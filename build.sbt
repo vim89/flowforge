@@ -1,3 +1,4 @@
+import scala.collection.Seq
 // ===== GLOBAL BUILD SETTINGS =====
 ThisBuild / organization := "com.flowforge"
 
@@ -10,9 +11,8 @@ ThisBuild / crossScalaVersions := Seq(
 )
 
 // ===== REPOSITORY RESOLVERS =====
-resolvers ++= Seq(
+resolvers ++= Resolver.sonatypeOssRepos("public") ++ Seq(
   Resolver.mavenCentral,
-  Resolver.sonatypeRepo("public"),
   "Confluent" at "https://packages.confluent.io/maven/",
   "Apache Releases" at "https://repository.apache.org/content/repositories/releases/",
   "Google Cloud" at "https://maven-central.storage-download.googleapis.com/maven2/",
@@ -21,17 +21,53 @@ resolvers ++= Seq(
 )
 
 // Compiler settings for all projects
-ThisBuild / scalacOptions ++= Seq(
-  "-Xfatal-warnings",
-  "-feature",
+
+val scala3CompilerOptions = Seq(
+  "-explain",
+  "-explain-types",
+  "-Wconf:cat=unused:s",   // suppress unused warnings
+  "-Wconf:cat=deprecation:s", // suppress deprecation warnings
+  "-Wunused:nowarn",
+  "-source:3.3",
+  "-Wsafe-init",
   "-deprecation",
-  "-unchecked",
+  "-Wunused:all",
   "-language:higherKinds",
   "-language:implicitConversions",
   "-Xlint:_,-missing-interpolator",
   "-Ywarn-dead-code",
   "-Ywarn-value-discard"
 )
+val scala2CompilerOptions = Seq(
+  "-Xfatal-warnings",
+  "-Wconf:deprecation:w",
+  "-feature",
+  "-unchecked",
+  "-deprecation",
+  "-Wunused:nowarn",
+  "-Wunused:imports",
+  "-Wunused:privates",
+  "-Wunused:locals",
+  "-Wunused:patvars",
+  "-Wunused:params",
+  "-Wunused:linted",
+  "-language:higherKinds",
+  "-language:implicitConversions",
+  "-Xlint:_,-missing-interpolator",
+  "-Ywarn-dead-code",
+  "-Ywarn-value-discard"
+)
+
+def scalacOptionsForVersion(scalaVersion: String): Seq[String] =
+  CrossVersion.partialVersion(scalaVersion) match {
+    case Some((2, 13)) =>
+      scala2CompilerOptions
+    case Some((3, _)) =>
+      scala3CompilerOptions
+    case _ => Seq.empty
+  }
+
+ThisBuild / scalacOptions ++= scalacOptionsForVersion(scalaVersion.value)
 
 // Test settings
 ThisBuild / Test / parallelExecution := false
@@ -71,7 +107,8 @@ lazy val core = moduleProject("core")
     description := "Core abstractions and type system for FlowForge",
     libraryDependencies ++= Dependencies.forModule("core") ++ Seq(
       "com.chuusai" %% "shapeless" % Dependencies.Versions.shapeless % "provided"
-    )
+    ),
+    assembly / assemblyJarName := "flowforge-core.jar"
   )
 
 lazy val safety = moduleProject("safety")
@@ -129,7 +166,8 @@ lazy val enginesSpark = moduleProject("engines-spark")
   .dependsOn(engines, connectors)
   .settings(
     description := "Apache Spark execution engine",
-    libraryDependencies ++= Dependencies.forModule("engines-spark")
+    libraryDependencies ++= Dependencies.forModule("engines-spark"),
+    assembly / assemblyJarName := "flowforge-spark-engine.jar"
   )
 
 lazy val enginesFlink = moduleProject("engines-flink")
@@ -183,6 +221,7 @@ lazy val examples = moduleProject("examples")
     description := "Example implementations and tutorials",
     libraryDependencies ++= Dependencies.forModule("examples"),
     publish / skip := true,
+    assembly / assemblyJarName := "flowforge-examples.jar"
   )
 
 lazy val experimental = moduleProject("experimental")
@@ -238,3 +277,11 @@ addCommandAlias("assemblyCore", "core/assembly")
 addCommandAlias("assemblySpark", "enginesSpark/assembly")
 addCommandAlias("assemblyExamples", "examples/assembly")
 
+// Assembly merge strategy
+ThisBuild / assemblyMergeStrategy := {
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x if x.endsWith(".conf") => MergeStrategy.concat
+  case x if x.endsWith(".properties") => MergeStrategy.concat
+  case x if x.endsWith(".xml") => MergeStrategy.first
+  case x => MergeStrategy.first
+}

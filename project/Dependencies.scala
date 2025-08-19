@@ -17,7 +17,7 @@ object Dependencies {
     val zioInteropCats = "23.1.0.0"
     val refined = "0.11.0"
     val kittens = "3.1.0"
-    val shapeless = "2.3.10"
+    val shapeless = "2.3.13"
 
     // JSON & Config
     val circe = "0.14.6"
