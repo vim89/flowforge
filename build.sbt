@@ -1,14 +1,30 @@
 // ===== GLOBAL BUILD SETTINGS =====
 ThisBuild / organization := "com.flowforge"
+
 ThisBuild / version := "0.1.0"
 ThisBuild / scalaVersion := Dependencies.Versions.scala213
-ThisBuild / crossScalaVersions := Seq(Dependencies.Versions.scala213, Dependencies.Versions.scala3)
+ThisBuild / crossScalaVersions := Seq(
+  Dependencies.Versions.scala212,
+  Dependencies.Versions.scala213,
+  Dependencies.Versions.scala3
+)
+
+// ===== REPOSITORY RESOLVERS =====
+resolvers ++= Seq(
+  Resolver.mavenCentral,
+  Resolver.sonatypeRepo("public"),
+  "Confluent" at "https://packages.confluent.io/maven/",
+  "Apache Releases" at "https://repository.apache.org/content/repositories/releases/",
+  "Google Cloud" at "https://maven-central.storage-download.googleapis.com/maven2/",
+  "AWS SDK" at "https://repo1.maven.org/maven2/software/amazon/awssdk/",
+  "Spark Packages" at "https://repos.spark-packages.org/"
+)
 
 // Compiler settings for all projects
 ThisBuild / scalacOptions ++= Seq(
   "-Xfatal-warnings",
   "-feature",
-  "-deprecation", 
+  "-deprecation",
   "-unchecked",
   "-language:higherKinds",
   "-language:implicitConversions",
@@ -31,7 +47,6 @@ lazy val root = (project in file("."))
     connectorsS3,
     connectorsBigQuery,
     connectorsKafka,
-    connectorsAzure,
     engines,
     enginesSpark,
     enginesFlink,
@@ -84,7 +99,7 @@ lazy val connectorsGcs = moduleProject("connectors-gcs")
 lazy val connectorsS3 = moduleProject("connectors-s3")
   .dependsOn(connectors)
   .settings(
-    description := "Amazon S3 connector", 
+    description := "Amazon S3 connector",
     libraryDependencies ++= Dependencies.forModule("connectors-s3")
   )
 
@@ -100,13 +115,6 @@ lazy val connectorsKafka = moduleProject("connectors-kafka")
   .settings(
     description := "Apache Kafka connector",
     libraryDependencies ++= Dependencies.forModule("connectors-kafka")
-  )
-
-lazy val connectorsAzure = moduleProject("connectors-azure")
-  .dependsOn(connectors)
-  .settings(
-    description := "Azure Storage connector",
-    libraryDependencies ++= Dependencies.forModule("connectors-azure")
   )
 
 // ===== ENGINE MODULES =====
@@ -174,7 +182,7 @@ lazy val examples = moduleProject("examples")
   .settings(
     description := "Example implementations and tutorials",
     libraryDependencies ++= Dependencies.forModule("examples"),
-    publish / skip := true
+    publish / skip := true,
   )
 
 lazy val experimental = moduleProject("experimental")
@@ -188,7 +196,6 @@ lazy val experimental = moduleProject("experimental")
 // ===== BENCHMARKS =====
 lazy val benchmarks = (project in file("benchmarks"))
   .dependsOn(core, safety, examples)
-  .enablePlugins(JmhPlugin)
   .settings(
     name := "flowforge-benchmarks",
     description := "Performance benchmarks",
@@ -197,7 +204,7 @@ lazy val benchmarks = (project in file("benchmarks"))
   )
 
 // ===== HELPER FUNCTIONS =====
-def moduleProject(name: String): Project = 
+def moduleProject(name: String): Project =
   Project(name.replace("-", ""), file(s"modules/$name"))
     .settings(
       moduleName := s"flowforge-$name",
@@ -207,12 +214,15 @@ def moduleProject(name: String): Project =
 // ===== SBT ALIASES =====
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("fmtCheck", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
+addCommandAlias("fix", "all compile:scalafix test:scalafix")
+addCommandAlias("fixCheck", "compile:scalafix --check ; test:scalafix --check")
 addCommandAlias("testAll", "all test")
 addCommandAlias("testQuick", "testOnly * -- -l \"org.scalatest.tags.Slow\"")
 addCommandAlias("compileAll", "all compile test:compile")
-addCommandAlias("fullTest", "clean; compileAll; fmt; testAll")
-addCommandAlias("fullCheck", "clean; compileAll; fmtCheck; testAll")
-addCommandAlias("release", "fullCheck; publishSigned; sonatypeBundleRelease")
+addCommandAlias("coverage", "clean; coverage; testAll; coverageReport")
+addCommandAlias("fullTest", "clean; compileAll; fmt; fix; testAll")
+addCommandAlias("fullCheck", "clean; compileAll; fmtCheck; fixCheck; testAll")
+addCommandAlias("assembly", "core/assembly")
 
 // Quick development cycle
 addCommandAlias("dev", "~core/testQuick")
@@ -223,29 +233,8 @@ addCommandAlias("testCore", "core/test")
 addCommandAlias("testConnectors", "connectors*/test")
 addCommandAlias("testEngines", "engines*/test")
 
-// ===== GITHUB ACTIONS INTEGRATION =====
-ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("11"), JavaSpec.temurin("17"))
-ThisBuild / githubWorkflowScalaVersions := Seq(Dependencies.Versions.scala213, Dependencies.Versions.scala3)
+// Assembly for different modules
+addCommandAlias("assemblyCore", "core/assembly")
+addCommandAlias("assemblySpark", "enginesSpark/assembly")
+addCommandAlias("assemblyExamples", "examples/assembly")
 
-ThisBuild / githubWorkflowBuild := Seq(
-  WorkflowStep.Sbt(List("fullCheck")),
-  WorkflowStep.Sbt(
-    List("benchmarks/Jmh/run"), 
-    cond = Some(s"matrix.scala == '${Dependencies.Versions.scala213}'")
-  )
-)
-
-ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
-ThisBuild / githubWorkflowPublishTargetBranches := Seq(RefPredicate.StartsWith(Ref.Tag("v")))
-
-ThisBuild / githubWorkflowPublish := Seq(
-  WorkflowStep.Sbt(
-    List("ci-release"),
-    env = Map(
-      "PGP_PASSPHRASE" -> "${{ secrets.PGP_PASSPHRASE }}",
-      "PGP_SECRET" -> "${{ secrets.PGP_SECRET }}",
-      "SONATYPE_PASSWORD" -> "${{ secrets.SONATYPE_PASSWORD }}",
-      "SONATYPE_USERNAME" -> "${{ secrets.SONATYPE_USERNAME }}"
-    )
-  )
-)
