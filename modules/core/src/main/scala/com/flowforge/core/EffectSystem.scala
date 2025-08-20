@@ -4,22 +4,6 @@
  * This is the beating heart of FlowForge - a unified effect system abstraction that allows
  * developers to choose between ZIO and Cats-Effect without changing business logic.
  *
- * Design Patterns Applied:
- * - Strategy Pattern: Effect system implementations
- * - Template Method: Common effect operations
- * - Adapter Pattern: Unified interface for different effect systems
- * - Abstract Factory: Effect system instances
- *
- * Scala Features Showcased:
- * - Higher-Kinded Types: F[_] abstraction
- * - Type Classes: Implicit evidence parameters
- * - Variance: Covariant/contravariant relationships
- * - Pattern Matching: Error handling and result processing
- * - Implicit Conversions: Syntax extensions
- * - Lazy Evaluation: Deferred computations
- * - Generic Types: Parameterized abstractions
- * - Self Types: Component capabilities
- *
  * @author Vitthal Mirji
  * @version 0.1.0
  * @since Aug-2025
