@@ -26,11 +26,12 @@
  */
 package com.flowforge.core
 
+import cats.effect.implicits.monadCancelOps_
+
+import scala.annotation.implicitNotFound
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{Future, ExecutionContext}
-import scala.util.{Try, Success, Failure}
-import scala.annotation.{tailrec, implicitNotFound}
-import scala.language.{higherKinds, implicitConversions}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 /**
  * The unified effect system abstraction that forms the foundation of FlowForge.
@@ -525,8 +526,7 @@ object EffectSystem {
    * the Cats ecosystem.
    */
   implicit val catsEffectSystem: EffectSystem[cats.effect.IO] = {
-    import cats.effect.{IO, Fiber => CatsFiber}
-    import cats.effect.syntax.all._
+    import cats.effect.IO
     import cats.implicits._
 
     new EffectSystem[IO] {
@@ -645,9 +645,9 @@ object EffectSystem {
    * interface while maintaining ZIO's unique capabilities like
    * structured concurrency and typed errors.
    */
-  /*implicit val zioEffectSystem: EffectSystem[zio.Task] = {
-    import zio.{Task, ZIO, Fiber => ZIOFiber}
+  implicit val zioEffectSystem: EffectSystem[zio.Task] = {
     import zio.interop.catz._
+    import zio.{ Task, ZIO }
 
     new EffectSystem[Task] {
       // Functor implementation
@@ -680,7 +680,14 @@ object EffectSystem {
 
       // Async implementation
       def async[A](k: (Either[Throwable, A] => Unit) => Unit): Task[A] =
-        ZIO.async_(k)
+        // ZIO 2.x aligns with Cats Effect 3.x async—the callback expects a function(the effect to complete with), not just a value.
+        // This allows for proper interruption and effect safety.
+        // But here want to stick with an Either callback so wrap the callback in ZIO.
+        ZIO.async { (cb: ZIO[Any, Throwable, A] => Unit) =>
+          k { either =>
+            cb(ZIO.fromEither(either)) // wrap the Either back into ZIO
+          }
+        }
 
       // Concurrent implementation with ZIO Fiber adaptation
       def start[A](fa: Task[A]): Task[Fiber[Task, A]] =
@@ -691,21 +698,36 @@ object EffectSystem {
 
       def racePair[A, B](fa: Task[A], fb: Task[B]): Task[Either[(A, Fiber[Task, B]), (Fiber[Task, A], B)]] =
         fa.raceWith(fb)(
-          (exit, fiber) => exit.fold(
-            ZIO.fail(_),
-            ZIO.succeed(_).map(a => Left((a, new Fiber[Task, B] {
-              def cancel: Task[Unit] = fiber.interrupt.unit
-              def join: Task[B] = fiber.join.absorb
-            })))
-          ),
-          (exit, fiber) => exit.fold(
-            ZIO.fail(_),
-            ZIO.succeed(_).map(b => Right((new Fiber[Task, A] {
-              def cancel: Task[Unit] = fiber.interrupt.unit
-              def join: Task[A] = fiber.join.absorb
-            }, b)))
-          )
-        ).flatMap(Task)
+          // fa completed first
+          leftDone = { (exitA, fiberB) =>
+            exitA match {
+              case zio.Exit.Success(a) =>
+                val wrappedB = new Fiber[Task, B] {
+                  def cancel: Task[Unit] = fiberB.interrupt.unit
+                  def join:  Task[B]     = fiberB.join
+                }
+                ZIO.succeed(Left((a, wrappedB)))
+
+              case zio.Exit.Failure(cause) =>
+                // fail with fa’s error, but be nice and stop fb
+                fiberB.interrupt *> ZIO.fail(cause.squash)
+            }
+          },
+          // fb completed first
+          rightDone = { (exitB, fiberA) =>
+            exitB match {
+              case zio.Exit.Success(b) =>
+                val wrappedA = new Fiber[Task, A] {
+                  def cancel: Task[Unit] = fiberA.interrupt.unit
+                  def join:  Task[A]     = fiberA.join
+                }
+                ZIO.succeed(Right((wrappedA, b)))
+
+              case zio.Exit.Failure(cause) =>
+                fiberA.interrupt *> ZIO.fail(cause.squash)
+            }
+          }
+        )
 
       // Parallel implementation using ZIO's parallel operations
       def parProduct[A, B](fa: Task[A], fb: Task[B]): Task[(A, B)] = fa.zip(fb)
@@ -714,16 +736,20 @@ object EffectSystem {
 
       // Resource management using ZIO's bracket operations
       def bracket[A, B](acquire: Task[A])(use: A => Task[B])(release: A => Task[Unit]): Task[B] =
-        ZIO.bracket(acquire)(release)(use)
+        acquire.bracket(use)(release)
       def bracketCase[A, B](acquire: Task[A])(use: A => Task[B])(release: (A, ExitCase[Throwable]) => Task[Unit]): Task[B] =
-        acquire.bracketExit((a, exit) => {
-          val exitCase = exit match {
-            case zio.Exit.Success(_) => ExitCase.Completed
+        ZIO.acquireReleaseExitWith(acquire) { (a: A, exit: zio.Exit[Throwable, B]) =>
+          val exitCase: ExitCase[Throwable] = exit match {
+            case zio.Exit.Success(_)     => ExitCase.Completed
             case zio.Exit.Failure(cause) =>
-              cause.failureOption.map(ExitCase.Error(_)).getOrElse(ExitCase.Canceled)
+              cause.failureOption match {
+                case Some(err) => ExitCase.Error(err)
+                case None      => ExitCase.Canceled
+              }
           }
-          release(a, exitCase)
-        })(use)
+          release(a, exitCase).orDie
+        }(use)
+
 
       // Timing implementation using ZIO's timing operations
       def sleep(duration: FiniteDuration): Task[Unit] =
@@ -736,10 +762,8 @@ object EffectSystem {
         ZIO.foreach(list)(f)
       override def sequence[A](list: List[Task[A]]): Task[List[A]] =
         ZIO.collectAll(list)
-      override def parTraverse[A, B](list: List[A])(f: A => Task[B]): Task[List[B]] =
-        ZIO.foreachPar(list)(f)
     }
-  } */
+  }
 
   /**
    * Syntax extensions for EffectSystem operations.
