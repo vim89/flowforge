@@ -246,7 +246,7 @@ trait EffectSystem[F[_]] {
    */
   def onError[A](fa: F[A])(pf: PartialFunction[Throwable, F[Unit]]): F[A] =
     handleErrorWith(fa)(e =>
-      flatMap(if (pf.isDefinedAt(e)) pf(e) else pure(()))((_ => raiseError(e))))
+      flatMap(if (pf.isDefinedAt(e)) pf(e) else pure(()))(_ => raiseError(e)))
 
   // ===============================
   // SYNC OPERATIONS
@@ -324,8 +324,8 @@ trait EffectSystem[F[_]] {
    */
   def race[A, B](fa: F[A], fb: F[B]): F[Either[A, B]] =
     flatMap(racePair(fa, fb)) {
-      case Left((a, fiberB)) => map(fiberB.cancel)((_ => Left(a)))
-      case Right((fiberA, b)) => map(fiberA.cancel)((_ => Right(b)))
+      case Left((a, fiberB)) => map(fiberB.cancel)(_ => Left(a))
+      case Right((fiberA, b)) => map(fiberA.cancel)(_ => Right(b))
     }
 
   // ===============================
@@ -772,7 +772,7 @@ object EffectSystem {
    * enabling a fluent API that feels natural in Scala.
    *
    * Usage:
-   * ```scala
+   *
    * import EffectSystemOps._
    *
    * val result = for {
@@ -780,7 +780,6 @@ object EffectSystem {
    *   b <- effect2.handleError(recover)
    *   c <- effect3.timeout(30.seconds)
    * } yield (a, b, c)
-   * ```
    */
   implicit class EffectSystemOps[F[_], A](fa: F[A])(implicit F: EffectSystem[F]) {
     def map[B](f: A => B): F[B] = F.map(fa)(f)
