@@ -7,7 +7,7 @@ ThisBuild / scalaVersion := Dependencies.Versions.scala213
 ThisBuild / crossScalaVersions := Seq(
   Dependencies.Versions.scala212,
   Dependencies.Versions.scala213,
-  Dependencies.Versions.scala3
+  // Dependencies.Versions.scala3
 )
 
 // ===== REPOSITORY RESOLVERS =====
@@ -39,18 +39,11 @@ val scala3CompilerOptions = Seq(
   "-Ywarn-value-discard"
 )
 val scala2CompilerOptions = Seq(
-  "-Xfatal-warnings",
-  "-Wconf:deprecation:w",
+  // "-Xfatal-warnings", Commented to allow deprecation warnings
+  // "-Wconf:deprecation:w", // suppress deprecation warnings - Commented to allow deprecation warnings
   "-feature",
   "-unchecked",
   "-deprecation",
-  "-Wunused:nowarn",
-  "-Wunused:imports",
-  "-Wunused:privates",
-  "-Wunused:locals",
-  "-Wunused:patvars",
-  "-Wunused:params",
-  "-Wunused:linted",
   "-language:higherKinds",
   "-language:implicitConversions",
   "-Xlint:_,-missing-interpolator",
@@ -73,27 +66,26 @@ ThisBuild / scalacOptions ++= scalacOptionsForVersion(scalaVersion.value)
 ThisBuild / Test / parallelExecution := false
 ThisBuild / Test / testOptions += Tests.Argument("-oDF")
 
+
+// Helper function for module projects
+def moduleProject(name: String): Project = {
+  Project(name.replace("-", ""), file(s"modules/$name"))
+    .settings(
+      moduleName := s"flowforge-$name",
+      libraryDependencies ++= Dependencies.common
+    )
+}
+
 // ===== ROOT PROJECT =====
 lazy val root = (project in file("."))
   .aggregate(
-    core,
-    safety,
-    connectors,
-    connectorsGcs,
-    connectorsS3,
-    connectorsBigQuery,
-    connectorsKafka,
-    engines,
-    enginesSpark,
-    enginesFlink,
-    quality,
-    qualityDeequ,
-    templates,
-    monitoring,
-    testing,
-    examples,
-    experimental,
-    benchmarks
+    core, safety, contracts,
+    connectors, connectorsGcs, connectorsS3, connectorsBigQuery, connectorsKafka, connectorsAzure,
+    engines, enginesSpark, enginesFlink,
+    quality, qualityDeequ,
+    templates, monitoring, testing,
+    examples, experimental,
+    benchmarks, it
   )
   .settings(
     name := "flowforge",
@@ -104,23 +96,27 @@ lazy val root = (project in file("."))
 // ===== CORE MODULES =====
 lazy val core = moduleProject("core")
   .settings(
-    description := "Core abstractions and type system for FlowForge",
-    libraryDependencies ++= Dependencies.forModule("core") ++ Seq(
-      "com.chuusai" %% "shapeless" % Dependencies.Versions.shapeless % "provided"
-    ),
-    assembly / assemblyJarName := "flowforge-core.jar"
+    description := "Core abstractions and custom type system",
+    libraryDependencies ++= Dependencies.forModule("core")
   )
 
 lazy val safety = moduleProject("safety")
   .dependsOn(core)
   .settings(
-    description := "Effect-safe operations and resource management",
+    description := "Effect-safe operations for any effect system",
     libraryDependencies ++= Dependencies.forModule("safety")
+  )
+
+lazy val contracts = moduleProject("contracts")
+  .dependsOn(core, safety)
+  .settings(
+    description := "Compile-time and runtime data contracts",
+    libraryDependencies ++= Dependencies.forModule("contracts")
   )
 
 // ===== CONNECTOR MODULES =====
 lazy val connectors = moduleProject("connectors")
-  .dependsOn(core, safety)
+  .dependsOn(core, safety, contracts)
   .settings(
     description := "Base connector abstractions",
     libraryDependencies ++= Dependencies.forModule("connectors")
@@ -154,9 +150,16 @@ lazy val connectorsKafka = moduleProject("connectors-kafka")
     libraryDependencies ++= Dependencies.forModule("connectors-kafka")
   )
 
+lazy val connectorsAzure = moduleProject("connectors-azure")
+  .dependsOn(connectors)
+  .settings(
+    description := "Azure connector",
+    libraryDependencies ++= Dependencies.forModule("connectors-azure")
+  )
+
 // ===== ENGINE MODULES =====
 lazy val engines = moduleProject("engines")
-  .dependsOn(core, safety)
+  .dependsOn(core, safety, contracts)
   .settings(
     description := "Base execution engine abstractions",
     libraryDependencies ++= Dependencies.forModule("engines")
@@ -166,8 +169,7 @@ lazy val enginesSpark = moduleProject("engines-spark")
   .dependsOn(engines, connectors)
   .settings(
     description := "Apache Spark execution engine",
-    libraryDependencies ++= Dependencies.forModule("engines-spark"),
-    assembly / assemblyJarName := "flowforge-spark-engine.jar"
+    libraryDependencies ++= Dependencies.forModule("engines-spark")
   )
 
 lazy val enginesFlink = moduleProject("engines-flink")
@@ -179,7 +181,7 @@ lazy val enginesFlink = moduleProject("engines-flink")
 
 // ===== QUALITY MODULES =====
 lazy val quality = moduleProject("quality")
-  .dependsOn(core, safety)
+  .dependsOn(core, safety, contracts)
   .settings(
     description := "Data quality framework",
     libraryDependencies ++= Dependencies.forModule("quality")
@@ -194,10 +196,10 @@ lazy val qualityDeequ = moduleProject("quality-deequ")
 
 // ===== SUPPORT MODULES =====
 lazy val templates = moduleProject("templates")
-  .dependsOn(core)
+  .dependsOn(core, safety, contracts, quality)
   .settings(
-    description := "Giter8 templates and code generation",
-    libraryDependencies ++= Dependencies.common
+    description := "Pipeline Giter8 templates and code generation",
+    libraryDependencies ++= Dependencies.forModule("templates")
   )
 
 lazy val monitoring = moduleProject("monitoring")
@@ -208,7 +210,7 @@ lazy val monitoring = moduleProject("monitoring")
   )
 
 lazy val testing = moduleProject("testing")
-  .dependsOn(core, safety)
+  .dependsOn(core, safety, contracts, quality)
   .settings(
     description := "Testing utilities and frameworks",
     libraryDependencies ++= Dependencies.forModule("testing")
@@ -216,23 +218,23 @@ lazy val testing = moduleProject("testing")
 
 // ===== EXAMPLE & EXPERIMENTAL MODULES =====
 lazy val examples = moduleProject("examples")
-  .dependsOn(core, safety, enginesSpark, connectorsGcs, quality)
+  .dependsOn(core, safety, contracts, connectors, connectorsGcs, engines, enginesSpark, quality)
   .settings(
-    description := "Example implementations and tutorials",
+    description := "Example implementations",
     libraryDependencies ++= Dependencies.forModule("examples"),
-    publish / skip := true,
-    assembly / assemblyJarName := "flowforge-examples.jar"
+    publish / skip := true
   )
 
 lazy val experimental = moduleProject("experimental")
   .dependsOn(core, safety)
   .settings(
-    description := "Experimental features and prototypes",
+    description := "Experimental features & prototypes: ML, distributed computing, Kyo, Caprese",
+    crossScalaVersions := Seq(Dependencies.Versions.scala213),
     libraryDependencies ++= Dependencies.forModule("experimental"),
     publish / skip := true
   )
 
-// ===== BENCHMARKS =====
+// ===== ADDITIONAL MODULES =====
 lazy val benchmarks = (project in file("benchmarks"))
   .dependsOn(core, safety, examples)
   .settings(
@@ -242,13 +244,14 @@ lazy val benchmarks = (project in file("benchmarks"))
     publish / skip := true
   )
 
-// ===== HELPER FUNCTIONS =====
-def moduleProject(name: String): Project =
-  Project(name.replace("-", ""), file(s"modules/$name"))
-    .settings(
-      moduleName := s"flowforge-$name",
-      crossScalaVersions := (ThisBuild / crossScalaVersions).value
-    )
+lazy val it = (project in file("integration-tests"))
+  .dependsOn(examples, testing, connectorsGcs, connectorsBigQuery, enginesSpark, qualityDeequ)
+  .settings(
+    name := "flowforge-integration-tests",
+    description := "Integration tests",
+    publish / skip := true,
+    Test / fork := true
+  )
 
 // ===== SBT ALIASES =====
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")

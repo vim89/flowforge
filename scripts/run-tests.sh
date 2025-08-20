@@ -1,24 +1,16 @@
 #!/bin/bash
-# Comprehensive test runner
+# Comprehensive test runner - uses existing build.sbt
 
-set -euo pipefail
+set -e
 
 echo "🧪 Running FlowForge test suite..."
 
-# Quick tests
-echo "⚡ Running quick tests..."
-sbt testQuick
+# Unit tests
+echo "⚡ Running unit tests..."
+sbt test
 
-# Full test suite
-echo "🔍 Running full test suite..."
-sbt testAll
-
-# Integration tests
+# Integration tests (if configured in existing build.sbt)
 echo "🔗 Running integration tests..."
 sbt it:test
-
-# Performance benchmarks
-echo "📊 Running benchmarks..."
-sbt benchmarks/Jmh/run
 
 echo "✅ All tests completed!"

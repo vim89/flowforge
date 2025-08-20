@@ -1,66 +1,31 @@
-# SBT
+# Scala / SBT
 target/
 project/project/
 project/target/
-.cache
-.history
-.lib/
-
-# IntelliJ IDEA
-.bsp/
-.idea/
-*.iml
-*.iws
-
-# VS Code
-.vscode/
-!.vscode/settings.json
-!.vscode/tasks.json
-
-# Scala
 *.class
 *.log
+.bsp/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Metals
 .metals/
 .bloop/
-project/.bloop/
 
-# General
-.DS_Store
-Thumbs.db
-
-# Data files
-*.parquet
-*.csv
-*.json
-!examples/**/data/*.json
-!**/test/resources/**
+# Temp files
+*.tmp
+*.swp
+*~
 
 # Logs
 logs/
 *.log
-
-# Temporary files
-tmp/
-temp/
-
-# Docker
-.env
-docker-compose.override.yml
-
-# Secrets
-secrets/
-*.key
-*.pem
-
-# Coverage reports
-coverage/
-scoverage-data/
-
-# JMH results
-jmh-result.json
-
-# Native packager
-/target/universal/
-/target/native-packager/

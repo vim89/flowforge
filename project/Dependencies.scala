@@ -15,13 +15,13 @@ object Dependencies {
     val fs2 = "3.9.4"
     val zio = "2.0.19"
     val zioInteropCats = "23.1.0.0"
-    val refined = "0.11.0"
+    val refined = "0.11.3"
     val kittens = "3.1.0"
     val shapeless = "2.3.13"
 
     // JSON & Config
     val circe = "0.14.6"
-    val pureconfig = "0.17.4"
+    val pureconfig = "0.17.9"
 
     // Big Data engines
     val spark = "3.5.0"
@@ -34,7 +34,7 @@ object Dependencies {
     val gcpStorage = "2.37.0"
     val bigquery = "2.54.1"
     val aws = "2.21.29"
-    val azure = "1.2.18"
+    val azure = "12.9.0"
 
     // Data quality
     val deequ = "2.0.11-spark-3.5"
@@ -47,8 +47,11 @@ object Dependencies {
 
     // Logging
     val scalaLogging = "3.9.5"
-    val logback = "1.4.14"
-    val log4cats = "2.6.0"
+    val logback = "1.5.18"
+    val log4cats = "2.7.1"
+
+    // Experimental libraries
+    val kyo = "0.8.5"
 
     // Testing
     val scalaTest = "3.2.17"
@@ -65,6 +68,11 @@ object Dependencies {
     val unidoc = "0.5.0"
     val assembly = "2.1.4"
   }
+
+  val validation = Seq(
+    "io.github.jmcardon" %% "tsec-common" % "0.4.0",
+    "org.scalactic" %% "scalactic" % Versions.scalaTest
+  )
 
   // ===== CORE DEPENDENCIES =====
   object Core {
@@ -99,10 +107,17 @@ object Dependencies {
       "org.typelevel" %% "log4cats-slf4j" % Versions.log4cats
     )
 
-    val all: Seq[ModuleID] = functional ++ typeSafety ++ json ++ config ++ logging
+    val all: Seq[ModuleID] = functional ++ typeSafety ++ json ++ logging ++ validation
   }
 
-  // ===== ENGINE DEPENDENCIES =====
+  // Effect systems (provided dependencies)
+  val effectSystems = Seq(
+    "org.typelevel" %% "cats-effect" % Versions.catsEffect % "provided",
+    "dev.zio" %% "zio" % Versions.zio % "provided",
+    "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % "provided"
+  )
+
+  // Engines
   object Engines {
     val spark = Seq(
       "org.apache.spark" %% "spark-core" % Versions.spark % "provided",
@@ -116,6 +131,8 @@ object Dependencies {
       "org.apache.flink" % "flink-streaming-scala_2.12" % Versions.flink % "provided",
       "org.apache.flink" % "flink-table-runtime" % Versions.flink % "provided"
     )
+
+    val all: Seq[ModuleID] = spark ++ flink
   }
 
   // ===== CONNECTOR DEPENDENCIES =====
@@ -137,12 +154,17 @@ object Dependencies {
     val kafka = Seq(
       "org.apache.kafka" % "kafka-clients" % Versions.kafka,
       "com.github.fd4s" %% "fs2-kafka" % Versions.fs2Kafka
+        exclude("org.apache.kafka", "kafka-clients")
+        exclude("org.typelevel", "cats-effect")
+        exclude("org.scala-lang", "scala3-library")
     )
 
     val azure = Seq(
       "com.azure" % "azure-storage-blob" % Versions.azure,
       "com.azure" % "azure-identity" % "1.10.4"
     )
+
+    val all: Seq[ModuleID] = gcs ++ s3 ++ bigquery ++ kafka ++ azure
   }
 
   // ===== QUALITY DEPENDENCIES =====
@@ -152,11 +174,6 @@ object Dependencies {
         exclude("org.typelevel", "cats-core_2.12")
         exclude("org.typelevel", "cats-kernel_2.12")
         exclude("org.scala-lang.modules", "scala-xml_2.12")
-    )
-
-    val validation = Seq(
-      "io.github.jmcardon" %% "tsec-common" % "0.4.0",
-      "org.scalactic" %% "scalactic" % Versions.scalaTest
     )
 
     val all: Seq[ModuleID] = deequ ++ validation
@@ -188,6 +205,8 @@ object Dependencies {
       "org.scalatestplus" %% "scalacheck-1-17" % "3.2.17.0" % Test,
       "org.scalacheck" %% "scalacheck" % Versions.scalaCheck % Test,
       "org.typelevel" %% "cats-effect-testing-scalatest" % "1.5.0" % Test,
+      "dev.zio" %% "zio-test" % Versions.zio % Test,
+      "dev.zio" %% "zio-test-sbt" % Versions.zio % Test,
       "org.mockito" % "mockito-core" % Versions.mockito % Test
     )
 
@@ -202,41 +221,38 @@ object Dependencies {
     val all: Seq[ModuleID] = unit ++ integration
   }
 
-  // ===== ZIO ALTERNATIVE STACK =====
-  object ZIO {
-    val core = Seq(
-      "dev.zio" %% "zio" % Versions.zio,
-      "dev.zio" %% "zio-streams" % Versions.zio,
-      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats
-    )
-
-    val provided: Seq[ModuleID] = core.map(_ % "provided")
-  }
-
-  // ===== CONVENIENCE COLLECTIONS =====
-  val common: Seq[ModuleID] = Core.all ++ Testing.unit
+  // Common dependencies with all essentials
+  val common: Seq[ModuleID] = Core.all ++ effectSystems ++ Testing.unit
 
   def withProvided(deps: Seq[ModuleID], providedLibs: Seq[ModuleID]): Seq[ModuleID] =
     deps ++ providedLibs.map(_ % "provided")
 
   def forModule(moduleName: String): Seq[ModuleID] = moduleName match {
     case "core" => Core.all ++ Testing.unit
-    case "safety" => common ++ ZIO.provided
-    case "connectors" => common
+    case "safety" => Core.functional ++ effectSystems ++ Testing.unit
+    case "contracts" => Core.all ++ Testing.unit ++ Seq(
+      "org.apache.spark" %% "spark-sql" % Versions.spark % "provided"
+    )
+    case "connectors" => Core.functional ++ Testing.unit
     case "connectors-gcs" => common ++ Connectors.gcs
     case "connectors-s3" => common ++ Connectors.s3
     case "connectors-bigquery" => common ++ Connectors.bigquery
     case "connectors-kafka" => common ++ Connectors.kafka
     case "connectors-azure" => common ++ Connectors.azure
-    case "engines" => common
+    case "engines" => Core.functional ++ Testing.unit
     case "engines-spark" => common ++ Engines.spark
     case "engines-flink" => common ++ Engines.flink
-    case "quality" => common
+    case "quality" => Core.functional ++ Testing.unit
     case "quality-deequ" => common ++ Quality.deequ
+    case "templates" => common ++ Seq(
+      "org.foundweekends.giter8" %% "giter8-lib" % Versions.sbtGiter8
+    )
     case "monitoring" => common ++ Monitoring.all
     case "testing" => common ++ Testing.integration
     case "examples" => common
-    case "experimental" => common
+    case "experimental" => common ++ Seq(
+      "io.getkyo" %% "kyo-core" % Versions.kyo
+  )
     case _ => common
   }
 
