@@ -163,7 +163,7 @@ trait EffectSystem[F[_]] {
 
   /**
    * Flatten nested effects.
-   * Converts F[F[A]] to F[A] by removing one level of nesting.
+   * Converts F[ F[A] ] to F[A] by removing one level of nesting.
    */
   def flatten[A](ffa: F[F[A]]): F[A] = flatMap(ffa)(identity)
 
