@@ -2,11 +2,11 @@ import scala.collection.Seq
 // ===== GLOBAL BUILD SETTINGS =====
 ThisBuild / organization := "com.flowforge"
 
-ThisBuild / version := "0.1.0"
+ThisBuild / version      := "0.1.0"
 ThisBuild / scalaVersion := Dependencies.Versions.scala213
 ThisBuild / crossScalaVersions := Seq(
   Dependencies.Versions.scala212,
-  Dependencies.Versions.scala213,
+  Dependencies.Versions.scala213
   // Dependencies.Versions.scala3
 )
 
@@ -25,7 +25,7 @@ resolvers ++= Resolver.sonatypeOssRepos("public") ++ Seq(
 val scala3CompilerOptions = Seq(
   "-explain",
   "-explain-types",
-  "-Wconf:cat=unused:s",   // suppress unused warnings
+  "-Wconf:cat=unused:s",      // suppress unused warnings
   "-Wconf:cat=deprecation:s", // suppress deprecation warnings
   "-Wunused:nowarn",
   "-source:3.3",
@@ -66,30 +66,42 @@ ThisBuild / scalacOptions ++= scalacOptionsForVersion(scalaVersion.value)
 ThisBuild / Test / parallelExecution := false
 ThisBuild / Test / testOptions += Tests.Argument("-oDF")
 
-
 // Helper function for module projects
-def moduleProject(name: String): Project = {
+def moduleProject(name: String): Project =
   Project(name.replace("-", ""), file(s"modules/$name"))
     .settings(
       moduleName := s"flowforge-$name",
       libraryDependencies ++= Dependencies.common
     )
-}
 
 // ===== ROOT PROJECT =====
 lazy val root = (project in file("."))
   .aggregate(
-    core, safety, contracts,
-    connectors, connectorsGcs, connectorsS3, connectorsBigQuery, connectorsKafka, connectorsAzure,
-    engines, enginesSpark, enginesFlink,
-    quality, qualityDeequ,
-    templates, monitoring, testing,
-    examples, experimental,
-    benchmarks, it
+    core,
+    safety,
+    contracts,
+    connectors,
+    connectorsGcs,
+    connectorsS3,
+    connectorsBigQuery,
+    connectorsKafka,
+    connectorsAzure,
+    engines,
+    enginesSpark,
+    enginesFlink,
+    quality,
+    qualityDeequ,
+    templates,
+    monitoring,
+    testing,
+    examples,
+    experimental,
+    benchmarks,
+    it
   )
   .settings(
-    name := "flowforge",
-    publish / skip := true,
+    name               := "flowforge",
+    publish / skip     := true,
     crossScalaVersions := Nil
   )
 
@@ -238,7 +250,7 @@ lazy val experimental = moduleProject("experimental")
 lazy val benchmarks = (project in file("benchmarks"))
   .dependsOn(core, safety, examples)
   .settings(
-    name := "flowforge-benchmarks",
+    name        := "flowforge-benchmarks",
     description := "Performance benchmarks",
     libraryDependencies ++= Dependencies.common,
     publish / skip := true
@@ -247,10 +259,10 @@ lazy val benchmarks = (project in file("benchmarks"))
 lazy val it = (project in file("integration-tests"))
   .dependsOn(examples, testing, connectorsGcs, connectorsBigQuery, enginesSpark, qualityDeequ)
   .settings(
-    name := "flowforge-integration-tests",
-    description := "Integration tests",
+    name           := "flowforge-integration-tests",
+    description    := "Integration tests",
     publish / skip := true,
-    Test / fork := true
+    Test / fork    := true
   )
 
 // ===== SBT ALIASES =====
@@ -282,9 +294,9 @@ addCommandAlias("assemblyExamples", "examples/assembly")
 
 // Assembly merge strategy
 ThisBuild / assemblyMergeStrategy := {
-  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-  case x if x.endsWith(".conf") => MergeStrategy.concat
+  case PathList("META-INF", xs @ _*)  => MergeStrategy.discard
+  case x if x.endsWith(".conf")       => MergeStrategy.concat
   case x if x.endsWith(".properties") => MergeStrategy.concat
-  case x if x.endsWith(".xml") => MergeStrategy.first
-  case x => MergeStrategy.first
+  case x if x.endsWith(".xml")        => MergeStrategy.first
+  case x                              => MergeStrategy.first
 }
