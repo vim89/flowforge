@@ -1,30 +1,17 @@
 name: Claude code review (Reusable)
 
 on:
-  workflow_call:
-    inputs:
-      pr_head_sha:
-        description: 'PR head SHA to checkout'
-        required: true
-        type: string
-      review_type:
-        description: 'Type of review: trusted, external, or manual'
-        required: false
-        type: string
-        default: 'trusted'
-      pr_number:
-        description: 'PR number for context'
-        required: false
-        type: string
-      model:
-        description: 'Claude model to use'
-        required: false
-        type: string
-        default: 'claude-sonnet-4-20250514'
-    secrets:
-      CLAUDE_CODE_OAUTH_TOKEN:
-        description: 'Claude Code OAuth token'
-        required: true
+  pull_request:
+    types: [ opened, synchronize ]
+
+  issue_comment:
+    types: [ created ]
+
+# Prevent multiple Claude reviews for the same PR from running simultaneously
+concurrency:
+  group: ${{ github.repository }}-claude-review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
+
 
 jobs:
   claude-review:
@@ -40,32 +27,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ inputs.pr_head_sha }}
-
-      - name: Set review context
-        id: context
-        run: |
-          case "${{ inputs.review_type }}" in
-            "external")
-              echo "security_note=This is from an external contributor, so be thorough but welcoming in your feedback." >> $GITHUB_OUTPUT
-              echo "focus=extra attention to security implications and" >> $GITHUB_OUTPUT
-              ;;
-            "manual")
-              echo "security_note=This review was manually triggered by a maintainer." >> $GITHUB_OUTPUT
-              echo "focus=special attention to" >> $GITHUB_OUTPUT
-              ;;
-            *)
-              echo "security_note=Be constructive and helpful in your feedback." >> $GITHUB_OUTPUT
-              echo "focus=attention to" >> $GITHUB_OUTPUT
-              ;;
-          esac
-
-      - name: Run Claude Code Review
+          ref: ${{ github.event.pull_request.head.sha || github.event.issue.pull_request.head.sha }}
+      - name: Run Claude code improvements
         uses: anthropics/claude-code-action@beta
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           direct_prompt: |
-            Please review this pull request with ${{ steps.context.outputs.focus }}:
             - Convention over Configuration with Functional Purity - This framework/project will be a true integrated system for Data Engineering & Data pipelines - which collectively works with other libraries, but pieces built specifically for each other to Data Engineering that work as one cohesive whole. Framework also must be unified abstraction layer. Framework makes best architectural decisions as well. Wherever applicable Data Engineers interact with APIs & exposed patterns/ layers not the underlying logic which libraries gives us to use.
             - Best scala functional programming design patterns. Best practices of SOLID patterns, creational, structural & behavioral design patterns. Best scala functional programming design patterns - all best possible patterns that suits us & solve problems may be Kleisl etc.
             - We are writing data pipelines. So say goodbye to config/metadata chaos! Let Scala’s type & effect systems co-author them with you. We want to show how we built a contract-first, pluggable platform using Giter8, Refined, Cats Effect, ZIO, Kyo & Caprese ( Kyo & Caprese experimental only) - delivering compile-time guarantees and fiber-safe execution.
@@ -85,11 +52,6 @@ jobs:
             - Test coverage
             - Documentation clarity
             - Overall maintainability
-            - Suggest each & every improvement from above points
-            - Provide code examples where applicable
-            - Suggest improvements in file names, directory structure as well
-            - Suggest improvements in project structure as well
-
-            ${{ steps.context.outputs.security_note }}
-
-            ${{ inputs.pr_number && format('PR Number: {0}', inputs.pr_number) || '' }}
+            - Give revised code of each & every improvement from above points
+            - Give revised code of all suggest improvements
+            - Give revised improvements in project structure as well
