@@ -1,0 +1,95 @@
+name: Claude code review (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      pr_head_sha:
+        description: 'PR head SHA to checkout'
+        required: true
+        type: string
+      review_type:
+        description: 'Type of review: trusted, external, or manual'
+        required: false
+        type: string
+        default: 'trusted'
+      pr_number:
+        description: 'PR number for context'
+        required: false
+        type: string
+      model:
+        description: 'Claude model to use'
+        required: false
+        type: string
+        default: 'claude-sonnet-4-20250514'
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN:
+        description: 'Claude Code OAuth token'
+        required: true
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.pr_head_sha }}
+
+      - name: Set review context
+        id: context
+        run: |
+          case "${{ inputs.review_type }}" in
+            "external")
+              echo "security_note=This is from an external contributor, so be thorough but welcoming in your feedback." >> $GITHUB_OUTPUT
+              echo "focus=extra attention to security implications and" >> $GITHUB_OUTPUT
+              ;;
+            "manual")
+              echo "security_note=This review was manually triggered by a maintainer." >> $GITHUB_OUTPUT
+              echo "focus=special attention to" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "security_note=Be constructive and helpful in your feedback." >> $GITHUB_OUTPUT
+              echo "focus=attention to" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Run Claude Code Review
+        uses: anthropics/claude-code-action@beta
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          direct_prompt: |
+            Please review this pull request with ${{ steps.context.outputs.focus }}:
+            - Convention over Configuration with Functional Purity - This framework/project will be a true integrated system for Data Engineering & Data pipelines - which collectively works with other libraries, but pieces built specifically for each other to Data Engineering that work as one cohesive whole. Framework also must be unified abstraction layer. Framework makes best architectural decisions as well. Wherever applicable Data Engineers interact with APIs & exposed patterns/ layers not the underlying logic which libraries gives us to use.
+            - Best scala functional programming design patterns. Best practices of SOLID patterns, creational, structural & behavioral design patterns. Best scala functional programming design patterns - all best possible patterns that suits us & solve problems may be Kleisl etc.
+            - We are writing data pipelines. So say goodbye to config/metadata chaos! Let Scala’s type & effect systems co-author them with you. We want to show how we built a contract-first, pluggable platform using Giter8, Refined, Cats Effect, ZIO, Kyo & Caprese ( Kyo & Caprese experimental only) - delivering compile-time guarantees and fiber-safe execution.
+            - What if your data platform stopped relying on configuration-driven / metadata-driven and postmortems - and instead enforced correctness, traceability, and effect boundaries at compile time?
+            - We want to build a production-ready data pipeline archetype system in Scala. We want to use Giter8 templates to scaffold pipelines that are contract-driven, type-safe, effectful, and pluggable - all enforced through the Scala type system and effect libraries.
+            - 📦 Giter8 templates bootstrap consistent, compile-time safe projects • 🛡️ Refined types validate configuration before runtime • ✅ Cats ValidatedNel catches multi-rule violations in DQ checks • 🔌 Type classes enable pluggable validation and ingestion • ⚙️ ZIO Layers and Cats Effect offer fiber-safe orchestration • 🚀 Trait-based runners switch between Spark, Flink, and Kafka • 📊 Data Quality and custom rules enforce data contract quality at runtime • 🧠 Experimental: Kyo - tracks multiple effects via intersection types and Caprese - capture-checking tracks capabilities
+            - Use potential & power of Scala ecosystem but not over engineer it.
+            - All possible USPs of Scala - Monads, Pattern Matching, Generics, Variance, Type classes, Type class patterns, Self Types, Structural types, F-Bounded Polymorphism, Higher-Kinded Types, Reflections, Lazy Evals, Concurrency with Futures, Implicits. All we need to make best use of yet keeping simplicity by not over engineering it. Apply only where they fit perfectly to solve that bit of problem or make other things relevant & elegant.
+            - For project specific types create plenty of type aliases. Create type class patterns etc.
+            - Use Zio & Cats-Effect separately because we are providing an option of Effect system. Use cats core as well - Semigroups, Monoids, Monads, Functors, Applicatives, Creative Type class patterns etc.
+            - We need to be creative, innovative & something like Wow such a thing can be achieved who'd have never thought about such things in Data Engineering Data Pipelines.
+            - No Over Engineering - Keep simplicity, scalable, understandable, adaptable yet creative - We need to be creative, innovative & something like Wow such a thing can be achieved who'd have never thought about such things in Data Engineering Data Pipelines.
+            - Code quality and best practices
+            - Potential bugs or issues
+            - Performance considerations
+            - Security concerns
+            - Test coverage
+            - Documentation clarity
+            - Overall maintainability
+            - Suggest each & every improvement from above points
+            - Provide code examples where applicable
+            - Suggest improvements in file names, directory structure as well
+            - Suggest improvements in project structure as well
+
+            ${{ steps.context.outputs.security_note }}
+
+            ${{ inputs.pr_number && format('PR Number: {0}', inputs.pr_number) || '' }}
