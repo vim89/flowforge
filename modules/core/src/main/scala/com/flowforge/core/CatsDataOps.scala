@@ -2,7 +2,7 @@ package com.flowforge.core
 
 import cats.data._
 import cats.syntax.all._
-import cats.{Applicative, Eval, Functor, Monad}
+import cats.{ Applicative, Eval, Functor, Monad }
 import com.flowforge.TypeClasses.ConfigReader.PipelineConfig
 import com.flowforge.validation.ValidationResult
 

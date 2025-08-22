@@ -2,7 +2,7 @@ package com.flowforge.core
 
 import cats.data.Kleisli
 import cats.implicits.catsSyntaxTuple2Semigroupal
-import cats.{Applicative, Monad}
+import cats.{ Applicative, Monad }
 import com.flowforge.types.FlowForgeError
 
 /**

@@ -15,8 +15,8 @@ jobs:
   # Auto-review for trusted PRs
   claude-review-trusted:
     if: |
-      github.event_name == 'pull_request' && 
-      github.event.pull_request.draft == false && 
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.draft == false &&
       (
         github.event.pull_request.head.repo.full_name == github.repository ||
         github.event.pull_request.author_association == 'COLLABORATOR' ||
@@ -35,7 +35,7 @@ jobs:
   # Info comment for external PRs
   claude-review-external-info:
     if: |
-      github.event_name == 'pull_request' && 
+      github.event_name == 'pull_request' &&
       github.event.pull_request.draft == false &&
       github.event.pull_request.head.repo.full_name != github.repository &&
       github.event.pull_request.author_association != 'COLLABORATOR' &&
@@ -84,11 +84,11 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.issue.number
             });
-            
+
             core.setOutput('head_sha', pr.data.head.sha);
-            
+
             core.setOutput('is_external', pr.data.head.repo.full_name !== pr.data.base.repo.full_name);
-            
+
             return pr.data;
 
       - name: React to comment
@@ -104,7 +104,6 @@ jobs:
               content: 'rocket'
             });
 
-    steps:
       - name: Log External PR Info
         run: |
           echo "::notice::External PR detected - Claude review skipped for security"
@@ -134,18 +133,18 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const comment = `## 🔒 Claude Code Review Status
-            
+
             Thank you for your contribution! This PR is from an external repository, so automated Claude review is disabled for security reasons.
-            
+
             **For maintainers:** To get Claude review for this PR, comment \`@claude\` and I'll trigger a manual review.
-            
+
             **PR Summary:**
             - Files changed: ${{ github.event.pull_request.changed_files }}
             - Additions: +${{ github.event.pull_request.additions }}
             - Deletions: -${{ github.event.pull_request.deletions }}
             - Author: @${{ github.event.pull_request.user.login }}
             `;
-            
+
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -154,11 +153,12 @@ jobs:
             });
 
 
+
   # Call reusable workflow for manual review
   claude-review-manual-execute:
     needs: claude-review-manual
     if: needs.claude-review-manual.result == 'success' 37ed6c2 (Refactored claude code review -)
-    
+
     uses: ./.github/workflows/claude.yml
     with:
       pr_head_sha: ${{ needs.claude-review-manual.outputs.pr_head_sha }}
