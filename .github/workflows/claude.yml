@@ -30,11 +30,9 @@ on:
           - Give revised code of all suggest improvements
           - Give revised improvements in project structure as well
 
-# Prevent multiple Claude reviews for the same PR from running simultaneously
 concurrency:
   group: ${{ github.repository }}-claude-review-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: false
-
 
 jobs:
   claude-review:
@@ -51,9 +49,27 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.event.issue.pull_request.head.sha }}
+
+      # ✅ Step to check if secret exists
+      - name: Check for Claude Token
+        id: check_token
+        run: |
+          if [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+            echo "no_token=true" >> $GITHUB_OUTPUT
+          else
+            echo "no_token=false" >> $GITHUB_OUTPUT
+          fi
+
+      # ✅ Only run Claude review if token is present
       - name: Run Claude code improvements
+        if: steps.check_token.outputs.no_token == 'false'
         uses: anthropics/claude-code-action@beta
         with:
           mode: agent
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           direct_prompt: ${{ github.event.inputs.review_instructions }}
+
+      # ✅ Friendly log if token is missing
+      - name: Skip Claude review (no token configured)
+        if: steps.check_token.outputs.no_token == 'true'
+        run: echo "⚠️ Skipping Claude code review — CLAUDE_CODE_OAUTH_TOKEN not configured."
