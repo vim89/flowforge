@@ -1,19 +1,11 @@
-package com.flowforge.core
+package com.flowforge.core.ops
 
 import cats.data._
-import cats.{ Applicative, Functor, Monad, MonadError }
 import cats.syntax.all._
-import com.flowforge.types._
-import scala.concurrent.duration.FiniteDuration
-import com.flowforge.TypeClasses._
-import com.flowforge.TypeClasses.ConfigReader._
-import com.flowforge.TypeClasses.DataEncoder._
-import com.flowforge.TypeClasses.ContractOps._
-import com.flowforge.TypeClasses.Show._
-import com.flowforge.TypeClasses.ConfigMapOps._
-import com.flowforge.TypeClasses.DataContract._
-import com.flowforge.TypeClasses.BinaryDataOps._
-import com.flowforge.TypeClasses.DataEncoderOps._
+import cats.{Applicative, Functor, Monad}
+import com.flowforge.core.algebra.TypeClasses.ConfigReader._
+import com.flowforge.core.ValidationError
+import com.flowforge.core.types._
 
 /**
  * Complete monad transformers integration for FlowForge

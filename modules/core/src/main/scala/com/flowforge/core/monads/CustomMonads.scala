@@ -1,8 +1,9 @@
-package com.flowforge.core
+package com.flowforge.core.monads
 
 import cats.Monad
 import cats.syntax.all._
-import com.flowforge.types._
+import com.flowforge.core.ValidationError
+import com.flowforge.core.types._
 
 import java.time.Instant
 import scala.annotation.tailrec

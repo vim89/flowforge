@@ -1,4 +1,4 @@
-package com.flowforge
+package com.flowforge.core
 
 /**
  * FlowForge Core Module - Comprehensive Validation Framework
@@ -34,18 +34,20 @@ package com.flowforge
  *   - Integration with refined types for compile-time safety
  *
  * @author
- *   FlowForge Team
+ * FlowForge Team
  * @version 1.0.0
  * @since 2024
  */
 
-import com.flowforge.types._
-import cats.data.{ NonEmptyList, Validated, ValidatedNel }
+import types._
+import cats.data.{NonEmptyList, Validated, ValidatedNel}
 import cats.implicits._
-import cats.{ Applicative, Functor, Semigroup }
-import scala.language.{ higherKinds, implicitConversions }
-import scala.util.{ Failure, Success, Try }
-import java.time.{ Instant, LocalDate }
+import cats.{Applicative, Functor, Semigroup}
+import com.flowforge.core.error.{FormatError, LengthError, PatternError, RangeError, RequiredFieldError}
+
+import scala.language.{higherKinds, implicitConversions}
+import scala.util.{Failure, Success, Try}
+import java.time.{Instant, LocalDate}
 import java.util.regex.Pattern
 
 /**
@@ -86,210 +88,6 @@ package object validation {
    * conditions.
    */
   type ConditionalValidator[A] = (A, A => Boolean) => ValidationResult[A]
-
-  // ===============================
-  // VALIDATION ERROR TYPES
-  // ===============================
-
-  /**
-   * Comprehensive validation error hierarchy. Each error type provides specific context about what
-   * went wrong.
-   */
-  sealed abstract class ValidationError(
-    val field: String,
-    val message: String,
-    val code: String,
-    val context: Metadata = Map.empty
-  ) extends Product
-      with Serializable {
-
-    /**
-     * Add context to a validation error. Enables building rich error information.
-     */
-    def withContext(key: String, value: String): ValidationError = {
-      val newContext = context + (key -> value)
-      this match {
-        case e: RequiredFieldError => e.copy(context = newContext)
-        case e: FormatError        => e.copy(context = newContext)
-        case e: RangeError         => e.copy(context = newContext)
-        case e: LengthError        => e.copy(context = newContext)
-        case e: PatternError       => e.copy(context = newContext)
-        case e: CustomError        => e.copy(context = newContext)
-        case e: CrossFieldError    => e.copy(context = newContext)
-        case e: BusinessRuleError  => e.copy(context = newContext)
-      }
-    }
-
-    /**
-     * Convert validation error to a user-friendly message.
-     */
-    def toUserMessage: String = s"$field: $message"
-
-    /**
-     * Convert validation error to a detailed technical message.
-     */
-    def toTechnicalMessage: String =
-      s"ValidationError(field=$field, code=$code, message=$message, context=$context)"
-  }
-
-  /**
-   * Required field is missing or null.
-   */
-  case class RequiredFieldError(
-    override val field: String,
-    override val context: Metadata = Map.empty
-  ) extends ValidationError(
-        field = field,
-        message = s"Field '$field' is required but was not provided",
-        code = "REQUIRED_FIELD_MISSING",
-        context = context
-      )
-
-  /**
-   * Field value has invalid format.
-   */
-  case class FormatError(
-    override val field: String,
-    expectedFormat: String,
-    actualValue: String,
-    override val context: Metadata = Map.empty
-  ) extends ValidationError(
-        field = field,
-        message =
-          s"Field '$field' has invalid format. Expected: $expectedFormat, got: $actualValue",
-        code = "INVALID_FORMAT",
-        context = context
-      )
-
-  /**
-   * Field value is outside expected range.
-   */
-  case class RangeError(
-    override val field: String,
-    min: Option[Double],
-    max: Option[Double],
-    actualValue: Double,
-    override val context: Metadata = Map.empty
-  ) extends ValidationError(
-        field = field,
-        message = {
-          val bounds = (min, max) match {
-            case (Some(minVal), Some(maxVal)) => s"between $minVal and $maxVal"
-            case (Some(minVal), None)         => s"at least $minVal"
-            case (None, Some(maxVal))         => s"at most $maxVal"
-            case (None, None)                 => "within valid range"
-          }
-          s"Field '$field' must be $bounds, got: $actualValue"
-        },
-        code = "VALUE_OUT_OF_RANGE",
-        context = context
-      )
-
-  /**
-   * Field value has invalid length.
-   */
-  case class LengthError(
-    override val field: String,
-    minLength: Option[Int],
-    maxLength: Option[Int],
-    actualLength: Int,
-    override val context: Metadata = Map.empty
-  ) extends ValidationError(
-        field = field,
-        message = {
-          val bounds = (minLength, maxLength) match {
-            case (Some(min), Some(max)) => s"between $min and $max characters"
-            case (Some(min), None)      => s"at least $min characters"
-            case (None, Some(max))      => s"at most $max characters"
-            case (None, None)           => "valid length"
-          }
-          s"Field '$field' must be $bounds, got: $actualLength characters"
-        },
-        code = "INVALID_LENGTH",
-        context = context
-      )
-
-  /**
-   * Field value doesn't match expected pattern.
-   */
-  case class PatternError(
-    override val field: String,
-    pattern: String,
-    actualValue: String,
-    override val context: Metadata = Map.empty
-  ) extends ValidationError(
-        field = field,
-        message = s"Field '$field' must match pattern '$pattern', got: '$actualValue'",
-        code = "PATTERN_MISMATCH",
-        context = context
-      )
-
-  /**
-   * Custom validation error.
-   */
-  case class CustomError(
-    override val field: String,
-    override val message: String,
-    override val code: String = "CUSTOM_VALIDATION_ERROR",
-    override val context: Metadata = Map.empty
-  ) extends ValidationError(field, message, code, context)
-
-  /**
-   * Cross-field validation error.
-   */
-  case class CrossFieldError(
-    fields: List[String],
-    override val message: String,
-    override val code: String = "CROSS_FIELD_VALIDATION_ERROR",
-    override val context: Metadata = Map.empty
-  ) extends ValidationError(
-        field = fields.mkString(","),
-        message = message,
-        code = code,
-        context = context
-      )
-
-  /**
-   * Business rule validation error.
-   */
-  case class BusinessRuleError(
-    rule: String,
-    override val field: String,
-    override val message: String,
-    override val context: Metadata = Map.empty
-  ) extends ValidationError(
-        field = field,
-        message = s"Business rule '$rule' violation: $message",
-        code = "BUSINESS_RULE_VIOLATION",
-        context = context
-      )
-
-  /**
-   * Decode error.
-   */
-  case class DecodeError(
-    override val field: String,
-    override val context: Metadata = Map.empty
-  ) extends ValidationError(
-        field = field,
-        message = s"Cannot decode '$field'",
-        code = "DECODE_ERROR",
-        context = context
-      )
-
-  /**
-   * Timeout error.
-   */
-  case class TimeoutError(
-    override val field: String,
-    error: Throwable,
-    override val context: Metadata = Map.empty
-  ) extends ValidationError(
-        field = field,
-        message = s"Time out, duration: $field. [${error.getMessage}]",
-        code = "TIME_OUT",
-        context = context
-      )
 
   // ===============================
   // VALIDATION RULE DEFINITIONS
@@ -342,27 +140,28 @@ package object validation {
    */
   sealed trait ValidationSeverity extends Product with Serializable {
     def name: String
+
     def level: Int
   }
 
   object ValidationSeverity {
     case object Info extends ValidationSeverity {
-      val name  = "info"
+      val name = "info"
       val level = 1
     }
 
     case object Warning extends ValidationSeverity {
-      val name  = "warning"
+      val name = "warning"
       val level = 2
     }
 
     case object Error extends ValidationSeverity {
-      val name  = "error"
+      val name = "error"
       val level = 3
     }
 
     case object Critical extends ValidationSeverity {
-      val name  = "critical"
+      val name = "critical"
       val level = 4
     }
 
@@ -381,7 +180,7 @@ package object validation {
       case Some(v) =>
         v match {
           case s: String if s.trim.isEmpty => RequiredFieldError(field).invalidNel
-          case _                           => value.validNel
+          case _ => value.validNel
         }
       case None => RequiredFieldError(field).invalidNel
     }
@@ -393,14 +192,14 @@ package object validation {
    * Rule for string length validation.
    */
   case class LengthRule(
-    field: String,
-    minLength: Option[Int] = None,
-    maxLength: Option[Int] = None
-  ) extends ValidationRule[String] {
+                         field: String,
+                         minLength: Option[Int] = None,
+                         maxLength: Option[Int] = None
+                       ) extends ValidationRule[String] {
 
     def validate(value: String): ValidationResult[String] = {
       val length = value.length
-      val valid  = minLength.forall(length >= _) && maxLength.forall(length <= _)
+      val valid = minLength.forall(length >= _) && maxLength.forall(length <= _)
 
       if (valid) value.validNel
       else LengthError(field, minLength, maxLength, length).invalidNel
@@ -409,9 +208,9 @@ package object validation {
     def description: String = {
       val bounds = (minLength, maxLength) match {
         case (Some(min), Some(max)) => s"between $min and $max characters"
-        case (Some(min), None)      => s"at least $min characters"
-        case (None, Some(max))      => s"at most $max characters"
-        case (None, None)           => "any length"
+        case (Some(min), None) => s"at least $min characters"
+        case (None, Some(max)) => s"at most $max characters"
+        case (None, None) => "any length"
       }
       s"Field '$field' must be $bounds"
     }
@@ -421,10 +220,10 @@ package object validation {
    * Rule for numeric range validation.
    */
   case class RangeRule[A: Numeric](
-    field: String,
-    min: Option[A] = None,
-    max: Option[A] = None
-  ) extends ValidationRule[A] {
+                                    field: String,
+                                    min: Option[A] = None,
+                                    max: Option[A] = None
+                                  ) extends ValidationRule[A] {
 
     private val numeric = implicitly[Numeric[A]]
 
@@ -446,9 +245,9 @@ package object validation {
     def description: String = {
       val bounds = (min, max) match {
         case (Some(minVal), Some(maxVal)) => s"between $minVal and $maxVal"
-        case (Some(minVal), None)         => s"at least $minVal"
-        case (None, Some(maxVal))         => s"at most $maxVal"
-        case (None, None)                 => "within valid range"
+        case (Some(minVal), None) => s"at least $minVal"
+        case (None, Some(maxVal)) => s"at most $maxVal"
+        case (None, None) => "within valid range"
       }
       s"Field '$field' must be $bounds"
     }
@@ -458,10 +257,10 @@ package object validation {
    * Rule for pattern matching validation.
    */
   case class PatternRule(
-    field: String,
-    pattern: Pattern,
-    patternDescription: String
-  ) extends ValidationRule[String] {
+                          field: String,
+                          pattern: Pattern,
+                          patternDescription: String
+                        ) extends ValidationRule[String] {
 
     def validate(value: String): ValidationResult[String] =
       if (pattern.matcher(value).matches()) value.validNel
@@ -512,11 +311,11 @@ package object validation {
    * Rule for custom validation logic.
    */
   case class CustomRule[A](
-    field: String,
-    predicate: A => Boolean,
-    errorMessage: A => String,
-    ruleDescription: String
-  ) extends ValidationRule[A] {
+                            field: String,
+                            predicate: A => Boolean,
+                            errorMessage: A => String,
+                            ruleDescription: String
+                          ) extends ValidationRule[A] {
 
     def validate(value: A): ValidationResult[A] =
       if (predicate(value)) value.validNel
@@ -533,7 +332,7 @@ package object validation {
    * AND composition of validation rules. Both rules must pass for the combined rule to pass.
    */
   case class AndRule[A](left: ValidationRule[A], right: ValidationRule[A])
-      extends ValidationRule[A] {
+    extends ValidationRule[A] {
     def validate(value: A): ValidationResult[A] =
       (left.validate(value), right.validate(value)).mapN((_, _) => value)
 
@@ -544,11 +343,11 @@ package object validation {
    * OR composition of validation rules. Either rule can pass for the combined rule to pass.
    */
   case class OrRule[A](left: ValidationRule[A], right: ValidationRule[A])
-      extends ValidationRule[A] {
+    extends ValidationRule[A] {
     def validate(value: A): ValidationResult[A] =
       left.validate(value) match {
-        case valid @ Validated.Valid(_) => valid
-        case Validated.Invalid(_)       => right.validate(value)
+        case valid@Validated.Valid(_) => valid
+        case Validated.Invalid(_) => right.validate(value)
       }
 
     def description: String = s"(${left.description}) OR (${right.description})"
@@ -558,9 +357,9 @@ package object validation {
    * Conditional validation rule. Only applies the rule if the predicate is true.
    */
   case class ConditionalRule[A](
-    rule: ValidationRule[A],
-    condition: A => Boolean
-  ) extends ValidationRule[A] {
+                                 rule: ValidationRule[A],
+                                 condition: A => Boolean
+                               ) extends ValidationRule[A] {
 
     def validate(value: A): ValidationResult[A] =
       if (condition(value)) rule.validate(value)
@@ -631,18 +430,18 @@ package object validation {
      * Create custom validators.
      */
     def custom[A](
-      field: String,
-      predicate: A => Boolean,
-      errorMessage: A => String,
-      description: String
-    ): ValidationRule[A] = CustomRule(field, predicate, errorMessage, description)
+                   field: String,
+                   predicate: A => Boolean,
+                   errorMessage: A => String,
+                   description: String
+                 ): ValidationRule[A] = CustomRule(field, predicate, errorMessage, description)
 
     def custom[A](
-      field: String,
-      predicate: A => Boolean,
-      errorMessage: String,
-      description: String
-    ): ValidationRule[A] = CustomRule(field, predicate, _ => errorMessage, description)
+                   field: String,
+                   predicate: A => Boolean,
+                   errorMessage: String,
+                   description: String
+                 ): ValidationRule[A] = CustomRule(field, predicate, _ => errorMessage, description)
 
     /**
      * Validate that a value is in a set of allowed values.
@@ -659,7 +458,7 @@ package object validation {
      * Validate that a string is not empty.
      */
     def nonEmpty(field: String): ValidationRule[String] =
-      custom(field, _.trim.nonEmpty, "Must not be empty", "non-empty string")
+      custom(field, !_.trim.isEmpty, "Must not be empty", "non-empty string")
 
     /**
      * Validate that a collection is not empty.
@@ -688,7 +487,7 @@ package object validation {
    * The validation engine coordinates validation rule execution and provides advanced validation
    * capabilities.
    */
-  class ValidationEngine[A] private (private val rules: List[ValidationRule[A]]) {
+  class ValidationEngine[A] private(private val rules: List[ValidationRule[A]]) {
 
     /**
      * Add a validation rule to this engine.
@@ -722,7 +521,7 @@ package object validation {
       }
 
       val allErrors = ruleResults.flatMap(_.result.fold(_.toList, _ => Nil))
-      val isValid   = allErrors.isEmpty
+      val isValid = allErrors.isEmpty
 
       ValidationReport(value, ruleResults, isValid, allErrors)
     }
@@ -756,10 +555,11 @@ package object validation {
    * Result of applying a single validation rule.
    */
   case class ValidationRuleResult[A](
-    rule: ValidationRule[A],
-    result: ValidationResult[A]
-  ) {
-    def isValid: Boolean              = result.isValid
+                                      rule: ValidationRule[A],
+                                      result: ValidationResult[A]
+                                    ) {
+    def isValid: Boolean = result.isValid
+
     def errors: List[ValidationError] = result.fold(_.toList, _ => Nil)
   }
 
@@ -767,11 +567,11 @@ package object validation {
    * Comprehensive validation report.
    */
   case class ValidationReport[A](
-    value: A,
-    ruleResults: List[ValidationRuleResult[A]],
-    isValid: Boolean,
-    errors: List[ValidationError]
-  ) {
+                                  value: A,
+                                  ruleResults: List[ValidationRuleResult[A]],
+                                  isValid: Boolean,
+                                  errors: List[ValidationError]
+                                ) {
 
     /**
      * Get errors by severity.
@@ -801,12 +601,12 @@ package object validation {
    * Validation summary statistics.
    */
   case class ValidationSummary(
-    totalRules: Int,
-    passedRules: Int,
-    failedRules: Int,
-    totalErrors: Int,
-    errorsBySeverity: Map[ValidationSeverity, Int]
-  ) {
+                                totalRules: Int,
+                                passedRules: Int,
+                                failedRules: Int,
+                                totalErrors: Int,
+                                errorsBySeverity: Map[ValidationSeverity, Int]
+                              ) {
     def successRate: Double = if (totalRules > 0) passedRules.toDouble / totalRules else 0.0
   }
 
@@ -824,18 +624,18 @@ package object validation {
      * Validate pipeline configuration.
      */
     def validatePipelineConfig(
-      config: Map[String, String]
-    ): ValidationResult[Map[String, String]] = {
+                                config: Map[String, String]
+                              ): ValidationResult[Map[String, String]] = {
       val nameValidation = config.get("name") match {
         case Some(name) => Validators.nonEmpty("name").validate(name).map(_ => config)
-        case None       => RequiredFieldError("name").invalidNel
+        case None => RequiredFieldError("name").invalidNel
       }
 
       val typeValidation = config.get("type") match {
         case Some(pipelineType) =>
           WorkflowType.fromString(pipelineType) match {
             case Some(_) => config.validNel
-            case None    => FormatError("type", "valid workflow type", pipelineType).invalidNel
+            case None => FormatError("type", "valid workflow type", pipelineType).invalidNel
           }
         case None => RequiredFieldError("type").invalidNel
       }
@@ -847,18 +647,18 @@ package object validation {
      * Validate data source configuration.
      */
     def validateDataSourceConfig(
-      config: Map[String, String]
-    ): ValidationResult[Map[String, String]] = {
+                                  config: Map[String, String]
+                                ): ValidationResult[Map[String, String]] = {
       val pathValidation = config.get("path") match {
         case Some(path) => Validators.nonEmpty("path").validate(path).map(_ => config)
-        case None       => RequiredFieldError("path").invalidNel
+        case None => RequiredFieldError("path").invalidNel
       }
 
       val formatValidation = config.get("format") match {
         case Some(format) =>
           ContentType.fromString(format) match {
             case Some(_) => config.validNel
-            case None    => FormatError("format", "valid content type", format).invalidNel
+            case None => FormatError("format", "valid content type", format).invalidNel
           }
         case None => RequiredFieldError("format").invalidNel
       }
@@ -872,10 +672,10 @@ package object validation {
     def validateS3Config(bucket: String, key: String): ValidationResult[(String, String)] = {
       val bucketValidation = Refined.validS3Bucket(bucket) match {
         case Some(_) => bucket.validNel
-        case None    => FormatError("bucket", "valid S3 bucket name", bucket).invalidNel
+        case None => FormatError("bucket", "valid S3 bucket name", bucket).invalidNel
       }
 
-      val keyValidation = if (key.trim.nonEmpty && !key.startsWith("/")) {
+      val keyValidation = if (!key.trim.isEmpty && !key.startsWith("/")) {
         key.validNel
       } else {
         FormatError("key", "valid S3 key (no leading slash)", key).invalidNel
@@ -890,7 +690,7 @@ package object validation {
     def validateGcsConfig(path: String): ValidationResult[String] =
       Refined.validGcsPath(path) match {
         case Some(_) => path.validNel
-        case None    => FormatError("path", "valid GCS path (gs://bucket/path)", path).invalidNel
+        case None => FormatError("path", "valid GCS path (gs://bucket/path)", path).invalidNel
       }
 
     /**
@@ -913,7 +713,7 @@ package object validation {
     def validateBatchSize(size: Int): ValidationResult[BatchSize] =
       BatchSize(size) match {
         case Some(batchSize) => batchSize.validNel
-        case None            => RangeError("batchSize", Some(1), None, size).invalidNel
+        case None => RangeError("batchSize", Some(1), None, size).invalidNel
       }
 
     /**
@@ -922,7 +722,7 @@ package object validation {
     def validateRefreshType(refreshType: String): ValidationResult[RefreshType] =
       RefreshType.fromString(refreshType) match {
         case Some(rt) => rt.validNel
-        case None     => FormatError("refreshType", "valid refresh type", refreshType).invalidNel
+        case None => FormatError("refreshType", "valid refresh type", refreshType).invalidNel
       }
   }
 
@@ -992,7 +792,7 @@ package object validation {
      * Convert a Try to a ValidationResult.
      */
     def fromTry[A](field: String, tryValue: Try[A]): ValidationResult[A] = tryValue match {
-      case Success(value)     => value.validNel
+      case Success(value) => value.validNel
       case Failure(exception) => CustomError(field, exception.getMessage).invalidNel
     }
 
@@ -1000,13 +800,13 @@ package object validation {
      * Convert an Option to a ValidationResult.
      */
     def fromOption[A](
-      field: String,
-      option: Option[A],
-      errorMessage: String = "Value is required"
-    ): ValidationResult[A] =
+                       field: String,
+                       option: Option[A],
+                       errorMessage: String = "Value is required"
+                     ): ValidationResult[A] =
       option match {
         case Some(value) => value.validNel
-        case None        => CustomError(field, errorMessage).invalidNel
+        case None => CustomError(field, errorMessage).invalidNel
       }
 
     /**
@@ -1015,17 +815,17 @@ package object validation {
     def fromEither[A](field: String, either: Either[String, A]): ValidationResult[A] =
       either match {
         case Right(value) => value.validNel
-        case Left(error)  => CustomError(field, error).invalidNel
+        case Left(error) => CustomError(field, error).invalidNel
       }
 
     /**
      * Validate all items in a list.
      */
     def validateList[A](
-      field: String,
-      list: List[A],
-      rule: ValidationRule[A]
-    ): ValidationResult[List[A]] =
+                         field: String,
+                         list: List[A],
+                         rule: ValidationRule[A]
+                       ): ValidationResult[List[A]] =
       list.zipWithIndex.traverse { case (item, index) =>
         rule
           .validate(item)
@@ -1040,10 +840,10 @@ package object validation {
      * Validate all values in a map.
      */
     def validateMap[K, V](
-      field: String,
-      map: Map[K, V],
-      valueRule: ValidationRule[V]
-    ): ValidationResult[Map[K, V]] =
+                           field: String,
+                           map: Map[K, V],
+                           valueRule: ValidationRule[V]
+                         ): ValidationResult[Map[K, V]] =
       map.toList.traverse { case (key, value) =>
         valueRule
           .validate(value)

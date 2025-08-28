@@ -1,10 +1,11 @@
-package com.flowforge.core
+package com.flowforge.core.ops
 
 import cats.data._
 import cats.syntax.all._
-import cats.{ Applicative, Eval, Functor, Monad }
-import com.flowforge.TypeClasses.ConfigReader.PipelineConfig
-import com.flowforge.validation.ValidationResult
+import cats.{Applicative, Eval, Functor, Monad}
+import com.flowforge.core.algebra.TypeClasses.ConfigReader.PipelineConfig
+import com.flowforge.core.validation.ValidationResult
+import com.flowforge.core.types._
 
 import java.time.Instant
 

@@ -34,16 +34,16 @@
  */
 package com.flowforge
 
-import scala.language.{ higherKinds, implicitConversions }
+import scala.language.{higherKinds, implicitConversions}
 import scala.concurrent.duration.FiniteDuration
-import scala.util.{ Failure, Success, Try }
-import java.time.{ Instant, LocalDate }
+import scala.util.{Failure, Success, Try}
+import java.time.{Instant, LocalDate}
 import java.util.UUID
-
-import cats.data.{ Kleisli, NonEmptyList, Reader, State, Validated, ValidatedNel, Writer }
-import cats.effect.{ Clock, Resource }
-import cats.{ Applicative, Functor, Monad }
+import cats.data.{Kleisli, NonEmptyList, Reader, State, Validated, ValidatedNel, Writer}
+import cats.effect.{Clock, Resource}
+import cats.{Applicative, Functor, Monad}
 import cats.implicits._
+import com.flowforge.core.algebra.{EffectSystem, TypeClasses}
 
 /**
  * The core package object provides the main API for FlowForge core functionality.
@@ -598,7 +598,7 @@ package object core {
 
   // Import syntax extensions
   import validation.ValidationSyntax
-  import TypeClasses.{ BinaryDataOps, ConfigMapOps, ContractOps, DataEncoderOps }
+  import com.flowforge.core.algebra.TypeClasses.{ BinaryDataOps, ConfigMapOps, ContractOps, DataEncoderOps }
   import pipeline.{ PipelineComponentOps, PipelineOps }
 
   // ===============================

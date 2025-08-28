@@ -45,13 +45,12 @@ import cats.Applicative
 import cats.data.Kleisli
 import cats.effect.Clock
 import cats.implicits._
-import com.flowforge.types._
-import com.flowforge.validation._
-import com.flowforge.TypeClasses._
+import com.flowforge.core.algebra.EffectSystem
+
 import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.FiniteDuration
-import scala.language.{ higherKinds, implicitConversions }
+import scala.language.implicitConversions
 
 /**
  * The pipeline component system provides the foundation for building composable, type-safe data

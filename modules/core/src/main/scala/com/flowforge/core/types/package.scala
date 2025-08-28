@@ -1,4 +1,4 @@
-package com.flowforge
+package com.flowforge.core
 
 /**
  * FlowForge Core Module - Type System & Domain Types
@@ -41,9 +41,11 @@ package com.flowforge
  * @since 2024
  */
 
-import scala.language.{ higherKinds, implicitConversions }
-import scala.util.{ Failure, Success, Try }
-import java.time.{ Duration, Instant, LocalDate }
+import cats.data.ValidatedNel
+
+import scala.language.{higherKinds, implicitConversions}
+import scala.util.{Failure, Success, Try}
+import java.time.{Duration, Instant, LocalDate}
 import java.util.UUID
 
 /**
@@ -85,6 +87,11 @@ package object types {
    * Either for domain operations.
    */
   type Result[+A] = Either[FlowForgeError, A]
+
+  // ===== VALIDATION TYPES (Fix the validation result type) =====
+  type ValidationError = String  // Simple string for now
+  type ValidationResult[A] = ValidatedNel[String, A]  // Fixed: use String, not ValidationError
+
 
   // ===============================
   // PHANTOM TYPES FOR STATE SAFETY

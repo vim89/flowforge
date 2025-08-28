@@ -1,3 +1,5 @@
+import sbt.util
+
 import scala.collection.Seq
 // ===== GLOBAL BUILD SETTINGS =====
 ThisBuild / organization := "com.flowforge"

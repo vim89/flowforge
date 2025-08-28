@@ -9,14 +9,14 @@
  * @version 0.1.0
  * @since Aug-2025
  */
-package com.flowforge.core
+package com.flowforge.core.algebra
 
 import cats.effect.implicits.monadCancelOps_
 
 import scala.annotation.implicitNotFound
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 /**
  * The unified effect system abstraction that forms the foundation of FlowForge.
@@ -649,7 +649,7 @@ object EffectSystem {
    */
   implicit val zioEffectSystem: EffectSystem[zio.Task] = {
     import zio.interop.catz._
-    import zio.{ Task, ZIO }
+    import zio.{Task, ZIO}
 
     new EffectSystem[Task] {
       // Functor implementation

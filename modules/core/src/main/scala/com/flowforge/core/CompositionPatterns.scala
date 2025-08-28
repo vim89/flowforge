@@ -3,7 +3,7 @@ package com.flowforge.core
 import cats.data.Kleisli
 import cats.implicits.catsSyntaxTuple2Semigroupal
 import cats.{ Applicative, Monad }
-import com.flowforge.types.FlowForgeError
+import com.flowforge.core.types.FlowForgeError
 
 /**
  * Advanced composition patterns for FlowForge pipelines

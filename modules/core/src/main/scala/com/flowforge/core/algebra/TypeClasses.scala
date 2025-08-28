@@ -38,16 +38,16 @@
  * @version 1.0.0
  * @since 2024
  */
-package com.flowforge
+package com.flowforge.core.algebra
 
 import cats.implicits._
-import cats.{ Contravariant, Functor }
-import com.flowforge.types._
-import com.flowforge.validation._
+import cats.{Contravariant, Functor}
+import com.flowforge.core.types._
+
 import java.nio.charset.StandardCharsets
-import java.time.{ Duration, Instant, LocalDate }
-import java.util.{ Base64, UUID }
-import scala.language.{ higherKinds, implicitConversions }
+import java.time.{Duration, Instant, LocalDate}
+import java.util.{Base64, UUID}
+import scala.language.implicitConversions
 import scala.util.Try
 
 /**

@@ -1,4 +1,4 @@
-package com.flowforge.types
+package com.flowforge.core.types
 
 /**
  * Type class instances and implicit conversions for core types.
