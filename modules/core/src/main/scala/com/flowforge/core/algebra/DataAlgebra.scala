@@ -682,17 +682,22 @@ object DataAlgebra {
   object DataEncoder {
     implicit def anyDataEncoder[A]: DataEncoder[A] = new DataEncoder[A] {
       def encode(value: A): EncodedData = EncodedData(value.toString.getBytes)
-      def schema: DataSchema            = DataSchema("any", Map.empty, List.empty)
+      def schema: DataSchema            = DataSchema.builder.build
     }
 
     implicit val stringDataEncoder: DataEncoder[String] = new DataEncoder[String] {
       def encode(value: String): EncodedData = EncodedData(value.getBytes)
-      def schema: DataSchema                 = DataSchema("string", Map.empty, List.empty)
+      def schema: DataSchema                 = DataSchema.builder.build
     }
 
     implicit val intDataEncoder: DataEncoder[Int] = new DataEncoder[Int] {
       def encode(value: Int): EncodedData = EncodedData(value.toString.getBytes)
-      def schema: DataSchema              = DataSchema("int", Map.empty, List.empty)
+      def schema: DataSchema              = DataSchema.builder.build
+    }
+
+    implicit val longDataEncoder: DataEncoder[Long] = new DataEncoder[Long] {
+      def encode(value: Long): EncodedData = EncodedData(value.toString.getBytes)
+      def schema: DataSchema              = DataSchema.builder.build
     }
   }
 
@@ -705,24 +710,13 @@ object DataAlgebra {
             s"Generic decoder cannot decode to specific type A"
           )
         )
-      def expectedSchema: DataSchema = DataSchema("any", Map.empty, List.empty)
+      def expectedSchema: DataSchema = DataSchema.builder.build
     }
 
     implicit val stringDataDecoder: DataDecoder[String] = new DataDecoder[String] {
       def decode(data: EncodedData): Either[FlowForgeError, String] =
         Right(new String(data.bytes))
-      def expectedSchema: DataSchema = DataSchema("string", Map.empty, List.empty)
+      def expectedSchema: DataSchema = DataSchema.builder.build
     }
   }
-
-  // ===============================
-  // INTEGRATION WITH EXISTING TYPES
-  // ===============================
-
-  // Use existing FlowForge types where possible
-  case class DataSchema(
-    name: String,
-    fields: Map[String, String],
-    constraints: List[String]
-  )
 }

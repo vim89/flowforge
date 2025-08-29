@@ -1,12 +1,14 @@
 package com.flowforge.core.instances
 
-import cats.{ Applicative, Functor, Monad, Show }
 import cats.data.{ Kleisli, NonEmptyList, Validated, ValidatedNel }
-import cats.effect.{ Resource, Sync }
 import cats.implicits._
+import cats.{ Applicative, Functor, Monad, Show }
 import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
-import com.flowforge.core.types._
+import com.flowforge.core.patterns.ReaderPattern.ResourceConfig
 import com.flowforge.core.syntax.ValidationSyntax._
+import com.flowforge.core.types._
+import com.flowforge.core.{ algebra, types }
+
 import java.time.Instant
 import java.util.UUID
 
@@ -62,7 +64,7 @@ object DataInstances {
   }
 
   implicit val retryPolicyShow: Show[RetryPolicy] = Show.show { policy =>
-    s"RetryPolicy(maxRetries=${policy.maxRetries}, backoffMultiplier=${policy.backoffMultiplier})"
+    s"RetryPolicy(maxRetries=${policy.maxRetries}, backoffMultiplier=${policy.backoffFactor})"
   }
 
   implicit val flowForgeErrorShow: Show[FlowForgeError] = Show.show { error =>
@@ -88,7 +90,7 @@ object DataInstances {
    * Show instance for Dataset
    */
   implicit def datasetShow[A: Show]: Show[DataAlgebra.Dataset[A]] = Show.show { dataset =>
-    s"Dataset(id=${dataset.id}, size=${dataset.size}, schema=${dataset.schema.name})"
+    s"Dataset(id=${dataset.id.show}, size=${dataset.size.show}, schema=${dataset.schema.show})"
   }
 
   /**
@@ -98,47 +100,20 @@ object DataInstances {
     new DataAlgebra.DataEncoder[String] {
       def encode(value: String): DataAlgebra.EncodedData =
         DataAlgebra.EncodedData(value.getBytes("UTF-8"))
-      def schema: DataAlgebra.DataSchema =
-        DataAlgebra.DataSchema("string", Map("type" -> "string"), List("non-null"))
+      def schema: DataSchema = DataAlgebra.DataEncoder.stringDataEncoder.schema
     }
 
   implicit val intDataEncoder: DataAlgebra.DataEncoder[Int] = new DataAlgebra.DataEncoder[Int] {
     def encode(value: Int): DataAlgebra.EncodedData =
       DataAlgebra.EncodedData(value.toString.getBytes("UTF-8"))
-    def schema: DataAlgebra.DataSchema =
-      DataAlgebra.DataSchema("int", Map("type" -> "integer"), List("non-null"))
+    def schema: DataSchema = DataAlgebra.DataEncoder.intDataEncoder.schema
   }
 
   implicit val longDataEncoder: DataAlgebra.DataEncoder[Long] = new DataAlgebra.DataEncoder[Long] {
     def encode(value: Long): DataAlgebra.EncodedData =
       DataAlgebra.EncodedData(value.toString.getBytes("UTF-8"))
-    def schema: DataAlgebra.DataSchema =
-      DataAlgebra.DataSchema("long", Map("type" -> "long"), List("non-null"))
+    def schema: DataSchema = DataAlgebra.DataEncoder.longDataEncoder.schema
   }
-
-  implicit val doubleDataEncoder: DataAlgebra.DataEncoder[Double] =
-    new DataAlgebra.DataEncoder[Double] {
-      def encode(value: Double): DataAlgebra.EncodedData =
-        DataAlgebra.EncodedData(value.toString.getBytes("UTF-8"))
-      def schema: DataAlgebra.DataSchema =
-        DataAlgebra.DataSchema("double", Map("type" -> "double"), List("non-null"))
-    }
-
-  implicit val booleanDataEncoder: DataAlgebra.DataEncoder[Boolean] =
-    new DataAlgebra.DataEncoder[Boolean] {
-      def encode(value: Boolean): DataAlgebra.EncodedData =
-        DataAlgebra.EncodedData(value.toString.getBytes("UTF-8"))
-      def schema: DataAlgebra.DataSchema =
-        DataAlgebra.DataSchema("boolean", Map("type" -> "boolean"), List("non-null"))
-    }
-
-  implicit val instantDataEncoder: DataAlgebra.DataEncoder[Instant] =
-    new DataAlgebra.DataEncoder[Instant] {
-      def encode(value: Instant): DataAlgebra.EncodedData =
-        DataAlgebra.EncodedData(value.toString.getBytes("UTF-8"))
-      def schema: DataAlgebra.DataSchema =
-        DataAlgebra.DataSchema("timestamp", Map("type" -> "timestamp"), List("non-null"))
-    }
 
   /**
    * Generic encoder for case classes (simplified - would use reflection/macros in real
@@ -148,12 +123,7 @@ object DataInstances {
     new DataAlgebra.DataEncoder[A] {
       def encode(value: A): DataAlgebra.EncodedData =
         DataAlgebra.EncodedData(value.toString.getBytes("UTF-8"))
-      def schema: DataAlgebra.DataSchema =
-        DataAlgebra.DataSchema(
-          name = value.getClass.getSimpleName.toLowerCase,
-          fields = Map("type" -> "record"),
-          constraints = List("non-null")
-        )
+      def schema: DataSchema = DataSchema.builder.build
     }
 
   /**
@@ -163,8 +133,7 @@ object DataInstances {
     new DataAlgebra.DataDecoder[String] {
       def decode(data: DataAlgebra.EncodedData): Either[FlowForgeError, String] =
         Right(new String(data.bytes, "UTF-8"))
-      def expectedSchema: DataAlgebra.DataSchema =
-        DataAlgebra.DataSchema("string", Map("type" -> "string"), List("non-null"))
+      def expectedSchema: DataSchema = DataSchema.builder.build
     }
 
   implicit val intDataDecoder: DataAlgebra.DataDecoder[Int] = new DataAlgebra.DataDecoder[Int] {
@@ -175,12 +144,11 @@ object DataInstances {
         .toEither
         .left
         .map(e =>
-          FlowForgeError
-            .DataProcessingError(s"Cannot decode '$str' as Int: ${e.getMessage}", Some(e))
+          DataProcessingError.ProcessingFailure(s"Cannot decode '$str' as Int", e.getMessage)
         )
     }
-    def expectedSchema: DataAlgebra.DataSchema =
-      DataAlgebra.DataSchema("int", Map("type" -> "integer"), List("non-null"))
+
+    def expectedSchema: DataSchema = DataSchema.builder.build
   }
 
   implicit val longDataDecoder: DataAlgebra.DataDecoder[Long] = new DataAlgebra.DataDecoder[Long] {
@@ -191,12 +159,10 @@ object DataInstances {
         .toEither
         .left
         .map(e =>
-          FlowForgeError
-            .DataProcessingError(s"Cannot decode '$str' as Long: ${e.getMessage}", Some(e))
+          DataProcessingError.ProcessingFailure(s"Cannot decode '$str' as Long", e.getMessage)
         )
     }
-    def expectedSchema: DataAlgebra.DataSchema =
-      DataAlgebra.DataSchema("long", Map("type" -> "long"), List("non-null"))
+    def expectedSchema: DataSchema = DataSchema.builder.build
   }
 
   implicit val doubleDataDecoder: DataAlgebra.DataDecoder[Double] =
@@ -208,12 +174,10 @@ object DataInstances {
           .toEither
           .left
           .map(e =>
-            FlowForgeError
-              .DataProcessingError(s"Cannot decode '$str' as Double: ${e.getMessage}", Some(e))
+            DataProcessingError.ProcessingFailure(s"Cannot decode '$str' as Double", e.getMessage)
           )
       }
-      def expectedSchema: DataAlgebra.DataSchema =
-        DataAlgebra.DataSchema("double", Map("type" -> "double"), List("non-null"))
+      def expectedSchema: DataSchema = DataSchema.builder.build
     }
 
   implicit val booleanDataDecoder: DataAlgebra.DataDecoder[Boolean] =
@@ -224,11 +188,15 @@ object DataInstances {
           case "true" | "1" | "yes" => Right(true)
           case "false" | "0" | "no" => Right(false)
           case _ =>
-            Left(FlowForgeError.DataProcessingError(s"Cannot decode '$str' as Boolean", None))
+            Left(
+              DataProcessingError.ProcessingFailure(
+                s"Cannot decode '$str' as Int",
+                "Invalid boolean format"
+              )
+            )
         }
       }
-      def expectedSchema: DataAlgebra.DataSchema =
-        DataAlgebra.DataSchema("boolean", Map("type" -> "boolean"), List("non-null"))
+      def expectedSchema: DataSchema = DataSchema.builder.build
     }
 
   implicit val instantDataDecoder: DataAlgebra.DataDecoder[Instant] =
@@ -240,12 +208,10 @@ object DataInstances {
           .toEither
           .left
           .map(e =>
-            FlowForgeError
-              .DataProcessingError(s"Cannot decode '$str' as Instant: ${e.getMessage}", Some(e))
+            DataProcessingError.ProcessingFailure(s"Cannot decode '$str' as Instant", e.getMessage)
           )
       }
-      def expectedSchema: DataAlgebra.DataSchema =
-        DataAlgebra.DataSchema("timestamp", Map("type" -> "timestamp"), List("non-null"))
+      def expectedSchema: DataSchema = DataSchema.builder.build
     }
 
   // ===============================
@@ -285,18 +251,19 @@ object DataInstances {
   /**
    * Functor instance for PipelineComponent (Kleisli)
    */
-  implicit def pipelineComponentFunctor[F[_]: Functor, A]: Functor[Kleisli[F, A, *]] =
-    new Functor[Kleisli[F, A, *]] {
+  implicit def pipelineComponentFunctor[F[_]: Functor, A]
+    : Functor[({ type L[X] = Kleisli[F, A, X] })#L] =
+    new Functor[({ type L[X] = Kleisli[F, A, X] })#L] {
       def map[B, C](fa: Kleisli[F, A, B])(f: B => C): Kleisli[F, A, C] = fa.map(f)
     }
 
   /**
    * Applicative instance for PipelineComponent
    */
-  implicit def pipelineComponentApplicative[F[_]: Applicative, A]: Applicative[Kleisli[F, A, *]] =
-    new Applicative[Kleisli[F, A, *]] {
+  implicit def pipelineComponentApplicative[F[_]: Applicative, A]
+    : Applicative[({ type L[X] = Kleisli[F, A, X] })#L] =
+    new Applicative[({ type L[X] = Kleisli[F, A, X] })#L] {
       def pure[B](x: B): Kleisli[F, A, B] = Kleisli.pure(x)
-
       def ap[B, C](ff: Kleisli[F, A, B => C])(fa: Kleisli[F, A, B]): Kleisli[F, A, C] =
         ff.ap(fa)
     }
@@ -304,15 +271,15 @@ object DataInstances {
   /**
    * Monad instance for PipelineComponent
    */
-  implicit def pipelineComponentMonad[F[_]: Monad, A]: Monad[Kleisli[F, A, *]] =
-    new Monad[Kleisli[F, A, *]] {
+  implicit def pipelineComponentMonad[F[_]: Monad, A]: Monad[({ type L[X] = Kleisli[F, A, X] })#L] =
+    new Monad[({ type L[X] = Kleisli[F, A, X] })#L] {
       def pure[B](x: B): Kleisli[F, A, B] = Kleisli.pure(x)
-
       def flatMap[B, C](fa: Kleisli[F, A, B])(f: B => Kleisli[F, A, C]): Kleisli[F, A, C] =
         fa.flatMap(f)
-
       def tailRecM[B, C](b: B)(f: B => Kleisli[F, A, Either[B, C]]): Kleisli[F, A, C] =
-        Kleisli.tailRecM(b)(f)
+        Kleisli { a =>
+          Monad[F].tailRecM(b)(b0 => f(b0).run(a))
+        }
     }
 
   // ===============================
@@ -324,10 +291,7 @@ object DataInstances {
    */
   implicit val stringDataContract: DataContract[String] = { str =>
     str
-      .validIf(
-        str.nonEmpty,
-        FlowForgeError.ValidationError("String cannot be empty", None)
-      )
+      .validIf(!str.isEmpty, ValidationError.MissingRequiredField("String cannot be empty"))
       .map(_ => ())
   }
 
@@ -335,7 +299,7 @@ object DataInstances {
     int
       .validIf(
         int >= 0,
-        FlowForgeError.ValidationError(s"Integer $int must be non-negative", None)
+        ValidationError.MissingRequiredField(s"Integer $int must be non-negative")
       )
       .map(_ => ())
   }
@@ -344,7 +308,7 @@ object DataInstances {
     double
       .validIf(
         !double.isNaN && !double.isInfinite,
-        FlowForgeError.ValidationError(s"Double $double must be finite", None)
+        ValidationError.MissingRequiredField(s"Double $double must be finite")
       )
       .map(_ => ())
   }
@@ -357,7 +321,7 @@ object DataInstances {
     value
       .validIf(
         value != null,
-        FlowForgeError.ValidationError("Case class instance cannot be null", None)
+        ValidationError.MissingRequiredField("Case class instance cannot be null")
       )
       .map(_ => ())
   }
@@ -370,33 +334,31 @@ object DataInstances {
    * Show instances for configuration types
    */
   implicit val pipelineConfigShow: Show[PipelineConfig] = Show.show { config =>
-    s"PipelineConfig(settings=${config.settings.size} items, retryPolicy=${config.retryPolicy.show})"
+    s"PipelineConfig(name=${config.name}, environment=${config.environment.show}, " +
+      s"source=${config.source.show}, sink=${config.sink.show}, sparkConfig=${config.sparkConfig.show})," +
+      s"retryPolicy=${config.retryPolicy.show}"
   }
 
-  implicit val dataSourceShow: Show[DataSource] = Show.show { source =>
-    source match {
-      case DataSource.GcsSource(bucket, prefix, format, _) =>
-        s"GcsSource(bucket=$bucket, prefix=$prefix, format=${format.show})"
-      case DataSource.S3Source(bucket, prefix, format, _) =>
-        s"S3Source(bucket=$bucket, prefix=$prefix, format=${format.show})"
-      case DataSource.BigQuerySource(project, dataset, table, _) =>
-        s"BigQuerySource(project=$project, dataset=$dataset, table=$table)"
-      case DataSource.JdbcSource(url, query, _) =>
-        s"JdbcSource(url=$url, query=$query)"
-    }
+  implicit val dataSourceShow: Show[DataSource] = Show.show {
+    case DataSource.GcsSource(bucket, prefix, format, _, _, _) =>
+      s"GcsSource(bucket=$bucket, prefix=$prefix, format=${format.show})"
+    case DataSource.S3Source(bucket, prefix, format, _, _, _, _) =>
+      s"S3Source(bucket=$bucket, prefix=$prefix, format=${format.show})"
+    case DataSource.BigQuerySource(project, dataset, table, _, _, _, _) =>
+      s"BigQuerySource(project=$project, dataset=$dataset, table=$table)"
+    case DataSource.JdbcSource(url, query, _, _, _, _, _, _, _) =>
+      s"JdbcSource(url=$url, query=$query)"
   }
 
-  implicit val dataSinkShow: Show[DataSink] = Show.show { sink =>
-    sink match {
-      case DataSink.GcsSink(bucket, prefix, format, _) =>
-        s"GcsSink(bucket=$bucket, prefix=$prefix, format=${format.show})"
-      case DataSink.S3Sink(bucket, prefix, format, _) =>
-        s"S3Sink(bucket=$bucket, prefix=$prefix, format=${format.show})"
-      case DataSink.BigQuerySink(project, dataset, table, _) =>
-        s"BigQuerySink(project=$project, dataset=$dataset, table=$table)"
-      case DataSink.JdbcSink(url, table, _) =>
-        s"JdbcSink(url=$url, table=$table)"
-    }
+  implicit val dataSinkShow: Show[DataSink] = Show.show {
+    case DataSink.GcsSink(bucket, prefix, format, _, _, _) =>
+      s"GcsSink(bucket=$bucket, prefix=$prefix, format=${format.show})"
+    case DataSink.S3Sink(bucket, prefix, format, _, _, _, _) =>
+      s"S3Sink(bucket=$bucket, prefix=$prefix, format=${format.show})"
+    // case DataSink.BigQuerySink(project, dataset, table, _) =>
+    // s"BigQuerySink(project=$project, dataset=$dataset, table=$table)"
+    // case DataSink.JdbcSink(url, table, _) =>
+    // s"JdbcSink(url=$url, table=$table)"
   }
 
   // ===============================
@@ -415,7 +377,7 @@ object DataInstances {
   }
 
   implicit val validationErrorShow: Show[ValidationError] = Show.show { error =>
-    s"ValidationError(${error.message}, field=${error.field})"
+    s"ValidationError(${error.message}, field=${error.context})"
   }
 
   // ===============================
@@ -451,68 +413,103 @@ object DataInstances {
   def createMockDataAlgebra[F[_]: EffectSystem]: DataAlgebra[F] = new DataAlgebra[F] {
     import DataAlgebra._
 
-    val F = implicitly[EffectSystem[F]]
+    val F: EffectSystem[F] = implicitly[EffectSystem[F]]
 
-    def read[A: DataDecoder](source: DataSource): F[Dataset[A]] =
+    /**
+     * Read data from a source with automatic resource management
+     */
+    override def read[A: algebra.DataDecoder](source: DataSource): F[Dataset[A]] =
       F.delay(Dataset.empty[A])
 
-    def readWithSchema[A: DataDecoder: SchemaValidator](
+    /**
+     * Read data with schema validation
+     */
+    override def readWithSchema[A: algebra.DataDecoder: SchemaValidator](
       source: DataSource,
-      expectedSchema: DataSchema
-    ): F[Either[FlowForgeError, Dataset[A]]] =
-      F.delay(Right(Dataset.empty[A]))
+      expectedSchema: types.DataSchema
+    ): F[Either[FlowForgeError, Dataset[A]]] = F.delay(Right(Dataset.empty[A]))
 
-    // Simplified implementations for other methods
-    def stream[A: DataDecoder](source: DataSource): F[DataStream[F, A]] =
+    /**
+     * Stream data for large datasets
+     */
+    override def stream[A: algebra.DataDecoder](source: DataSource): F[DataStream[F, A]] =
       F.raiseError(new NotImplementedError("Streaming not implemented in mock"))
 
-    def readBatch[A: DataDecoder](source: DataSource, batchSize: Int): F[List[Dataset[A]]] =
-      F.delay(List(Dataset.empty[A]))
+    /**
+     * Batch read with configurable size
+     */
+    override def readBatch[A: algebra.DataDecoder](
+      source: DataSource,
+      batchSize: Int
+    ): F[List[Dataset[A]]] = F.delay(List(Dataset.empty[A]))
 
-    def transform[A, B: DataEncoder](
+    /**
+     * Apply a transformation to a dataset
+     */
+    override def transform[A, B: algebra.DataEncoder](
       dataset: Dataset[A],
       transformation: A => F[B]
-    ): F[Dataset[B]] =
-      F.delay(Dataset.empty[B])
+    ): F[Dataset[B]] = F.delay(Dataset.empty[B])
 
-    def transformPipeline[A, B: DataEncoder](
+    /**
+     * Apply multiple transformations in sequence
+     */
+    override def transformPipeline[A, B: algebra.DataEncoder](
       dataset: Dataset[A],
       transformations: NonEmptyList[A => F[B]]
-    ): F[Dataset[B]] =
-      F.delay(Dataset.empty[B])
+    ): F[Dataset[B]] = F.delay(Dataset.empty[B])
 
-    def filter[A](dataset: Dataset[A], predicate: A => Boolean): F[Dataset[A]] =
+    /**
+     * Filter data based on predicate
+     */
+    override def filter[A](dataset: Dataset[A], predicate: A => Boolean): F[Dataset[A]] =
       F.delay(dataset.filter(predicate))
 
-    def mapWithEffect[A, B: DataEncoder](dataset: Dataset[A], f: A => F[B]): F[Dataset[B]] =
-      dataset.data
-        .traverse(f)
-        .map(transformedData => Dataset.fromList(transformedData, s"${dataset.id}_mapped"))
+    /**
+     * Map over dataset with effect support
+     */
+    override def mapWithEffect[A, B: algebra.DataEncoder](
+      dataset: Dataset[A],
+      f: A => F[B]
+    ): F[Dataset[B]] = dataset.data
+      .traverse(f)
+      .map(transformedData => Dataset.fromList(transformedData, s"${dataset.id}_mapped"))
 
-    // Additional methods with simplified implementations
-    def flatMapWithEffect[A, B: DataEncoder](
+    /**
+     * FlatMap over dataset for nested operations
+     */
+    override def flatMapWithEffect[A, B: algebra.DataEncoder](
       dataset: Dataset[A],
       f: A => F[Dataset[B]]
-    ): F[Dataset[B]] =
-      F.delay(Dataset.empty[B])
+    ): F[Dataset[B]] = F.delay(Dataset.empty[B])
 
-    def groupBy[A, K, V: DataEncoder](
+    /**
+     * Group by key with aggregation
+     */
+    override def groupBy[A, K, V: algebra.DataEncoder](
       dataset: Dataset[A],
       keyExtractor: A => K,
       aggregator: List[A] => V
-    ): F[Dataset[(K, V)]] =
-      F.delay(Dataset.empty[(K, V)])
+    ): F[Dataset[(K, V)]] = F.delay(Dataset.empty[(K, V)])
 
-    def join[A, B, K, C: DataEncoder](
+    /**
+     * Join two datasets
+     */
+    override def join[A, B, K, C: algebra.DataEncoder](
       left: Dataset[A],
       right: Dataset[B],
       leftKey: A => K,
       rightKey: B => K,
       combiner: (A, B) => C
-    ): F[Dataset[C]] =
-      F.delay(Dataset.empty[C])
+    ): F[Dataset[C]] = F.delay(Dataset.empty[C])
 
-    def validate[A](dataset: Dataset[A], contract: DataContract[A]): F[QualityResult[Dataset[A]]] =
+    /**
+     * Validate dataset against data contract
+     */
+    override def validate[A](
+      dataset: Dataset[A],
+      contract: algebra.DataContract[A]
+    ): F[QualityResult[Dataset[A]]] =
       F.delay(
         QualityResult(
           data = dataset,
@@ -523,133 +520,197 @@ object DataInstances {
         )
       )
 
-    def runQualityChecks[A](
+    /**
+     * Run specific quality checks
+     */
+    override def runQualityChecks[A](
       dataset: Dataset[A],
       checks: NonEmptyList[QualityCheck[A]]
-    ): F[List[QualityCheckResult]] =
-      F.delay(List.empty)
+    ): F[List[QualityCheckResult]] = F.delay(List.empty)
 
-    def profile[A](dataset: Dataset[A]): F[DataProfile[A]] =
-      F.delay(
-        DataProfile(
-          recordCount = dataset.size.toLong,
-          nullCounts = Map.empty,
-          uniqueCounts = Map.empty,
-          dataTypes = Map.empty,
-          statistics = Map.empty,
-          schema = dataset.schema
-        )
-      )
+    /**
+     * Profile dataset to understand data characteristics
+     */
+    override def profile[A](dataset: Dataset[A]): F[DataProfile[A]] = ???
 
-    def clean[A](dataset: Dataset[A], cleaningRules: List[CleaningRule[A]]): F[Dataset[A]] =
-      F.delay(dataset)
+    /**
+     * Clean dataset based on quality rules
+     */
+    override def clean[A](
+      dataset: Dataset[A],
+      cleaningRules: List[CleaningRule[A]]
+    ): F[Dataset[A]] = F.delay(dataset)
 
-    def detectAnomalies[A](
+    /**
+     * Detect anomalies in dataset
+     */
+    override def detectAnomalies[A](
       dataset: Dataset[A],
       detectors: List[AnomalyDetector[A]]
-    ): F[AnomalyReport[A]] =
-      F.delay(
-        AnomalyReport(
-          datasetId = dataset.id,
-          anomalies = List.empty,
-          totalRecords = dataset.size.toLong,
-          anomalyRate = 0.0,
-          detectionTime = Instant.now()
-        )
+    ): F[AnomalyReport[A]] = F.delay(
+      AnomalyReport(
+        datasetId = dataset.id,
+        anomalies = List.empty,
+        totalRecords = dataset.size.toLong,
+        anomalyRate = 0.0,
+        detectionTime = Instant.now()
       )
+    )
 
-    def extractSchema[A](dataset: Dataset[A]): F[DataSchema] =
+    /**
+     * Extract schema from dataset
+     */
+    override def extractSchema[A](dataset: Dataset[A]): F[types.DataSchema] =
       F.delay(dataset.schema)
 
-    def evolveSchema[A, B: DataEncoder](
+    /**
+     * Evolve schema with migrations
+     */
+    override def evolveSchema[A, B: algebra.DataEncoder](
       dataset: Dataset[A],
       migration: SchemaMigration[A, B]
-    ): F[Dataset[B]] =
-      F.delay(Dataset.empty[B])
+    ): F[Dataset[B]] = F.delay(Dataset.empty[B])
 
-    def compareSchemas(source: DataSchema, target: DataSchema): F[SchemaCompatibilityReport] =
-      F.delay(
-        SchemaCompatibilityReport(
-          compatible = true,
-          issues = List.empty,
-          recommendations = List.empty
-        )
+    /**
+     * Compare schemas for compatibility
+     */
+    override def compareSchemas(
+      source: types.DataSchema,
+      target: types.DataSchema
+    ): F[SchemaCompatibilityReport] = F.delay(
+      SchemaCompatibilityReport(
+        compatible = true,
+        issues = List.empty,
+        recommendations = List.empty
       )
+    )
 
-    def validateSchema[A](
+    /**
+     * Validate schema compliance
+     */
+    override def validateSchema[A](
       dataset: Dataset[A],
-      schema: DataSchema
-    ): F[ValidatedNel[FlowForgeError, Dataset[A]]] =
-      F.delay(dataset.validNel)
+      schema: types.DataSchema
+    ): F[ValidatedNel[FlowForgeError, Dataset[A]]] = F.delay(dataset.validNel)
 
-    def write[A: DataEncoder](dataset: Dataset[A], sink: DataSink): F[WriteResult] =
-      F.delay(
-        WriteResult(
-          recordsWritten = dataset.size.toLong,
-          bytesWritten = dataset.size * 100L,
-          partitions = List("partition-1"),
-          duration = 1000L,
-          success = true,
-          errors = List.empty
-        )
+    /**
+     * Write dataset to sink
+     */
+    override def write[A: algebra.DataEncoder](
+      dataset: Dataset[A],
+      sink: DataSink
+    ): F[WriteResult] = F.delay(
+      WriteResult(
+        recordsWritten = dataset.size.toLong,
+        bytesWritten = dataset.size * 100L,
+        partitions = List("partition-1"),
+        duration = 1000L,
+        success = true,
+        errors = List.empty
       )
+    )
 
-    def writeWithOptions[A: DataEncoder](
+    /**
+     * Write with options (partitioning, compression, etc.)
+     */
+    override def writeWithOptions[A: algebra.DataEncoder](
       dataset: Dataset[A],
       sink: DataSink,
       options: WriteOptions
-    ): F[WriteResult] =
-      write(dataset, sink)
+    ): F[WriteResult] = F.delay(
+      WriteResult(
+        recordsWritten = dataset.size.toLong,
+        bytesWritten = dataset.size * 100L,
+        partitions = List("partition-1"),
+        duration = 1000L,
+        success = true,
+        errors = List.empty
+      )
+    )
 
-    def writeStream[A: DataEncoder](stream: DataStream[F, A], sink: DataSink): F[WriteResult] =
+    /**
+     * Stream write for large datasets
+     */
+    override def writeStream[A: algebra.DataEncoder](
+      stream: DataStream[F, A],
+      sink: DataSink
+    ): F[WriteResult] =
       F.raiseError(new NotImplementedError("Stream writing not implemented in mock"))
 
-    def writeBatch[A: DataEncoder](
+    /**
+     * Batch write with configurable size
+     */
+    override def writeBatch[A: algebra.DataEncoder](
       datasets: List[Dataset[A]],
       sink: DataSink
-    ): F[List[WriteResult]] =
-      datasets.traverse(write(_, sink))
+    ): F[List[WriteResult]] = datasets.traverse(write(_, sink))
 
-    def extractMetadata[A](dataset: Dataset[A]): F[DatasetMetadata] =
+    /**
+     * Extract metadata from dataset
+     */
+    override def extractMetadata[A](dataset: Dataset[A]): F[DatasetMetadata] =
       F.delay(dataset.metadata)
 
-    def trackLineage[A](
+    /**
+     * Track data lineage
+     */
+    override def trackLineage[A](
       dataset: Dataset[A],
       operation: DataOperation,
       context: LineageContext
-    ): F[LineageRecord] =
-      F.delay(
-        LineageRecord(
-          id = UUID.randomUUID().toString,
-          datasetId = dataset.id,
-          operation = operation,
-          inputs = List.empty,
-          outputs = List.empty,
-          timestamp = Instant.now(),
-          context = context
-        )
+    ): F[LineageRecord] = F.delay(
+      LineageRecord(
+        id = UUID.randomUUID().toString,
+        datasetId = dataset.id,
+        operation = operation,
+        inputs = List.empty,
+        outputs = List.empty,
+        timestamp = Instant.now(),
+        context = context
       )
+    )
 
-    def queryLineage(datasetId: String, query: LineageQuery): F[List[LineageRecord]] =
+    /**
+     * Query lineage information
+     */
+    override def queryLineage(datasetId: String, query: LineageQuery): F[List[LineageRecord]] =
       F.delay(List.empty)
 
-    def count[A](dataset: Dataset[A]): F[Long] =
-      F.delay(dataset.size.toLong)
+    /**
+     * Count records in dataset
+     */
+    override def count[A](dataset: Dataset[A]): F[Long] = F.delay(dataset.size.toLong)
 
-    def isEmpty[A](dataset: Dataset[A]): F[Boolean] =
-      F.delay(dataset.isEmpty)
+    /**
+     * Check if dataset is empty
+     */
+    override def isEmpty[A](dataset: Dataset[A]): F[Boolean] = F.delay(dataset.isEmpty)
 
-    def take[A](dataset: Dataset[A], n: Int): F[Dataset[A]] =
+    /**
+     * Take first N records
+     */
+    override def take[A](dataset: Dataset[A], n: Int): F[Dataset[A]] =
       F.delay(dataset.copy(data = dataset.data.take(n)))
 
-    def sample[A](dataset: Dataset[A], fraction: Double): F[Dataset[A]] =
+    /**
+     * Sample dataset
+     */
+    override def sample[A](dataset: Dataset[A], fraction: Double): F[Dataset[A]] =
       F.delay(dataset.copy(data = dataset.data.take((dataset.size * fraction).toInt)))
 
-    def cache[A](dataset: Dataset[A], strategy: CacheStrategy): F[Dataset[A]] =
+    /**
+     * Cache dataset in memory/disk
+     */
+    override def cache[A](dataset: Dataset[A], strategy: CacheStrategy): F[Dataset[A]] =
       F.delay(dataset)
 
-    def partition[A](dataset: Dataset[A], partitioner: Partitioner[A]): F[Map[String, Dataset[A]]] =
-      F.delay(Map("default" -> dataset))
+    /**
+     * Partition dataset
+     */
+    override def partition[A](
+      dataset: Dataset[A],
+      partitioner: Partitioner[A]
+    ): F[Map[String, Dataset[A]]] = F.delay(Map("default" -> dataset))
   }
 
   // ===============================
