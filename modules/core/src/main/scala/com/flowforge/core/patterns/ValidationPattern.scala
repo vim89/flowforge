@@ -72,14 +72,14 @@
  */
 package com.flowforge.core.patterns
 
-import cats.data.{NonEmptyList, Validated, ValidatedNel}
+import cats.data.{ NonEmptyList, Validated, ValidatedNel }
 import cats.syntax.all._
-import com.flowforge.core.algebra.{SchemaError, SchemaIncompatible}
+import com.flowforge.core.algebra.{ SchemaError, SchemaIncompatible }
 import com.flowforge.core.types.RefinedTypes._
 import com.flowforge.core.types.ValidationError.QualityViolation
 import com.flowforge.core.types._
 
-import java.time.{Duration, Instant}
+import java.time.{ Duration, Instant }
 import scala.concurrent.duration.FiniteDuration
 import scala.util.matching.Regex
 

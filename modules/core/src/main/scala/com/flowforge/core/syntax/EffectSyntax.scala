@@ -62,13 +62,13 @@
  */
 package com.flowforge.core.syntax
 
-import cats.data.{NonEmptyList, ValidatedNel}
+import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.types.{ConfigError, FlowForgeError}
+import com.flowforge.core.types.{ ConfigError, FlowForgeError }
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
 
 /**

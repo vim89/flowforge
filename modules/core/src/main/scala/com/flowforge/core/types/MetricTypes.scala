@@ -66,9 +66,9 @@
 package com.flowforge.core.types
 
 import cats.syntax.all._
-import cats.{Monoid, Show}
+import cats.{ Monoid, Show }
 
-import java.time.{Duration, Instant}
+import java.time.{ Duration, Instant }
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 

@@ -699,7 +699,12 @@ object DataAlgebra {
   object DataDecoder {
     implicit def anyDataDecoder[A]: DataDecoder[A] = new DataDecoder[A] {
       def decode(data: EncodedData): Either[FlowForgeError, A] =
-        Left(DataProcessingError.ProcessingFailure("Generic decoder not implemented", s"Generic decoder cannot decode to specific type A"))
+        Left(
+          DataProcessingError.ProcessingFailure(
+            "Generic decoder not implemented",
+            s"Generic decoder cannot decode to specific type A"
+          )
+        )
       def expectedSchema: DataSchema = DataSchema("any", Map.empty, List.empty)
     }
 

@@ -119,7 +119,7 @@ object EffectInstances {
      * without stack overflow.
      */
     // def tailRecM[A, B](a: A)(f: A => IO[Either[A, B]]): IO[B] = IO.tailRecM(a)(f)
-      // Cats provides a default implementation, but we can optimize if needed
+    // Cats provides a default implementation, but we can optimize if needed
 
     // MonadError implementation
     def raiseError[A](error: Throwable): IO[A] = IO.raiseError(error)

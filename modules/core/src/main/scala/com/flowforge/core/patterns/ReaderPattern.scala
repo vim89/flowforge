@@ -1,10 +1,10 @@
 package com.flowforge.core.patterns
 
-import cats.data.{Kleisli, Reader, ReaderT}
+import cats.data.{ Kleisli, Reader, ReaderT }
 import cats.effect.Resource
 import cats.implicits._
-import cats.{Applicative, Monad}
-import com.flowforge.core.algebra.{DataAlgebra, EffectSystem}
+import cats.{ Applicative, Monad }
+import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
 import com.flowforge.core.types._
 
 import java.time.Instant
@@ -12,25 +12,26 @@ import java.time.Instant
 /**
  * 🚀 **FlowForge Reader Pattern - Functional Dependency Injection**
  *
- * This module implements the Reader monad pattern for dependency injection
- * in FlowForge pipelines. It integrates seamlessly with the existing
- * Kleisli-based pipeline architecture to provide clean, composable DI.
+ * This module implements the Reader monad pattern for dependency injection in FlowForge pipelines.
+ * It integrates seamlessly with the existing Kleisli-based pipeline architecture to provide clean,
+ * composable DI.
  *
  * **Key Benefits:**
- * - **Type-Safe DI**: All dependencies resolved at compile time
- * - **Composable**: Reader instances compose naturally via monad operations
- * - **Testable**: Easy to provide test implementations
- * - **Pure Functional**: No side effects in dependency resolution
- * - **Effect Polymorphic**: Works with any effect system F[_]
- * - **Pipeline Integration**: Works with existing FlowForge components
+ *   - **Type-Safe DI**: All dependencies resolved at compile time
+ *   - **Composable**: Reader instances compose naturally via monad operations
+ *   - **Testable**: Easy to provide test implementations
+ *   - **Pure Functional**: No side effects in dependency resolution
+ *   - **Effect Polymorphic**: Works with any effect system F[_]
+ *   - **Pipeline Integration**: Works with existing FlowForge components
  *
  * **Usage Patterns:**
- * - Configuration injection for pipeline components
- * - Service layer dependency injection
- * - Cross-cutting concerns (logging, metrics, auditing)
- * - Multi-environment support (dev, staging, prod)
+ *   - Configuration injection for pipeline components
+ *   - Service layer dependency injection
+ *   - Cross-cutting concerns (logging, metrics, auditing)
+ *   - Multi-environment support (dev, staging, prod)
  *
- * @author FlowForge Core Team
+ * @author
+ *   FlowForge Core Team
  * @since 0.1.0
  */
 
@@ -99,7 +100,10 @@ object ReaderPattern {
      * Get environment-specific configuration
      */
     def envConfig[A](key: String): Option[A] =
-      core.config.settings.get(s"${environment.toString.toLowerCase}.$key").orElse(core.config.settings.get(key)).asInstanceOf[Option[A]]
+      core.config.settings
+        .get(s"${environment.toString.toLowerCase}.$key")
+        .orElse(core.config.settings.get(key))
+        .asInstanceOf[Option[A]]
   }
 
   // ===============================
@@ -258,8 +262,8 @@ object ReaderPattern {
         val logger = context.core.logger
         level match {
           case LogLevel.Debug => logger.debug(message)
-          case LogLevel.Info => logger.info(message)
-          case LogLevel.Warn => logger.warn(message)
+          case LogLevel.Info  => logger.info(message)
+          case LogLevel.Warn  => logger.warn(message)
           case LogLevel.Error => logger.error(message)
         }
       }
@@ -276,11 +280,11 @@ object ReaderPattern {
         val metrics = context.core.metrics
         val tags = Map(
           "environment" -> context.environment.toString,
-          "request_id" -> context.requestId.value
+          "request_id"  -> context.requestId.value
         )
         metricType match {
-          case MetricType.Counter => metrics.counter(name, value.toLong, tags)
-          case MetricType.Gauge => metrics.gauge(name, value, tags)
+          case MetricType.Counter   => metrics.counter(name, value.toLong, tags)
+          case MetricType.Gauge     => metrics.gauge(name, value, tags)
           case MetricType.Histogram => metrics.histogram(name, value, tags)
         }
       }
@@ -307,9 +311,11 @@ object ReaderPattern {
     ): FlowForgeReaderT[F, A] =
       for {
         context <- ReaderT.ask[F, AppContext[F]]
-        _ <- ReaderT.liftF(context.core.auditService.recordAccess(resource, action, "system"))
-        result <- operation
-        _ <- ReaderT.liftF(context.core.auditService.recordAccess(resource, s"${action}_completed", "system"))
+        _       <- ReaderT.liftF(context.core.auditService.recordAccess(resource, action, "system"))
+        result  <- operation
+        _ <- ReaderT.liftF(
+          context.core.auditService.recordAccess(resource, s"${action}_completed", "system")
+        )
       } yield result
 
     /**
@@ -323,7 +329,8 @@ object ReaderPattern {
         def retry(attempt: Int): F[A] =
           operation.run(context).handleErrorWith { error =>
             if (attempt < maxRetries) {
-              context.core.logger.warn(s"Operation failed, retrying (attempt ${attempt + 1}/$maxRetries)") *>
+              context.core.logger
+                .warn(s"Operation failed, retrying (attempt ${attempt + 1}/$maxRetries)") *>
                 retry(attempt + 1)
             } else {
               F.raiseError(error)
@@ -341,11 +348,12 @@ object ReaderPattern {
       operation: FlowForgeReaderT[F, A]
     )(implicit F: EffectSystem[F]): FlowForgeReaderT[F, A] =
       ReaderT { context =>
-        F.timeout(operation.run(context), duration)
-          .handleErrorWith { _ =>
-            context.core.logger.error(s"Operation timed out after $duration") *>
-              F.raiseError(new java.util.concurrent.TimeoutException(s"Operation timed out after $duration"))
-          }
+        F.timeout(operation.run(context), duration).handleErrorWith { _ =>
+          context.core.logger.error(s"Operation timed out after $duration") *>
+            F.raiseError(
+              new java.util.concurrent.TimeoutException(s"Operation timed out after $duration")
+            )
+        }
       }
 
     /**
@@ -364,7 +372,9 @@ object ReaderPattern {
     ): FlowForgeReaderT[F, DataAlgebra.Dataset[A]] =
       for {
         context <- ReaderT.ask[F, AppContext[F]]
-        dataset <- ReaderT.liftF(context.core.dataAlgebra.read[A](source)(DataAlgebra.DataDecoder.anyDataDecoder))
+        dataset <- ReaderT.liftF(
+          context.core.dataAlgebra.read[A](source)(DataAlgebra.DataDecoder.anyDataDecoder)
+        )
       } yield dataset
   }
 
@@ -373,8 +383,8 @@ object ReaderPattern {
   // ===============================
 
   /**
-   * Create a pipeline component with dependency injection
-   * Integrates with existing FlowForge PipelineComponent system
+   * Create a pipeline component with dependency injection Integrates with existing FlowForge
+   * PipelineComponent system
    */
   def component[F[_]: Monad, A, B](
     name: String,
@@ -441,17 +451,21 @@ object ReaderPattern {
         secretManager = TestImplementations.mockSecretManager[F],
         resourceManager = TestImplementations.mockResourceManager[F]
       ),
-      database = Some(DatabaseDependencies[F](
-        connectionPool = TestImplementations.mockConnectionPool[F],
-        transactionManager = TestImplementations.mockTransactionManager[F],
-        migrationService = TestImplementations.mockMigrationService[F]
-      )),
-      cloud = Some(CloudDependencies[F](
-        storageService = TestImplementations.mockStorageService[F],
-        queueService = TestImplementations.mockQueueService[F],
-        notificationService = TestImplementations.mockNotificationService[F],
-        monitoringService = TestImplementations.mockMonitoringService[F]
-      )),
+      database = Some(
+        DatabaseDependencies[F](
+          connectionPool = TestImplementations.mockConnectionPool[F],
+          transactionManager = TestImplementations.mockTransactionManager[F],
+          migrationService = TestImplementations.mockMigrationService[F]
+        )
+      ),
+      cloud = Some(
+        CloudDependencies[F](
+          storageService = TestImplementations.mockStorageService[F],
+          queueService = TestImplementations.mockQueueService[F],
+          notificationService = TestImplementations.mockNotificationService[F],
+          monitoringService = TestImplementations.mockMonitoringService[F]
+        )
+      ),
       environment = Environment.Testing,
       requestId = RequestId.generate,
       timestamp = Instant.now()
@@ -465,15 +479,15 @@ object ReaderPattern {
   sealed trait LogLevel extends Product with Serializable
   object LogLevel {
     case object Debug extends LogLevel
-    case object Info extends LogLevel
-    case object Warn extends LogLevel
+    case object Info  extends LogLevel
+    case object Warn  extends LogLevel
     case object Error extends LogLevel
   }
 
   sealed trait MetricType extends Product with Serializable
   object MetricType {
-    case object Counter extends MetricType
-    case object Gauge extends MetricType
+    case object Counter   extends MetricType
+    case object Gauge     extends MetricType
     case object Histogram extends MetricType
   }
 
@@ -507,8 +521,8 @@ object ReaderPattern {
 
   sealed trait ResourceStatus extends Product with Serializable
   object ResourceStatus {
-    case object Healthy extends ResourceStatus
-    case object Degraded extends ResourceStatus
+    case object Healthy   extends ResourceStatus
+    case object Degraded  extends ResourceStatus
     case object Unhealthy extends ResourceStatus
   }
 
@@ -596,45 +610,99 @@ object ReaderPattern {
       ): F[Either[FlowForgeError, Dataset[A]]] =
         implicitly[EffectSystem[F]].delay(Right(Dataset.empty[A]))
 
-      def stream[A: DataDecoder](source: DataSource): F[DataStream[F, A]] = ???
+      def stream[A: DataDecoder](source: DataSource): F[DataStream[F, A]]                    = ???
       def readBatch[A: DataDecoder](source: DataSource, batchSize: Int): F[List[Dataset[A]]] = ???
-      def transform[A, B: DataEncoder](dataset: Dataset[A], transformation: A => F[B]): F[Dataset[B]] = ???
-      def transformPipeline[A, B: DataEncoder](dataset: Dataset[A], transformations: cats.data.NonEmptyList[A => F[B]]): F[Dataset[B]] = ???
-      def filter[A](dataset: Dataset[A], predicate: A => Boolean): F[Dataset[A]] = ???
+      def transform[A, B: DataEncoder](
+        dataset: Dataset[A],
+        transformation: A => F[B]
+      ): F[Dataset[B]] = ???
+      def transformPipeline[A, B: DataEncoder](
+        dataset: Dataset[A],
+        transformations: cats.data.NonEmptyList[A => F[B]]
+      ): F[Dataset[B]] = ???
+      def filter[A](dataset: Dataset[A], predicate: A => Boolean): F[Dataset[A]]             = ???
       def mapWithEffect[A, B: DataEncoder](dataset: Dataset[A], f: A => F[B]): F[Dataset[B]] = ???
-      def flatMapWithEffect[A, B: DataEncoder](dataset: Dataset[A], f: A => F[Dataset[B]]): F[Dataset[B]] = ???
-      def groupBy[A, K, V: DataEncoder](dataset: Dataset[A], keyExtractor: A => K, aggregator: List[A] => V): F[Dataset[(K, V)]] = ???
-      def join[A, B, K, C: DataEncoder](left: Dataset[A], right: Dataset[B], leftKey: A => K, rightKey: B => K, combiner: (A, B) => C): F[Dataset[C]] = ???
-      def validate[A](dataset: Dataset[A], contract: DataContract[A]): F[QualityResult[Dataset[A]]] = ???
-      def runQualityChecks[A](dataset: Dataset[A], checks: cats.data.NonEmptyList[QualityCheck[A]]): F[List[QualityCheckResult]] = ???
-      def profile[A](dataset: Dataset[A]): F[DataProfile[A]] = ???
+      def flatMapWithEffect[A, B: DataEncoder](
+        dataset: Dataset[A],
+        f: A => F[Dataset[B]]
+      ): F[Dataset[B]] = ???
+      def groupBy[A, K, V: DataEncoder](
+        dataset: Dataset[A],
+        keyExtractor: A => K,
+        aggregator: List[A] => V
+      ): F[Dataset[(K, V)]] = ???
+      def join[A, B, K, C: DataEncoder](
+        left: Dataset[A],
+        right: Dataset[B],
+        leftKey: A => K,
+        rightKey: B => K,
+        combiner: (A, B) => C
+      ): F[Dataset[C]] = ???
+      def validate[A](
+        dataset: Dataset[A],
+        contract: DataContract[A]
+      ): F[QualityResult[Dataset[A]]] = ???
+      def runQualityChecks[A](
+        dataset: Dataset[A],
+        checks: cats.data.NonEmptyList[QualityCheck[A]]
+      ): F[List[QualityCheckResult]] = ???
+      def profile[A](dataset: Dataset[A]): F[DataProfile[A]]                                 = ???
       def clean[A](dataset: Dataset[A], cleaningRules: List[CleaningRule[A]]): F[Dataset[A]] = ???
-      def detectAnomalies[A](dataset: Dataset[A], detectors: List[AnomalyDetector[A]]): F[AnomalyReport[A]] = ???
+      def detectAnomalies[A](
+        dataset: Dataset[A],
+        detectors: List[AnomalyDetector[A]]
+      ): F[AnomalyReport[A]] = ???
       def extractSchema[A](dataset: Dataset[A]): F[DataSchema] = ???
-      def evolveSchema[A, B: DataEncoder](dataset: Dataset[A], migration: SchemaMigration[A, B]): F[Dataset[B]] = ???
+      def evolveSchema[A, B: DataEncoder](
+        dataset: Dataset[A],
+        migration: SchemaMigration[A, B]
+      ): F[Dataset[B]] = ???
       def compareSchemas(source: DataSchema, target: DataSchema): F[SchemaCompatibilityReport] = ???
-      def validateSchema[A](dataset: Dataset[A], schema: DataSchema): F[cats.data.ValidatedNel[FlowForgeError, Dataset[A]]] = ???
+      def validateSchema[A](
+        dataset: Dataset[A],
+        schema: DataSchema
+      ): F[cats.data.ValidatedNel[FlowForgeError, Dataset[A]]] = ???
       def write[A: DataEncoder](dataset: Dataset[A], sink: DataSink): F[WriteResult] = ???
-      def writeWithOptions[A: DataEncoder](dataset: Dataset[A], sink: DataSink, options: WriteOptions): F[WriteResult] = ???
-      def writeStream[A: DataEncoder](stream: DataStream[F, A], sink: DataSink): F[WriteResult] = ???
-      def writeBatch[A: DataEncoder](datasets: List[Dataset[A]], sink: DataSink): F[List[WriteResult]] = ???
+      def writeWithOptions[A: DataEncoder](
+        dataset: Dataset[A],
+        sink: DataSink,
+        options: WriteOptions
+      ): F[WriteResult] = ???
+      def writeStream[A: DataEncoder](stream: DataStream[F, A], sink: DataSink): F[WriteResult] =
+        ???
+      def writeBatch[A: DataEncoder](
+        datasets: List[Dataset[A]],
+        sink: DataSink
+      ): F[List[WriteResult]] = ???
       def extractMetadata[A](dataset: Dataset[A]): F[DatasetMetadata] = ???
-      def trackLineage[A](dataset: Dataset[A], operation: DataOperation, context: LineageContext): F[LineageRecord] = ???
+      def trackLineage[A](
+        dataset: Dataset[A],
+        operation: DataOperation,
+        context: LineageContext
+      ): F[LineageRecord] = ???
       def queryLineage(datasetId: String, query: LineageQuery): F[List[LineageRecord]] = ???
-      def count[A](dataset: Dataset[A]): F[Long] = ???
-      def isEmpty[A](dataset: Dataset[A]): F[Boolean] = ???
-      def take[A](dataset: Dataset[A], n: Int): F[Dataset[A]] = ???
-      def sample[A](dataset: Dataset[A], fraction: Double): F[Dataset[A]] = ???
-      def cache[A](dataset: Dataset[A], strategy: CacheStrategy): F[Dataset[A]] = ???
-      def partition[A](dataset: Dataset[A], partitioner: Partitioner[A]): F[Map[String, Dataset[A]]] = ???
+      def count[A](dataset: Dataset[A]): F[Long]                                       = ???
+      def isEmpty[A](dataset: Dataset[A]): F[Boolean]                                  = ???
+      def take[A](dataset: Dataset[A], n: Int): F[Dataset[A]]                          = ???
+      def sample[A](dataset: Dataset[A], fraction: Double): F[Dataset[A]]              = ???
+      def cache[A](dataset: Dataset[A], strategy: CacheStrategy): F[Dataset[A]]        = ???
+      def partition[A](
+        dataset: Dataset[A],
+        partitioner: Partitioner[A]
+      ): F[Map[String, Dataset[A]]] = ???
     }
 
     def mockLogger[F[_]: EffectSystem]: Logger[F] = new Logger[F] {
-      def debug(message: String): F[Unit] = implicitly[EffectSystem[F]].delay(println(s"DEBUG: $message"))
-      def info(message: String): F[Unit] = implicitly[EffectSystem[F]].delay(println(s"INFO: $message"))
-      def warn(message: String): F[Unit] = implicitly[EffectSystem[F]].delay(println(s"WARN: $message"))
+      def debug(message: String): F[Unit] =
+        implicitly[EffectSystem[F]].delay(println(s"DEBUG: $message"))
+      def info(message: String): F[Unit] =
+        implicitly[EffectSystem[F]].delay(println(s"INFO: $message"))
+      def warn(message: String): F[Unit] =
+        implicitly[EffectSystem[F]].delay(println(s"WARN: $message"))
       def error(message: String, throwable: Option[Throwable]): F[Unit] =
-        implicitly[EffectSystem[F]].delay(println(s"ERROR: $message ${throwable.map(_.getMessage).getOrElse("")}"))
+        implicitly[EffectSystem[F]].delay(
+          println(s"ERROR: $message ${throwable.map(_.getMessage).getOrElse("")}")
+        )
       def withContext(context: Map[String, String]): Logger[F] = this
     }
 
@@ -661,65 +729,74 @@ object ReaderPattern {
     }
 
     def mockSecretManager[F[_]: EffectSystem]: SecretManager[F] = new SecretManager[F] {
-      def getSecret(key: String): F[Option[String]] = implicitly[EffectSystem[F]].delay(None)
+      def getSecret(key: String): F[Option[String]]        = implicitly[EffectSystem[F]].delay(None)
       def storeSecret(key: String, value: String): F[Unit] = implicitly[EffectSystem[F]].delay(())
-      def deleteSecret(key: String): F[Unit] = implicitly[EffectSystem[F]].delay(())
+      def deleteSecret(key: String): F[Unit]               = implicitly[EffectSystem[F]].delay(())
       def rotateSecret(key: String): F[String] = implicitly[EffectSystem[F]].delay("new-secret")
     }
 
     def mockResourceManager[F[_]: EffectSystem]: ResourceManager[F] = new ResourceManager[F] {
       def acquireResource[R](name: String, config: ResourceConfig): Resource[F, R] = ???
       def releaseResource(name: String): F[Unit] = implicitly[EffectSystem[F]].delay(())
-      def listResources: F[List[ResourceInfo]] = implicitly[EffectSystem[F]].delay(List.empty)
+      def listResources: F[List[ResourceInfo]]   = implicitly[EffectSystem[F]].delay(List.empty)
       def healthCheck: F[Map[String, ResourceHealth]] = implicitly[EffectSystem[F]].delay(Map.empty)
     }
 
     // Database mocks
     def mockConnectionPool[F[_]: EffectSystem]: ConnectionPool[F] = new ConnectionPool[F] {
       def withConnection[A](operation: Connection[F] => F[A]): F[A] = ???
-      def stats: F[PoolStats] = ???
-      def health: F[PoolHealth] = ???
+      def stats: F[PoolStats]                                       = ???
+      def health: F[PoolHealth]                                     = ???
     }
 
-    def mockTransactionManager[F[_]: EffectSystem]: TransactionManager[F] = new TransactionManager[F] {
-      def transaction[A](operation: F[A]): F[A] = operation
-      def rollback: F[Unit] = implicitly[EffectSystem[F]].delay(())
-      def commit: F[Unit] = implicitly[EffectSystem[F]].delay(())
-    }
+    def mockTransactionManager[F[_]: EffectSystem]: TransactionManager[F] =
+      new TransactionManager[F] {
+        def transaction[A](operation: F[A]): F[A] = operation
+        def rollback: F[Unit]                     = implicitly[EffectSystem[F]].delay(())
+        def commit: F[Unit]                       = implicitly[EffectSystem[F]].delay(())
+      }
 
     def mockMigrationService[F[_]: EffectSystem]: MigrationService[F] = new MigrationService[F] {
-      def runMigrations: F[MigrationResult] = ???
+      def runMigrations: F[MigrationResult]                      = ???
       def rollbackMigration(version: String): F[MigrationResult] = ???
       def migrationStatus: F[List[MigrationInfo]] = implicitly[EffectSystem[F]].delay(List.empty)
     }
 
     // Cloud service mocks
     def mockStorageService[F[_]: EffectSystem]: StorageService[F] = new StorageService[F] {
-      def read(path: String): F[Array[Byte]] = implicitly[EffectSystem[F]].delay(Array.emptyByteArray)
+      def read(path: String): F[Array[Byte]] =
+        implicitly[EffectSystem[F]].delay(Array.emptyByteArray)
       def write(path: String, data: Array[Byte]): F[Unit] = implicitly[EffectSystem[F]].delay(())
-      def exists(path: String): F[Boolean] = implicitly[EffectSystem[F]].delay(false)
+      def exists(path: String): F[Boolean]                = implicitly[EffectSystem[F]].delay(false)
       def list(prefix: String): F[List[String]] = implicitly[EffectSystem[F]].delay(List.empty)
-      def delete(path: String): F[Unit] = implicitly[EffectSystem[F]].delay(())
+      def delete(path: String): F[Unit]         = implicitly[EffectSystem[F]].delay(())
     }
 
     def mockQueueService[F[_]: EffectSystem]: QueueService[F] = new QueueService[F] {
       def publish[A](queue: String, message: A): F[Unit] = implicitly[EffectSystem[F]].delay(())
       def subscribe[A](queue: String): F[QueueSubscription[F, A]] = ???
-      def createQueue(name: String, config: QueueConfig): F[Unit] = implicitly[EffectSystem[F]].delay(())
+      def createQueue(name: String, config: QueueConfig): F[Unit] =
+        implicitly[EffectSystem[F]].delay(())
       def deleteQueue(name: String): F[Unit] = implicitly[EffectSystem[F]].delay(())
     }
 
-    def mockNotificationService[F[_]: EffectSystem]: NotificationService[F] = new NotificationService[F] {
-      def sendEmail(to: List[String], subject: String, body: String): F[Unit] = implicitly[EffectSystem[F]].delay(())
-      def sendSlack(channel: String, message: String): F[Unit] = implicitly[EffectSystem[F]].delay(())
-      def sendWebhook(url: String, payload: Map[String, Any]): F[Unit] = implicitly[EffectSystem[F]].delay(())
-    }
+    def mockNotificationService[F[_]: EffectSystem]: NotificationService[F] =
+      new NotificationService[F] {
+        def sendEmail(to: List[String], subject: String, body: String): F[Unit] =
+          implicitly[EffectSystem[F]].delay(())
+        def sendSlack(channel: String, message: String): F[Unit] =
+          implicitly[EffectSystem[F]].delay(())
+        def sendWebhook(url: String, payload: Map[String, Any]): F[Unit] =
+          implicitly[EffectSystem[F]].delay(())
+      }
 
     def mockMonitoringService[F[_]: EffectSystem]: MonitoringService[F] = new MonitoringService[F] {
-      def createAlert(name: String, condition: String, actions: List[AlertAction]): F[Unit] = implicitly[EffectSystem[F]].delay(())
-      def updateAlert(name: String, enabled: Boolean): F[Unit] = implicitly[EffectSystem[F]].delay(())
+      def createAlert(name: String, condition: String, actions: List[AlertAction]): F[Unit] =
+        implicitly[EffectSystem[F]].delay(())
+      def updateAlert(name: String, enabled: Boolean): F[Unit] =
+        implicitly[EffectSystem[F]].delay(())
       def deleteAlert(name: String): F[Unit] = implicitly[EffectSystem[F]].delay(())
-      def listAlerts: F[List[AlertInfo]] = implicitly[EffectSystem[F]].delay(List.empty)
+      def listAlerts: F[List[AlertInfo]]     = implicitly[EffectSystem[F]].delay(List.empty)
     }
   }
 }

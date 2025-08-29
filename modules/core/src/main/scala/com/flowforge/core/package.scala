@@ -1,12 +1,11 @@
 /**
  * FlowForge Core Module - Package Object
  *
- * File: modules/core/src/main/scala/com/flowforge/core/package.scala
- * Package: com.flowforge.core
+ * File: modules/core/src/main/scala/com/flowforge/core/package.scala Package: com.flowforge.core
  *
- * This package object provides convenient imports, type aliases, and utility functions
- * for the FlowForge core module. It serves as the main entry point for users of the
- * core functionality, offering a clean and intuitive API surface.
+ * This package object provides convenient imports, type aliases, and utility functions for the
+ * FlowForge core module. It serves as the main entry point for users of the core functionality,
+ * offering a clean and intuitive API surface.
  *
  * Design Patterns Applied:
  *   - Facade Pattern: Simplified interface to complex subsystems
@@ -38,32 +37,31 @@
  *
  * // Type-safe pipeline construction
  * val pipeline = Pipeline
- * .builder[IO]
- * .withName("customer-analytics")
- * .withSource(DataSource.gcs("my-bucket", "events/", Parquet))
- * .withSink(DataSink.bigquery("project", "dataset", "table"))
- * .withQuality(QualityRules.standard)
- * .build
+ *   .builder[IO]
+ *   .withName("customer-analytics")
+ *   .withSource(DataSource.gcs("my-bucket", "events/", Parquet))
+ *   .withSink(DataSink.bigquery("project", "dataset", "table"))
+ *   .withQuality(QualityRules.standard)
+ *   .build
  *
  * // Effect-polymorphic operations
- * def processData[F[_]: EffectSystem](data: List[String]): F[ProcessedData] = {
- * for {
- * validated <- data.parTraverseEffect(validateItem)
- * processed <- validated.traverseEffect(processItem)
- * result <- aggregateResults(processed)
- * } yield result
- * }
+ * def processData[F[_]: EffectSystem](data: List[String]): F[ProcessedData] =
+ *   for {
+ *     validated <- data.parTraverseEffect(validateItem)
+ *     processed <- validated.traverseEffect(processItem)
+ *     result    <- aggregateResults(processed)
+ *   } yield result
  *
  * // Configuration with validation
  * val config = PipelineConfig.builder
- * .withName("etl-pipeline")
- * .withEnvironment(Environment.Production)
- * .withSpark(SparkConfig.cluster("etl-app", "spark://master:7077"))
- * .build
+ *   .withName("etl-pipeline")
+ *   .withEnvironment(Environment.Production)
+ *   .withSpark(SparkConfig.cluster("etl-app", "spark://master:7077"))
+ *   .build
  * ```
  *
- *
- * @author FlowForge Team
+ * @author
+ *   FlowForge Team
  * @version 1.0.0
  * @since 2024
  */
@@ -73,33 +71,32 @@ import cats.data._
 import cats.effect.Resource
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.types.RefinedTypes.{BucketName, TableName}
+import com.flowforge.core.types.RefinedTypes.{ BucketName, TableName }
 import com.flowforge.core.types._
 
-import java.time.{Duration, Instant}
+import java.time.{ Duration, Instant }
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
-import scala.language.implicitConversions
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
 
 /**
  * The core package object provides the main API for FlowForge core functionality.
  *
  * This includes:
- * - Type aliases for common patterns and complex types
- * - Implicit conversions for seamless API usage
- * - Utility functions for common operations
- * - Integration points with effect systems
- * - Performance-optimized operations
- * - Validation and error handling utilities
+ *   - Type aliases for common patterns and complex types
+ *   - Implicit conversions for seamless API usage
+ *   - Utility functions for common operations
+ *   - Integration points with effect systems
+ *   - Performance-optimized operations
+ *   - Validation and error handling utilities
  *
  * Key Design Principles:
- * - Convention over Configuration: Smart defaults for common use cases
- * - Type Safety: Compile-time validation wherever possible
- * - Effect Polymorphism: Work with any F[_] that has an EffectSystem instance
- * - Functional Purity: All operations are referentially transparent
- * - Performance: Zero-cost abstractions and optimized implementations
- * - Discoverability: Intuitive naming and comprehensive documentation
+ *   - Convention over Configuration: Smart defaults for common use cases
+ *   - Type Safety: Compile-time validation wherever possible
+ *   - Effect Polymorphism: Work with any F[_] that has an EffectSystem instance
+ *   - Functional Purity: All operations are referentially transparent
+ *   - Performance: Zero-cost abstractions and optimized implementations
+ *   - Discoverability: Intuitive naming and comprehensive documentation
  */
 package object core {
 
@@ -108,39 +105,38 @@ package object core {
   // ===============================
 
   /**
-   * Common type aliases for frequently used complex types.
-   * These provide more readable domain-specific names.
+   * Common type aliases for frequently used complex types. These provide more readable
+   * domain-specific names.
    */
 
   // Effect types
-  type Effect[F[_], A] = F[A]
+  type Effect[F[_], A]              = F[A]
   type EffectValidation[F[_], E, A] = F[ValidatedNel[E, A]]
-  type ConfigValidation[A] = ValidatedNel[ConfigError, A]
-  type ErrorOr[A] = Either[FlowForgeError, A]
-
+  type ConfigValidation[A]          = ValidatedNel[ConfigError, A]
+  type ErrorOr[A]                   = Either[FlowForgeError, A]
 
   // Pipeline types
   type PipelineComponent[F[_], A, B] = Kleisli[F, A, B]
-  type PipelineResult[A] = Either[NonEmptyList[FlowForgeError], A]
-  type ValidationResult[A] = ValidatedNel[FlowForgeError, A]
+  type PipelineResult[A]             = Either[NonEmptyList[FlowForgeError], A]
+  type ValidationResult[A]           = ValidatedNel[FlowForgeError, A]
 
   // Data types
-  type DataContract[A] = A => ValidationResult[Unit]
+  type DataContract[A]                = A => ValidationResult[Unit]
   type DataTransformation[F[_], A, B] = A => F[B]
-  type QualityCheck[A] = A => ValidationResult[A]
+  type QualityCheck[A]                = A => ValidationResult[A]
 
   // Configuration types
-  type ConfigReader[A] = Reader[Map[String, String], ConfigValidation[A]]
-  type MetricsWriter[A] = Writer[List[String], A]
+  type ConfigReader[A]     = Reader[Map[String, String], ConfigValidation[A]]
+  type MetricsWriter[A]    = Writer[List[String], A]
   type PipelineState[S, A] = State[S, A]
 
   // Resource types
-  type SafeResource[F[_], R] = Resource[F, R]
+  type SafeResource[F[_], R]        = Resource[F, R]
   type ResourceAcquisition[F[_], R] = F[R]
-  type ResourceRelease[F[_], R] = R => F[Unit]
+  type ResourceRelease[F[_], R]     = R => F[Unit]
 
   // Timing and measurement
-  type TimedResult[A] = (A, FiniteDuration)
+  type TimedResult[A]       = (A, FiniteDuration)
   type TimestampedResult[A] = (A, Instant)
 
   // Import common instances and syntax automatically
@@ -150,8 +146,8 @@ package object core {
   // ===============================
 
   /**
-   * Smart constructors for common FlowForge types.
-   * These provide convenient, validated construction of core types.
+   * Smart constructors for common FlowForge types. These provide convenient, validated construction
+   * of core types.
    */
 
   object Pipeline {
@@ -159,35 +155,46 @@ package object core {
     /**
      * Create a pipeline builder with effect system support.
      *
-     * @tparam F Effect type (IO, Task, etc.)
-     * @return Pipeline builder for fluent construction
+     * @tparam F
+     *   Effect type (IO, Task, etc.)
+     * @return
+     *   Pipeline builder for fluent construction
      */
-    def builder[F[_] : EffectSystem]: PipelineBuilder[F] =
+    def builder[F[_]: EffectSystem]: PipelineBuilder[F] =
       PipelineBuilder.empty[F]
 
     /**
      * Create a simple transformation pipeline.
      *
-     * @param f Transformation function
-     * @tparam F Effect type
-     * @tparam A Input type
-     * @tparam B Output type
-     * @return Pipeline component
+     * @param f
+     *   Transformation function
+     * @tparam F
+     *   Effect type
+     * @tparam A
+     *   Input type
+     * @tparam B
+     *   Output type
+     * @return
+     *   Pipeline component
      */
-    def transform[F[_] : EffectSystem, A, B](f: A => F[B]): PipelineComponent[F, A, B] =
+    def transform[F[_]: EffectSystem, A, B](f: A => F[B]): PipelineComponent[F, A, B] =
       Kleisli(f)
 
     /**
      * Create a validation pipeline component.
      *
-     * @param validator Validation function
-     * @tparam F Effect type
-     * @tparam A Type to validate
-     * @return Validation pipeline component
+     * @param validator
+     *   Validation function
+     * @tparam F
+     *   Effect type
+     * @tparam A
+     *   Type to validate
+     * @return
+     *   Validation pipeline component
      */
-    def validate[F[_] : EffectSystem, A](
-                                          validator: A => ValidationResult[A]
-                                        ): PipelineComponent[F, A, A] =
+    def validate[F[_]: EffectSystem, A](
+      validator: A => ValidationResult[A]
+    ): PipelineComponent[F, A, A] =
       Kleisli { a =>
         validator(a).fold(
           errors => EffectSystem[F].raiseError(errors.head.asInstanceOf[Throwable]),
@@ -204,71 +211,70 @@ package object core {
     /**
      * Lift a pure value into any effect.
      */
-    def pure[F[_] : EffectSystem, A](value: A): F[A] =
+    def pure[F[_]: EffectSystem, A](value: A): F[A] =
       EffectSystem[F].pure(value)
 
     /**
      * Create an effect that fails with the given error.
      */
-    def raiseError[F[_] : EffectSystem, A](error: Throwable): F[A] =
+    def raiseError[F[_]: EffectSystem, A](error: Throwable): F[A] =
       EffectSystem[F].raiseError(error)
 
     /**
      * Create an effect from a Try.
      */
-    def fromTry[F[_] : EffectSystem, A](tried: Try[A]): F[A] =
+    def fromTry[F[_]: EffectSystem, A](tried: Try[A]): F[A] =
       EffectSystem[F].fromTry(tried)
 
     /**
      * Create an effect from an Either.
      */
-    def fromEither[F[_] : EffectSystem, A](either: Either[Throwable, A]): F[A] =
+    def fromEither[F[_]: EffectSystem, A](either: Either[Throwable, A]): F[A] =
       EffectSystem[F].fromEither(either)
 
     /**
      * Create an effect from a Future.
      */
-    def fromFuture[F[_] : EffectSystem, A](
-                                            future: => Future[A]
-                                          )(implicit ec: ExecutionContext): F[A] =
+    def fromFuture[F[_]: EffectSystem, A](
+      future: => Future[A]
+    )(implicit ec: ExecutionContext): F[A] =
       EffectSystem[F].fromFuture(future)
 
     /**
      * Convert a validation to an effect.
      */
-    def fromValidation[F[_] : EffectSystem, E <: Throwable, A](
-                                                                validation: ValidatedNel[E, A]
-                                                              ): F[A] = {
+    def fromValidation[F[_]: EffectSystem, E <: Throwable, A](
+      validation: ValidatedNel[E, A]
+    ): F[A] =
       validation.fold(
         errors => EffectSystem[F].raiseError(errors.head),
         success => EffectSystem[F].pure(success)
       )
-    }
 
     /**
      * Run multiple effects in parallel and collect results.
      */
-    def parAll[F[_] : EffectSystem, A](effects: List[F[A]]): F[List[A]] =
+    def parAll[F[_]: EffectSystem, A](effects: List[F[A]]): F[List[A]] =
       EffectSystem[F].parSequence(effects)
 
     /**
      * Run effects sequentially and collect results.
      */
-    def seqAll[F[_] : EffectSystem, A](effects: List[F[A]]): F[List[A]] =
+    def seqAll[F[_]: EffectSystem, A](effects: List[F[A]]): F[List[A]] =
       EffectSystem[F].sequence(effects)
 
     /**
      * Repeat an effect until a condition is met.
      */
-    def repeatUntil[F[_] : EffectSystem, A](
-                                             fa: F[A]
-                                           )(condition: A => Boolean): F[A] =
+    def repeatUntil[F[_]: EffectSystem, A](
+      fa: F[A]
+    )(condition: A => Boolean): F[A] =
       EffectSystem[F].repeatUntil(fa)(condition)
 
     /**
      * Time the execution of an effect.
      */
-    def timed[F[_] : EffectSystem, A](fa: F[A]): F[(A, FiniteDuration)] =
+    def timed[F[_]: EffectSystem, A](fa: F[A]): F[(A, FiniteDuration)] =
       EffectSystem[F].timed(fa)
   }
 
@@ -305,51 +311,47 @@ package object core {
      * Validate a string matches a pattern.
      */
     def matchesPattern(
-                        fieldName: String,
-                        value: String,
-                        pattern: String
-                      ): ConfigValidation[String] = {
+      fieldName: String,
+      value: String,
+      pattern: String
+    ): ConfigValidation[String] =
       if (value.matches(pattern)) {
         value.validNel
       } else {
         ConfigError.InvalidFormat(fieldName, value, s"pattern $pattern").invalidNel
       }
-    }
 
     /**
      * Validate a number is within range.
      */
     def inRange(
-                 fieldName: String,
-                 value: Double,
-                 min: Double,
-                 max: Double
-               ): ConfigValidation[Double] = {
+      fieldName: String,
+      value: Double,
+      min: Double,
+      max: Double
+    ): ConfigValidation[Double] =
       if (value >= min && value <= max) {
         value.validNel
       } else {
         ConfigError.OutOfRange(fieldName, value.toString, min.toString, max.toString).invalidNel
       }
-    }
 
     /**
      * Combine multiple validations.
      */
     def combine[A, B, C](
-                          va: ValidatedNel[ConfigError, A],
-                          vb: ValidatedNel[ConfigError, B]
-                        )(f: (A, B) => C): ValidatedNel[ConfigError, C] = {
+      va: ValidatedNel[ConfigError, A],
+      vb: ValidatedNel[ConfigError, B]
+    )(f: (A, B) => C): ValidatedNel[ConfigError, C] =
       (va, vb).mapN(f)
-    }
 
     /**
      * Validate all elements in a list.
      */
     def validateAll[A, B](
-                           list: List[A]
-                         )(validator: A => ValidatedNel[ConfigError, B]): ValidatedNel[ConfigError, List[B]] = {
+      list: List[A]
+    )(validator: A => ValidatedNel[ConfigError, B]): ValidatedNel[ConfigError, List[B]] =
       list.traverse(validator)
-    }
   }
 
   // ===============================
@@ -357,8 +359,7 @@ package object core {
   // ===============================
 
   /**
-   * Implicit conversions for seamless API usage.
-   * These enable natural syntax for common operations.
+   * Implicit conversions for seamless API usage. These enable natural syntax for common operations.
    */
 
   /**
@@ -389,19 +390,19 @@ package object core {
     /**
      * Apply an effect to all elements in parallel.
      */
-    def parMapEffect[F[_] : EffectSystem, B](f: A => F[B]): F[List[B]] =
+    def parMapEffect[F[_]: EffectSystem, B](f: A => F[B]): F[List[B]] =
       EffectSystem[F].parTraverse(list)(f)
 
     /**
      * Apply an effect to all elements sequentially.
      */
-    def mapEffect[F[_] : EffectSystem, B](f: A => F[B]): F[List[B]] =
+    def mapEffect[F[_]: EffectSystem, B](f: A => F[B]): F[List[B]] =
       EffectSystem[F].traverse(list)(f)
 
     /**
      * Find the first element that satisfies an effectful predicate.
      */
-    def findEffect[F[_] : EffectSystem](predicate: A => F[Boolean]): F[Option[A]] = {
+    def findEffect[F[_]: EffectSystem](predicate: A => F[Boolean]): F[Option[A]] = {
       def loop(remaining: List[A]): F[Option[A]] = remaining match {
         case Nil => EffectSystem[F].pure(None)
         case head :: tail =>
@@ -451,7 +452,7 @@ package object core {
         value.toLowerCase match {
           case "true" | "yes" | "1" => true.validNel
           case "false" | "no" | "0" => false.validNel
-          case _ => ConfigError.InvalidFormat(key, value, "boolean").invalidNel
+          case _                    => ConfigError.InvalidFormat(key, value, "boolean").invalidNel
         }
       }
 
@@ -532,41 +533,41 @@ package object core {
    */
 
   val DefaultTimeout: FiniteDuration = FiniteDuration(300, "seconds")
-  val DefaultRetryAttempts: Int = 3
-  val DefaultBackoffFactor: Double = 2.0
-  val DefaultParallelism: Int = Runtime.getRuntime.availableProcessors()
+  val DefaultRetryAttempts: Int      = 3
+  val DefaultBackoffFactor: Double   = 2.0
+  val DefaultParallelism: Int        = Runtime.getRuntime.availableProcessors()
 
   // Data format constants
   val Parquet: DataFormat = DataFormat.Parquet
-  val Avro: DataFormat = DataFormat.Avro
-  val CSV: DataFormat = DataFormat.CSV
-  val JSON: DataFormat = DataFormat.JSON
-  val JSONL: DataFormat = DataFormat.JSONL
-  val ORC: DataFormat = DataFormat.ORC
-  val Delta: DataFormat = DataFormat.Delta
+  val Avro: DataFormat    = DataFormat.Avro
+  val CSV: DataFormat     = DataFormat.CSV
+  val JSON: DataFormat    = DataFormat.JSON
+  val JSONL: DataFormat   = DataFormat.JSONL
+  val ORC: DataFormat     = DataFormat.ORC
+  val Delta: DataFormat   = DataFormat.Delta
 
   // Environment constants
   val Development: Environment = Environment.Development
-  val Testing: Environment = Environment.Testing
-  val Staging: Environment = Environment.Staging
-  val Production: Environment = Environment.Production
+  val Testing: Environment     = Environment.Testing
+  val Staging: Environment     = Environment.Staging
+  val Production: Environment  = Environment.Production
 
   // ===============================
   // PIPELINE BUILDER
   // ===============================
 
   /**
-   * Fluent builder for constructing data pipelines.
-   * This provides a type-safe way to build complex pipelines.
+   * Fluent builder for constructing data pipelines. This provides a type-safe way to build complex
+   * pipelines.
    */
-  case class PipelineBuilder[F[_] : EffectSystem] private(
-                                                           name: Option[String] = None,
-                                                           source: Option[DataSource] = None,
-                                                           sink: Option[DataSink] = None,
-                                                           transformations: List[PipelineComponent[F, Any, Any]] = List.empty,
-                                                           validations: List[QualityCheck[Any]] = List.empty,
-                                                           config: Option[PipelineConfig] = None
-                                                         ) {
+  case class PipelineBuilder[F[_]: EffectSystem] private (
+    name: Option[String] = None,
+    source: Option[DataSource] = None,
+    sink: Option[DataSink] = None,
+    transformations: List[PipelineComponent[F, Any, Any]] = List.empty,
+    validations: List[QualityCheck[Any]] = List.empty,
+    config: Option[PipelineConfig] = None
+  ) {
 
     def withName(pipelineName: String): PipelineBuilder[F] =
       copy(name = Some(pipelineName))
@@ -591,9 +592,9 @@ package object core {
       copy(config = Some(pipelineConfig))
 
     def build: ConfigValidation[FlowForgePipeline[F]] = {
-      val nameValidation = name.toValidNel(ConfigError.MissingRequired("name"))
+      val nameValidation   = name.toValidNel(ConfigError.MissingRequired("name"))
       val sourceValidation = source.toValidNel(ConfigError.MissingRequired("source"))
-      val sinkValidation = sink.toValidNel(ConfigError.MissingRequired("sink"))
+      val sinkValidation   = sink.toValidNel(ConfigError.MissingRequired("sink"))
 
       (nameValidation, sourceValidation, sinkValidation).mapN { (n, src, snk) =>
         FlowForgePipeline(n, src, snk, transformations, validations, config)
@@ -602,20 +603,20 @@ package object core {
   }
 
   object PipelineBuilder {
-    def empty[F[_] : EffectSystem]: PipelineBuilder[F] = PipelineBuilder[F]()
+    def empty[F[_]: EffectSystem]: PipelineBuilder[F] = PipelineBuilder[F]()
   }
 
   /**
    * Represents a complete FlowForge pipeline.
    */
-  case class FlowForgePipeline[F[_] : EffectSystem](
-                                                     name: String,
-                                                     source: DataSource,
-                                                     sink: DataSink,
-                                                     transformations: List[PipelineComponent[F, Any, Any]],
-                                                     validations: List[QualityCheck[Any]],
-                                                     config: Option[PipelineConfig]
-                                                   ) {
+  case class FlowForgePipeline[F[_]: EffectSystem](
+    name: String,
+    source: DataSource,
+    sink: DataSink,
+    transformations: List[PipelineComponent[F, Any, Any]],
+    validations: List[QualityCheck[Any]],
+    config: Option[PipelineConfig]
+  ) {
 
     /**
      * Execute the pipeline with the given input data.
@@ -625,8 +626,9 @@ package object core {
       val F = EffectSystem[F]
 
       // Apply transformations sequentially
-      val transformed = transformations.foldLeft(F.pure(inputData.asInstanceOf[Any])) { (acc, transform) =>
-        acc.flatMap(data => transform.run(data))
+      val transformed = transformations.foldLeft(F.pure(inputData.asInstanceOf[Any])) {
+        (acc, transform) =>
+          acc.flatMap(data => transform.run(data))
       }
 
       // Apply validations
@@ -645,9 +647,8 @@ package object core {
     /**
      * Validate the pipeline configuration.
      */
-    def validate: ConfigValidation[Unit] = {
+    def validate: ConfigValidation[Unit] =
       // Pipeline-level validation logic would go here
       ().validNel
-    }
   }
 }

@@ -1,9 +1,9 @@
 package com.flowforge.core.syntax
 
-import cats.data.{Kleisli, NonEmptyList, ReaderT, ValidatedNel}
+import cats.data.{ Kleisli, NonEmptyList, ReaderT, ValidatedNel }
 import cats.implicits._
 import com.flowforge.core.FlowForgePipeline
-import com.flowforge.core.algebra.{DataAlgebra, EffectSystem}
+import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
 import com.flowforge.core.patterns.ReaderPattern._
 import com.flowforge.core.types._
 
@@ -12,25 +12,25 @@ import scala.concurrent.duration.Duration
 /**
  * 🚀 **FlowForge Pipeline Syntax - Enhanced Fluent API**
  *
- * This module provides enhanced syntax for composing data pipelines
- * in FlowForge, building upon the existing Kleisli-based system.
- * It provides intuitive, readable API extensions while maintaining
+ * This module provides enhanced syntax for composing data pipelines in FlowForge, building upon the
+ * existing Kleisli-based system. It provides intuitive, readable API extensions while maintaining
  * full compatibility with the existing FlowForge architecture.
  *
  * **Key Features:**
- * - **Fluent Interface**: Chain operations naturally with method calls
- * - **Type Safety**: All operations preserve type information
- * - **Effect Polymorphism**: Works with any effect system F[_]
- * - **Composable Operations**: Mix and match pipeline components
- * - **Error Handling**: Built-in error recovery and handling patterns
- * - **Resource Safety**: Automatic resource management and cleanup
- * - **Integration**: Seamless integration with existing FlowForge types
+ *   - **Fluent Interface**: Chain operations naturally with method calls
+ *   - **Type Safety**: All operations preserve type information
+ *   - **Effect Polymorphism**: Works with any effect system F[_]
+ *   - **Composable Operations**: Mix and match pipeline components
+ *   - **Error Handling**: Built-in error recovery and handling patterns
+ *   - **Resource Safety**: Automatic resource management and cleanup
+ *   - **Integration**: Seamless integration with existing FlowForge types
  *
  * **Usage Examples:**
  * ```scala
  * import com.flowforge.core.syntax.PipelineSyntax._
  *
- * val pipeline = Pipeline.builder[IO]("customer-analytics")
+ * val pipeline = Pipeline
+ *   .builder[IO]("customer-analytics")
  *   .from(jdbcSource)
  *   .transform(cleanData)
  *   .validate(dataContract)
@@ -41,7 +41,8 @@ import scala.concurrent.duration.Duration
  *   .build
  * ```
  *
- * @author FlowForge Core Team
+ * @author
+ *   FlowForge Core Team
  * @since 0.1.0
  */
 
@@ -152,7 +153,8 @@ object PipelineSyntax {
      * Build the final pipeline using existing FlowForge system
      */
     def build: Either[NonEmptyList[FlowForgeError], FlowForgePipeline[F]] = {
-      val sourceValidation = source.toValidNel(FlowForgeError.ConfigurationError("Missing source", None))
+      val sourceValidation =
+        source.toValidNel(FlowForgeError.ConfigurationError("Missing source", None))
       val sinkValidation = sink.toValidNel(FlowForgeError.ConfigurationError("Missing sink", None))
 
       (sourceValidation, sinkValidation).mapN { (src, snk) =>
@@ -171,12 +173,11 @@ object PipelineSyntax {
     /**
      * Build and execute the pipeline
      */
-    def execute[A](input: A): F[A] = {
+    def execute[A](input: A): F[A] =
       build match {
         case Right(pipeline) => pipeline.execute(input)
-        case Left(errors) => F.raiseError(ValidationException(errors.toList))
+        case Left(errors)    => F.raiseError(ValidationException(errors.toList))
       }
-    }
   }
 
   /**
@@ -227,9 +228,9 @@ object PipelineSyntax {
     def logged(name: String): PipelineComponent[F, A, B] =
       Kleisli[F, A, B] { a =>
         for {
-          _ <- F.delay(println(s"Starting component: $name"))
+          _      <- F.delay(println(s"Starting component: $name"))
           result <- component.run(a)
-          _ <- F.delay(println(s"Completed component: $name"))
+          _      <- F.delay(println(s"Completed component: $name"))
         } yield result
       }
 
@@ -239,10 +240,10 @@ object PipelineSyntax {
     def withMetrics(metricName: String): PipelineComponent[F, A, B] =
       Kleisli[F, A, B] { a =>
         for {
-          start <- F.delay(System.currentTimeMillis())
+          start  <- F.delay(System.currentTimeMillis())
           result <- component.run(a)
-          end <- F.delay(System.currentTimeMillis())
-          _ <- F.delay(println(s"METRIC: $metricName duration = ${end - start}ms"))
+          end    <- F.delay(System.currentTimeMillis())
+          _      <- F.delay(println(s"METRIC: $metricName duration = ${end - start}ms"))
         } yield result
       }
   }
@@ -258,9 +259,11 @@ object PipelineSyntax {
     def transformSafe[F[_]: EffectSystem, B](
       f: A => F[B]
     )(implicit encoder: DataAlgebra.DataEncoder[B]): F[DataAlgebra.Dataset[B]] =
-      dataset.data.traverse(f).map(transformedData =>
-        DataAlgebra.Dataset.fromList(transformedData, s"${dataset.id}_transformed")
-      )
+      dataset.data
+        .traverse(f)
+        .map(transformedData =>
+          DataAlgebra.Dataset.fromList(transformedData, s"${dataset.id}_transformed")
+        )
 
     /**
      * Apply validation to all records
@@ -269,7 +272,7 @@ object PipelineSyntax {
       validator: A => ValidatedNel[FlowForgeError, A]
     ): F[ValidationResult[DataAlgebra.Dataset[A]]] = {
       val validationResults = dataset.data.map(validator)
-      val sequence = validationResults.sequence
+      val sequence          = validationResults.sequence
 
       sequence match {
         case cats.data.Validated.Valid(validData) =>
@@ -282,8 +285,8 @@ object PipelineSyntax {
     /**
      * Create a pipeline from this dataset
      */
-    def pipeline[F[_]: EffectSystem](
-      implicit algebra: DataAlgebra[F]
+    def pipeline[F[_]: EffectSystem](implicit
+      algebra: DataAlgebra[F]
     ): DatasetPipelineBuilder[F, A] =
       DatasetPipelineBuilder(dataset, algebra)
   }
@@ -367,9 +370,9 @@ object PipelineSyntax {
      */
     def logged(message: String): FlowForgeReaderT[F, A] =
       for {
-        _ <- Operations.log(LogLevel.Info, message)
+        _      <- Operations.log(LogLevel.Info, message)
         result <- readerOp
-        _ <- Operations.log(LogLevel.Info, s"Completed: $message")
+        _      <- Operations.log(LogLevel.Info, s"Completed: $message")
       } yield result
 
     /**
@@ -377,10 +380,10 @@ object PipelineSyntax {
      */
     def timed(metricName: String): FlowForgeReaderT[F, A] =
       for {
-        start <- ReaderT.liftF(F.delay(System.currentTimeMillis()))
+        start  <- ReaderT.liftF(F.delay(System.currentTimeMillis()))
         result <- readerOp
-        end <- ReaderT.liftF(F.delay(System.currentTimeMillis()))
-        _ <- Operations.recordMetric(s"${metricName}_duration", (end - start).toDouble)
+        end    <- ReaderT.liftF(F.delay(System.currentTimeMillis()))
+        _      <- Operations.recordMetric(s"${metricName}_duration", (end - start).toDouble)
       } yield result
 
     /**
@@ -427,9 +430,10 @@ object PipelineSyntax {
   ): PipelineComponent[F, A, A] =
     Kleisli[F, A, A] { a =>
       if (predicate(a)) implicitly[EffectSystem[F]].pure(a)
-      else implicitly[EffectSystem[F]].raiseError(
-        new IllegalArgumentException("Record filtered out")
-      )
+      else
+        implicitly[EffectSystem[F]].raiseError(
+          new IllegalArgumentException("Record filtered out")
+        )
     }
 
   /**
@@ -559,14 +563,13 @@ object PipelineSyntax {
     def etlPipeline[F[_]: EffectSystem](
       source: DataSource,
       sink: DataSink
-    ): EnhancedPipelineBuilder[F] = {
+    ): EnhancedPipelineBuilder[F] =
       pipeline[F]("etl-pipeline")
         .from(source)
-        .transform((_: String).toUpperCase) // Extract & Transform
-        .filter((_: String).nonEmpty)       // Transform
+        .transform((_: String).toUpperCase)        // Extract & Transform
+        .filter((_: String).nonEmpty)              // Transform
         .validate((_: String) => "clean".validNel) // Validate
-        .to(sink)                           // Load
-    }
+        .to(sink)                                  // Load
 
     /**
      * Create a data quality pipeline
@@ -574,7 +577,8 @@ object PipelineSyntax {
     def qualityPipeline[F[_]: EffectSystem, A](
       dataset: DataAlgebra.Dataset[A]
     )(implicit da: DataAlgebra[F]): DatasetPipelineBuilder[F, A] =
-      dataset.pipeline[F]
+      dataset
+        .pipeline[F]
         .filter((_: A) => true) // Placeholder filter
 
     /**
@@ -584,9 +588,11 @@ object PipelineSyntax {
       name: String
     ): FlowForgeReaderT[F, String] =
       for {
-        _ <- Operations.log(LogLevel.Info, s"Starting DI pipeline: $name")
+        _      <- Operations.log(LogLevel.Info, s"Starting DI pipeline: $name")
         config <- Operations.getConfig("batch_size", "100")
-        result <- ReaderT.liftF(implicitly[EffectSystem[F]].pure(s"Processed with batch size: $config"))
+        result <- ReaderT.liftF(
+          implicitly[EffectSystem[F]].pure(s"Processed with batch size: $config")
+        )
         _ <- Operations.recordMetric("pipeline_completed", 1.0)
       } yield result
   }
@@ -597,11 +603,11 @@ object PipelineSyntax {
 
   // Type aliases to integrate with existing FlowForge system
   type PipelineComponent[F[_], A, B] = Kleisli[F, A, B]
-  type DataContract[A] = A => ValidationResult[Unit]
-  type QualityCheck[A] = A => ValidationResult[A]
-  type ValidationResult[A] = ValidatedNel[FlowForgeError, A]
-  type FlowForgePipeline[F[_]] = com.flowforge.core.FlowForgePipeline[F]
-  type QualityResult[A] = DataAlgebra.QualityResult[A]
+  type DataContract[A]               = A => ValidationResult[Unit]
+  type QualityCheck[A]               = A => ValidationResult[A]
+  type ValidationResult[A]           = ValidatedNel[FlowForgeError, A]
+  type FlowForgePipeline[F[_]]       = com.flowforge.core.FlowForgePipeline[F]
+  type QualityResult[A]              = DataAlgebra.QualityResult[A]
 
   // Provide default quality result for testing
   object QualityResult {

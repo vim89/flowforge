@@ -58,8 +58,8 @@ package com.flowforge.core.algebra
 import cats.MonadError
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
 
 /**
  * Universal effect system abstraction.

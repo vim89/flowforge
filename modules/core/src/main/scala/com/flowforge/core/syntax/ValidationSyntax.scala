@@ -1,6 +1,6 @@
 package com.flowforge.core.syntax
 
-import cats.data.{NonEmptyList, ValidatedNel}
+import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.implicits._
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.types._
@@ -8,18 +8,18 @@ import com.flowforge.core.types._
 /**
  * 🚀 **FlowForge Validation Syntax - Enhanced Validation Operations**
  *
- * This module provides rich syntax extensions for validation operations
- * in FlowForge, integrating seamlessly with the existing validation
- * patterns and providing enhanced composability.
+ * This module provides rich syntax extensions for validation operations in FlowForge, integrating
+ * seamlessly with the existing validation patterns and providing enhanced composability.
  *
  * **Key Features:**
- * - **Composable Validations**: Chain and combine validation rules
- * - **Error Accumulation**: Collect all validation errors, not just the first
- * - **Type Safety**: Compile-time validation rule composition
- * - **Integration**: Works with existing FlowForge validation patterns
- * - **Extensible**: Easy to add custom validation rules
+ *   - **Composable Validations**: Chain and combine validation rules
+ *   - **Error Accumulation**: Collect all validation errors, not just the first
+ *   - **Type Safety**: Compile-time validation rule composition
+ *   - **Integration**: Works with existing FlowForge validation patterns
+ *   - **Extensible**: Easy to add custom validation rules
  *
- * @author FlowForge Core Team
+ * @author
+ *   FlowForge Core Team
  * @since 0.1.0
  */
 
@@ -31,7 +31,7 @@ object ValidationSyntax {
 
   type ValidationResult[A] = ValidatedNel[FlowForgeError, A]
   type ConfigValidation[A] = ValidatedNel[ConfigError, A]
-  type DataValidation[A] = ValidatedNel[FlowForgeError, A]
+  type DataValidation[A]   = ValidatedNel[FlowForgeError, A]
 
   // ===============================
   // VALIDATION SYNTAX EXTENSIONS
@@ -102,30 +102,39 @@ object ValidationSyntax {
      */
     def matches(pattern: String): ValidationResult[String] =
       if (str.matches(pattern)) str.validNel
-      else FlowForgeError.ValidationError(s"String '$str' does not match pattern '$pattern'", None).invalidNel
+      else
+        FlowForgeError
+          .ValidationError(s"String '$str' does not match pattern '$pattern'", None)
+          .invalidNel
 
     /**
      * Validate string length
      */
     def lengthBetween(min: Int, max: Int): ValidationResult[String] =
       if (str.length >= min && str.length <= max) str.validNel
-      else FlowForgeError.ValidationError(s"String length ${str.length} not between $min and $max", None).invalidNel
+      else
+        FlowForgeError
+          .ValidationError(s"String length ${str.length} not between $min and $max", None)
+          .invalidNel
 
     /**
      * Validate email format
      */
     def isEmail: ValidationResult[String] = {
       val emailPattern = """^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$""".r
-      str.matches(emailPattern.regex).validIf(
-        true,
-        FlowForgeError.ValidationError(s"Invalid email format: $str", None)
-      ).map(_ => str)
+      str
+        .matches(emailPattern.regex)
+        .validIf(
+          true,
+          FlowForgeError.ValidationError(s"Invalid email format: $str", None)
+        )
+        .map(_ => str)
     }
 
     /**
      * Validate URL format
      */
-    def isUrl: ValidationResult[String] = {
+    def isUrl: ValidationResult[String] =
       try {
         new java.net.URL(str)
         str.validNel
@@ -133,13 +142,13 @@ object ValidationSyntax {
         case _: java.net.MalformedURLException =>
           FlowForgeError.ValidationError(s"Invalid URL format: $str", None).invalidNel
       }
-    }
   }
 
   /**
    * Numeric validation extensions
    */
-  implicit class NumericValidationOps[N](private val num: N)(implicit numeric: Numeric[N]) extends AnyVal {
+  implicit class NumericValidationOps[N](private val num: N)(implicit numeric: Numeric[N])
+      extends AnyVal {
 
     /**
      * Validate number is positive
@@ -167,14 +176,18 @@ object ValidationSyntax {
      */
     def greaterThan(threshold: N): ValidationResult[N] =
       if (numeric.gt(num, threshold)) num.validNel
-      else FlowForgeError.ValidationError(s"Number $num must be greater than $threshold", None).invalidNel
+      else
+        FlowForgeError
+          .ValidationError(s"Number $num must be greater than $threshold", None)
+          .invalidNel
 
     /**
      * Validate number is less than threshold
      */
     def lessThan(threshold: N): ValidationResult[N] =
       if (numeric.lt(num, threshold)) num.validNel
-      else FlowForgeError.ValidationError(s"Number $num must be less than $threshold", None).invalidNel
+      else
+        FlowForgeError.ValidationError(s"Number $num must be less than $threshold", None).invalidNel
   }
 
   /**
@@ -186,7 +199,9 @@ object ValidationSyntax {
      * Validate option is not empty
      */
     def required(fieldName: String): ValidationResult[A] =
-      opt.toValidNel(FlowForgeError.ConfigurationError(s"Required field '$fieldName' is missing", None))
+      opt.toValidNel(
+        FlowForgeError.ConfigurationError(s"Required field '$fieldName' is missing", None)
+      )
 
     /**
      * Validate option and apply validation to inner value if present
@@ -194,7 +209,7 @@ object ValidationSyntax {
     def validateInner[B](validator: A => ValidationResult[B]): ValidationResult[Option[B]] =
       opt match {
         case Some(value) => validator(value).map(Some.apply)
-        case None => None.validNel
+        case None        => None.validNel
       }
 
     /**
@@ -221,7 +236,10 @@ object ValidationSyntax {
      */
     def sizeBetween(min: Int, max: Int): ValidationResult[List[A]] =
       if (list.size >= min && list.size <= max) list.validNel
-      else FlowForgeError.ValidationError(s"List size ${list.size} not between $min and $max", None).invalidNel
+      else
+        FlowForgeError
+          .ValidationError(s"List size ${list.size} not between $min and $max", None)
+          .invalidNel
 
     /**
      * Validate all elements in the list
@@ -266,10 +284,12 @@ object ValidationSyntax {
      */
     def getInt(key: String): ConfigValidation[Int] =
       requireKey(key).andThen { value =>
-        scala.util.Try(value.toInt).fold(
-          _ => ConfigError.InvalidFormat(key, value, "integer").invalidNel,
-          int => int.validNel
-        )
+        scala.util
+          .Try(value.toInt)
+          .fold(
+            _ => ConfigError.InvalidFormat(key, value, "integer").invalidNel,
+            int => int.validNel
+          )
       }
 
     /**
@@ -280,7 +300,7 @@ object ValidationSyntax {
         value.toLowerCase match {
           case "true" | "yes" | "1" => true.validNel
           case "false" | "no" | "0" => false.validNel
-          case _ => ConfigError.InvalidFormat(key, value, "boolean").invalidNel
+          case _                    => ConfigError.InvalidFormat(key, value, "boolean").invalidNel
         }
       }
 
@@ -289,10 +309,12 @@ object ValidationSyntax {
      */
     def getDuration(key: String): ConfigValidation[scala.concurrent.duration.Duration] =
       requireKey(key).andThen { value =>
-        scala.util.Try(java.time.Duration.parse(value)).fold(
-          _ => ConfigError.InvalidFormat(key, value, "ISO-8601 duration").invalidNel,
-          d => scala.concurrent.duration.Duration.fromNanos(d.toNanos).validNel
-        )
+        scala.util
+          .Try(java.time.Duration.parse(value))
+          .fold(
+            _ => ConfigError.InvalidFormat(key, value, "ISO-8601 duration").invalidNel,
+            d => scala.concurrent.duration.Duration.fromNanos(d.toNanos).validNel
+          )
       }
 
     /**
@@ -346,7 +368,9 @@ object ValidationSyntax {
     /**
      * Conditional validator
      */
-    def when[A](condition: A => Boolean)(validator: A => ValidationResult[A]): A => ValidationResult[A] = { value =>
+    def when[A](
+      condition: A => Boolean
+    )(validator: A => ValidationResult[A]): A => ValidationResult[A] = { value =>
       if (condition(value)) validator(value)
       else value.validNel
     }
@@ -354,9 +378,10 @@ object ValidationSyntax {
     /**
      * Create a custom validator
      */
-    def custom[A](predicate: A => Boolean, error: A => FlowForgeError): A => ValidationResult[A] = { value =>
-      if (predicate(value)) value.validNel
-      else error(value).invalidNel
+    def custom[A](predicate: A => Boolean, error: A => FlowForgeError): A => ValidationResult[A] = {
+      value =>
+        if (predicate(value)) value.validNel
+        else error(value).invalidNel
     }
 
     /**
@@ -375,12 +400,20 @@ object ValidationSyntax {
      */
     object Strings {
       def nonEmpty: String => ValidationResult[String] = x => x.nonEmpty
-      def email: String => ValidationResult[String] = _.isEmail
-      def url: String => ValidationResult[String] = _.isUrl
+      def email: String => ValidationResult[String]    = _.isEmail
+      def url: String => ValidationResult[String]      = _.isUrl
       def minLength(min: Int): String => ValidationResult[String] =
-       (x: String) =>  x.validIf(x.length >= min, FlowForgeError.ValidationError(s"String must be at least $min characters", None))
+        (x: String) =>
+          x.validIf(
+            x.length >= min,
+            FlowForgeError.ValidationError(s"String must be at least $min characters", None)
+          )
       def maxLength(max: Int): String => ValidationResult[String] =
-        x =>  x.validIf(x.length <= max, FlowForgeError.ValidationError(s"String must be at most $max characters", None))
+        x =>
+          x.validIf(
+            x.length <= max,
+            FlowForgeError.ValidationError(s"String must be at most $max characters", None)
+          )
       def pattern(regex: String): String => ValidationResult[String] = _.matches(regex)
     }
 
@@ -388,11 +421,11 @@ object ValidationSyntax {
      * Common numeric validators
      */
     object Numbers {
-      def positive[N: Numeric]: N => ValidationResult[N] = _.positive
-      def nonNegative[N: Numeric]: N => ValidationResult[N] = _.nonNegative
+      def positive[N: Numeric]: N => ValidationResult[N]              = _.positive
+      def nonNegative[N: Numeric]: N => ValidationResult[N]           = _.nonNegative
       def range[N: Numeric](min: N, max: N): N => ValidationResult[N] = _.between(min, max)
-      def min[N: Numeric](threshold: N): N => ValidationResult[N] = _.greaterThan(threshold)
-      def max[N: Numeric](threshold: N): N => ValidationResult[N] = _.lessThan(threshold)
+      def min[N: Numeric](threshold: N): N => ValidationResult[N]     = _.greaterThan(threshold)
+      def max[N: Numeric](threshold: N): N => ValidationResult[N]     = _.lessThan(threshold)
     }
 
     /**
@@ -400,11 +433,18 @@ object ValidationSyntax {
      */
     object Collections {
       def nonEmpty[A]: List[A] => ValidationResult[List[A]] = _.nonEmpty
-      def size[A](min: Int, max: Int): List[A] => ValidationResult[List[A]] = _.sizeBetween(min, max)
+      def size[A](min: Int, max: Int): List[A] => ValidationResult[List[A]] =
+        _.sizeBetween(min, max)
       def minSize[A](min: Int): List[A] => ValidationResult[List[A]] =
-        _.validIf(_.size >= min, FlowForgeError.ValidationError(s"Collection must have at least $min elements", None))
+        _.validIf(
+          _.size >= min,
+          FlowForgeError.ValidationError(s"Collection must have at least $min elements", None)
+        )
       def maxSize[A](max: Int): List[A] => ValidationResult[List[A]] =
-        _.validIf(_.size <= max, FlowForgeError.ValidationError(s"Collection must have at most $max elements", None))
+        _.validIf(
+          _.size <= max,
+          FlowForgeError.ValidationError(s"Collection must have at most $max elements", None)
+        )
     }
   }
 
@@ -462,7 +502,7 @@ object ValidationSyntax {
 
     def validatePipelineConfig(config: PipelineConfig): ConfigValidation[PipelineConfig] = {
       val nameValidation = config.settings.requireKey("name").map(_ => ())
-      val validations = List(nameValidation)
+      val validations    = List(nameValidation)
       validations.sequence.map(_ => config)
     }
 
@@ -498,7 +538,10 @@ object ValidationSyntax {
   /**
    * Create a validation result from a Try
    */
-  def fromTry[A](tried: scala.util.Try[A], errorMapper: Throwable => FlowForgeError): ValidationResult[A] =
+  def fromTry[A](
+    tried: scala.util.Try[A],
+    errorMapper: Throwable => FlowForgeError
+  ): ValidationResult[A] =
     tried.fold(e => errorMapper(e).invalidNel, _.validNel)
 
   /**
@@ -536,7 +579,8 @@ object ValidationSyntax {
   /**
    * Convert Either to validation result
    */
-  implicit class EitherToValidation[A](private val either: Either[FlowForgeError, A]) extends AnyVal {
+  implicit class EitherToValidation[A](private val either: Either[FlowForgeError, A])
+      extends AnyVal {
     def toValidation: ValidationResult[A] = either.toValidatedNel
   }
 }
