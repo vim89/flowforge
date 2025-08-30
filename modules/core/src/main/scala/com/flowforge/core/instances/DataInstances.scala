@@ -1,6 +1,6 @@
 package com.flowforge.core.instances
 
-import cats.data.{ Kleisli, ValidatedNel, Validated }
+import cats.data.{ Kleisli, Validated, ValidatedNel }
 import cats.implicits._
 import cats.{ Applicative, Functor, Monad, Show }
 import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }

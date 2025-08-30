@@ -86,7 +86,7 @@ object Dependencies {
     )
 
     val typeSafety = Seq(
-      "eu.timepit" %% "refined"      % Versions.refined
+      "eu.timepit" %% "refined" % Versions.refined
     )
 
     val json = Seq(

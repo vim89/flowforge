@@ -38,7 +38,7 @@
  */
 package com.flowforge.core.types
 
-import cats.data.{Kleisli, ValidatedNel}
+import cats.data.{ Kleisli, ValidatedNel }
 
 /**
  * Type aliases for common pipeline patterns

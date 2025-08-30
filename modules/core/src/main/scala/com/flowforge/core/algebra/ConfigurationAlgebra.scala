@@ -1,8 +1,8 @@
 /**
  * FlowForge Core Module - Configuration Management Algebra
  *
- * File: modules/core/src/main/scala/com/flowforge/core/algebra/ConfigurationAlgebra.scala
- * Package: com.flowforge.core.algebra
+ * File: modules/core/src/main/scala/com/flowforge/core/algebra/ConfigurationAlgebra.scala Package:
+ * com.flowforge.core.algebra
  *
  * Revolutionary type-safe configuration management system replacing traditional CCM approaches.
  * Integrates reference-utilities CCM patterns with FlowForge's functional programming principles.
@@ -30,16 +30,17 @@
  *   - Hot configuration reloading with functional reactive streams
  *   - CCM compatibility layer for seamless migration
  *
- * @author FlowForge Team
+ * @author
+ *   FlowForge Team
  * @version 1.0.0
  * @since 2024
  */
 package com.flowforge.core.algebra
 
-import cats.data.{NonEmptyList, ValidatedNel}
+import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.effect.Sync
 import cats.implicits._
-import com.flowforge.core.types.{ErrorCategory, ErrorSeverity, FlowForgeError}
+import com.flowforge.core.types.{ ErrorCategory, ErrorSeverity, FlowForgeError }
 import eu.timepit.refined.types.string.NonEmptyString
 import fs2.Stream
 
@@ -47,8 +48,8 @@ import java.util.Properties
 import scala.concurrent.duration.FiniteDuration
 
 /**
- * Core configuration management algebra with effect polymorphism.
- * Provides type-safe, functional configuration operations.
+ * Core configuration management algebra with effect polymorphism. Provides type-safe, functional
+ * configuration operations.
  */
 trait ConfigurationAlgebra[F[_]] {
 
@@ -59,43 +60,55 @@ trait ConfigurationAlgebra[F[_]] {
   /**
    * Load configuration with type safety and validation.
    *
-   * @param key Configuration key
-   * @tparam T Configuration type with decoder and validator instances
-   * @return Validated configuration or accumulated errors
+   * @param key
+   *   Configuration key
+   * @tparam T
+   *   Configuration type with decoder and validator instances
+   * @return
+   *   Validated configuration or accumulated errors
    */
   def load[T: ConfigDecoder: ConfigValidator](key: NonEmptyString): F[ValidatedNel[ConfigError, T]]
 
   /**
    * Load optional configuration that may not exist.
    *
-   * @param key Configuration key
-   * @tparam T Configuration type with decoder instance
-   * @return Optional configuration value
+   * @param key
+   *   Configuration key
+   * @tparam T
+   *   Configuration type with decoder instance
+   * @return
+   *   Optional configuration value
    */
   def loadOptional[T: ConfigDecoder: ConfigValidator](key: NonEmptyString): F[Option[T]]
 
   /**
-   * Refresh configuration from source.
-   * Useful for hot configuration reloading in production.
+   * Refresh configuration from source. Useful for hot configuration reloading in production.
    */
   def refresh: F[Unit]
 
   /**
    * Watch configuration for changes using reactive streams.
    *
-   * @param key Configuration key to watch
-   * @tparam T Configuration type
-   * @return Stream of configuration updates
+   * @param key
+   *   Configuration key to watch
+   * @tparam T
+   *   Configuration type
+   * @return
+   *   Stream of configuration updates
    */
   def watch[T: ConfigDecoder](key: NonEmptyString): Stream[F, T]
 
   /**
    * Save configuration (for writeable configuration sources).
    *
-   * @param key Configuration key
-   * @param config Configuration value
-   * @tparam T Configuration type with encoder instance
-   * @return Save operation result
+   * @param key
+   *   Configuration key
+   * @param config
+   *   Configuration value
+   * @tparam T
+   *   Configuration type with encoder instance
+   * @return
+   *   Save operation result
    */
   def save[T: ConfigEncoder](key: NonEmptyString, config: T): F[Unit]
 
@@ -111,10 +124,14 @@ trait ConfigurationAlgebra[F[_]] {
   /**
    * Load configuration with environment variable fallback.
    *
-   * @param key Primary configuration key
-   * @param envPrefix Environment variable prefix
-   * @tparam T Configuration type
-   * @return Configuration with fallback chain
+   * @param key
+   *   Primary configuration key
+   * @param envPrefix
+   *   Environment variable prefix
+   * @tparam T
+   *   Configuration type
+   * @return
+   *   Configuration with fallback chain
    */
   def loadWithFallback[T: ConfigDecoder: ConfigValidator](
     key: NonEmptyString,
@@ -124,9 +141,12 @@ trait ConfigurationAlgebra[F[_]] {
   /**
    * Load multiple configurations atomically.
    *
-   * @param keys List of configuration keys
-   * @tparam T Configuration type
-   * @return All configurations or validation errors
+   * @param keys
+   *   List of configuration keys
+   * @tparam T
+   *   Configuration type
+   * @return
+   *   All configurations or validation errors
    */
   def loadBatch[T: ConfigDecoder: ConfigValidator](
     keys: NonEmptyList[NonEmptyString]
@@ -135,9 +155,12 @@ trait ConfigurationAlgebra[F[_]] {
   /**
    * Merge configurations from multiple sources.
    *
-   * @param sources Configuration sources to merge
-   * @tparam T Configuration type
-   * @return Merged configuration
+   * @param sources
+   *   Configuration sources to merge
+   * @tparam T
+   *   Configuration type
+   * @return
+   *   Merged configuration
    */
   def merge[T: ConfigDecoder: ConfigMerger](
     sources: NonEmptyList[ConfigSource]
@@ -145,8 +168,8 @@ trait ConfigurationAlgebra[F[_]] {
 }
 
 /**
- * CCM compatibility layer for seamless migration from reference-utilities patterns.
- * Implements the exact interface from CcmUtils.scala while adding type safety.
+ * CCM compatibility layer for seamless migration from reference-utilities patterns. Implements the
+ * exact interface from CcmUtils.scala while adding type safety.
  */
 trait CCMCompatibilityLayer[F[_]] extends ConfigurationAlgebra[F] {
 
@@ -157,24 +180,24 @@ trait CCMCompatibilityLayer[F[_]] extends ConfigurationAlgebra[F] {
   /**
    * Get CCM configuration as Map (preserving original interface).
    *
-   * Original method from CcmUtils.scala:
-   * def getCcmConfig(configName: String): Option[Map[String, String]]
+   * Original method from CcmUtils.scala: def getCcmConfig(configName: String): Option[Map[String,
+   * String]]
    */
   def getCcmConfig(configName: String): F[Option[Map[String, String]]]
 
   /**
    * Get CCM provider configuration (preserving original interface).
    *
-   * Original method from CcmUtils.scala:
-   * def getCcmProviderConfig(providerName: String, configName: String): Option[Map[String, String]]
+   * Original method from CcmUtils.scala: def getCcmProviderConfig(providerName: String, configName:
+   * String): Option[Map[String, String]]
    */
   def getCcmProviderConfig(providerName: String, configName: String): F[Option[Map[String, String]]]
 
   /**
    * Get configuration as Properties (preserving original interface).
    *
-   * Original method from CcmUtils.scala:
-   * def getCcmConfigAsProperties(configMap: Map[String, String]): Properties
+   * Original method from CcmUtils.scala: def getCcmConfigAsProperties(configMap: Map[String,
+   * String]): Properties
    */
   def getConfigurationAsProperties(configName: String): F[Option[Properties]]
 
@@ -185,9 +208,12 @@ trait CCMCompatibilityLayer[F[_]] extends ConfigurationAlgebra[F] {
   /**
    * Adapt CCM configuration to type-safe FlowForge configuration.
    *
-   * @param ccmConfig Raw CCM configuration map
-   * @tparam T Target configuration type
-   * @return Type-safe configuration with validation
+   * @param ccmConfig
+   *   Raw CCM configuration map
+   * @tparam T
+   *   Target configuration type
+   * @return
+   *   Type-safe configuration with validation
    */
   def adaptCcmToTyped[T: ConfigDecoder](
     ccmConfig: Map[String, String]
@@ -196,9 +222,12 @@ trait CCMCompatibilityLayer[F[_]] extends ConfigurationAlgebra[F] {
   /**
    * Migration utility for converting CCM configurations to FlowForge.
    *
-   * @param ccmConfigName Original CCM configuration name
-   * @tparam T Target FlowForge configuration type
-   * @return Migrated configuration
+   * @param ccmConfigName
+   *   Original CCM configuration name
+   * @tparam T
+   *   Target FlowForge configuration type
+   * @return
+   *   Migrated configuration
    */
   def migrateCcmConfig[T: ConfigDecoder: ConfigValidator](
     ccmConfigName: String
@@ -227,8 +256,8 @@ object ConfigDecoder {
     desc: String = "Configuration decoder"
   ): ConfigDecoder[A] = new ConfigDecoder[A] {
     def decode(source: Map[String, String]): ValidatedNel[ConfigError, A] = decodeF(source)
-    val expectedKeys: List[String] = keys
-    val description: String = desc
+    val expectedKeys: List[String]                                        = keys
+    val description: String                                               = desc
   }
 }
 
@@ -248,7 +277,7 @@ object ConfigValidator {
     configConstraints: List[ConfigConstraint[A]] = List.empty
   ): ConfigValidator[A] = new ConfigValidator[A] {
     def validate(config: A): ValidatedNel[ConfigError, A] = validateF(config)
-    val constraints: List[ConfigConstraint[A]] = configConstraints
+    val constraints: List[ConfigConstraint[A]]            = configConstraints
   }
 }
 
@@ -277,11 +306,11 @@ trait ConfigMerger[A] {
  */
 sealed trait ConfigSource
 object ConfigSource {
-  case class CCM(serverUrl: String, configName: String) extends ConfigSource
-  case class EnvironmentVariables(prefix: String) extends ConfigSource
-  case class PropertyFile(filePath: String) extends ConfigSource
+  case class CCM(serverUrl: String, configName: String)               extends ConfigSource
+  case class EnvironmentVariables(prefix: String)                     extends ConfigSource
+  case class PropertyFile(filePath: String)                           extends ConfigSource
   case class Database(connection: String, table: String, key: String) extends ConfigSource
-  case class Consul(endpoint: String, path: String) extends ConfigSource
+  case class Consul(endpoint: String, path: String)                   extends ConfigSource
 }
 
 /**
@@ -289,10 +318,10 @@ object ConfigSource {
  */
 sealed trait ConfigFormat
 object ConfigFormat {
-  case object Properties extends ConfigFormat
-  case object JSON extends ConfigFormat
-  case object YAML extends ConfigFormat
-  case object HOCON extends ConfigFormat
+  case object Properties           extends ConfigFormat
+  case object JSON                 extends ConfigFormat
+  case object YAML                 extends ConfigFormat
+  case object HOCON                extends ConfigFormat
   case object EnvironmentVariables extends ConfigFormat
 }
 
@@ -301,9 +330,9 @@ object ConfigFormat {
  */
 sealed trait ConfigConstraint[A]
 object ConfigConstraint {
-  case class Required[A](fieldName: String) extends ConfigConstraint[A]
-  case class Range[A](fieldName: String, min: Double, max: Double) extends ConfigConstraint[A]
-  case class Pattern[A](fieldName: String, regex: String) extends ConfigConstraint[A]
+  case class Required[A](fieldName: String)                          extends ConfigConstraint[A]
+  case class Range[A](fieldName: String, min: Double, max: Double)   extends ConfigConstraint[A]
+  case class Pattern[A](fieldName: String, regex: String)            extends ConfigConstraint[A]
   case class OneOf[A](fieldName: String, allowedValues: Set[String]) extends ConfigConstraint[A]
 }
 
@@ -313,48 +342,50 @@ object ConfigConstraint {
 sealed trait ConfigError extends FlowForgeError
 object ConfigError {
   case class MissingRequired(key: String) extends ConfigError {
-    val message = s"Required configuration key '$key' is missing"
-    val category = ErrorCategory.Configuration
-    val severity = ErrorSeverity.Error
-    val context = Map("key" -> key)
-    val cause = None
-    val timestamp = java.time.Instant.now()
-    val errorId = java.util.UUID.randomUUID().toString
-    val isRetryable = false
+    val message       = s"Required configuration key '$key' is missing"
+    val category      = ErrorCategory.Configuration
+    val severity      = ErrorSeverity.Error
+    val context       = Map("key" -> key)
+    val cause         = None
+    val timestamp     = java.time.Instant.now()
+    val errorId       = java.util.UUID.randomUUID().toString
+    val isRetryable   = false
     val recoveryHints = List(s"Provide configuration for key '$key'", "Check configuration source")
 
     def withContext(additionalContext: Map[String, Any]) = this
-    def withCause(underlyingCause: Throwable) = this
+    def withCause(underlyingCause: Throwable)            = this
   }
 
   case class InvalidFormat(key: String, expected: String, actual: String) extends ConfigError {
-    val message = s"Configuration key '$key' has invalid format. Expected: $expected, Got: $actual"
+    val message  = s"Configuration key '$key' has invalid format. Expected: $expected, Got: $actual"
     val category = ErrorCategory.Configuration
     val severity = ErrorSeverity.Error
-    val context = Map("key" -> key, "expected" -> expected, "actual" -> actual)
-    val cause = None
-    val timestamp = java.time.Instant.now()
-    val errorId = java.util.UUID.randomUUID().toString
+    val context  = Map("key" -> key, "expected" -> expected, "actual" -> actual)
+    val cause    = None
+    val timestamp   = java.time.Instant.now()
+    val errorId     = java.util.UUID.randomUUID().toString
     val isRetryable = false
-    val recoveryHints = List(s"Fix format for key '$key'", s"Ensure value matches pattern: $expected")
+    val recoveryHints =
+      List(s"Fix format for key '$key'", s"Ensure value matches pattern: $expected")
 
     def withContext(additionalContext: Map[String, Any]) = this
-    def withCause(underlyingCause: Throwable) = this
+    def withCause(underlyingCause: Throwable)            = this
   }
 
   case class ValidationFailed(key: String, constraint: String) extends ConfigError {
-    val message = s"Configuration validation failed for '$key': $constraint"
-    val category = ErrorCategory.Configuration
-    val severity = ErrorSeverity.Error
-    val context = Map("key" -> key, "constraint" -> constraint)
-    val cause = None
-    val timestamp = java.time.Instant.now()
-    val errorId = java.util.UUID.randomUUID().toString
+    val message     = s"Configuration validation failed for '$key': $constraint"
+    val category    = ErrorCategory.Configuration
+    val severity    = ErrorSeverity.Error
+    val context     = Map("key" -> key, "constraint" -> constraint)
+    val cause       = None
+    val timestamp   = java.time.Instant.now()
+    val errorId     = java.util.UUID.randomUUID().toString
     val isRetryable = false
-    val recoveryHints = List(s"Fix validation constraint for '$key'", s"Check constraint: $constraint")
+    val recoveryHints =
+      List(s"Fix validation constraint for '$key'", s"Check constraint: $constraint")
 
     def withContext(additionalContext: Map[String, Any]) = this
-    def withCause(underlyingCause: Throwable) = this
+    def withCause(underlyingCause: Throwable)            = this
   }
 }
 
@@ -363,8 +394,8 @@ object ConfigError {
  */
 sealed trait ConfigHealthStatus
 object ConfigHealthStatus {
-  case object Healthy extends ConfigHealthStatus
-  case class Degraded(issues: List[String]) extends ConfigHealthStatus
+  case object Healthy                             extends ConfigHealthStatus
+  case class Degraded(issues: List[String])       extends ConfigHealthStatus
   case class Unhealthy(errors: List[ConfigError]) extends ConfigHealthStatus
 }
 
@@ -374,9 +405,9 @@ object ConfigHealthStatus {
 sealed trait ConflictResolution
 object ConflictResolution {
   case object FirstWins extends ConflictResolution
-  case object LastWins extends ConflictResolution
-  case object Merge extends ConflictResolution
-  case object Fail extends ConflictResolution
+  case object LastWins  extends ConflictResolution
+  case object Merge     extends ConflictResolution
+  case object Fail      extends ConflictResolution
 }
 
 // ===============================
@@ -445,33 +476,33 @@ case class SecurityConfig(
 sealed trait Environment
 object Environment {
   case object Development extends Environment
-  case object Staging extends Environment
-  case object Production extends Environment
+  case object Staging     extends Environment
+  case object Production  extends Environment
 }
 
 sealed trait LogLevel
 object LogLevel {
   case object Debug extends LogLevel
-  case object Info extends LogLevel
-  case object Warn extends LogLevel
+  case object Info  extends LogLevel
+  case object Warn  extends LogLevel
   case object Error extends LogLevel
 }
 
 sealed trait AuditLevel
 object AuditLevel {
-  case object None extends AuditLevel
+  case object None     extends AuditLevel
   case object Standard extends AuditLevel
   case object Detailed extends AuditLevel
-  case object Full extends AuditLevel
+  case object Full     extends AuditLevel
 }
 
 sealed trait SecretProvider
 object SecretProvider {
   case object Environment extends SecretProvider
-  case object CCM extends SecretProvider
-  case object Vault extends SecretProvider
-  case object GCP extends SecretProvider
-  case object AWS extends SecretProvider
+  case object CCM         extends SecretProvider
+  case object Vault       extends SecretProvider
+  case object GCP         extends SecretProvider
+  case object AWS         extends SecretProvider
 }
 
 case class RetryPolicy(
@@ -549,22 +580,31 @@ object ConfigurationAlgebra {
       decodeF = source => {
         // Comprehensive configuration decoding with error accumulation
         val applicationV = decodeApplication(source)
-        val pipelineV = decodePipeline(source)
-        val enginesV = decodeEngines(source)
-        val connectorsV = decodeConnectors(source)
-        val qualityV = decodeQuality(source)
-        val monitoringV = decodeMonitoring(source)
-        val securityV = decodeSecurity(source)
+        val pipelineV    = decodePipeline(source)
+        val enginesV     = decodeEngines(source)
+        val connectorsV  = decodeConnectors(source)
+        val qualityV     = decodeQuality(source)
+        val monitoringV  = decodeMonitoring(source)
+        val securityV    = decodeSecurity(source)
 
         (applicationV, pipelineV, enginesV, connectorsV, qualityV, monitoringV, securityV)
           .mapN(FlowForgeConfig.apply)
       },
       keys = List(
-        "application.name", "application.version", "application.environment",
-        "pipeline.batchSize", "pipeline.timeout", "pipeline.retryPolicy",
-        "engines.spark", "engines.flink",
-        "connectors.gcs", "connectors.s3", "connectors.bigquery",
-        "quality.enableChecks", "monitoring.enableMetrics", "security.enableAudit"
+        "application.name",
+        "application.version",
+        "application.environment",
+        "pipeline.batchSize",
+        "pipeline.timeout",
+        "pipeline.retryPolicy",
+        "engines.spark",
+        "engines.flink",
+        "connectors.gcs",
+        "connectors.s3",
+        "connectors.bigquery",
+        "quality.enableChecks",
+        "monitoring.enableMetrics",
+        "security.enableAudit"
       ),
       desc = "FlowForge main configuration decoder"
     )
@@ -573,7 +613,7 @@ object ConfigurationAlgebra {
    * Configuration validator for FlowForge configuration.
    */
   implicit def flowForgeConfigValidator: ConfigValidator[FlowForgeConfig] =
-    ConfigValidator.instance(config => {
+    ConfigValidator.instance { config =>
       val validations = List(
         validateApplication(config.application),
         validatePipeline(config.pipeline),
@@ -582,30 +622,41 @@ object ConfigurationAlgebra {
       )
 
       validations.sequence.map(_ => config)
-    })
+    }
 
   // Private helper methods for decoding
-  private def decodeApplication(source: Map[String, String]): ValidatedNel[ConfigError, ApplicationConfig] = {
+  private def decodeApplication(
+    source: Map[String, String]
+  ): ValidatedNel[ConfigError, ApplicationConfig] =
     // Simple placeholder implementation demonstrating the pattern
     ApplicationConfig(
       NonEmptyString("default-app"),
-      "1.0.0", 
+      "1.0.0",
       Environment.Development,
       LogLevel.Info
     ).validNel[ConfigError]
-  }
-  private def decodePipeline(source: Map[String, String]): ValidatedNel[ConfigError, PipelineConfig] = ???
-  private def decodeEngines(source: Map[String, String]): ValidatedNel[ConfigError, EngineConfig] = ???
-  private def decodeConnectors(source: Map[String, String]): ValidatedNel[ConfigError, ConnectorConfig] = ???
-  private def decodeQuality(source: Map[String, String]): ValidatedNel[ConfigError, QualityConfig] = ???
-  private def decodeMonitoring(source: Map[String, String]): ValidatedNel[ConfigError, MonitoringConfig] = ???
-  private def decodeSecurity(source: Map[String, String]): ValidatedNel[ConfigError, SecurityConfig] = ???
+  private def decodePipeline(
+    source: Map[String, String]
+  ): ValidatedNel[ConfigError, PipelineConfig] = ???
+  private def decodeEngines(source: Map[String, String]): ValidatedNel[ConfigError, EngineConfig] =
+    ???
+  private def decodeConnectors(
+    source: Map[String, String]
+  ): ValidatedNel[ConfigError, ConnectorConfig] = ???
+  private def decodeQuality(source: Map[String, String]): ValidatedNel[ConfigError, QualityConfig] =
+    ???
+  private def decodeMonitoring(
+    source: Map[String, String]
+  ): ValidatedNel[ConfigError, MonitoringConfig] = ???
+  private def decodeSecurity(
+    source: Map[String, String]
+  ): ValidatedNel[ConfigError, SecurityConfig] = ???
 
   // Private helper methods for validation
   private def validateApplication(config: ApplicationConfig): ValidatedNel[ConfigError, Unit] = ???
-  private def validatePipeline(config: PipelineConfig): ValidatedNel[ConfigError, Unit] = ???
-  private def validateEngines(config: EngineConfig): ValidatedNel[ConfigError, Unit] = ???
-  private def validateConnectors(config: ConnectorConfig): ValidatedNel[ConfigError, Unit] = ???
+  private def validatePipeline(config: PipelineConfig): ValidatedNel[ConfigError, Unit]       = ???
+  private def validateEngines(config: EngineConfig): ValidatedNel[ConfigError, Unit]          = ???
+  private def validateConnectors(config: ConnectorConfig): ValidatedNel[ConfigError, Unit]    = ???
 }
 
 // ===============================
@@ -620,29 +671,33 @@ object ConfigurationMigration {
   /**
    * Create CCM compatibility layer from existing CCM client.
    *
-   * @param ccmEndpoint CCM server endpoint
-   * @tparam F Effect type
-   * @return CCM compatibility layer instance
+   * @param ccmEndpoint
+   *   CCM server endpoint
+   * @tparam F
+   *   Effect type
+   * @return
+   *   CCM compatibility layer instance
    */
   def fromCCMEndpoint[F[_]: Sync](ccmEndpoint: String): CCMCompatibilityLayer[F] =
     new CCMCompatibilityLayer[F] {
 
-      def getCcmConfig(configName: String): F[Option[Map[String, String]]] = {
+      def getCcmConfig(configName: String): F[Option[Map[String, String]]] =
         // Implementation would call actual CCM service
         Sync[F].delay {
           // Simulate CCM call - replace with actual implementation
           Option(Map("key1" -> "value1", "key2" -> "value2"))
         }
-      }
 
-      def getCcmProviderConfig(providerName: String, configName: String): F[Option[Map[String, String]]] = {
+      def getCcmProviderConfig(
+        providerName: String,
+        configName: String
+      ): F[Option[Map[String, String]]] =
         Sync[F].delay {
           // Provider-specific configuration retrieval
           Option(Map(s"$providerName.config" -> configName))
         }
-      }
 
-      def getConfigurationAsProperties(configName: String): F[Option[Properties]] = {
+      def getConfigurationAsProperties(configName: String): F[Option[Properties]] =
         getCcmConfig(configName).map { optConfig =>
           optConfig.map { config =>
             val props = new Properties()
@@ -650,17 +705,15 @@ object ConfigurationMigration {
             props
           }
         }
-      }
 
       def adaptCcmToTyped[T: ConfigDecoder](
         ccmConfig: Map[String, String]
-      ): F[ValidatedNel[ConfigError, T]] = {
+      ): F[ValidatedNel[ConfigError, T]] =
         Sync[F].delay(ConfigDecoder[T].decode(ccmConfig))
-      }
 
       def migrateCcmConfig[T: ConfigDecoder: ConfigValidator](
         ccmConfigName: String
-      ): F[ValidatedNel[ConfigError, T]] = {
+      ): F[ValidatedNel[ConfigError, T]] =
         for {
           ccmConfig <- getCcmConfig(ccmConfigName)
           result <- ccmConfig match {
@@ -678,10 +731,11 @@ object ConfigurationMigration {
               Sync[F].pure(ConfigError.MissingRequired(ccmConfigName).invalidNel)
           }
         } yield result
-      }
 
       // Implement remaining ConfigurationAlgebra methods
-      def load[T: ConfigDecoder: ConfigValidator](key: NonEmptyString): F[ValidatedNel[ConfigError, T]] =
+      def load[T: ConfigDecoder: ConfigValidator](
+        key: NonEmptyString
+      ): F[ValidatedNel[ConfigError, T]] =
         migrateCcmConfig[T](key.value)
 
       def loadOptional[T: ConfigDecoder: ConfigValidator](key: NonEmptyString): F[Option[T]] =
@@ -698,15 +752,22 @@ object ConfigurationMigration {
       def healthCheck: F[ConfigHealthStatus] =
         Sync[F].pure(ConfigHealthStatus.Healthy) // TODO: Implement actual health check
 
-      def loadWithFallback[T: ConfigDecoder: ConfigValidator](key: NonEmptyString, envPrefix: String): F[ValidatedNel[ConfigError, T]] =
+      def loadWithFallback[T: ConfigDecoder: ConfigValidator](
+        key: NonEmptyString,
+        envPrefix: String
+      ): F[ValidatedNel[ConfigError, T]] =
         load[T](key) // TODO: Implement environment fallback
 
-      def loadBatch[T: ConfigDecoder: ConfigValidator](keys: NonEmptyList[NonEmptyString]): F[ValidatedNel[ConfigError, List[T]]] =
+      def loadBatch[T: ConfigDecoder: ConfigValidator](
+        keys: NonEmptyList[NonEmptyString]
+      ): F[ValidatedNel[ConfigError, List[T]]] =
         keys.traverse(load[T]).map { results =>
           results.traverse(identity).map(_.toList)
         }
 
-      def merge[T: ConfigDecoder: ConfigMerger](sources: NonEmptyList[ConfigSource]): F[ValidatedNel[ConfigError, T]] =
+      def merge[T: ConfigDecoder: ConfigMerger](
+        sources: NonEmptyList[ConfigSource]
+      ): F[ValidatedNel[ConfigError, T]] =
         ??? // TODO: Implement configuration merging
     }
 
@@ -725,7 +786,7 @@ object ConfigurationMigration {
   private def generateMigrationSteps(
     ccm: List[String],
     flowforge: List[String]
-  ): List[MigrationStep] = {
+  ): List[MigrationStep] =
     // Generate step-by-step migration plan
     List(
       MigrationStep("backup-current-config", "Backup existing CCM configurations"),
@@ -733,7 +794,6 @@ object ConfigurationMigration {
       MigrationStep("validate-migration", "Validate configuration migration"),
       MigrationStep("switch-to-flowforge", "Switch to FlowForge configuration system")
     )
-  }
 }
 
 case class ConfigMigrationPlan(

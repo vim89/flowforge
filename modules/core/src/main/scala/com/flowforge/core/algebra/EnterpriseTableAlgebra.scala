@@ -29,24 +29,25 @@
  *   - GCS blob operations with resource management
  *   - Enterprise table optimization strategies
  *
- * @author FlowForge Team
+ * @author
+ *   FlowForge Team
  * @version 1.0.0
  * @since 2024
  */
 package com.flowforge.core.algebra
 
-import cats.data.{NonEmptyList, ValidatedNel}
-import cats.effect.{Resource, MonadCancel}
+import cats.data.{ NonEmptyList, ValidatedNel }
+import cats.effect.{ MonadCancel, Resource }
 import cats.implicits._
-import com.flowforge.core.types.RefinedTypes.{FieldName, TableName}
-import com.flowforge.core.types.{ErrorCategory, ErrorSeverity, FlowForgeError}
+import com.flowforge.core.types.RefinedTypes.{ FieldName, TableName }
+import com.flowforge.core.types.{ ErrorCategory, ErrorSeverity, FlowForgeError }
 
 import java.time.Instant
 import scala.concurrent.duration.FiniteDuration
 
 /**
- * Enterprise table operations algebra with effect polymorphism.
- * Enhanced version of reference-utilities Table.scala patterns.
+ * Enterprise table operations algebra with effect polymorphism. Enhanced version of
+ * reference-utilities Table.scala patterns.
  */
 trait EnterpriseTableAlgebra[F[_]] {
 
@@ -55,39 +56,48 @@ trait EnterpriseTableAlgebra[F[_]] {
   // ===============================
 
   /**
-   * Repair and refresh table metadata.
-   * Enhanced version of reference Table.repairRefreshTable with effect safety.
+   * Repair and refresh table metadata. Enhanced version of reference Table.repairRefreshTable with
+   * effect safety.
    *
-   * @param tableName Table to repair and refresh
-   * @return Operation result with detailed metrics
+   * @param tableName
+   *   Table to repair and refresh
+   * @return
+   *   Operation result with detailed metrics
    */
   def repairRefreshTable(tableName: TableName): F[TableOperationResult]
 
   /**
-   * Get table physical location on distributed file system.
-   * Enhanced version of reference Table.getTableLocation with validation.
+   * Get table physical location on distributed file system. Enhanced version of reference
+   * Table.getTableLocation with validation.
    *
-   * @param tableName Table name to locate
-   * @return Validated table location or errors
+   * @param tableName
+   *   Table name to locate
+   * @return
+   *   Validated table location or errors
    */
   def getTableLocation(tableName: TableName): F[ValidatedNel[TableError, TableLocation]]
 
   /**
-   * Delete table data from distributed file system.
-   * Enhanced version of reference Table.deleteDfsLocation with safety checks.
+   * Delete table data from distributed file system. Enhanced version of reference
+   * Table.deleteDfsLocation with safety checks.
    *
-   * @param location DFS location to delete
-   * @return Deletion result with safety confirmations
+   * @param location
+   *   DFS location to delete
+   * @return
+   *   Deletion result with safety confirmations
    */
   def deleteDfsLocation(location: TableLocation): F[DeletionResult]
 
   /**
-   * Optimize table storage and performance.
-   * Advanced optimization strategies for different table types.
+   * Optimize table storage and performance. Advanced optimization strategies for different table
+   * types.
    *
-   * @param tableName Table to optimize
-   * @param strategy Optimization strategy to apply
-   * @return Optimization result with performance metrics
+   * @param tableName
+   *   Table to optimize
+   * @param strategy
+   *   Optimization strategy to apply
+   * @return
+   *   Optimization result with performance metrics
    */
   def optimizeTable(
     tableName: TableName,
@@ -95,12 +105,15 @@ trait EnterpriseTableAlgebra[F[_]] {
   ): F[OptimizationResult]
 
   /**
-   * Vacuum table to remove old versions and compact storage.
-   * Resource-safe vacuum operations with configurable retention.
+   * Vacuum table to remove old versions and compact storage. Resource-safe vacuum operations with
+   * configurable retention.
    *
-   * @param tableName Table to vacuum
-   * @param retentionPolicy Retention policy for old versions
-   * @return Vacuum result with space reclaimed metrics
+   * @param tableName
+   *   Table to vacuum
+   * @param retentionPolicy
+   *   Retention policy for old versions
+   * @return
+   *   Vacuum result with space reclaimed metrics
    */
   def vacuumTable(
     tableName: TableName,
@@ -112,13 +125,17 @@ trait EnterpriseTableAlgebra[F[_]] {
   // ===============================
 
   /**
-   * Get affected partitions based on timestamp criteria.
-   * Enhanced version of reference Table.getAffectedPartitions with type safety.
+   * Get affected partitions based on timestamp criteria. Enhanced version of reference
+   * Table.getAffectedPartitions with type safety.
    *
-   * @param tableName Source table name
-   * @param sinceTimestamp Timestamp threshold for affected partitions
-   * @param regionFilter Optional region filter for geo-partitioned tables
-   * @return List of affected partitions with metadata
+   * @param tableName
+   *   Source table name
+   * @param sinceTimestamp
+   *   Timestamp threshold for affected partitions
+   * @param regionFilter
+   *   Optional region filter for geo-partitioned tables
+   * @return
+   *   List of affected partitions with metadata
    */
   def getAffectedPartitions(
     tableName: TableName,
@@ -127,12 +144,14 @@ trait EnterpriseTableAlgebra[F[_]] {
   ): F[ValidatedNel[PartitionError, List[PartitionInfo]]]
 
   /**
-   * Drop specific table partitions safely.
-   * Enhanced version with validation and safety checks.
+   * Drop specific table partitions safely. Enhanced version with validation and safety checks.
    *
-   * @param tableName Table name
-   * @param partitions Partitions to drop
-   * @return Drop operation results
+   * @param tableName
+   *   Table name
+   * @param partitions
+   *   Partitions to drop
+   * @return
+   *   Drop operation results
    */
   def dropPartitions(
     tableName: TableName,
@@ -140,12 +159,14 @@ trait EnterpriseTableAlgebra[F[_]] {
   ): F[List[PartitionDropResult]]
 
   /**
-   * Add new partitions to table.
-   * Type-safe partition addition with validation.
+   * Add new partitions to table. Type-safe partition addition with validation.
    *
-   * @param tableName Table name
-   * @param partitions Partitions to add
-   * @return Addition operation results
+   * @param tableName
+   *   Table name
+   * @param partitions
+   *   Partitions to add
+   * @return
+   *   Addition operation results
    */
   def addPartitions(
     tableName: TableName,
@@ -155,8 +176,10 @@ trait EnterpriseTableAlgebra[F[_]] {
   /**
    * Analyze partition statistics for optimization.
    *
-   * @param tableName Table to analyze
-   * @return Partition analysis with optimization recommendations
+   * @param tableName
+   *   Table to analyze
+   * @return
+   *   Partition analysis with optimization recommendations
    */
   def analyzePartitions(tableName: TableName): F[PartitionAnalysis]
 
@@ -165,13 +188,17 @@ trait EnterpriseTableAlgebra[F[_]] {
   // ===============================
 
   /**
-   * Get affected blobs from cloud storage.
-   * Enhanced version of reference Table.getAffectedBlobs with resource safety.
+   * Get affected blobs from cloud storage. Enhanced version of reference Table.getAffectedBlobs
+   * with resource safety.
    *
-   * @param bucketName Cloud storage bucket
-   * @param beforeTimestamp Upper bound for blob timestamps
-   * @param afterTimestamp Lower bound for blob timestamps
-   * @return List of affected blobs with metadata
+   * @param bucketName
+   *   Cloud storage bucket
+   * @param beforeTimestamp
+   *   Upper bound for blob timestamps
+   * @param afterTimestamp
+   *   Lower bound for blob timestamps
+   * @return
+   *   List of affected blobs with metadata
    */
   def getAffectedBlobs(
     bucketName: String,
@@ -180,14 +207,19 @@ trait EnterpriseTableAlgebra[F[_]] {
   ): F[ValidatedNel[BlobError, List[BlobInfo]]]
 
   /**
-   * Process blobs concurrently with resource management.
-   * Enhanced version with effect-safe concurrent processing.
+   * Process blobs concurrently with resource management. Enhanced version with effect-safe
+   * concurrent processing.
    *
-   * @param blobs Blobs to process
-   * @param processor Processing function
-   * @param concurrency Maximum concurrent operations
-   * @tparam A Processing result type
-   * @return Processing results
+   * @param blobs
+   *   Blobs to process
+   * @param processor
+   *   Processing function
+   * @param concurrency
+   *   Maximum concurrent operations
+   * @tparam A
+   *   Processing result type
+   * @return
+   *   Processing results
    */
   def processBlobsConcurrently[A](
     blobs: List[BlobInfo],
@@ -196,11 +228,13 @@ trait EnterpriseTableAlgebra[F[_]] {
   ): F[List[A]]
 
   /**
-   * Sync table metadata with cloud storage state.
-   * Ensures table metadata accurately reflects storage reality.
+   * Sync table metadata with cloud storage state. Ensures table metadata accurately reflects
+   * storage reality.
    *
-   * @param tableName Table to sync
-   * @return Sync operation result
+   * @param tableName
+   *   Table to sync
+   * @return
+   *   Sync operation result
    */
   def syncTableWithStorage(tableName: TableName): F[SyncResult]
 
@@ -211,10 +245,14 @@ trait EnterpriseTableAlgebra[F[_]] {
   /**
    * Evolve table schema with backward compatibility validation.
    *
-   * @param tableName Table to evolve
-   * @param newSchema New schema definition
-   * @param evolutionStrategy Evolution strategy (additive, breaking, etc.)
-   * @return Schema evolution result
+   * @param tableName
+   *   Table to evolve
+   * @param newSchema
+   *   New schema definition
+   * @param evolutionStrategy
+   *   Evolution strategy (additive, breaking, etc.)
+   * @return
+   *   Schema evolution result
    */
   def evolveSchema(
     tableName: TableName,
@@ -225,9 +263,12 @@ trait EnterpriseTableAlgebra[F[_]] {
   /**
    * Validate schema compatibility between versions.
    *
-   * @param currentSchema Current table schema
-   * @param proposedSchema Proposed new schema
-   * @return Compatibility analysis
+   * @param currentSchema
+   *   Current table schema
+   * @param proposedSchema
+   *   Proposed new schema
+   * @return
+   *   Compatibility analysis
    */
   def validateSchemaCompatibility(
     currentSchema: TableSchema,
@@ -237,9 +278,12 @@ trait EnterpriseTableAlgebra[F[_]] {
   /**
    * Generate schema migration script.
    *
-   * @param fromSchema Source schema
-   * @param toSchema Target schema
-   * @return Migration script and instructions
+   * @param fromSchema
+   *   Source schema
+   * @param toSchema
+   *   Target schema
+   * @return
+   *   Migration script and instructions
    */
   def generateSchemaMigration(
     fromSchema: TableSchema,
@@ -315,11 +359,11 @@ case class BlobInfo(
  */
 sealed trait OptimizationStrategy
 object OptimizationStrategy {
-  case object Compact extends OptimizationStrategy
-  case object ZOrder extends OptimizationStrategy
-  case object Vacuum extends OptimizationStrategy
-  case object RepartitionBySize extends OptimizationStrategy
-  case object RepartitionByColumn extends OptimizationStrategy
+  case object Compact                                              extends OptimizationStrategy
+  case object ZOrder                                               extends OptimizationStrategy
+  case object Vacuum                                               extends OptimizationStrategy
+  case object RepartitionBySize                                    extends OptimizationStrategy
+  case object RepartitionByColumn                                  extends OptimizationStrategy
   case class Custom(name: String, parameters: Map[String, String]) extends OptimizationStrategy
 }
 
@@ -328,9 +372,9 @@ object OptimizationStrategy {
  */
 sealed trait RetentionPolicy
 object RetentionPolicy {
-  case class TimeBasedRetention(duration: FiniteDuration) extends RetentionPolicy
-  case class VersionBasedRetention(versionsToKeep: Int) extends RetentionPolicy
-  case class SizeBasedRetention(maxSizeBytes: Long) extends RetentionPolicy
+  case class TimeBasedRetention(duration: FiniteDuration)                extends RetentionPolicy
+  case class VersionBasedRetention(versionsToKeep: Int)                  extends RetentionPolicy
+  case class SizeBasedRetention(maxSizeBytes: Long)                      extends RetentionPolicy
   case class CompositeRetention(policies: NonEmptyList[RetentionPolicy]) extends RetentionPolicy
 }
 
@@ -339,10 +383,10 @@ object RetentionPolicy {
  */
 sealed trait SchemaEvolutionStrategy
 object SchemaEvolutionStrategy {
-  case object Additive extends SchemaEvolutionStrategy      // Add new columns only
-  case object Compatible extends SchemaEvolutionStrategy    // Backward compatible changes
-  case object Breaking extends SchemaEvolutionStrategy      // Breaking changes allowed
-  case object Strict extends SchemaEvolutionStrategy        // No changes allowed
+  case object Additive   extends SchemaEvolutionStrategy // Add new columns only
+  case object Compatible extends SchemaEvolutionStrategy // Backward compatible changes
+  case object Breaking   extends SchemaEvolutionStrategy // Breaking changes allowed
+  case object Strict     extends SchemaEvolutionStrategy // No changes allowed
 }
 
 /**
@@ -350,11 +394,11 @@ object SchemaEvolutionStrategy {
  */
 sealed trait FileSystemType
 object FileSystemType {
-  case object HDFS extends FileSystemType
-  case object S3 extends FileSystemType
-  case object GCS extends FileSystemType
+  case object HDFS      extends FileSystemType
+  case object S3        extends FileSystemType
+  case object GCS       extends FileSystemType
   case object AzureBlob extends FileSystemType
-  case object Local extends FileSystemType
+  case object Local     extends FileSystemType
 }
 
 // ===============================
@@ -457,50 +501,50 @@ case class SchemaVersion(value: Int) extends AnyVal
 
 sealed trait TableError extends FlowForgeError
 case class TableNotFound(tableName: TableName) extends TableError {
-  val message = s"Table '${tableName.value}' not found"
-  val category = ErrorCategory.System
-  val severity = ErrorSeverity.Error
-  val context = Map("tableName" -> tableName.value)
-  val cause = None
-  val timestamp = java.time.Instant.now()
-  val errorId = java.util.UUID.randomUUID().toString
-  val isRetryable = false
+  val message       = s"Table '${tableName.value}' not found"
+  val category      = ErrorCategory.System
+  val severity      = ErrorSeverity.Error
+  val context       = Map("tableName" -> tableName.value)
+  val cause         = None
+  val timestamp     = java.time.Instant.now()
+  val errorId       = java.util.UUID.randomUUID().toString
+  val isRetryable   = false
   val recoveryHints = List("Check table name spelling", "Verify table exists", "Check permissions")
 
   def withContext(additionalContext: Map[String, Any]) = this
-  def withCause(underlyingCause: Throwable) = this
+  def withCause(underlyingCause: Throwable)            = this
 }
 
 sealed trait PartitionError extends FlowForgeError
 case class PartitionNotFound(partitionSpec: PartitionSpec) extends PartitionError {
-  val message = s"Partition '${partitionSpec.toPartitionPath}' not found"
-  val category = ErrorCategory.System
-  val severity = ErrorSeverity.Error
-  val context = Map("partitionSpec" -> partitionSpec.toPartitionPath)
-  val cause = None
-  val timestamp = java.time.Instant.now()
-  val errorId = java.util.UUID.randomUUID().toString
-  val isRetryable = false
+  val message       = s"Partition '${partitionSpec.toPartitionPath}' not found"
+  val category      = ErrorCategory.System
+  val severity      = ErrorSeverity.Error
+  val context       = Map("partitionSpec" -> partitionSpec.toPartitionPath)
+  val cause         = None
+  val timestamp     = java.time.Instant.now()
+  val errorId       = java.util.UUID.randomUUID().toString
+  val isRetryable   = false
   val recoveryHints = List("Check partition specification", "Verify partition exists")
 
   def withContext(additionalContext: Map[String, Any]) = this
-  def withCause(underlyingCause: Throwable) = this
+  def withCause(underlyingCause: Throwable)            = this
 }
 
 sealed trait BlobError extends FlowForgeError
 case class BlobAccessError(bucketName: String, blobName: String, reason: String) extends BlobError {
-  val message = s"Cannot access blob '$blobName' in bucket '$bucketName': $reason"
-  val category = ErrorCategory.System
-  val severity = ErrorSeverity.Error
-  val context = Map("bucketName" -> bucketName, "blobName" -> blobName, "reason" -> reason)
-  val cause = None
-  val timestamp = java.time.Instant.now()
-  val errorId = java.util.UUID.randomUUID().toString
-  val isRetryable = true
+  val message       = s"Cannot access blob '$blobName' in bucket '$bucketName': $reason"
+  val category      = ErrorCategory.System
+  val severity      = ErrorSeverity.Error
+  val context       = Map("bucketName" -> bucketName, "blobName" -> blobName, "reason" -> reason)
+  val cause         = None
+  val timestamp     = java.time.Instant.now()
+  val errorId       = java.util.UUID.randomUUID().toString
+  val isRetryable   = true
   val recoveryHints = List("Check cloud permissions", "Verify bucket exists", "Retry operation")
 
   def withContext(additionalContext: Map[String, Any]) = this
-  def withCause(underlyingCause: Throwable) = this
+  def withCause(underlyingCause: Throwable)            = this
 }
 
 // ===============================
@@ -515,9 +559,12 @@ trait AdvancedTableOperations[F[_]] extends EnterpriseTableAlgebra[F] {
   /**
    * Create table snapshot for backup and recovery.
    *
-   * @param tableName Table to snapshot
-   * @param snapshotName Name for the snapshot
-   * @return Snapshot creation result
+   * @param tableName
+   *   Table to snapshot
+   * @param snapshotName
+   *   Name for the snapshot
+   * @return
+   *   Snapshot creation result
    */
   def createSnapshot(
     tableName: TableName,
@@ -527,9 +574,12 @@ trait AdvancedTableOperations[F[_]] extends EnterpriseTableAlgebra[F] {
   /**
    * Restore table from snapshot.
    *
-   * @param tableName Table to restore
-   * @param snapshotName Snapshot to restore from
-   * @return Restore operation result
+   * @param tableName
+   *   Table to restore
+   * @param snapshotName
+   *   Snapshot to restore from
+   * @return
+   *   Restore operation result
    */
   def restoreFromSnapshot(
     tableName: TableName,
@@ -539,10 +589,14 @@ trait AdvancedTableOperations[F[_]] extends EnterpriseTableAlgebra[F] {
   /**
    * Clone table with or without data.
    *
-   * @param sourceTable Source table to clone
-   * @param targetTable Target table name
-   * @param includeData Whether to copy data or just schema
-   * @return Clone operation result
+   * @param sourceTable
+   *   Source table to clone
+   * @param targetTable
+   *   Target table name
+   * @param includeData
+   *   Whether to copy data or just schema
+   * @return
+   *   Clone operation result
    */
   def cloneTable(
     sourceTable: TableName,
@@ -553,18 +607,24 @@ trait AdvancedTableOperations[F[_]] extends EnterpriseTableAlgebra[F] {
   /**
    * Analyze table statistics and generate recommendations.
    *
-   * @param tableName Table to analyze
-   * @return Comprehensive table analysis
+   * @param tableName
+   *   Table to analyze
+   * @return
+   *   Comprehensive table analysis
    */
   def analyzeTable(tableName: TableName): F[TableAnalysis]
 
   /**
    * Compare two tables for differences.
    *
-   * @param table1 First table
-   * @param table2 Second table
-   * @param comparisonType Type of comparison to perform
-   * @return Table comparison result
+   * @param table1
+   *   First table
+   * @param table2
+   *   Second table
+   * @param comparisonType
+   *   Type of comparison to perform
+   * @return
+   *   Table comparison result
    */
   def compareTables(
     table1: TableName,
@@ -578,8 +638,8 @@ trait AdvancedTableOperations[F[_]] extends EnterpriseTableAlgebra[F] {
 // ===============================
 
 /**
- * Resource-safe table operations using Resource[F, _] pattern.
- * Ensures proper cleanup of table connections and locks.
+ * Resource-safe table operations using Resource[F, _] pattern. Ensures proper cleanup of table
+ * connections and locks.
  */
 trait ResourceSafeTableOps[F[_]] {
   implicit def monadCancel: MonadCancel[F, Throwable]
@@ -587,9 +647,12 @@ trait ResourceSafeTableOps[F[_]] {
   /**
    * Acquire table lock for exclusive operations.
    *
-   * @param tableName Table to lock
-   * @param lockType Type of lock to acquire
-   * @return Resource-managed table lock
+   * @param tableName
+   *   Table to lock
+   * @param lockType
+   *   Type of lock to acquire
+   * @return
+   *   Resource-managed table lock
    */
   def acquireTableLock(
     tableName: TableName,
@@ -599,24 +662,29 @@ trait ResourceSafeTableOps[F[_]] {
   /**
    * Open table connection with automatic cleanup.
    *
-   * @param tableName Table to connect to
-   * @return Resource-managed table connection
+   * @param tableName
+   *   Table to connect to
+   * @return
+   *   Resource-managed table connection
    */
   def openTableConnection(tableName: TableName): Resource[F, TableConnection]
 
   /**
    * Execute table operation within resource boundary.
    *
-   * @param tableName Table for operation
-   * @param operation Operation to execute
-   * @tparam A Operation result type
-   * @return Operation result with guaranteed cleanup
+   * @param tableName
+   *   Table for operation
+   * @param operation
+   *   Operation to execute
+   * @tparam A
+   *   Operation result type
+   * @return
+   *   Operation result with guaranteed cleanup
    */
   def withTableResource[A](
     tableName: TableName
-  )(operation: TableConnection => F[A]): F[A] = {
+  )(operation: TableConnection => F[A]): F[A] =
     openTableConnection(tableName).use(operation)
-  }
 }
 
 // ===============================
@@ -625,24 +693,24 @@ trait ResourceSafeTableOps[F[_]] {
 
 sealed trait TableLockType
 object TableLockType {
-  case object Shared extends TableLockType
-  case object Exclusive extends TableLockType
+  case object Shared     extends TableLockType
+  case object Exclusive  extends TableLockType
   case object SchemaLock extends TableLockType
 }
 
 sealed trait TableComparisonType
 object TableComparisonType {
-  case object Schema extends TableComparisonType
-  case object Data extends TableComparisonType
+  case object Schema     extends TableComparisonType
+  case object Data       extends TableComparisonType
   case object Statistics extends TableComparisonType
-  case object Complete extends TableComparisonType
+  case object Complete   extends TableComparisonType
 }
 
 sealed trait RiskLevel
 object RiskLevel {
-  case object Low extends RiskLevel
-  case object Medium extends RiskLevel
-  case object High extends RiskLevel
+  case object Low      extends RiskLevel
+  case object Medium   extends RiskLevel
+  case object High     extends RiskLevel
   case object Critical extends RiskLevel
 }
 
@@ -655,18 +723,18 @@ case class SchemaChange(
 
 sealed trait SchemaChangeType
 object SchemaChangeType {
-  case object AddColumn extends SchemaChangeType
-  case object DropColumn extends SchemaChangeType
+  case object AddColumn    extends SchemaChangeType
+  case object DropColumn   extends SchemaChangeType
   case object ModifyColumn extends SchemaChangeType
   case object RenameColumn extends SchemaChangeType
 }
 
 sealed trait SchemaImpact
 object SchemaImpact {
-  case object None extends SchemaImpact
-  case object Low extends SchemaImpact
-  case object Medium extends SchemaImpact
-  case object High extends SchemaImpact
+  case object None     extends SchemaImpact
+  case object Low      extends SchemaImpact
+  case object Medium   extends SchemaImpact
+  case object High     extends SchemaImpact
   case object Breaking extends SchemaImpact
 }
 
@@ -679,17 +747,17 @@ case class PartitionRecommendation(
 
 sealed trait RecommendationType
 object RecommendationType {
-  case object Optimize extends RecommendationType
+  case object Optimize    extends RecommendationType
   case object Repartition extends RecommendationType
-  case object Cleanup extends RecommendationType
-  case object Archive extends RecommendationType
+  case object Cleanup     extends RecommendationType
+  case object Archive     extends RecommendationType
 }
 
 sealed trait EffortLevel
 object EffortLevel {
-  case object Low extends EffortLevel
+  case object Low    extends EffortLevel
   case object Medium extends EffortLevel
-  case object High extends EffortLevel
+  case object High   extends EffortLevel
 }
 
 // ===============================
@@ -775,40 +843,40 @@ case class TableDifference(
 sealed trait RecommendationCategory
 object RecommendationCategory {
   case object Performance extends RecommendationCategory
-  case object Storage extends RecommendationCategory
+  case object Storage     extends RecommendationCategory
   case object Maintenance extends RecommendationCategory
-  case object Security extends RecommendationCategory
+  case object Security    extends RecommendationCategory
 }
 
 sealed trait Priority
 object Priority {
-  case object Low extends Priority
-  case object Medium extends Priority
-  case object High extends Priority
+  case object Low      extends Priority
+  case object Medium   extends Priority
+  case object High     extends Priority
   case object Critical extends Priority
 }
 
 sealed trait ComplexityLevel
 object ComplexityLevel {
-  case object Simple extends ComplexityLevel
+  case object Simple   extends ComplexityLevel
   case object Moderate extends ComplexityLevel
-  case object Complex extends ComplexityLevel
-  case object Expert extends ComplexityLevel
+  case object Complex  extends ComplexityLevel
+  case object Expert   extends ComplexityLevel
 }
 
 sealed trait DifferenceCategory
 object DifferenceCategory {
-  case object Schema extends DifferenceCategory
-  case object Data extends DifferenceCategory
+  case object Schema     extends DifferenceCategory
+  case object Data       extends DifferenceCategory
   case object Statistics extends DifferenceCategory
-  case object Metadata extends DifferenceCategory
+  case object Metadata   extends DifferenceCategory
 }
 
 sealed trait DifferenceSeverity
 object DifferenceSeverity {
-  case object Info extends DifferenceSeverity
-  case object Warning extends DifferenceSeverity
-  case object Error extends DifferenceSeverity
+  case object Info     extends DifferenceSeverity
+  case object Warning  extends DifferenceSeverity
+  case object Error    extends DifferenceSeverity
   case object Critical extends DifferenceSeverity
 }
 
@@ -851,10 +919,10 @@ object EnterpriseTableAlgebra {
    * Utility methods for table operations
    */
   def inferTableType(location: TableLocation): TableType = location.path match {
-    case path if path.contains("delta") => TableType.Delta
+    case path if path.contains("delta")   => TableType.Delta
     case path if path.contains("iceberg") => TableType.Iceberg
-    case path if path.contains("hudi") => TableType.Hudi
-    case _ => TableType.Parquet
+    case path if path.contains("hudi")    => TableType.Hudi
+    case _                                => TableType.Parquet
   }
 }
 
@@ -875,51 +943,54 @@ case class TableOperationBuilder[F[_]: EffectSystem](
   def vacuum(policy: RetentionPolicy): TableOperationBuilder[F] =
     copy(operations = operations :+ TableOperation.Vacuum(policy))
 
-  def execute(implicit algebra: EnterpriseTableAlgebra[F]): F[List[TableOperationResult]] = {
+  def execute(implicit algebra: EnterpriseTableAlgebra[F]): F[List[TableOperationResult]] =
     operations.traverse {
       case TableOperation.Repair =>
         algebra.repairRefreshTable(tableName)
       case TableOperation.Optimize(strategy) =>
-        algebra.optimizeTable(tableName, strategy).map(opt =>
-          TableOperationResult(
-            tableName = tableName,
-            operation = "optimize",
-            success = true,
-            duration = opt.duration,
-            recordsAffected = 0,
-            partitionsAffected = 0,
-            storageUsed = opt.beforeMetrics.sizeBytes - opt.afterMetrics.sizeBytes
+        algebra
+          .optimizeTable(tableName, strategy)
+          .map(opt =>
+            TableOperationResult(
+              tableName = tableName,
+              operation = "optimize",
+              success = true,
+              duration = opt.duration,
+              recordsAffected = 0,
+              partitionsAffected = 0,
+              storageUsed = opt.beforeMetrics.sizeBytes - opt.afterMetrics.sizeBytes
+            )
           )
-        )
       case TableOperation.Vacuum(policy) =>
-        algebra.vacuumTable(tableName, policy).map(vac =>
-          TableOperationResult(
-            tableName = tableName,
-            operation = "vacuum",
-            success = true,
-            duration = vac.duration,
-            recordsAffected = 0,
-            partitionsAffected = 0,
-            storageUsed = vac.spaceReclaimed
+        algebra
+          .vacuumTable(tableName, policy)
+          .map(vac =>
+            TableOperationResult(
+              tableName = tableName,
+              operation = "vacuum",
+              success = true,
+              duration = vac.duration,
+              recordsAffected = 0,
+              partitionsAffected = 0,
+              storageUsed = vac.spaceReclaimed
+            )
           )
-        )
     }
-  }
 }
 
 sealed trait TableOperation[+F[_]]
 object TableOperation {
-  case object Repair extends TableOperation[Nothing]
+  case object Repair                                  extends TableOperation[Nothing]
   case class Optimize(strategy: OptimizationStrategy) extends TableOperation[Nothing]
-  case class Vacuum(policy: RetentionPolicy) extends TableOperation[Nothing]
+  case class Vacuum(policy: RetentionPolicy)          extends TableOperation[Nothing]
 }
 
 sealed trait TableType
 object TableType {
-  case object Delta extends TableType
+  case object Delta   extends TableType
   case object Iceberg extends TableType
-  case object Hudi extends TableType
+  case object Hudi    extends TableType
   case object Parquet extends TableType
-  case object Avro extends TableType
-  case object ORC extends TableType
+  case object Avro    extends TableType
+  case object ORC     extends TableType
 }

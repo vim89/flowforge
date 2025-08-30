@@ -237,14 +237,12 @@ object EffectInstances {
 
     override def void[A](fa: IO[A]): IO[Unit] = fa.void
 
-
     def tailRecM[A, B](a: A)(f: A => IO[Either[A, B]]): IO[B] = {
-      def loop(current: A): IO[B] = {
+      def loop(current: A): IO[B] =
         f(current).flatMap {
-          case Left(nextA) => loop(nextA)  // Continue recursion
-          case Right(b) => IO.pure(b)      // Terminate recursion
+          case Left(nextA) => loop(nextA) // Continue recursion
+          case Right(b)    => IO.pure(b)  // Terminate recursion
         }
-      }
       loop(a)
     }
   }

@@ -731,8 +731,8 @@ object DataAlgebra {
 // ===============================
 
 /**
- * Change Data Capture operations mixin for DataAlgebra.
- * Integrates reference-utilities ETL patterns with functional programming.
+ * Change Data Capture operations mixin for DataAlgebra. Integrates reference-utilities ETL patterns
+ * with functional programming.
  */
 trait CDCOperations[F[_]] {
   self: DataAlgebra[F] =>
@@ -740,8 +740,8 @@ trait CDCOperations[F[_]] {
   import CDCOperations._
 
   /**
-   * Perform CDC between source and target datasets.
-   * Enhanced version of reference ETL.performDelta with type safety.
+   * Perform CDC between source and target datasets. Enhanced version of reference ETL.performDelta
+   * with type safety.
    */
   def performDelta[A: DataDecoder: DataEncoder](
     source: Dataset[A],
@@ -785,10 +785,10 @@ object CDCOperations {
 
   object CDCConfig {
     def default: CDCConfig = CDCConfig()
-    
+
     def withQualityChecks: CDCConfig = CDCConfig(enableQualityChecks = true)
-    
-    def withSoftDelete(column: FieldName): CDCConfig = 
+
+    def withSoftDelete(column: FieldName): CDCConfig =
       CDCConfig(softDeleteColumn = Some(column))
   }
 
@@ -810,9 +810,9 @@ object CDCOperations {
    */
   sealed trait ChangeOperation
   object ChangeOperation {
-    case object Insert extends ChangeOperation
-    case object Update extends ChangeOperation
-    case object Delete extends ChangeOperation
+    case object Insert   extends ChangeOperation
+    case object Update   extends ChangeOperation
+    case object Delete   extends ChangeOperation
     case object NoChange extends ChangeOperation
   }
 }
@@ -822,8 +822,8 @@ object CDCOperations {
 // ===============================
 
 /**
- * Table management operations mixin for DataAlgebra.
- * Integrates reference-utilities Table patterns with functional programming.
+ * Table management operations mixin for DataAlgebra. Integrates reference-utilities Table patterns
+ * with functional programming.
  */
 trait TableOperations[F[_]] {
   self: DataAlgebra[F] =>
@@ -831,20 +831,19 @@ trait TableOperations[F[_]] {
   import TableOperations._
 
   /**
-   * Repair and refresh table metadata.
-   * Enhanced version of reference Table.repairRefreshTable with safety.
+   * Repair and refresh table metadata. Enhanced version of reference Table.repairRefreshTable with
+   * safety.
    */
   def repairRefreshTable(table: TableName): F[TableOperationResult]
 
   /**
-   * Get table location with validation.
-   * Enhanced version of reference Table.getTableLocation.
+   * Get table location with validation. Enhanced version of reference Table.getTableLocation.
    */
   def getTableLocation(table: TableName): F[ValidatedNel[FlowForgeError, String]]
 
   /**
-   * Get affected partitions for time range.
-   * Enhanced version of reference Table.getAffectedPartitions.
+   * Get affected partitions for time range. Enhanced version of reference
+   * Table.getAffectedPartitions.
    */
   def getAffectedPartitions(
     table: TableName,
@@ -853,8 +852,8 @@ trait TableOperations[F[_]] {
   ): F[List[PartitionSpec]]
 
   /**
-   * Safe deletion of table location.
-   * Enhanced version of reference Table.deleteDfsLocation with safety checks.
+   * Safe deletion of table location. Enhanced version of reference Table.deleteDfsLocation with
+   * safety checks.
    */
   def deleteDfsLocation(
     location: String,

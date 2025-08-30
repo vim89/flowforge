@@ -1,7 +1,7 @@
 package com.flowforge.core.types
 
-import cats.data.{Kleisli, NonEmptyList, ValidatedNel}
-import cats.implicits.{catsSyntaxTuple2Semigroupal, catsSyntaxValidatedId}
+import cats.data.{ Kleisli, NonEmptyList, ValidatedNel }
+import cats.implicits.{ catsSyntaxTuple2Semigroupal, catsSyntaxValidatedId }
 import com.flowforge.core.algebra.EffectSystem
 
 import java.time.Instant
