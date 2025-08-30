@@ -26,8 +26,11 @@ import com.flowforge.core.algebra.DataAlgebra.{
 }
 import com.flowforge.core.types._
 import com.flowforge.core.types.PipelineTypes._
+import com.flowforge.core.types.RefinedTypes.FieldName
+import eu.timepit.refined.types.string.NonEmptyString
 
 import java.time.Instant
+import scala.concurrent.duration.FiniteDuration
 
 /**
  * 🚀 **FlowForge Data Algebra - Universal Data Operations**
@@ -60,8 +63,10 @@ import java.time.Instant
 /**
  * Core algebra defining all data operations in FlowForge. Integrates with the existing
  * EffectSystem[F[_]] architecture.
+ *
+ * Enhanced with CDC and Table operations from reference-utilities integration.
  */
-trait DataAlgebra[F[_]] {
+trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
 
   // ===============================
   // CORE DATA SOURCE OPERATIONS
@@ -719,4 +724,191 @@ object DataAlgebra {
       def expectedSchema: DataSchema = DataSchema.builder.build
     }
   }
+}
+
+// ===============================
+// CDC OPERATIONS MIXIN
+// ===============================
+
+/**
+ * Change Data Capture operations mixin for DataAlgebra.
+ * Integrates reference-utilities ETL patterns with functional programming.
+ */
+trait CDCOperations[F[_]] {
+  self: DataAlgebra[F] =>
+
+  import CDCOperations._
+
+  /**
+   * Perform CDC between source and target datasets.
+   * Enhanced version of reference ETL.performDelta with type safety.
+   */
+  def performDelta[A: DataDecoder: DataEncoder](
+    source: Dataset[A],
+    target: Dataset[A],
+    primaryKeys: NonEmptyList[FieldName],
+    config: CDCConfig = CDCConfig.default
+  ): F[CDCResult[A]]
+
+  /**
+   * Perform incremental CDC with watermark tracking.
+   */
+  def performIncrementalDelta[A: DataDecoder: DataEncoder](
+    source: Dataset[A],
+    target: Dataset[A],
+    watermark: Option[Instant],
+    primaryKeys: NonEmptyList[FieldName],
+    config: CDCConfig = CDCConfig.default
+  ): F[(CDCResult[A], Instant)]
+
+  /**
+   * Compute change hash for record comparison.
+   */
+  def computeChangeHash[A](
+    record: A,
+    hashColumns: NonEmptyList[FieldName]
+  ): F[String]
+}
+
+object CDCOperations {
+
+  /**
+   * CDC configuration aligned with reference-utilities patterns
+   */
+  case class CDCConfig(
+    batchSize: Int = 10000,
+    enableQualityChecks: Boolean = true,
+    softDeleteColumn: Option[FieldName] = None,
+    timestampColumn: Option[FieldName] = None,
+    hashAlgorithm: String = "SHA-256"
+  )
+
+  object CDCConfig {
+    def default: CDCConfig = CDCConfig()
+    
+    def withQualityChecks: CDCConfig = CDCConfig(enableQualityChecks = true)
+    
+    def withSoftDelete(column: FieldName): CDCConfig = 
+      CDCConfig(softDeleteColumn = Some(column))
+  }
+
+  /**
+   * CDC processing result
+   */
+  case class CDCResult[A](
+    processedRecords: Long,
+    insertCount: Long,
+    updateCount: Long,
+    deleteCount: Long,
+    noChangeCount: Long,
+    processingTime: FiniteDuration,
+    errors: List[FlowForgeError] = List.empty
+  )
+
+  /**
+   * Change operation types
+   */
+  sealed trait ChangeOperation
+  object ChangeOperation {
+    case object Insert extends ChangeOperation
+    case object Update extends ChangeOperation
+    case object Delete extends ChangeOperation
+    case object NoChange extends ChangeOperation
+  }
+}
+
+// ===============================
+// TABLE OPERATIONS MIXIN
+// ===============================
+
+/**
+ * Table management operations mixin for DataAlgebra.
+ * Integrates reference-utilities Table patterns with functional programming.
+ */
+trait TableOperations[F[_]] {
+  self: DataAlgebra[F] =>
+
+  import TableOperations._
+
+  /**
+   * Repair and refresh table metadata.
+   * Enhanced version of reference Table.repairRefreshTable with safety.
+   */
+  def repairRefreshTable(table: TableName): F[TableOperationResult]
+
+  /**
+   * Get table location with validation.
+   * Enhanced version of reference Table.getTableLocation.
+   */
+  def getTableLocation(table: TableName): F[ValidatedNel[FlowForgeError, String]]
+
+  /**
+   * Get affected partitions for time range.
+   * Enhanced version of reference Table.getAffectedPartitions.
+   */
+  def getAffectedPartitions(
+    table: TableName,
+    startTime: Instant,
+    endTime: Instant
+  ): F[List[PartitionSpec]]
+
+  /**
+   * Safe deletion of table location.
+   * Enhanced version of reference Table.deleteDfsLocation with safety checks.
+   */
+  def deleteDfsLocation(
+    location: String,
+    dryRun: Boolean = true
+  ): F[TableOperationResult]
+
+  /**
+   * Analyze table and compute statistics.
+   */
+  def analyzeTable(
+    table: TableName,
+    partitions: Option[NonEmptyList[PartitionSpec]] = None
+  ): F[TableOperationResult]
+
+  /**
+   * Vacuum table to optimize storage.
+   */
+  def vacuumTable(
+    table: TableName,
+    retentionHours: Int = 168,
+    dryRun: Boolean = true
+  ): F[TableOperationResult]
+}
+
+object TableOperations {
+
+  /**
+   * Table name with validation
+   */
+  case class TableName(
+    database: NonEmptyString,
+    table: NonEmptyString
+  ) {
+    def qualified: String = s"${database.value}.${table.value}"
+  }
+
+  /**
+   * Partition specification
+   */
+  case class PartitionSpec(
+    columns: NonEmptyList[FieldName],
+    values: NonEmptyList[String]
+  )
+
+  /**
+   * Table operation result
+   */
+  case class TableOperationResult(
+    tableName: TableName,
+    operation: String,
+    success: Boolean,
+    affectedPartitions: List[PartitionSpec] = List.empty,
+    recordsProcessed: Long = 0,
+    processingTime: FiniteDuration,
+    errors: List[FlowForgeError] = List.empty
+  )
 }
