@@ -1,13 +1,12 @@
 package com.flowforge.core.instances
 
-import cats.data.{ Kleisli, NonEmptyList, Validated, ValidatedNel }
+import cats.data.{ Kleisli, ValidatedNel, Validated }
 import cats.implicits._
 import cats.{ Applicative, Functor, Monad, Show }
 import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
 import com.flowforge.core.patterns.ReaderPattern.ResourceConfig
 import com.flowforge.core.syntax.ValidationSyntax._
 import com.flowforge.core.types._
-import com.flowforge.core.{ algebra, types }
 
 import java.time.Instant
 import java.util.UUID
@@ -374,6 +373,14 @@ object DataInstances {
       s"InvalidFormat($field=$value, expected=$expected)"
     case ConfigError.OutOfRange(field, value, min, max) =>
       s"OutOfRange($field=$value, range=[$min, $max])"
+    case ConfigError.InvalidValue(field, value, details) =>
+      s"InvalidValue($field=$value, details=$details)"
+    case ConfigError.DependencyMissing(field, dependency) =>
+      s"DependencyMissing($field, requires=$dependency)"
+    case ConfigError.ConflictingValues(field1, field2, details) =>
+      s"ConflictingValues($field1, $field2, $details)"
+    case ConfigError.CustomError(message) =>
+      s"CustomError($message)"
   }
 
   implicit val validationErrorShow: Show[ValidationError] = Show.show { error =>

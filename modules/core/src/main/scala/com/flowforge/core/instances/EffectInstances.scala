@@ -124,8 +124,8 @@ object EffectInstances {
     // MonadError implementation
     def raiseError[A](error: Throwable): IO[A] = IO.raiseError(error)
 
-    def handleError[A](fa: IO[A])(handler: Throwable => IO[A]): IO[A] =
-      fa.handleErrorWith(handler)
+    override def handleErrorWith[A](fa: IO[A])(f: Throwable => IO[A]): IO[A] =
+      fa.handleErrorWith(f)
 
     // ===============================
     // SYNCHRONOUS OPERATIONS
@@ -237,7 +237,6 @@ object EffectInstances {
 
     override def void[A](fa: IO[A]): IO[Unit] = fa.void
 
-    override def handleErrorWith[A](fa: IO[A])(f: Throwable => IO[A]): IO[A] = fa.handleErrorWith(f)
 
     override def tailRecM[A, B](a: A)(f: A => IO[Either[A, B]]): IO[B] = ???
   }
@@ -293,8 +292,8 @@ object EffectInstances {
     // MonadError implementation
     def raiseError[A](error: Throwable): Task[A] = ZIO.fail(error)
 
-    def handleError[A](fa: Task[A])(handler: Throwable => Task[A]): Task[A] =
-      fa.catchAll(handler)
+    override def handleErrorWith[A](fa: Task[A])(f: Throwable => Task[A]): Task[A] =
+      fa.catchAll(f)
 
     // ===============================
     // SYNCHRONOUS OPERATIONS
@@ -442,7 +441,6 @@ object EffectInstances {
       fa.retry(schedule)
     }
 
-    override def handleErrorWith[A](fa: Task[A])(f: Throwable => Task[A]): Task[A] = fa.catchAll(f)
   }
 
   // ===============================
