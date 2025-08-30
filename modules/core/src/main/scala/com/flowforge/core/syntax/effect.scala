@@ -1,7 +1,7 @@
 /**
  * FlowForge Core Module - Effect System Syntax Extensions
  *
- * File: modules/core/src/main/scala/com/flowforge/core/syntax/EffectSyntax.scala Package:
+ * File: modules/core/src/main/scala/com/flowforge/core/syntax/effect.scala Package:
  * com.flowforge.core.syntax
  *
  * This file provides convenient syntax extensions for effect operations in FlowForge. It enables
