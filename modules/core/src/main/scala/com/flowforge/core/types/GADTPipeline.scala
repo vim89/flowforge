@@ -28,20 +28,17 @@
  */
 package com.flowforge.core.types
 
-import cats.data.{Kleisli, ValidatedNel}
 import cats.FlatMap
+import cats.data.{Kleisli, ValidatedNel}
 import cats.implicits._
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.types.{FlowForgeError, PipelineError, DataSource, DataSink, PipelineResult, ExecutionStatus, StageMetrics, PipelineMetrics, PipelineMetadata}
-import com.flowforge.core.types.RefinedTypes.{FieldName, TableName}
 
-import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.FiniteDuration
 
 // Simple type markers for GADT implementation
 case class GADTDataType[A](name: String = "data")
-case class GADTInputType[A](name: String = "input") 
+case class GADTInputType[A](name: String = "input")
 case class GADTOutputType[A](name: String = "output")
 
 // ===============================

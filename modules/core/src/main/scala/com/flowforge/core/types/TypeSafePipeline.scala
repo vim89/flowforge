@@ -37,7 +37,7 @@ package com.flowforge.core.types
 
 import cats.data.{Kleisli, ValidatedNel}
 import cats.implicits._
-import com.flowforge.core.algebra.EffectSystem
+import com.flowforge.core.algebra.{EffectSystem, DataAlgebra}
 import com.flowforge.core.types.{FlowForgeError, PipelineError, DataSource, DataSink, PipelineResult, ExecutionStatus, StageMetrics, PipelineMetrics, PipelineMetadata}
 
 import java.time.Instant
@@ -68,7 +68,10 @@ object TypeSafeStage {
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "source"
   ) extends TypeSafeStage[F, Unit, B] {
-    def execute: Kleisli[F, Unit, B] = Kleisli.liftF(???) // Implementation via DataAlgebra
+    def execute: Kleisli[F, Unit, B] = Kleisli { _ =>
+      // TODO: Implement via DataAlgebra when available
+      throw new NotImplementedError("SourceStage.execute requires DataAlgebra implementation")
+    }
   }
 
   /**
@@ -109,7 +112,13 @@ object TypeSafeStage {
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "sink"
   ) extends TypeSafeStage[F, A, Unit] {
-    def execute: Kleisli[F, A, Unit] = Kleisli.liftF(???) // Implementation via DataAlgebra
+    def execute: Kleisli[F, A, Unit] = ??? // Kleisli { data =>
+      // TODO: Implement via DataAlgebra when available
+      // For now, provide a placeholder that maintains type safety
+      //import com.flowforge.core.algebra.EffectSystem
+      //implicitly[EffectSystem[F]].raiseError(
+      //  new NotImplementedError("SinkStage.execute requires DataAlgebra implementation")
+      //)
   }
 }
 
