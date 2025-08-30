@@ -72,7 +72,7 @@ trait ConfigurationAlgebra[F[_]] {
    * @tparam T Configuration type with decoder instance
    * @return Optional configuration value
    */
-  def loadOptional[T: ConfigDecoder](key: NonEmptyString): F[Option[T]]
+  def loadOptional[T: ConfigDecoder: ConfigValidator](key: NonEmptyString): F[Option[T]]
 
   /**
    * Refresh configuration from source.
@@ -116,7 +116,7 @@ trait ConfigurationAlgebra[F[_]] {
    * @tparam T Configuration type
    * @return Configuration with fallback chain
    */
-  def loadWithFallback[T: ConfigDecoder](
+  def loadWithFallback[T: ConfigDecoder: ConfigValidator](
     key: NonEmptyString,
     envPrefix: String
   ): F[ValidatedNel[ConfigError, T]]
@@ -128,7 +128,7 @@ trait ConfigurationAlgebra[F[_]] {
    * @tparam T Configuration type
    * @return All configurations or validation errors
    */
-  def loadBatch[T: ConfigDecoder](
+  def loadBatch[T: ConfigDecoder: ConfigValidator](
     keys: NonEmptyList[NonEmptyString]
   ): F[ValidatedNel[ConfigError, List[T]]]
 
@@ -676,7 +676,7 @@ object ConfigurationMigration {
       def load[T: ConfigDecoder: ConfigValidator](key: NonEmptyString): F[ValidatedNel[ConfigError, T]] =
         migrateCcmConfig[T](key.value)
 
-      def loadOptional[T: ConfigDecoder](key: NonEmptyString): F[Option[T]] =
+      def loadOptional[T: ConfigDecoder: ConfigValidator](key: NonEmptyString): F[Option[T]] =
         load[T](key).map(_.toOption)
 
       def refresh: F[Unit] = Sync[F].unit
@@ -690,11 +690,13 @@ object ConfigurationMigration {
       def healthCheck: F[ConfigHealthStatus] =
         Sync[F].pure(ConfigHealthStatus.Healthy) // TODO: Implement actual health check
 
-      def loadWithFallback[T: ConfigDecoder](key: NonEmptyString, envPrefix: String): F[ValidatedNel[ConfigError, T]] =
+      def loadWithFallback[T: ConfigDecoder: ConfigValidator](key: NonEmptyString, envPrefix: String): F[ValidatedNel[ConfigError, T]] =
         load[T](key) // TODO: Implement environment fallback
 
-      def loadBatch[T: ConfigDecoder](keys: NonEmptyList[NonEmptyString]): F[ValidatedNel[ConfigError, List[T]]] =
-        keys.traverse(load[T]).map(_.sequence)
+      def loadBatch[T: ConfigDecoder: ConfigValidator](keys: NonEmptyList[NonEmptyString]): F[ValidatedNel[ConfigError, List[T]]] =
+        keys.traverse(load[T]).map { results =>
+          results.traverse(identity).map(_.toList)
+        }
 
       def merge[T: ConfigDecoder: ConfigMerger](sources: NonEmptyList[ConfigSource]): F[ValidatedNel[ConfigError, T]] =
         ??? // TODO: Implement configuration merging

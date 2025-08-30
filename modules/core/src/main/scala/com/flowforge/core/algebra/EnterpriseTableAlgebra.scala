@@ -36,7 +36,7 @@
 package com.flowforge.core.algebra
 
 import cats.data.{NonEmptyList, ValidatedNel}
-import cats.effect.Resource
+import cats.effect.{Resource, MonadCancel}
 import cats.implicits._
 import com.flowforge.core.types.RefinedTypes.{FieldName, TableName}
 import com.flowforge.core.types.{ErrorCategory, ErrorSeverity, FlowForgeError}
@@ -582,6 +582,7 @@ trait AdvancedTableOperations[F[_]] extends EnterpriseTableAlgebra[F] {
  * Ensures proper cleanup of table connections and locks.
  */
 trait ResourceSafeTableOps[F[_]] {
+  implicit def monadCancel: MonadCancel[F, Throwable]
 
   /**
    * Acquire table lock for exclusive operations.
@@ -906,7 +907,7 @@ case class TableOperationBuilder[F[_]: EffectSystem](
   }
 }
 
-sealed trait TableOperation[F[_]]
+sealed trait TableOperation[+F[_]]
 object TableOperation {
   case object Repair extends TableOperation[Nothing]
   case class Optimize(strategy: OptimizationStrategy) extends TableOperation[Nothing]

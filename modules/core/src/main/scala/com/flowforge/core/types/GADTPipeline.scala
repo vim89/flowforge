@@ -29,11 +29,20 @@
 package com.flowforge.core.types
 
 import cats.data.{Kleisli, ValidatedNel}
+import cats.FlatMap
 import cats.implicits._
 import com.flowforge.core.algebra.EffectSystem
+import com.flowforge.core.types.{FlowForgeError, PipelineError, DataSource, DataSink, PipelineResult, ExecutionStatus, StageMetrics, PipelineMetrics, PipelineMetadata}
+import com.flowforge.core.types.RefinedTypes.{FieldName, TableName}
 
+import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.FiniteDuration
+
+// Simple type markers for GADT implementation
+case class GADTDataType[A](name: String = "data")
+case class GADTInputType[A](name: String = "input") 
+case class GADTOutputType[A](name: String = "output")
 
 // ===============================
 // GADT PIPELINE STAGE DEFINITIONS
@@ -54,14 +63,14 @@ sealed trait GADTStage[F[_], Input, Output] { self =>
    */
   def andThen[NextOutput](
     next: GADTStage[F, Output, NextOutput]
-  ): GADTStage[F, Input, NextOutput] = GADTStage.Composed(self, next)
+  )(implicit effectSystem: EffectSystem[F]): GADTStage[F, Input, NextOutput] = GADTStage.Composed(self, next)
 
   /**
    * Compose with Kleisli arrow - maintains type safety
    */
   def andThenK[NextOutput](
     kleisli: Kleisli[F, Output, NextOutput]
-  ): GADTStage[F, Input, NextOutput] = GADTStage.ComposedK(self, kleisli)
+  )(implicit effectSystem: EffectSystem[F]): GADTStage[F, Input, NextOutput] = GADTStage.ComposedK(self, kleisli)
 }
 
 object GADTStage {
@@ -71,7 +80,7 @@ object GADTStage {
    */
   case class Source[F[_], Output](
     source: DataSource,
-    outputType: OutputType[Output],
+    outputType: GADTOutputType[Output] = GADTOutputType[Output](),
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "source"
   ) extends GADTStage[F, Unit, Output] {
@@ -84,8 +93,8 @@ object GADTStage {
    */
   case class Transform[F[_], Input, Output](
     transformation: Input => F[Output],
-    inputType: InputType[Input],
-    outputType: OutputType[Output],
+    inputType: GADTInputType[Input] = GADTInputType[Input](),
+    outputType: GADTOutputType[Output] = GADTOutputType[Output](),
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "transform"
   ) extends GADTStage[F, Input, Output] {
@@ -97,7 +106,7 @@ object GADTStage {
    */
   case class Quality[F[_]: EffectSystem, A](
     validation: A => ValidatedNel[FlowForgeError, Unit],
-    dataType: DataType[A],
+    dataType: GADTDataType[A] = GADTDataType[A](),
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "quality"
   ) extends GADTStage[F, A, A] {
@@ -117,7 +126,7 @@ object GADTStage {
    */
   case class Sink[F[_], Input](
     sink: DataSink,
-    inputType: InputType[Input],
+    inputType: GADTInputType[Input] = GADTInputType[Input](),
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "sink"
   ) extends GADTStage[F, Input, Unit] {
@@ -128,25 +137,31 @@ object GADTStage {
   /**
    * Composed stage - maintains type safety through GADT structure
    */
-  case class Composed[F[_], Input, Intermediate, Output](
+  case class Composed[F[_]: EffectSystem, Input, Intermediate, Output](
     first: GADTStage[F, Input, Intermediate],
     second: GADTStage[F, Intermediate, Output],
-    override val stageId: String = UUID.randomUUID().toString,
-    override val stageName: String = s"${first.stageName}->${second.stageName}"
+    override val stageId: String = UUID.randomUUID().toString
   ) extends GADTStage[F, Input, Output] {
-    def execute: Kleisli[F, Input, Output] = first.execute andThen second.execute
+    override val stageName: String = s"${first.stageName}->${second.stageName}"
+    def execute: Kleisli[F, Input, Output] = {
+      implicit val F: FlatMap[F] = implicitly[EffectSystem[F]]
+      first.execute andThen second.execute
+    }
   }
 
   /**
    * Composed with Kleisli - for direct function composition
    */
-  case class ComposedK[F[_], Input, Intermediate, Output](
+  case class ComposedK[F[_]: EffectSystem, Input, Intermediate, Output](
     stage: GADTStage[F, Input, Intermediate],
     kleisli: Kleisli[F, Intermediate, Output],
-    override val stageId: String = UUID.randomUUID().toString,
-    override val stageName: String = s"${stage.stageName}->kleisli"
+    override val stageId: String = UUID.randomUUID().toString
   ) extends GADTStage[F, Input, Output] {
-    def execute: Kleisli[F, Input, Output] = stage.execute andThen kleisli
+    override val stageName: String = s"${stage.stageName}->kleisli"
+    def execute: Kleisli[F, Input, Output] = {
+      implicit val F: FlatMap[F] = implicitly[EffectSystem[F]]
+      stage.execute andThen kleisli
+    }
   }
 }
 
@@ -182,7 +197,7 @@ case class GADTPipelineBuilder[F[_]: EffectSystem, State <: GADTBuilderState, In
   ): GADTPipelineBuilder[F, GADTHasSource, Unit, SourceOutput] = {
     val sourceStage = GADTStage.Source[F, SourceOutput](
       source = dataSource,
-      outputType = OutputType[SourceOutput]
+      outputType = GADTOutputType[SourceOutput]()
     )
     GADTPipelineBuilder[F, GADTHasSource, Unit, SourceOutput](
       currentStage = Some(sourceStage),
@@ -199,8 +214,8 @@ case class GADTPipelineBuilder[F[_]: EffectSystem, State <: GADTBuilderState, In
   ): GADTPipelineBuilder[F, GADTHasTransform, Input, TransformOutput] = {
     val transformStage = GADTStage.Transform[F, Output, TransformOutput](
       transformation = transformation,
-      inputType = InputType[Output],
-      outputType = OutputType[TransformOutput]
+      inputType = GADTInputType[Output](),
+      outputType = GADTOutputType[TransformOutput]()
     )
 
     val composedStage = currentStage match {
@@ -223,7 +238,7 @@ case class GADTPipelineBuilder[F[_]: EffectSystem, State <: GADTBuilderState, In
   ): GADTPipelineBuilder[F, GADTHasQuality, Input, Output] = {
     val qualityStage = GADTStage.Quality[F, Output](
       validation = input => validations.toList.traverse(_(input)).map(_ => ()),
-      dataType = DataType[Output]
+      dataType = GADTDataType[Output]()
     )
 
     val composedStage = currentStage match {
@@ -246,7 +261,7 @@ case class GADTPipelineBuilder[F[_]: EffectSystem, State <: GADTBuilderState, In
   ): GADTPipelineBuilder[F, GADTComplete, Input, Unit] = {
     val sinkStage = GADTStage.Sink[F, Output](
       sink = dataSink,
-      inputType = InputType[Output]
+      inputType = GADTInputType[Output]()
     )
 
     val composedStage = currentStage match {
@@ -266,10 +281,10 @@ case class GADTPipelineBuilder[F[_]: EffectSystem, State <: GADTBuilderState, In
    */
   def build(implicit
     ev: State =:= GADTComplete
-  ): ValidatedNel[FlowForgeError, GADTPipeline[F, Input, Unit]] = {
+  ): ValidatedNel[FlowForgeError, GADTPipeline[F, Input, Output]] = {
     currentStage match {
       case Some(stage) =>
-        GADTPipeline[F, Input, Unit](
+        GADTPipeline[F, Input, Output](
           id = UUID.randomUUID().toString,
           name = pipelineName,
           description = pipelineDescription,
@@ -331,7 +346,7 @@ case class GADTPipeline[F[_]: EffectSystem, Input, Output](
       startTime = startTime,
       endTime = endTime,
       duration = FiniteDuration(duration, scala.concurrent.duration.MILLISECONDS),
-      metrics = StageMetrics.empty,
+      metrics = PipelineMetrics.empty(name),
       errors = result.left.toOption.map(e => List(e.getMessage)).getOrElse(List.empty)
     )
   }
@@ -349,17 +364,18 @@ case class GADTPipeline[F[_]: EffectSystem, Input, Output](
 
     // Fuse adjacent transform stages
     case GADTStage.Composed(
-      GADTStage.Transform(f1, _, intermediateType),
-      GADTStage.Transform(f2, _, outputType)
+      GADTStage.Transform(f1, _, intermediateType, _, _),
+      GADTStage.Transform(f2, _, outputType, _, _),
+      _
     ) =>
       GADTStage.Transform[F, A, B](
         transformation = (a: A) => f1(a).flatMap(f2),
-        inputType = InputType[A],
-        outputType = outputType.asInstanceOf[OutputType[B]]
+        inputType = GADTInputType[A](),
+        outputType = outputType.asInstanceOf[GADTOutputType[B]]
       )
 
     // Recursive optimization for nested compositions
-    case GADTStage.Composed(first, second) =>
+    case GADTStage.Composed(first, second, _) =>
       GADTStage.Composed(optimizeStage(first), optimizeStage(second))
 
     // No optimization needed
@@ -378,7 +394,7 @@ case class GADTPipeline[F[_]: EffectSystem, Input, Output](
 abstract class DependentPipeline[F[_]] {
   type Input
   type Output
-  type StageCount <: Nat
+  type StageCount <: TypeLevelNumbers.Nat
 
   val pipeline: GADTPipeline[F, Input, Output]
   val stageCount: StageCount
@@ -408,11 +424,12 @@ object TypeLevelNumbers {
 /**
  * Type-level proof that pipeline has minimum required stages
  */
-trait MinimumStages[N <: Nat] {
+trait MinimumStages[N <: TypeLevelNumbers.Nat] {
   def proof: N
 }
 
 object MinimumStages {
+  import TypeLevelNumbers._
   implicit val hasOne: MinimumStages[_1] = new MinimumStages[_1] { val proof = Succ(Zero) }
   implicit val hasTwo: MinimumStages[_2] = new MinimumStages[_2] { val proof = Succ(Succ(Zero)) }
   implicit val hasThree: MinimumStages[_3] = new MinimumStages[_3] { val proof = Succ(Succ(Succ(Zero))) }
@@ -422,11 +439,11 @@ object MinimumStages {
 /**
  * Validated pipeline with compile-time stage count verification
  */
-case class ValidatedPipeline[F[_]: EffectSystem, Input, Output, N <: Nat](
-  pipeline: GADTPipeline[F, Input, Output]
+case class ValidatedPipeline[F[_]: EffectSystem, I, O, N <: TypeLevelNumbers.Nat](
+  pipeline: GADTPipeline[F, I, O]
 )(implicit minStages: MinimumStages[N]) extends DependentPipeline[F] {
-  type Input = Input
-  type Output = Output
+  type Input = I
+  type Output = O
   type StageCount = N
 
   val stageCount: N = minStages.proof
@@ -452,11 +469,13 @@ trait CompileTimeOptimization[F[_]] {
   def fuseIfPossible[A, B, C](
     stage1: GADTStage[F, A, B],
     stage2: GADTStage[F, B, C]
-  ): GADTStage[F, A, C] = (stage1, stage2) match {
+  )(implicit effectSystem: EffectSystem[F]): GADTStage[F, A, C] = (stage1, stage2) match {
     case (t1: GADTStage.Transform[F, A, B], t2: GADTStage.Transform[F, B, C]) =>
       // Compile-time fusion of transform stages
-      GADTStage.Transform[F, A, C](
-        transformation = (a: A) => t1.transformation(a).flatMap(t2.transformation),
+      GADTStage.Transform[F, A, C]({
+        implicit val F: FlatMap[F] = implicitly[EffectSystem[F]]
+        (a: A) => t1.transformation(a).flatMap(t2.transformation)
+      },
         inputType = t1.inputType,
         outputType = t2.outputType
       )
@@ -480,12 +499,12 @@ object GADTPipelineExamples {
 
     // This construction is 100% type-safe - no casting possible
     val builder = GADTPipelineBuilder[F]
-      .source[String](DataSource.gcs("bucket", "path"))
+      .source[String](DataSource.gcs("bucket", "path", DataFormat.Parquet))
       .transform[Int](s => EffectSystem[F].pure(s.length))
       .quality(
         (i: Int) => if (i > 0) ().validNel else FlowForgeError.ValidationError("Empty string").invalidNel
       )
-      .sink(DataSink.console)
+      .sink(DataSink.gcs("output-bucket", "results", DataFormat.Parquet))
 
     builder.build
   }
@@ -499,9 +518,12 @@ object GADTPipelineExamples {
 
     // ✅ VALID: Correct stage order
     val validPipeline = builder
-      .source[String](DataSource.gcs("bucket", "path"))
+      .source[String](DataSource.gcs("bucket", "path", DataFormat.Parquet))
       .transform[Int](s => EffectSystem[F].pure(s.length))
-      .sink(DataSink.console)
+      .quality(
+        (i: Int) => if (i > 0) ().validNel else FlowForgeError.ValidationError("Empty string").invalidNel
+      )
+      .sink(DataSink.gcs("output-bucket", "results", DataFormat.Parquet))
 
     // ❌ COMPILE ERROR: Cannot add transform before source
     // val invalidPipeline1 = builder.transform[String](identity)

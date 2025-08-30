@@ -38,6 +38,7 @@ package com.flowforge.core.types
 import cats.data.{Kleisli, ValidatedNel}
 import cats.implicits._
 import com.flowforge.core.algebra.EffectSystem
+import com.flowforge.core.types.{FlowForgeError, PipelineError, DataSource, DataSink, PipelineResult, ExecutionStatus, StageMetrics, PipelineMetrics, PipelineMetadata}
 
 import java.time.Instant
 import java.util.UUID
@@ -88,9 +89,9 @@ object TypeSafeStage {
     validations: List[A => ValidatedNel[FlowForgeError, Unit]],
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "quality"
-  ) extends TypeSafeStage[F, A, A] {
+  )(implicit effectSystem: EffectSystem[F]) extends TypeSafeStage[F, A, A] {
     def execute: Kleisli[F, A, A] = Kleisli { input =>
-      val allValidations = validations.traverse(_(input))
+      val allValidations = validations.map(_(input)).sequence
       allValidations match {
         case cats.data.Validated.Valid(_) =>
           EffectSystem[F].pure(input)
@@ -198,7 +199,7 @@ case class TypeSafePipelineBuilder[F[_]: EffectSystem, State <: PipelineState, A
   def build(implicit
     ev: State =:= CompletePipeline
   ): ValidatedNel[FlowForgeError, TypeSafePipeline[F, A, Unit]] =
-    TypeSafePipeline.validate[F](stages, pipelineName, pipelineDescription)
+    TypeSafePipeline.validate[F](stages, pipelineName, pipelineDescription).asInstanceOf[ValidatedNel[FlowForgeError, TypeSafePipeline[F, A, Unit]]]
 }
 
 object TypeSafePipelineBuilder {
@@ -248,7 +249,7 @@ case class TypeSafePipeline[F[_]: EffectSystem, A, B] private (
       startTime = startTime,
       endTime = endTime,
       duration = FiniteDuration(duration, scala.concurrent.duration.MILLISECONDS),
-      metrics = StageMetrics.empty, // TODO: Implement metrics collection
+      metrics = PipelineMetrics.empty(name), // TODO: Implement metrics collection
       errors = result.left.toOption.map(e => List(e.getMessage)).getOrElse(List.empty)
     )
   }
@@ -264,7 +265,7 @@ object TypeSafePipeline {
     stages: List[TypeSafeStage[F, _, _]],
     name: String,
     description: String
-  ): ValidatedNel[FlowForgeError, TypeSafePipeline[F, _, _]] = {
+  ): ValidatedNel[FlowForgeError, TypeSafePipeline[F, Unit, Unit]] = {
 
     if (stages.isEmpty) {
       PipelineError.EmptyPipeline(name).invalidNel
@@ -277,7 +278,7 @@ object TypeSafePipeline {
         description = description,
         composition = composedPipeline,
         metadata = PipelineMetadata()
-      ).validNel
+      ).asInstanceOf[TypeSafePipeline[F, Unit, Unit]].validNel
     }
   }
 
