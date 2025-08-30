@@ -86,21 +86,16 @@ object Dependencies {
     )
 
     val typeSafety = Seq(
-      "eu.timepit" %% "refined"      % Versions.refined,
-      "eu.timepit" %% "refined-cats" % Versions.refined
+      "eu.timepit" %% "refined"      % Versions.refined
     )
 
     val json = Seq(
       "io.circe" %% "circe-core"    % Versions.circe,
       "io.circe" %% "circe-generic" % Versions.circe,
-      "io.circe" %% "circe-parser"  % Versions.circe,
-      "io.circe" %% "circe-refined" % Versions.circe
+      "io.circe" %% "circe-parser"  % Versions.circe
     )
 
-    val config = Seq(
-      "com.github.pureconfig" %% "pureconfig"             % Versions.pureconfig,
-      "com.github.pureconfig" %% "pureconfig-cats-effect" % Versions.pureconfig
-    )
+    val config = Seq.empty[ModuleID]
 
     val logging = Seq(
       "com.typesafe.scala-logging" %% "scala-logging"   % Versions.scalaLogging,
