@@ -91,10 +91,6 @@ trait EffectSystem[F[_]] extends MonadError[F, Throwable] {
    * This is CRITICAL for Cats compatibility and large data processing. Must be implemented
    * efficiently to prevent stack overflow.
    *
-   * @param a
-   *   Initial value
-   * @param f
-   *   Function that either continues (Left) or terminates (Right)
    * @return
    *   The final result when Right is produced
    */

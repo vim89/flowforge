@@ -33,11 +33,10 @@ package com.flowforge.core.algebra
 
 import cats.data.{NonEmptyList, ValidatedNel}
 import cats.implicits._
-import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.algebra.DataAlgebra.Dataset
-import com.flowforge.core.types.{DataSource, DataSink, FlowForgeError}
-import com.flowforge.core.types.RefinedTypes.FieldName
 import com.flowforge.core.types.PipelineTypes.DataContract
+import com.flowforge.core.types.RefinedTypes.FieldName
+import com.flowforge.core.types.{DataSink, DataSource, FlowForgeError}
 import eu.timepit.refined.types.string.NonEmptyString
 
 import java.time.Instant
@@ -50,8 +49,7 @@ import scala.concurrent.duration.FiniteDuration
  * data changes between source and target datasets. Enhanced version of reference-utilities
  * ETL patterns with functional programming principles.
  *
- * @tparam F The effect type constructor
- */
+ * */
 // ===============================
 // CORE CDC TYPES (moved outside trait for companion object access)
 // ===============================
@@ -62,7 +60,7 @@ import scala.concurrent.duration.FiniteDuration
 sealed trait ChangeOperation
 object ChangeOperation {
   case object Insert extends ChangeOperation
-  case object Update extends ChangeOperation  
+  case object Update extends ChangeOperation
   case object Delete extends ChangeOperation
   case object NoChange extends ChangeOperation
 }
@@ -126,25 +124,25 @@ trait CDCAlgebra[F[_]] {
    *
    * Enhanced version of reference ETL.performDelta with:
    * - Type safety via DataContract
-   * - Effect polymorphism  
+   * - Effect polymorphism
    * - Comprehensive validation
    * - Quality metrics collection
    *
    * @param source Source dataset
-   * @param target Target dataset  
+   * @param target Target dataset
    * @param config CDC configuration
    * @tparam A Dataset record type with DataContract
    * @return CDC result with comprehensive metrics
    */
   def performDelta[A: DataContract](
     source: Dataset[A],
-    target: Dataset[A], 
+    target: Dataset[A],
     config: CDCConfig
   ): F[CDCResult[A]]
 
   /**
    * Compute hash for change detection.
-   * 
+   *
    * @param record Record to hash
    * @param columns Columns to include in hash
    * @return Hash string for change detection
@@ -262,13 +260,13 @@ object CDCAlgebra {
    * Syntax extensions for CDC operations
    */
   implicit class CDCOps[F[_], A: DataContract](private val source: Dataset[A]) {
-    
+
     def deltaWith(target: Dataset[A], config: CDCConfig)(implicit cdc: CDCAlgebra[F]): F[CDCResult[A]] =
       cdc.performDelta(source, target, config)
-      
+
     def incrementalDeltaWith(
-      target: Dataset[A], 
-      watermark: Option[Instant], 
+      target: Dataset[A],
+      watermark: Option[Instant],
       config: CDCConfig
     )(implicit cdc: CDCAlgebra[F]): F[(CDCResult[A], Instant)] =
       cdc.performIncrementalDelta(source, target, watermark, config)
@@ -278,7 +276,7 @@ object CDCAlgebra {
    * Enhanced syntax for dataset operations
    */
   implicit class DatasetOps[A](private val dataset: Dataset[A]) {
-    
+
     def validateWith[F[_]](contract: DataContract[A])(implicit F: EffectSystem[F]): F[ValidatedNel[FlowForgeError, Dataset[A]]] = {
       import cats.syntax.traverse._
       val validations = dataset.data.traverse(contract)
