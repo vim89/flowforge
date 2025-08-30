@@ -585,7 +585,15 @@ object ConfigurationAlgebra {
     })
 
   // Private helper methods for decoding
-  private def decodeApplication(source: Map[String, String]): ValidatedNel[ConfigError, ApplicationConfig] = ???
+  private def decodeApplication(source: Map[String, String]): ValidatedNel[ConfigError, ApplicationConfig] = {
+    // Simple placeholder implementation demonstrating the pattern
+    ApplicationConfig(
+      NonEmptyString("default-app"),
+      "1.0.0", 
+      Environment.Development,
+      LogLevel.Info
+    ).validNel[ConfigError]
+  }
   private def decodePipeline(source: Map[String, String]): ValidatedNel[ConfigError, PipelineConfig] = ???
   private def decodeEngines(source: Map[String, String]): ValidatedNel[ConfigError, EngineConfig] = ???
   private def decodeConnectors(source: Map[String, String]): ValidatedNel[ConfigError, ConnectorConfig] = ???
