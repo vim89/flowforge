@@ -398,10 +398,10 @@ object OutputType {
 /**
  * General data type marker
  */
-case class DataType[A] private (marker: DataTypeMarker = new DataTypeMarker {}) extends AnyVal
+case class DataTypeWithMarker[A] private (marker: DataTypeMarker = new DataTypeMarker {}) extends AnyVal
 
-object DataType {
-  def apply[A]: DataType[A] = new DataType[A]()
+object DataTypeWithMarker {
+  def apply[A]: DataTypeWithMarker[A] = new DataTypeWithMarker[A]()
 }
 
 // ===============================
