@@ -2,7 +2,6 @@ package com.flowforge.core.algebra
 
 import cats.data.{ Kleisli, NonEmptyList, ValidatedNel }
 import cats.{ Functor, Monad }
-import com.flowforge.core.QualityCheck
 import com.flowforge.core.algebra.DataAlgebra.{
   AnomalyDetector,
   AnomalyReport,
@@ -26,6 +25,7 @@ import com.flowforge.core.algebra.DataAlgebra.{
   WriteResult
 }
 import com.flowforge.core.types._
+import com.flowforge.core.types.PipelineTypes._
 
 import java.time.Instant
 

@@ -83,37 +83,76 @@ import java.time.Instant
  */
 object RefinedTypes {
 
+  import eu.timepit.refined.W
+
   // String pattern types
   type NonEmptyString = String Refined NonEmpty
-  type BucketNameType = String Refined MatchesRegex["^[a-z0-9][a-z0-9-]*[a-z0-9]$"]
-  type TableNameType  = String Refined MatchesRegex["^[a-zA-Z_][a-zA-Z0-9_]*$"]
-  type FieldNameType  = String Refined MatchesRegex["^[a-zA-Z_][a-zA-Z0-9_]*$"]
-  type ProjectIdType  = String Refined MatchesRegex["^[a-z][a-z0-9-]*[a-z0-9]$"]
+  type BucketNameType = String Refined MatchesRegex[W.`"^[a-z0-9][a-z0-9-]*[a-z0-9]$"`.T]
+  type TableNameType  = String Refined MatchesRegex[W.`"^[a-zA-Z_][a-zA-Z0-9_]*$"`.T]
+  type FieldNameType  = String Refined MatchesRegex[W.`"^[a-zA-Z_][a-zA-Z0-9_]*$"`.T]
+  type ProjectIdType  = String Refined MatchesRegex[W.`"^[a-z][a-z0-9-]*[a-z0-9]$"`.T]
 
   // Numeric types
   type PositiveInt    = Int Refined Positive
   type NonNegativeInt = Int Refined NonNegative
-  type PortNumber     = Int Refined eu.timepit.refined.numeric.Interval.Closed[1, 65535]
+  type PortNumber     = Int Refined eu.timepit.refined.numeric.Interval.Closed[W.`1`.T, W.`65535`.T]
 
-  // Create value classes for better performance and type safety
-  case class BucketName(value: BucketNameType) extends AnyVal
+  // Simplified case classes - removing AnyVal extension due to refined type conflicts
+  case class BucketName(value: String) {
+    // Runtime validation instead of compile-time for dynamic values
+    require(value.matches("^[a-z0-9][a-z0-9-]*[a-z0-9]$"), s"Invalid bucket name: $value")
+  }
+  
+  object BucketName {
+    def unsafeFrom(value: String): BucketName = BucketName(value)
+  }
 
-  case class TableName(value: TableNameType) extends AnyVal
+  case class TableName(value: String) {
+    require(value.matches("^[a-zA-Z_][a-zA-Z0-9_]*$"), s"Invalid table name: $value")
+  }
+  
+  object TableName {
+    def unsafeFrom(value: String): TableName = TableName(value)
+  }
 
-  case class FieldName(value: FieldNameType) extends AnyVal
+  case class FieldName(value: String) {
+    require(value.matches("^[a-zA-Z_][a-zA-Z0-9_]*$"), s"Invalid field name: $value")
+  }
+  
+  object FieldName {
+    def unsafeFrom(value: String): FieldName = FieldName(value)
+  }
 
-  case class ProjectId(value: ProjectIdType) extends AnyVal
+  case class ProjectId(value: String) {
+    require(value.matches("^[a-z][a-z0-9-]*[a-z0-9]$"), s"Invalid project ID: $value")
+  }
+  
+  object ProjectId {
+    def unsafeFrom(value: String): ProjectId = ProjectId(value)
+  }
 
-  case class DatasetId(value: NonEmptyString) extends AnyVal
+  case class DatasetId(value: String) {
+    require(value.nonEmpty, "Dataset ID cannot be empty")
+  }
+  
+  object DatasetId {
+    def unsafeFrom(value: String): DatasetId = DatasetId(value)
+  }
 
-  case class SchemaVersion(value: PositiveInt) extends AnyVal
+  case class SchemaVersion(value: Int) {
+    require(value > 0, s"Schema version must be positive: $value")
+  }
+  
+  object SchemaVersion {
+    def unsafeFrom(value: Int): SchemaVersion = SchemaVersion(value)
+  }
 
-  // Show instances for refined types
-  implicit val showBucketName: Show[BucketName]       = Show.show(_.value.value)
-  implicit val showTableName: Show[TableName]         = Show.show(_.value.value)
-  implicit val showFieldName: Show[FieldName]         = Show.show(_.value.value)
-  implicit val showProjectId: Show[ProjectId]         = Show.show(_.value.value)
-  implicit val showDatasetId: Show[DatasetId]         = Show.show(_.value.value)
+  // Show instances for simple case classes
+  implicit val showBucketName: Show[BucketName]       = Show.show(_.value)
+  implicit val showTableName: Show[TableName]         = Show.show(_.value)
+  implicit val showFieldName: Show[FieldName]         = Show.show(_.value)
+  implicit val showProjectId: Show[ProjectId]         = Show.show(_.value)
+  implicit val showDatasetId: Show[DatasetId]         = Show.show(_.value)
   implicit val showSchemaVersion: Show[SchemaVersion] = Show.show(_.value.toString)
 }
 
@@ -387,11 +426,25 @@ object DataType {
   }
 
   // Convenience constructors
-  def decimal(precision: Int, scale: Int): Decimal =
-    Decimal(Refined.unsafeApply(precision), Refined.unsafeApply(scale))
+  def decimal(precision: Int, scale: Int): Decimal = {
+    val refinedPrecision = eu.timepit.refined.refineV[Positive](precision) match {
+      case Right(value) => value
+      case Left(_) => throw new IllegalArgumentException(s"Precision must be positive: $precision")
+    }
+    val refinedScale = eu.timepit.refined.refineV[NonNegative](scale) match {
+      case Right(value) => value
+      case Left(_) => throw new IllegalArgumentException(s"Scale must be non-negative: $scale")
+    }
+    Decimal(refinedPrecision, refinedScale)
+  }
 
-  def varchar(maxLength: Int): VarChar =
-    VarChar(Refined.unsafeApply(maxLength))
+  def varchar(maxLength: Int): VarChar = {
+    val refined = eu.timepit.refined.refineV[Positive](maxLength) match {
+      case Right(value) => value
+      case Left(_) => throw new IllegalArgumentException(s"Max length must be positive: $maxLength")
+    }
+    VarChar(refined)
+  }
 
   def nullable(dataType: DataType): DataType =
     if (dataType.isNullable) dataType else Nullable(dataType)
@@ -416,14 +469,14 @@ case class StructField(
 
 object StructField {
   def apply(name: String, dataType: DataType): StructField =
-    new StructField(FieldName(Refined.unsafeApply(name)), dataType)
+    new StructField(FieldName(name), dataType)
 
   def required(name: String, dataType: DataType): StructField =
-    new StructField(FieldName(Refined.unsafeApply(name)), dataType, nullable = false)
+    new StructField(FieldName(name), dataType, nullable = false)
 
   def optional(name: String, dataType: DataType): StructField =
     new StructField(
-      FieldName(Refined.unsafeApply(name)),
+      FieldName(name),
       DataType.nullable(dataType),
       nullable = true
     )
@@ -439,10 +492,10 @@ case class DataSchema(
   createdAt: Instant = Instant.now()
 ) {
 
-  def fieldNames: List[String] = fields.map(_.name.value.value)
+  def fieldNames: List[String] = fields.map(_.name.value)
 
   def fieldByName(name: String): Option[StructField] =
-    fields.find(_.name.value.value == name)
+    fields.find(_.name.value == name)
 
   def requiredFields: List[StructField] = fields.filter(_.isRequired)
 
@@ -454,7 +507,7 @@ case class DataSchema(
   def evolve(newFields: List[StructField]): DataSchema =
     copy(
       fields = fields ++ newFields,
-      version = SchemaVersion(Refined.unsafeApply(version.value.value + 1)),
+      version = SchemaVersion(version.value + 1),
       createdAt = Instant.now()
     )
 }
@@ -487,7 +540,7 @@ object DataSchema {
     def build: DataSchema =
       DataSchema(
         fields = fields,
-        version = SchemaVersion(Refined.unsafeApply(1)),
+        version = SchemaVersion(1),
         metadata = metadata
       )
   }
@@ -632,20 +685,20 @@ object DataSource {
 
   // Convenience factory methods
   def gcs(bucket: String, prefix: String, format: DataFormat): GcsSource =
-    GcsSource(BucketName(Refined.unsafeApply(bucket)), prefix, format)
+    GcsSource(BucketName(bucket), prefix, format)
 
   def s3(bucket: String, prefix: String, format: DataFormat): S3Source =
-    S3Source(BucketName(Refined.unsafeApply(bucket)), prefix, format)
+    S3Source(BucketName(bucket), prefix, format)
 
   def bigQuery(project: String, dataset: String, table: String): BigQuerySource =
     BigQuerySource(
-      ProjectId(Refined.unsafeApply(project)),
-      DatasetId(Refined.unsafeApply(dataset)),
-      TableName(Refined.unsafeApply(table))
+      ProjectId(project),
+      DatasetId(dataset),
+      TableName(table)
     )
 
   def jdbc(url: String, table: String, driver: String): JdbcSource =
-    JdbcSource(url, TableName(Refined.unsafeApply(table)), driver = driver)
+    JdbcSource(url, TableName(table), driver = driver)
 }
 
 /**
@@ -734,10 +787,10 @@ object DataSink {
 
   // Convenience factory methods
   def gcs(bucket: String, prefix: String, format: DataFormat): GcsSink =
-    GcsSink(BucketName(Refined.unsafeApply(bucket)), prefix, format)
+    GcsSink(BucketName(bucket), prefix, format)
 
   def s3(bucket: String, prefix: String, format: DataFormat): S3Sink =
-    S3Sink(BucketName(Refined.unsafeApply(bucket)), prefix, format)
+    S3Sink(BucketName(bucket), prefix, format)
 }
 
 // ===============================
@@ -840,7 +893,7 @@ object QualitySeverity {
 case class QualityRules(
   constraints: List[QualityConstraint],
   name: String = "default",
-  version: SchemaVersion = SchemaVersion(Refined.unsafeApply(1))
+  version: SchemaVersion = SchemaVersion(1)
 ) {
 
   def errorConstraints: List[QualityConstraint] =
@@ -859,21 +912,21 @@ object QualityRules {
 
   def standard: QualityRules = QualityRules(
     List(
-      QualityConstraint.NotNull(FieldName(Refined.unsafeApply("id"))),
-      QualityConstraint.NotNull(FieldName(Refined.unsafeApply("timestamp"))),
-      QualityConstraint.Range(FieldName(Refined.unsafeApply("amount")), Some(0), None)
+      QualityConstraint.NotNull(FieldName("id")),
+      QualityConstraint.NotNull(FieldName("timestamp")),
+      QualityConstraint.Range(FieldName("amount"), Some(0), None)
     ),
     name = "standard_rules"
   )
 
   def strict: QualityRules = QualityRules(
     List(
-      QualityConstraint.NotNull(FieldName(Refined.unsafeApply("id"))),
-      QualityConstraint.Unique(FieldName(Refined.unsafeApply("id"))),
-      QualityConstraint.NotNull(FieldName(Refined.unsafeApply("timestamp"))),
-      QualityConstraint.Range(FieldName(Refined.unsafeApply("amount")), Some(0), Some(1000000)),
+      QualityConstraint.NotNull(FieldName("id")),
+      QualityConstraint.Unique(FieldName("id")),
+      QualityConstraint.NotNull(FieldName("timestamp")),
+      QualityConstraint.Range(FieldName("amount"), Some(0), Some(1000000)),
       QualityConstraint.Pattern(
-        FieldName(Refined.unsafeApply("email")),
+        FieldName("email"),
         "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
       )
     ),

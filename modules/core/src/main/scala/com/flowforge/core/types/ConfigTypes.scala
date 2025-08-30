@@ -517,6 +517,7 @@ case class PipelineConfig(
   circuitBreaker: CircuitBreakerConfig = CircuitBreakerConfig.default,
   monitoring: MonitoringConfig = MonitoringConfig.default,
   tags: Map[String, String] = Map.empty,
+  settings: Map[String, String] = Map.empty,
   createdAt: Instant = Instant.now(),
   configId: String = UUID.randomUUID().toString
 ) {

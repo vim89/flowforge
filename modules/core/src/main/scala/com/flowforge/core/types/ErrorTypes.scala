@@ -57,8 +57,9 @@ package com.flowforge.core.types
 import cats.Show
 import cats.data.NonEmptyList
 import cats.syntax.show._
+import com.flowforge.core.types.ValidationError.{MissingRequiredField, SchemaViolation}
 
-import java.time.{ Duration, Instant }
+import java.time.{Duration, Instant}
 import java.util.UUID
 import scala.concurrent.duration.FiniteDuration
 
@@ -564,6 +565,64 @@ object DataProcessingError {
 object FlowForgeError {
 
   /**
+   * Generic validation error for missing ValidationError cases.
+   */
+  case class ValidationError(
+    message: String,
+    field: Option[String] = None,
+    severity: ErrorSeverity = ErrorSeverity.Error,
+    context: Map[String, Any] = Map.empty,
+    cause: Option[Throwable] = None,
+    timestamp: Instant = Instant.now(),
+    errorId: String = UUID.randomUUID().toString
+  ) extends FlowForgeError {
+
+    val category: ErrorCategory = ErrorCategory.Validation
+    val isRetryable: Boolean = false
+
+    val recoveryHints: List[String] = List(
+      "Check input validation logic",
+      "Verify data constraints",
+      "Review validation rules"
+    )
+
+    def withContext(additionalContext: Map[String, Any]): ValidationError =
+      copy(context = context ++ additionalContext)
+
+    def withCause(underlyingCause: Throwable): ValidationError =
+      copy(cause = Some(underlyingCause))
+  }
+
+  /**
+   * Configuration error for missing ConfigurationError cases.
+   */
+  case class ConfigurationError(
+    message: String,
+    configKey: Option[String] = None,
+    severity: ErrorSeverity = ErrorSeverity.Error,
+    context: Map[String, Any] = Map.empty,
+    cause: Option[Throwable] = None,
+    timestamp: Instant = Instant.now(),
+    errorId: String = UUID.randomUUID().toString
+  ) extends FlowForgeError {
+
+    val category: ErrorCategory = ErrorCategory.Configuration
+    val isRetryable: Boolean = false
+
+    val recoveryHints: List[String] = List(
+      "Check configuration file syntax",
+      "Verify required configuration keys",
+      "Review configuration documentation"
+    )
+
+    def withContext(additionalContext: Map[String, Any]): ConfigurationError =
+      copy(context = context ++ additionalContext)
+
+    def withCause(underlyingCause: Throwable): ConfigurationError =
+      copy(cause = Some(underlyingCause))
+  }
+
+  /**
    * Create a composite error from multiple errors. Useful for aggregating validation errors or
    * batch processing errors.
    */
@@ -613,8 +672,8 @@ object FlowForgeError {
   def missingField(
     fieldName: String,
     recordId: Option[String] = None
-  ): ValidationError.MissingRequiredField =
-    ValidationError.MissingRequiredField(fieldName, recordId)
+  ): MissingRequiredField =
+    MissingRequiredField(fieldName, recordId)
 
   /**
    * Create a validation error for schema violations.
@@ -623,8 +682,7 @@ object FlowForgeError {
     field: String,
     expected: String,
     actual: String
-  ): ValidationError.SchemaViolation =
-    ValidationError.SchemaViolation(field, expected, actual)
+  ): SchemaViolation = SchemaViolation(field, expected, actual)
 
   /**
    * Show instance for FlowForge errors. Provides formatted error output for logging and debugging.

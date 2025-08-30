@@ -1,13 +1,13 @@
 package com.flowforge.core.syntax
 
-import cats.data.{ Kleisli, NonEmptyList, ReaderT, ValidatedNel }
+import cats.data.{Kleisli, NonEmptyList, ReaderT, ValidatedNel}
 import cats.implicits._
 import com.flowforge.core.FlowForgePipeline
-import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
+import com.flowforge.core.algebra.{DataAlgebra, DataEncoder, EffectSystem}
 import com.flowforge.core.patterns.ReaderPattern._
 import com.flowforge.core.types._
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, FiniteDuration}
 
 /**
  * 🚀 **FlowForge Pipeline Syntax - Enhanced Fluent API**
@@ -60,7 +60,7 @@ object PipelineSyntax {
     source: Option[DataSource] = None,
     sink: Option[DataSink] = None,
     components: List[Kleisli[F, Any, Any]] = List.empty,
-    config: PipelineConfig = PipelineConfig.default,
+    config: Option[PipelineConfig] = None,
     retryPolicy: Option[RetryPolicy] = None,
     timeout: Option[Duration] = None
   )(implicit F: EffectSystem[F]) {
@@ -147,7 +147,7 @@ object PipelineSyntax {
      * Update configuration
      */
     def withConfig(pipelineConfig: PipelineConfig): EnhancedPipelineBuilder[F] =
-      copy(config = pipelineConfig)
+      copy(config = Some(pipelineConfig))
 
     /**
      * Build the final pipeline using existing FlowForge system
@@ -165,7 +165,7 @@ object PipelineSyntax {
           sink = snk,
           transformations = components.map(_.asInstanceOf[PipelineComponent[F, Any, Any]]),
           validations = List.empty, // Would be populated in real implementation
-          config = Some(config)
+          config = config
         )
       }.toEither
     }
@@ -217,7 +217,7 @@ object PipelineSyntax {
     /**
      * Add timeout to component
      */
-    def timeout(duration: Duration): PipelineComponent[F, A, B] =
+    def timeout(duration: FiniteDuration): PipelineComponent[F, A, B] =
       Kleisli[F, A, B] { a =>
         F.timeout(component.run(a), duration)
       }
@@ -304,7 +304,7 @@ object PipelineSyntax {
      */
     def transform[B](
       transformation: A => F[B]
-    )(implicit encoder: DataAlgebra.DataEncoder[B]): F[DatasetPipelineBuilder[F, B]] =
+    )(implicit encoder: DataEncoder[B]): F[DatasetPipelineBuilder[F, B]] =
       dataAlgebra.mapWithEffect(dataset, transformation).map { newDataset =>
         DatasetPipelineBuilder(newDataset, dataAlgebra)
       }
@@ -333,7 +333,7 @@ object PipelineSyntax {
      */
     def writeTo(
       sink: DataSink
-    )(implicit encoder: DataAlgebra.DataEncoder[A]): F[DataAlgebra.WriteResult] =
+    )(implicit encoder: DataEncoder[A]): F[DataAlgebra.WriteResult] =
       dataAlgebra.write(dataset, sink)
 
     /**
@@ -497,7 +497,17 @@ object PipelineSyntax {
   def withRetry[F[_]: EffectSystem, A](
     maxRetries: Int
   )(component: PipelineComponent[F, A, A]): PipelineComponent[F, A, A] =
-    component.retry(maxRetries)
+    Kleisli { input =>
+      val F = implicitly[EffectSystem[F]]
+      def attempt(remaining: Int): F[A] =
+        if (remaining <= 0) component.run(input)
+        else
+          F.handleErrorWith(component.run(input)) { _ =>
+            if (remaining > 1) attempt(remaining - 1)
+            else component.run(input)
+          }
+      attempt(maxRetries)
+    }
 
   // ===============================
   // FOR-COMPREHENSION SUPPORT
@@ -566,7 +576,7 @@ object PipelineSyntax {
     ): EnhancedPipelineBuilder[F] =
       pipeline[F]("etl-pipeline")
         .from(source)
-        .transform((_: String).toUpperCase)        // Extract & Transform
+        .transform((s: String) => s.trim.toUpperCase) // Transform
         .filter((_: String).nonEmpty)              // Transform
         .validate((_: String) => "clean".validNel) // Validate
         .to(sink)                                  // Load

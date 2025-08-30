@@ -42,9 +42,19 @@ import cats.Parallel
 import cats.data.{ Kleisli, NonEmptyList, ValidatedNel }
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
+import eu.timepit.refined.api.Refined
 import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.FiniteDuration
+
+/**
+ * Type aliases for common pipeline patterns
+ */
+object PipelineTypes {
+  type PipelineComponent[F[_], A, B] = Kleisli[F, A, B]
+  type QualityCheck[A] = A => ValidatedNel[FlowForgeError, Unit]
+  type DataContract[A] = A => ValidatedNel[FlowForgeError, Unit]
+}
 
 /**
  * Pipeline stage representing a discrete processing step.
@@ -507,7 +517,7 @@ case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
       case Right(_) =>
         val defaultConfig = config.getOrElse(
           PipelineConfig(
-            name = eu.timepit.refined.auto.autoRefineV(name),
+            name = Refined.unsafeApply(if (name.nonEmpty) name else "default"),
             version = "1.0.0",
             environment = Environment.Development,
             source = stages.collectFirst { case s: PipelineStage.Source[F, _] => s.dataSource }
@@ -576,12 +586,9 @@ object PipelineCombinators {
       name = s"parallel-${left.name}-${right.name}",
       description = s"Parallel execution of ${left.name} and ${right.name}",
       logic = { a =>
-        val _ = implicitly[Parallel[F]]
-        val _ = implicitly[EffectSystem[F]]
         (left.execute(a), right.execute(a)).parTupled
       },
       execute = Kleisli { a =>
-        val _ = implicitly[Parallel[F]]
         (left.execute(a), right.execute(a)).parTupled
       }
     )
@@ -781,7 +788,7 @@ case class PipelineBuilder2[F[_]: EffectSystem, In, Out] private (
 
     val defaultConfig = config.getOrElse(
       PipelineConfig(
-        name = eu.timepit.refined.auto.autoRefineV(name),
+        name = Refined.unsafeApply(if (name.nonEmpty) name else "default"),
         version = "1.0.0",
         environment = Environment.Development,
         source = stages.collectFirst { case s: PipelineStage.Source[F, _] => s.dataSource }
@@ -840,12 +847,9 @@ object PipelineBuilder2Combinators {
       name = s"parallel-${left.name}-${right.name}",
       description = s"Parallel execution of ${left.name} and ${right.name}",
       logic = { in =>
-        val _ = implicitly[Parallel[F]]
-        val _ = implicitly[EffectSystem[F]]
         (leftPipe.execute(in), rightPipe.execute(in)).parTupled
       },
       execute = Kleisli { in =>
-        val _ = implicitly[Parallel[F]]
         (leftPipe.execute(in), rightPipe.execute(in)).parTupled
       }
     )

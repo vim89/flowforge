@@ -674,6 +674,6 @@ object effect {
      *   Effect with transformed errors
      */
     def mapError(f: Throwable => Throwable)(implicit F: EffectSystem[F]): F[A] =
-      F.handleError(fa)(error => F.raiseError(f(error)))
+      F.handleErrorWith(fa)(error => F.raiseError(f(error)))
   }
 }

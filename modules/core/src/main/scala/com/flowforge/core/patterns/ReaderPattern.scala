@@ -1,13 +1,17 @@
 package com.flowforge.core.patterns
 
-import cats.data.{ Kleisli, Reader, ReaderT }
+import cats.data.{Kleisli, Reader, ReaderT}
 import cats.effect.Resource
 import cats.implicits._
-import cats.{ Applicative, Monad }
-import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
+import cats.{Applicative, Monad}
+import com.flowforge.core.algebra.{DataAlgebra, DataDecoder, EffectSystem}
 import com.flowforge.core.types._
+import com.flowforge.core.types.PipelineTypes._
+import eu.timepit.refined
+import eu.timepit.refined.api.Refined
 
 import java.time.Instant
+import scala.concurrent.duration.FiniteDuration
 
 /**
  * 🚀 **FlowForge Reader Pattern - Functional Dependency Injection**
@@ -52,7 +56,7 @@ object ReaderPattern {
     auditService: AuditService[F],
     secretManager: SecretManager[F],
     resourceManager: ResourceManager[F]
-  )(implicit F: EffectSystem[F])
+  )
 
   /**
    * Database-specific dependencies
@@ -61,7 +65,7 @@ object ReaderPattern {
     connectionPool: ConnectionPool[F],
     transactionManager: TransactionManager[F],
     migrationService: MigrationService[F]
-  )(implicit F: EffectSystem[F])
+  )
 
   /**
    * Cloud services dependencies
@@ -71,7 +75,7 @@ object ReaderPattern {
     queueService: QueueService[F],
     notificationService: NotificationService[F],
     monitoringService: MonitoringService[F]
-  )(implicit F: EffectSystem[F])
+  )
 
   /**
    * Complete application context integrating with FlowForge types
@@ -83,7 +87,7 @@ object ReaderPattern {
     environment: Environment,
     requestId: RequestId,
     timestamp: Instant
-  )(implicit F: EffectSystem[F]) {
+  ) {
 
     /**
      * Create a child context with new request ID
@@ -344,7 +348,7 @@ object ReaderPattern {
      * Execute operation with timeout
      */
     def withTimeout[F[_]: Monad, A](
-      duration: scala.concurrent.duration.Duration,
+      duration: FiniteDuration,
       operation: FlowForgeReaderT[F, A]
     )(implicit F: EffectSystem[F]): FlowForgeReaderT[F, A] =
       ReaderT { context =>
@@ -369,11 +373,11 @@ object ReaderPattern {
      */
     def createDataReader[F[_]: Monad, A](
       source: DataSource
-    ): FlowForgeReaderT[F, DataAlgebra.Dataset[A]] =
+    )(implicit decoder: DataDecoder[A]): FlowForgeReaderT[F, DataAlgebra.Dataset[A]] =
       for {
         context <- ReaderT.ask[F, AppContext[F]]
         dataset <- ReaderT.liftF(
-          context.core.dataAlgebra.read[A](source)(DataAlgebra.DataDecoder.anyDataDecoder)
+          context.core.dataAlgebra.read[A](source)(decoder)
         )
       } yield dataset
   }
@@ -438,32 +442,34 @@ object ReaderPattern {
     AppContext[F](
       core = FlowForgeDependencies[F](
         config = PipelineConfig(
+          name = Refined.unsafeApply("test-pipeline"),
+          environment = Environment.Testing,
+          source = DataSource.gcs("test-bucket", "test-prefix", DataFormat.Parquet),
+          sink = DataSink.gcs("test-output-bucket", "test-output-prefix", DataFormat.Parquet),
           settings = Map("test" -> "true"),
           retryPolicy = RetryPolicy.default,
-          timeoutPolicy = None,
-          qualityRules = QualityRules.empty,
-          monitoringConfig = MonitoringConfig.default
+          qualityRules = QualityRules.empty
         ),
-        dataAlgebra = TestImplementations.mockDataAlgebra[F],
-        logger = TestImplementations.mockLogger[F],
-        metrics = TestImplementations.mockMetrics[F],
-        auditService = TestImplementations.mockAuditService[F],
-        secretManager = TestImplementations.mockSecretManager[F],
-        resourceManager = TestImplementations.mockResourceManager[F]
+        dataAlgebra = TestImplementations.mockDataAlgebra[F](F),
+        logger = TestImplementations.mockLogger[F](F),
+        metrics = TestImplementations.mockMetrics[F](F),
+        auditService = TestImplementations.mockAuditService[F](F),
+        secretManager = TestImplementations.mockSecretManager[F](F),
+        resourceManager = TestImplementations.mockResourceManager[F](F)
       ),
       database = Some(
         DatabaseDependencies[F](
-          connectionPool = TestImplementations.mockConnectionPool[F],
-          transactionManager = TestImplementations.mockTransactionManager[F],
-          migrationService = TestImplementations.mockMigrationService[F]
+          connectionPool = TestImplementations.mockConnectionPool[F](F),
+          transactionManager = TestImplementations.mockTransactionManager[F](F),
+          migrationService = TestImplementations.mockMigrationService[F](F)
         )
       ),
       cloud = Some(
         CloudDependencies[F](
-          storageService = TestImplementations.mockStorageService[F],
-          queueService = TestImplementations.mockQueueService[F],
-          notificationService = TestImplementations.mockNotificationService[F],
-          monitoringService = TestImplementations.mockMonitoringService[F]
+          storageService = TestImplementations.mockStorageService[F](F),
+          queueService = TestImplementations.mockQueueService[F](F),
+          notificationService = TestImplementations.mockNotificationService[F](F),
+          monitoringService = TestImplementations.mockMonitoringService[F](F)
         )
       ),
       environment = Environment.Testing,
@@ -598,99 +604,7 @@ object ReaderPattern {
 
   private object TestImplementations {
 
-    def mockDataAlgebra[F[_]: EffectSystem]: DataAlgebra[F] = new DataAlgebra[F] {
-      import DataAlgebra._
-
-      def read[A: DataDecoder](source: DataSource): F[Dataset[A]] =
-        implicitly[EffectSystem[F]].delay(Dataset.empty[A])
-
-      def readWithSchema[A: DataDecoder: SchemaValidator](
-        source: DataSource,
-        expectedSchema: DataSchema
-      ): F[Either[FlowForgeError, Dataset[A]]] =
-        implicitly[EffectSystem[F]].delay(Right(Dataset.empty[A]))
-
-      def stream[A: DataDecoder](source: DataSource): F[DataStream[F, A]]                    = ???
-      def readBatch[A: DataDecoder](source: DataSource, batchSize: Int): F[List[Dataset[A]]] = ???
-      def transform[A, B: DataEncoder](
-        dataset: Dataset[A],
-        transformation: A => F[B]
-      ): F[Dataset[B]] = ???
-      def transformPipeline[A, B: DataEncoder](
-        dataset: Dataset[A],
-        transformations: cats.data.NonEmptyList[A => F[B]]
-      ): F[Dataset[B]] = ???
-      def filter[A](dataset: Dataset[A], predicate: A => Boolean): F[Dataset[A]]             = ???
-      def mapWithEffect[A, B: DataEncoder](dataset: Dataset[A], f: A => F[B]): F[Dataset[B]] = ???
-      def flatMapWithEffect[A, B: DataEncoder](
-        dataset: Dataset[A],
-        f: A => F[Dataset[B]]
-      ): F[Dataset[B]] = ???
-      def groupBy[A, K, V: DataEncoder](
-        dataset: Dataset[A],
-        keyExtractor: A => K,
-        aggregator: List[A] => V
-      ): F[Dataset[(K, V)]] = ???
-      def join[A, B, K, C: DataEncoder](
-        left: Dataset[A],
-        right: Dataset[B],
-        leftKey: A => K,
-        rightKey: B => K,
-        combiner: (A, B) => C
-      ): F[Dataset[C]] = ???
-      def validate[A](
-        dataset: Dataset[A],
-        contract: DataContract[A]
-      ): F[QualityResult[Dataset[A]]] = ???
-      def runQualityChecks[A](
-        dataset: Dataset[A],
-        checks: cats.data.NonEmptyList[QualityCheck[A]]
-      ): F[List[QualityCheckResult]] = ???
-      def profile[A](dataset: Dataset[A]): F[DataProfile[A]]                                 = ???
-      def clean[A](dataset: Dataset[A], cleaningRules: List[CleaningRule[A]]): F[Dataset[A]] = ???
-      def detectAnomalies[A](
-        dataset: Dataset[A],
-        detectors: List[AnomalyDetector[A]]
-      ): F[AnomalyReport[A]] = ???
-      def extractSchema[A](dataset: Dataset[A]): F[DataSchema] = ???
-      def evolveSchema[A, B: DataEncoder](
-        dataset: Dataset[A],
-        migration: SchemaMigration[A, B]
-      ): F[Dataset[B]] = ???
-      def compareSchemas(source: DataSchema, target: DataSchema): F[SchemaCompatibilityReport] = ???
-      def validateSchema[A](
-        dataset: Dataset[A],
-        schema: DataSchema
-      ): F[cats.data.ValidatedNel[FlowForgeError, Dataset[A]]] = ???
-      def write[A: DataEncoder](dataset: Dataset[A], sink: DataSink): F[WriteResult] = ???
-      def writeWithOptions[A: DataEncoder](
-        dataset: Dataset[A],
-        sink: DataSink,
-        options: WriteOptions
-      ): F[WriteResult] = ???
-      def writeStream[A: DataEncoder](stream: DataStream[F, A], sink: DataSink): F[WriteResult] =
-        ???
-      def writeBatch[A: DataEncoder](
-        datasets: List[Dataset[A]],
-        sink: DataSink
-      ): F[List[WriteResult]] = ???
-      def extractMetadata[A](dataset: Dataset[A]): F[DatasetMetadata] = ???
-      def trackLineage[A](
-        dataset: Dataset[A],
-        operation: DataOperation,
-        context: LineageContext
-      ): F[LineageRecord] = ???
-      def queryLineage(datasetId: String, query: LineageQuery): F[List[LineageRecord]] = ???
-      def count[A](dataset: Dataset[A]): F[Long]                                       = ???
-      def isEmpty[A](dataset: Dataset[A]): F[Boolean]                                  = ???
-      def take[A](dataset: Dataset[A], n: Int): F[Dataset[A]]                          = ???
-      def sample[A](dataset: Dataset[A], fraction: Double): F[Dataset[A]]              = ???
-      def cache[A](dataset: Dataset[A], strategy: CacheStrategy): F[Dataset[A]]        = ???
-      def partition[A](
-        dataset: Dataset[A],
-        partitioner: Partitioner[A]
-      ): F[Map[String, Dataset[A]]] = ???
-    }
+    def mockDataAlgebra[F[_]: EffectSystem]: DataAlgebra[F] = ???
 
     def mockLogger[F[_]: EffectSystem]: Logger[F] = new Logger[F] {
       def debug(message: String): F[Unit] =

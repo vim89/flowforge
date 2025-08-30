@@ -58,13 +58,14 @@
  */
 package com.flowforge.core.instances
 
-import cats.effect.{ IO, Outcome }
+import cats.effect.{IO, Outcome}
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
-import zio.{ Task, ZIO }
+import zio.{Task, ZIO}
 
+import scala.annotation.tailrec
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * Effect system instances for popular Scala effect libraries.
@@ -239,7 +240,13 @@ object EffectInstances {
 
     override def handleErrorWith[A](fa: IO[A])(f: Throwable => IO[A]): IO[A] = fa.handleErrorWith(f)
 
-    override def tailRecM[A, B](a: A)(f: A => IO[Either[A, B]]): IO[B] = ???
+    @tailrec
+    def tailRecM[A, B](a: A)(f: A => IO[Either[A, B]]): IO[B] = {
+      f(a).flatMap {
+        case Right(b)    => IO.pure(b)
+        case Left(nextA) => tailRecM(nextA)(f)
+      }
+    }
   }
 
   // ===============================
@@ -381,9 +388,20 @@ object EffectInstances {
     def bracketCase[A, B](
       acquire: Task[A]
     )(use: A => Task[B])(release: (A, ExitCase[Throwable]) => Task[Unit]): Task[B] =
-      ZIO.acquireReleaseWith(acquire) { a =>
-        // call the user-provided release and convert to a non-failing finalizer
-        release(a, ExitCase.Completed).foldCauseZIO(_ => ZIO.unit, _ => ZIO.unit)
+      ZIO.acquireReleaseExitWith(acquire) { (a: A, exit: zio.Exit[Throwable, B]) =>
+        val exitCase = exit match {
+          case zio.Exit.Success(_) => ExitCase.Completed
+          case zio.Exit.Failure(cause) =>
+            cause.failureOrCause match {
+              case Left(error) => ExitCase.Error(error)
+              case Right(_) => ExitCase.Canceled
+            }
+        }
+        // Log errors during release but don't fail the operation
+        release(a, exitCase).foldCauseZIO(
+          cause => ZIO.logWarning(s"Error during resource release: $cause").as(()),
+          _ => ZIO.unit
+        )
       }(use)
 
     // ===============================
@@ -450,11 +468,15 @@ object EffectInstances {
 
     /**
      * Convert any effect to a different effect type (when both have EffectSystem instances).
+     * Note: This is a conceptual method. Real effect transformation requires runtime bridging.
      */
-    def liftTo[G[_]](implicit F: EffectSystem[F], G: EffectSystem[G]): G[A] =
-      // This would require some additional machinery for effect transformation
-      // For now, we just provide the structure
-      throw new NotImplementedError("Effect transformation requires additional machinery")
+    def liftTo[G[_]](implicit F: EffectSystem[F], G: EffectSystem[G]): G[A] = {
+      // Placeholder for effect transformation - would need runtime interop
+      // For production use, consider using cats-interop-zio or similar
+      G.raiseError(new UnsupportedOperationException(
+        "Effect transformation not implemented. Use specific interop libraries (e.g., zio-interop-cats)"
+      ))
+    }
   }
 
   /**

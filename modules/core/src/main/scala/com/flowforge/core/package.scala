@@ -71,12 +71,12 @@ import cats.data._
 import cats.effect.Resource
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.types.RefinedTypes.{ BucketName, TableName }
+import com.flowforge.core.types.RefinedTypes.{BucketName, TableName}
 import com.flowforge.core.types._
 
-import java.time.{ Duration, Instant }
+import java.time.{Duration, Instant}
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 /**
@@ -160,8 +160,8 @@ package object core {
      * @return
      *   Pipeline builder for fluent construction
      */
-    def builder[F[_]: EffectSystem]: PipelineBuilder[F] =
-      PipelineBuilder.empty[F]
+    def builder[F[_]: EffectSystem]: com.flowforge.core.PipelineBuilder[F] =
+      com.flowforge.core.PipelineBuilder.empty[F]
 
     /**
      * Create a simple transformation pipeline.
@@ -363,17 +363,17 @@ package object core {
    */
 
   /**
-   * Convert string to refined bucket name with validation.
+   * Convert string to validated bucket name.
    */
   implicit class StringToBucketName(private val str: String) extends AnyVal {
-    def bucketName: BucketName = BucketName(eu.timepit.refined.auto.autoRefineV(str))
+    def bucketName: BucketName = BucketName(str)
   }
 
   /**
-   * Convert string to refined table name with validation.
+   * Convert string to validated table name.
    */
   implicit class StringToTableName(private val str: String) extends AnyVal {
-    def tableName: TableName = TableName(eu.timepit.refined.auto.autoRefineV(str))
+    def tableName: TableName = TableName(str)
   }
 
   /**
@@ -556,99 +556,6 @@ package object core {
   // PIPELINE BUILDER
   // ===============================
 
-  /**
-   * Fluent builder for constructing data pipelines. This provides a type-safe way to build complex
-   * pipelines.
-   */
-  case class PipelineBuilder[F[_]: EffectSystem] private (
-    name: Option[String] = None,
-    source: Option[DataSource] = None,
-    sink: Option[DataSink] = None,
-    transformations: List[PipelineComponent[F, Any, Any]] = List.empty,
-    validations: List[QualityCheck[Any]] = List.empty,
-    config: Option[PipelineConfig] = None
-  ) {
-
-    def withName(pipelineName: String): PipelineBuilder[F] =
-      copy(name = Some(pipelineName))
-
-    def withSource(dataSource: DataSource): PipelineBuilder[F] =
-      copy(source = Some(dataSource))
-
-    def withSink(dataSink: DataSink): PipelineBuilder[F] =
-      copy(sink = Some(dataSink))
-
-    def addTransformation[A, B](transform: A => F[B]): PipelineBuilder[F] = {
-      val component = Kleisli(transform).asInstanceOf[PipelineComponent[F, Any, Any]]
-      copy(transformations = transformations :+ component)
-    }
-
-    def addValidation[A](validation: QualityCheck[A]): PipelineBuilder[F] = {
-      val check = validation.asInstanceOf[QualityCheck[Any]]
-      copy(validations = validations :+ check)
-    }
-
-    def withConfig(pipelineConfig: PipelineConfig): PipelineBuilder[F] =
-      copy(config = Some(pipelineConfig))
-
-    def build: ConfigValidation[FlowForgePipeline[F]] = {
-      val nameValidation   = name.toValidNel(ConfigError.MissingRequired("name"))
-      val sourceValidation = source.toValidNel(ConfigError.MissingRequired("source"))
-      val sinkValidation   = sink.toValidNel(ConfigError.MissingRequired("sink"))
-
-      (nameValidation, sourceValidation, sinkValidation).mapN { (n, src, snk) =>
-        FlowForgePipeline(n, src, snk, transformations, validations, config)
-      }
-    }
-  }
-
-  object PipelineBuilder {
-    def empty[F[_]: EffectSystem]: PipelineBuilder[F] = PipelineBuilder[F]()
-  }
-
-  /**
-   * Represents a complete FlowForge pipeline.
-   */
-  case class FlowForgePipeline[F[_]: EffectSystem](
-    name: String,
-    source: DataSource,
-    sink: DataSink,
-    transformations: List[PipelineComponent[F, Any, Any]],
-    validations: List[QualityCheck[Any]],
-    config: Option[PipelineConfig]
-  ) {
-
-    /**
-     * Execute the pipeline with the given input data.
-     */
-    def execute[A](inputData: A): F[A] = {
-      // This is a simplified implementation - in practice would be much more sophisticated
-      val F = EffectSystem[F]
-
-      // Apply transformations sequentially
-      val transformed = transformations.foldLeft(F.pure(inputData.asInstanceOf[Any])) {
-        (acc, transform) =>
-          acc.flatMap(data => transform.run(data))
-      }
-
-      // Apply validations
-      val validated = transformed.map { data =>
-        val results = validations.map(_(data))
-        results.sequence match {
-          case cats.data.Validated.Valid(_) => data
-          case cats.data.Validated.Invalid(errors) =>
-            throw new RuntimeException(s"Validation failed: ${errors.toList.mkString(", ")}")
-        }
-      }
-
-      validated.map(_.asInstanceOf[A])
-    }
-
-    /**
-     * Validate the pipeline configuration.
-     */
-    def validate: ConfigValidation[Unit] =
-      // Pipeline-level validation logic would go here
-      ().validNel
-  }
+  // Moved PipelineBuilder and FlowForgePipeline to separate files to avoid
+  // package object anti-pattern - see PipelineBuilder.scala and FlowForgePipeline.scala
 }

@@ -72,14 +72,14 @@
  */
 package com.flowforge.core.patterns
 
-import cats.data.{ NonEmptyList, Validated, ValidatedNel }
+import cats.data.{NonEmptyList, Validated, ValidatedNel}
 import cats.syntax.all._
-import com.flowforge.core.algebra.{ SchemaError, SchemaIncompatible }
+import com.flowforge.core.algebra.{SchemaError, SchemaIncompatible}
 import com.flowforge.core.types.RefinedTypes._
 import com.flowforge.core.types.ValidationError.QualityViolation
 import com.flowforge.core.types._
 
-import java.time.{ Duration, Instant }
+import java.time.Instant
 import scala.concurrent.duration.FiniteDuration
 import scala.util.matching.Regex
 
@@ -357,21 +357,23 @@ object DataQualityValidation {
     fieldName: String,
     timestamp: Instant,
     maxAge: FiniteDuration
-  ): QualityValidationResult[A] = { _ =>
-    val age        = Duration.between(timestamp, Instant.now())
-    val maxAgeJava = Duration.ofMillis(maxAge.toMillis)
+  ): QualityValidationResult[A]  = { (data: A) =>
+    val age        = FiniteDuration(Instant.now().toEpochMilli - timestamp.toEpochMilli, "ms")
+    val maxAgeDur = FiniteDuration(maxAge.toMillis, "ms")
 
-    if (age.compareTo(maxAgeJava) <= 0) {
-      valid(())
+    if(age <= maxAgeDur) {
+      data.validNel
     } else {
-      val violation = QualityConstraint.Range(
-        FieldName(eu.timepit.refined.auto.autoRefineV(fieldName)),
-        Some(0.0),
-        Some(maxAge.toHours.toDouble)
+      val violation = QualityViolation(
+        constraint = "freshness",
+        violatedValue = fieldName,
+        threshold = Some(maxAge.toString),
+        message = s"Data is stale: age $age exceeds max age $maxAge",
+        severity = ErrorSeverity.Warning
       )
-      invalid(violation).map(_ => ()).asInstanceOf[QualityValidationResult[A]]
+      violation.invalidNel
     }
-  }.apply _
+  }
 
   /**
    * Validate data completeness - ensure required percentage of non-null values.
@@ -386,14 +388,16 @@ object DataQualityValidation {
     val actualCompleteness = if (total > 0) nonNull.toDouble / total else 0.0
 
     if (actualCompleteness >= minCompleteness) {
-      valid(values)
+      values.validNel
     } else {
-      val violation = QualityConstraint.Range(
-        FieldName(eu.timepit.refined.auto.autoRefineV(fieldName)),
-        Some(minCompleteness),
-        Some(1.0)
+      val violation = QualityViolation(
+        constraint = "completeness",
+        violatedValue = fieldName,
+        threshold = Some(minCompleteness.toString),
+        message = s"Completeness too low: ${actualCompleteness * 100}% < ${minCompleteness * 100}%",
+        severity = ErrorSeverity.Error
       )
-      invalid(violation).asInstanceOf[QualityValidationResult[List[Option[A]]]]
+      violation.invalidNel
     }
   }
 
@@ -407,12 +411,16 @@ object DataQualityValidation {
     val duplicates = values.groupBy(identity).filter(_._2.size > 1)
 
     if (duplicates.isEmpty) {
-      valid(values)
+      values.validNel
     } else {
-      val violation = QualityConstraint.Unique(
-        FieldName(eu.timepit.refined.auto.autoRefineV(fieldName))
+      val violation = QualityViolation(
+        constraint = "uniqueness",
+        violatedValue = fieldName,
+        threshold = Some(duplicates).map(_.toString),
+        message = s"Duplicate values found: ${duplicates.keys.mkString(", ")}",
+        severity = ErrorSeverity.Error
       )
-      invalid(violation).asInstanceOf[QualityValidationResult[List[A]]]
+      violation.invalidNel
     }
   }
 
@@ -427,13 +435,16 @@ object DataQualityValidation {
     val invalidKeys = foreignKeys.filterNot(referenceTable.contains)
 
     if (invalidKeys.isEmpty) {
-      valid(foreignKeys)
+      foreignKeys.validNel
     } else {
-      val violation = QualityConstraint.Pattern(
-        FieldName(eu.timepit.refined.auto.autoRefineV(fieldName)),
-        "exists in reference table"
+      val violation = QualityViolation(
+        constraint = "referential_integrity",
+        violatedValue = fieldName,
+        threshold = Some(invalidKeys).map(_.toString),
+        message = s"Invalid foreign key references: ${invalidKeys.mkString(", ")}",
+        severity = ErrorSeverity.Error
       )
-      invalid(violation).asInstanceOf[QualityValidationResult[List[A]]]
+      violation.invalidNel
     }
   }
 
@@ -447,23 +458,29 @@ object DataQualityValidation {
     tolerance: Double
   ): QualityValidationResult[List[Double]] =
     if (values.isEmpty) {
-      val violation = QualityConstraint.NotNull(
-        FieldName(eu.timepit.refined.auto.autoRefineV(fieldName))
+      val violation = QualityViolation(
+        constraint = "distribution",
+        violatedValue = fieldName,
+        threshold = None,
+        message = s"No values provided for distribution validation",
+        severity = ErrorSeverity.Error
       )
-      invalid(violation).asInstanceOf[QualityValidationResult[List[Double]]]
+      violation.invalidNel
     } else {
       val actualMean = values.sum / values.length
       val deviation  = math.abs(actualMean - expectedMean)
 
       if (deviation <= tolerance) {
-        valid(values)
+        values.validNel
       } else {
-        val violation = QualityConstraint.Range(
-          FieldName(eu.timepit.refined.auto.autoRefineV(fieldName)),
-          Some(expectedMean - tolerance),
-          Some(expectedMean + tolerance)
+        val violation = QualityViolation(
+          constraint = "distribution",
+          violatedValue = fieldName,
+          threshold = Some(s"$expectedMean + $tolerance"),
+          message = s"Mean deviation exceeds tolerance: $deviation > $tolerance",
+          severity = ErrorSeverity.Error
         )
-        invalid(violation).asInstanceOf[QualityValidationResult[List[Double]]]
+        violation.invalidNel
       }
     }
 
@@ -475,13 +492,16 @@ object DataQualityValidation {
     description: String
   )(rule: A => Boolean): A => QualityValidationResult[A] = { value =>
     if (rule(value)) {
-      valid(value)
+      value.validNel
     } else {
-      val violation = QualityConstraint.Pattern(
-        FieldName(eu.timepit.refined.auto.autoRefineV(ruleName)),
-        description
+      val violation = QualityViolation(
+        constraint = "business_rule",
+        violatedValue = ruleName,
+        threshold = Some(value).map(_.toString),
+        message = s"Business rule violation: $description",
+        severity = ErrorSeverity.Error
       )
-      invalid(violation).asInstanceOf[QualityValidationResult[A]]
+      violation.invalidNel
     }
   }
 }
@@ -506,7 +526,7 @@ object SchemaValidation {
 
     // Check field compatibility
     target.fields.foreach { targetField =>
-      source.fieldByName(targetField.name.value.value) match {
+      source.fieldByName(targetField.name.value) match {
         case Some(sourceField) =>
           if (!areTypesCompatible(sourceField.dataType, targetField.dataType)) {
             errors += SchemaIncompatible(source, target)
@@ -519,8 +539,8 @@ object SchemaValidation {
     }
 
     NonEmptyList.fromList(errors.toList) match {
-      case Some(errs) => invalid(errs)
-      case None       => valid(())
+      case Some(errs) => errs.invalid
+      case None       => ().valid
     }
   }
 
@@ -535,7 +555,7 @@ object SchemaValidation {
 
     // Check for removed required fields
     oldSchema.requiredFields.foreach { oldField =>
-      newSchema.fieldByName(oldField.name.value.value) match {
+      newSchema.fieldByName(oldField.name.value) match {
         case None => errors += SchemaIncompatible(oldSchema, newSchema)
         case Some(newField) =>
           if (!areTypesCompatible(oldField.dataType, newField.dataType)) {
@@ -546,14 +566,14 @@ object SchemaValidation {
 
     // Check for added required fields without defaults
     newSchema.requiredFields.foreach { newField =>
-      if (!oldSchema.fieldByName(newField.name.value.value).isDefined) {
+      if (!oldSchema.fieldByName(newField.name.value).isDefined) {
         errors += SchemaIncompatible(oldSchema, newSchema)
       }
     }
 
     NonEmptyList.fromList(errors.toList) match {
-      case Some(errs) => invalid(errs)
-      case None       => valid(())
+      case Some(errs) => errs.invalid
+      case None       => ().valid
     }
   }
 
@@ -699,7 +719,7 @@ case class NamedValidationRule[A](
   def combine(other: NamedValidationRule[A]): NamedValidationRule[A] =
     NamedValidationRule(
       s"$name+${other.name}",
-      value => validator(value).combine(other.validator(value)).map(_ => value)
+      value => (validator(value), other.validator(value)).mapN((_, _) => value)
     )
 }
 
@@ -858,7 +878,7 @@ object CommonValidations {
     age: Int
   )
 
-  val validateUser: UserValidation => ValidationResult[UserValidation] = { user =>
+  val validateUser: UserValidation => ConfigValidationResult[UserValidation] = { user =>
     (
       nonEmpty("name", user.name),
       email("email", user.email),
@@ -869,11 +889,11 @@ object CommonValidations {
   /**
    * Configuration validation pattern.
    */
-  def validatePipelineConfig(config: PipelineConfig): ValidationResult[PipelineConfig] = {
+  def validatePipelineConfig(config: PipelineConfig): ConfigValidationResult[PipelineConfig] = {
     val nameValidation        = nonEmpty("name", config.name.value)
-    val environmentValidation = valid(config.environment) // Always valid
-    val sourceValidation      = valid(config.source)      // Assume valid for now
-    val sinkValidation        = valid(config.sink)        // Assume valid for now
+    val environmentValidation = config.environment.validNel // Always valid
+    val sourceValidation      = config.source.validNel      // Assume valid for now
+    val sinkValidation        = config.sink.validNel        // Assume valid for now
 
     (nameValidation, environmentValidation, sourceValidation, sinkValidation)
       .mapN((_, _, _, _) => config)
@@ -891,7 +911,7 @@ object CommonValidations {
       valid(data)
     } else {
       val violation = QualityConstraint.NotNull(
-        FieldName(eu.timepit.refined.auto.autoRefineV("data"))
+        FieldName.unsafeFrom("data")
       )
       invalid(violation).asInstanceOf[QualityValidationResult[List[A]]]
     }
