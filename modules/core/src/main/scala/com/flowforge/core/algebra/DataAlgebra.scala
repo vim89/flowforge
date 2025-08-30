@@ -697,7 +697,7 @@ object DataAlgebra {
 
     implicit val longDataEncoder: DataEncoder[Long] = new DataEncoder[Long] {
       def encode(value: Long): EncodedData = EncodedData(value.toString.getBytes)
-      def schema: DataSchema              = DataSchema.builder.build
+      def schema: DataSchema               = DataSchema.builder.build
     }
   }
 

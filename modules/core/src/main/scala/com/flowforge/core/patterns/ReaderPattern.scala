@@ -1,13 +1,11 @@
 package com.flowforge.core.patterns
 
-import cats.data.{Kleisli, Reader, ReaderT}
+import cats.data.{ Kleisli, Reader, ReaderT }
 import cats.effect.Resource
 import cats.implicits._
-import cats.{Applicative, Monad}
-import com.flowforge.core.algebra.{DataAlgebra, DataDecoder, EffectSystem}
+import cats.{ Applicative, Monad }
+import com.flowforge.core.algebra.{ DataAlgebra, DataDecoder, EffectSystem }
 import com.flowforge.core.types._
-import com.flowforge.core.types.PipelineTypes._
-import eu.timepit.refined
 import eu.timepit.refined.api.Refined
 
 import java.time.Instant

@@ -1,8 +1,8 @@
 /**
  * FlowForge Core Module - Pipeline Builder
  *
- * File: modules/core/src/main/scala/com/flowforge/core/PipelineBuilder.scala
- * Package: com.flowforge.core
+ * File: modules/core/src/main/scala/com/flowforge/core/PipelineBuilder.scala Package:
+ * com.flowforge.core
  *
  * Type-safe, fluent builder for constructing FlowForge data pipelines.
  */
@@ -16,7 +16,7 @@ import com.flowforge.core.types.PipelineTypes._
 
 /**
  * Fluent builder for constructing data pipelines.
- * 
+ *
  * Provides a type-safe way to build complex pipelines with validation.
  */
 case class PipelineBuilder[F[_]: EffectSystem] private (
@@ -51,12 +51,12 @@ case class PipelineBuilder[F[_]: EffectSystem] private (
     copy(config = Some(pipelineConfig))
 
   def build: ConfigValidation[FlowForgePipeline[F]] = {
-    val nameValidation = name.toValidNel(ConfigError.MissingRequired("name"))
+    val nameValidation   = name.toValidNel(ConfigError.MissingRequired("name"))
     val sourceValidation = source.toValidNel(ConfigError.MissingRequired("source"))
-    val sinkValidation = sink.toValidNel(ConfigError.MissingRequired("sink"))
+    val sinkValidation   = sink.toValidNel(ConfigError.MissingRequired("sink"))
 
-    nameValidation.product(sourceValidation).product(sinkValidation).map {
-      case ((n, src), snk) => FlowForgePipeline(n, src, snk, transformations, validations, config)
+    nameValidation.product(sourceValidation).product(sinkValidation).map { case ((n, src), snk) =>
+      FlowForgePipeline(n, src, snk, transformations, validations, config)
     }
   }
 }

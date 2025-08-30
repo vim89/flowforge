@@ -4,6 +4,8 @@ import cats.data.ValidatedNel
 import cats.implicits._
 import com.flowforge.core.types._
 
+import java.net.URI
+
 /**
  * 🚀 **FlowForge Validation Syntax - Enhanced Validation Operations**
  *
@@ -135,7 +137,7 @@ object ValidationSyntax {
      */
     def isUrl: ValidationResult[String] =
       try {
-        new java.net.URL(str)
+        new URI(str)
         str.validNel
       } catch {
         case _: java.net.MalformedURLException =>

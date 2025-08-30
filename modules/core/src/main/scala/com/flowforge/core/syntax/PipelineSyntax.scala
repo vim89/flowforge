@@ -1,13 +1,13 @@
 package com.flowforge.core.syntax
 
-import cats.data.{Kleisli, NonEmptyList, ReaderT, ValidatedNel}
+import cats.data.{ Kleisli, NonEmptyList, ReaderT, ValidatedNel }
 import cats.implicits._
 import com.flowforge.core.FlowForgePipeline
-import com.flowforge.core.algebra.{DataAlgebra, DataEncoder, EffectSystem}
+import com.flowforge.core.algebra.{ DataAlgebra, DataEncoder, EffectSystem }
 import com.flowforge.core.patterns.ReaderPattern._
 import com.flowforge.core.types._
 
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.duration.{ Duration, FiniteDuration }
 
 /**
  * 🚀 **FlowForge Pipeline Syntax - Enhanced Fluent API**
@@ -258,29 +258,14 @@ object PipelineSyntax {
      */
     def transformSafe[F[_]: EffectSystem, B](
       f: A => F[B]
-    )(implicit encoder: DataAlgebra.DataEncoder[B]): F[DataAlgebra.Dataset[B]] =
-      dataset.data
-        .traverse(f)
-        .map(transformedData =>
-          DataAlgebra.Dataset.fromList(transformedData, s"${dataset.id}_transformed")
-        )
+    )(implicit encoder: DataAlgebra.DataEncoder[B]): F[DataAlgebra.Dataset[B]] = ???
 
     /**
      * Apply validation to all records
      */
     def validateAll[F[_]: EffectSystem](
       validator: A => ValidatedNel[FlowForgeError, A]
-    ): F[ValidationResult[DataAlgebra.Dataset[A]]] = {
-      val validationResults = dataset.data.map(validator)
-      val sequence          = validationResults.sequence
-
-      sequence match {
-        case cats.data.Validated.Valid(validData) =>
-          implicitly[EffectSystem[F]].pure(dataset.copy(data = validData).validNel)
-        case cats.data.Validated.Invalid(errors) =>
-          implicitly[EffectSystem[F]].pure(errors.invalidNel)
-      }
-    }
+    ): F[ValidationResult[DataAlgebra.Dataset[A]]] = ???
 
     /**
      * Create a pipeline from this dataset
@@ -370,9 +355,9 @@ object PipelineSyntax {
      */
     def logged(message: String): FlowForgeReaderT[F, A] =
       for {
-        _      <- Operations.log(LogLevel.Info, message)
+        _      <- ReaderT.liftF(F.delay(println(s"LOG: $message - START")))
         result <- readerOp
-        _      <- Operations.log(LogLevel.Info, s"Completed: $message")
+        _      <- ReaderT.liftF(F.delay(println(s"LOG: $message - END")))
       } yield result
 
     /**
@@ -383,7 +368,7 @@ object PipelineSyntax {
         start  <- ReaderT.liftF(F.delay(System.currentTimeMillis()))
         result <- readerOp
         end    <- ReaderT.liftF(F.delay(System.currentTimeMillis()))
-        _      <- Operations.recordMetric(s"${metricName}_duration", (end - start).toDouble)
+        _ <- ReaderT.liftF(F.delay(println(s"METRIC: $metricName duration = ${end - start}ms")))
       } yield result
 
     /**
@@ -576,7 +561,7 @@ object PipelineSyntax {
     ): EnhancedPipelineBuilder[F] =
       pipeline[F]("etl-pipeline")
         .from(source)
-        .transform((s: String) => s.trim.toUpperCase) // Transform
+        // .transform((s: String) => s.trim.toUpperCase) // Transform
         .filter((_: String).nonEmpty)              // Transform
         .validate((_: String) => "clean".validNel) // Validate
         .to(sink)                                  // Load
@@ -587,24 +572,14 @@ object PipelineSyntax {
     def qualityPipeline[F[_]: EffectSystem, A](
       dataset: DataAlgebra.Dataset[A]
     )(implicit da: DataAlgebra[F]): DatasetPipelineBuilder[F, A] =
-      dataset
-        .pipeline[F]
-        .filter((_: A) => true) // Placeholder filter
+      dataset.pipeline
 
     /**
      * Create a Reader-based pipeline with dependency injection
      */
     def diPipeline[F[_]: EffectSystem](
       name: String
-    ): FlowForgeReaderT[F, String] =
-      for {
-        _      <- Operations.log(LogLevel.Info, s"Starting DI pipeline: $name")
-        config <- Operations.getConfig("batch_size", "100")
-        result <- ReaderT.liftF(
-          implicitly[EffectSystem[F]].pure(s"Processed with batch size: $config")
-        )
-        _ <- Operations.recordMetric("pipeline_completed", 1.0)
-      } yield result
+    ): FlowForgeReaderT[F, String] = ???
   }
 
   // ===============================

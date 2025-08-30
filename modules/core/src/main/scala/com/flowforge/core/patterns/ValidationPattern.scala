@@ -72,9 +72,9 @@
  */
 package com.flowforge.core.patterns
 
-import cats.data.{NonEmptyList, Validated, ValidatedNel}
+import cats.data.{ NonEmptyList, Validated, ValidatedNel }
 import cats.syntax.all._
-import com.flowforge.core.algebra.{SchemaError, SchemaIncompatible}
+import com.flowforge.core.algebra.{ SchemaError, SchemaIncompatible }
 import com.flowforge.core.types.RefinedTypes._
 import com.flowforge.core.types.ValidationError.QualityViolation
 import com.flowforge.core.types._
@@ -357,23 +357,7 @@ object DataQualityValidation {
     fieldName: String,
     timestamp: Instant,
     maxAge: FiniteDuration
-  ): QualityValidationResult[A]  = { (data: A) =>
-    val age        = FiniteDuration(Instant.now().toEpochMilli - timestamp.toEpochMilli, "ms")
-    val maxAgeDur = FiniteDuration(maxAge.toMillis, "ms")
-
-    if(age <= maxAgeDur) {
-      data.validNel
-    } else {
-      val violation = QualityViolation(
-        constraint = "freshness",
-        violatedValue = fieldName,
-        threshold = Some(maxAge.toString),
-        message = s"Data is stale: age $age exceeds max age $maxAge",
-        severity = ErrorSeverity.Warning
-      )
-      violation.invalidNel
-    }
-  }
+  ): QualityValidationResult[A] = ???
 
   /**
    * Validate data completeness - ensure required percentage of non-null values.

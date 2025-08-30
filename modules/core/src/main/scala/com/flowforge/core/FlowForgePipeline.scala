@@ -1,8 +1,8 @@
 /**
  * FlowForge Core Module - Pipeline Implementation
  *
- * File: modules/core/src/main/scala/com/flowforge/core/FlowForgePipeline.scala
- * Package: com.flowforge.core
+ * File: modules/core/src/main/scala/com/flowforge/core/FlowForgePipeline.scala Package:
+ * com.flowforge.core
  *
  * Complete FlowForge pipeline with execution capabilities.
  */

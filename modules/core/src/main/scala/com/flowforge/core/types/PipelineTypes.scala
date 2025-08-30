@@ -52,8 +52,8 @@ import scala.concurrent.duration.FiniteDuration
  */
 object PipelineTypes {
   type PipelineComponent[F[_], A, B] = Kleisli[F, A, B]
-  type QualityCheck[A] = A => ValidatedNel[FlowForgeError, Unit]
-  type DataContract[A] = A => ValidatedNel[FlowForgeError, Unit]
+  type QualityCheck[A]               = A => ValidatedNel[FlowForgeError, Unit]
+  type DataContract[A]               = A => ValidatedNel[FlowForgeError, Unit]
 }
 
 /**

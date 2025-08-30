@@ -59,7 +59,7 @@
 package com.flowforge.core.algebra
 
 import cats.Show
-import cats.data.{NonEmptyList, ValidatedNel}
+import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.syntax.all._
 import com.flowforge.core.types._
 

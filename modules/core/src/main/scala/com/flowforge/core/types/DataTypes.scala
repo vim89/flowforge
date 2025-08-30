@@ -68,7 +68,7 @@ import cats.syntax.show._
 import com.flowforge.core.types.DataSink.WriteMode
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.collection.NonEmpty
-import eu.timepit.refined.numeric.{NonNegative, Positive}
+import eu.timepit.refined.numeric.{ NonNegative, Positive }
 import eu.timepit.refined.string.MatchesRegex
 
 import java.time.Instant
@@ -102,7 +102,7 @@ object RefinedTypes {
     // Runtime validation instead of compile-time for dynamic values
     require(value.matches("^[a-z0-9][a-z0-9-]*[a-z0-9]$"), s"Invalid bucket name: $value")
   }
-  
+
   object BucketName {
     def unsafeFrom(value: String): BucketName = BucketName(value)
   }
@@ -110,7 +110,7 @@ object RefinedTypes {
   case class TableName(value: String) {
     require(value.matches("^[a-zA-Z_][a-zA-Z0-9_]*$"), s"Invalid table name: $value")
   }
-  
+
   object TableName {
     def unsafeFrom(value: String): TableName = TableName(value)
   }
@@ -118,7 +118,7 @@ object RefinedTypes {
   case class FieldName(value: String) {
     require(value.matches("^[a-zA-Z_][a-zA-Z0-9_]*$"), s"Invalid field name: $value")
   }
-  
+
   object FieldName {
     def unsafeFrom(value: String): FieldName = FieldName(value)
   }
@@ -126,7 +126,7 @@ object RefinedTypes {
   case class ProjectId(value: String) {
     require(value.matches("^[a-z][a-z0-9-]*[a-z0-9]$"), s"Invalid project ID: $value")
   }
-  
+
   object ProjectId {
     def unsafeFrom(value: String): ProjectId = ProjectId(value)
   }
@@ -134,7 +134,7 @@ object RefinedTypes {
   case class DatasetId(value: String) {
     require(value.nonEmpty, "Dataset ID cannot be empty")
   }
-  
+
   object DatasetId {
     def unsafeFrom(value: String): DatasetId = DatasetId(value)
   }
@@ -142,7 +142,7 @@ object RefinedTypes {
   case class SchemaVersion(value: Int) {
     require(value > 0, s"Schema version must be positive: $value")
   }
-  
+
   object SchemaVersion {
     def unsafeFrom(value: Int): SchemaVersion = SchemaVersion(value)
   }
@@ -433,7 +433,7 @@ object DataType {
     }
     val refinedScale = eu.timepit.refined.refineV[NonNegative](scale) match {
       case Right(value) => value
-      case Left(_) => throw new IllegalArgumentException(s"Scale must be non-negative: $scale")
+      case Left(_)      => throw new IllegalArgumentException(s"Scale must be non-negative: $scale")
     }
     Decimal(refinedPrecision, refinedScale)
   }

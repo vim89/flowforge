@@ -57,9 +57,9 @@ package com.flowforge.core.types
 import cats.Show
 import cats.data.NonEmptyList
 import cats.syntax.show._
-import com.flowforge.core.types.ValidationError.{MissingRequiredField, SchemaViolation}
+import com.flowforge.core.types.ValidationError.{ MissingRequiredField, SchemaViolation }
 
-import java.time.{Duration, Instant}
+import java.time.{ Duration, Instant }
 import java.util.UUID
 import scala.concurrent.duration.FiniteDuration
 
@@ -578,7 +578,7 @@ object FlowForgeError {
   ) extends FlowForgeError {
 
     val category: ErrorCategory = ErrorCategory.Validation
-    val isRetryable: Boolean = false
+    val isRetryable: Boolean    = false
 
     val recoveryHints: List[String] = List(
       "Check input validation logic",
@@ -607,7 +607,7 @@ object FlowForgeError {
   ) extends FlowForgeError {
 
     val category: ErrorCategory = ErrorCategory.Configuration
-    val isRetryable: Boolean = false
+    val isRetryable: Boolean    = false
 
     val recoveryHints: List[String] = List(
       "Check configuration file syntax",

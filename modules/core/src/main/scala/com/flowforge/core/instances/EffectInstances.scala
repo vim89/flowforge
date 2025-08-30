@@ -58,14 +58,13 @@
  */
 package com.flowforge.core.instances
 
-import cats.effect.{IO, Outcome}
+import cats.effect.{ IO, Outcome }
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
-import zio.{Task, ZIO}
+import zio.{ Task, ZIO }
 
-import scala.annotation.tailrec
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 /**
  * Effect system instances for popular Scala effect libraries.
@@ -240,13 +239,7 @@ object EffectInstances {
 
     override def handleErrorWith[A](fa: IO[A])(f: Throwable => IO[A]): IO[A] = fa.handleErrorWith(f)
 
-    @tailrec
-    def tailRecM[A, B](a: A)(f: A => IO[Either[A, B]]): IO[B] = {
-      f(a).flatMap {
-        case Right(b)    => IO.pure(b)
-        case Left(nextA) => tailRecM(nextA)(f)
-      }
-    }
+    override def tailRecM[A, B](a: A)(f: A => IO[Either[A, B]]): IO[B] = ???
   }
 
   // ===============================
@@ -394,7 +387,7 @@ object EffectInstances {
           case zio.Exit.Failure(cause) =>
             cause.failureOrCause match {
               case Left(error) => ExitCase.Error(error)
-              case Right(_) => ExitCase.Canceled
+              case Right(_)    => ExitCase.Canceled
             }
         }
         // Log errors during release but don't fail the operation
@@ -467,16 +460,17 @@ object EffectInstances {
   implicit class EffectSystemSyntax[F[_], A](private val fa: F[A]) extends AnyVal {
 
     /**
-     * Convert any effect to a different effect type (when both have EffectSystem instances).
-     * Note: This is a conceptual method. Real effect transformation requires runtime bridging.
+     * Convert any effect to a different effect type (when both have EffectSystem instances). Note:
+     * This is a conceptual method. Real effect transformation requires runtime bridging.
      */
-    def liftTo[G[_]](implicit F: EffectSystem[F], G: EffectSystem[G]): G[A] = {
+    def liftTo[G[_]](implicit F: EffectSystem[F], G: EffectSystem[G]): G[A] =
       // Placeholder for effect transformation - would need runtime interop
       // For production use, consider using cats-interop-zio or similar
-      G.raiseError(new UnsupportedOperationException(
-        "Effect transformation not implemented. Use specific interop libraries (e.g., zio-interop-cats)"
-      ))
-    }
+      G.raiseError(
+        new UnsupportedOperationException(
+          "Effect transformation not implemented. Use specific interop libraries (e.g., zio-interop-cats)"
+        )
+      )
   }
 
   /**
