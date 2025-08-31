@@ -1,13 +1,12 @@
 package com.flowforge.core.syntax
 
-import cats.data.{ Kleisli, NonEmptyList, ReaderT, ValidatedNel }
+import cats.data.{Kleisli, NonEmptyList, ReaderT, ValidatedNel}
 import cats.implicits._
 import com.flowforge.core.FlowForgePipeline
-import com.flowforge.core.algebra.{ DataAlgebra, DataEncoder, EffectSystem }
-import com.flowforge.core.patterns.ReaderPattern._
+import com.flowforge.core.algebra.{DataAlgebra, DataEncoder, EffectSystem}
 import com.flowforge.core.types._
 
-import scala.concurrent.duration.{ Duration, FiniteDuration }
+import scala.concurrent.duration.{Duration, FiniteDuration}
 
 /**
  * 🚀 **FlowForge Pipeline Syntax - Enhanced Fluent API**

@@ -825,7 +825,26 @@ object ConfigurationMigration {
       def merge[T: ConfigDecoder: ConfigMerger](
         sources: NonEmptyList[ConfigSource]
       ): F[ValidatedNel[ConfigError, T]] =
-        ??? // TODO: Implement configuration merging
+        Sync[F].pure {
+          // Simplified implementation - in real system would load from each source
+          val configs = sources.map { source =>
+            // For now, return empty config for each source
+            // TODO: Implement actual loading from different ConfigSource types
+            val emptyConfig = Map.empty[String, String]
+            ConfigDecoder[T].decode(emptyConfig)
+          }
+          configs.sequence.andThen { configList =>
+            if (configList.isEmpty) {
+              com.flowforge.core.types.ConfigError
+                .CustomError("No configurations to merge")
+                .invalidNel
+            } else {
+              val merger = implicitly[ConfigMerger[T]]
+              val nel    = cats.data.NonEmptyList.fromListUnsafe(configList)
+              merger.merge(nel).validNel
+            }
+          }
+        }
     }
 
   /**

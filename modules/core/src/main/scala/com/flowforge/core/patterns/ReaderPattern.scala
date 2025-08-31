@@ -5,6 +5,7 @@ import cats.effect.Resource
 import cats.implicits._
 import cats.{ Applicative, Monad }
 import com.flowforge.core.algebra.{ DataAlgebra, DataDecoder, EffectSystem }
+import com.flowforge.core.instances.DataInstances
 import com.flowforge.core.types._
 import eu.timepit.refined.api.Refined
 
@@ -602,7 +603,7 @@ object ReaderPattern {
 
   private object TestImplementations {
 
-    def mockDataAlgebra[F[_]: EffectSystem]: DataAlgebra[F] = ???
+    def mockDataAlgebra[F[_]: EffectSystem]: DataAlgebra[F] = DataInstances.createMockDataAlgebra[F]
 
     def mockLogger[F[_]: EffectSystem]: Logger[F] = new Logger[F] {
       def debug(message: String): F[Unit] =
@@ -648,7 +649,12 @@ object ReaderPattern {
     }
 
     def mockResourceManager[F[_]: EffectSystem]: ResourceManager[F] = new ResourceManager[F] {
-      def acquireResource[R](name: String, config: ResourceConfig): Resource[F, R] = ???
+      def acquireResource[R](name: String, config: ResourceConfig): Resource[F, R] =
+        Resource.eval(
+          implicitly[EffectSystem[F]].raiseError(
+            new NotImplementedError("Mock resource acquisition")
+          )
+        )
       def releaseResource(name: String): F[Unit] = implicitly[EffectSystem[F]].delay(())
       def listResources: F[List[ResourceInfo]]   = implicitly[EffectSystem[F]].delay(List.empty)
       def healthCheck: F[Map[String, ResourceHealth]] = implicitly[EffectSystem[F]].delay(Map.empty)
@@ -656,9 +662,12 @@ object ReaderPattern {
 
     // Database mocks
     def mockConnectionPool[F[_]: EffectSystem]: ConnectionPool[F] = new ConnectionPool[F] {
-      def withConnection[A](operation: Connection[F] => F[A]): F[A] = ???
-      def stats: F[PoolStats]                                       = ???
-      def health: F[PoolHealth]                                     = ???
+      def withConnection[A](operation: Connection[F] => F[A]): F[A] =
+        implicitly[EffectSystem[F]].raiseError(new NotImplementedError("Mock connection"))
+      def stats: F[PoolStats] =
+        implicitly[EffectSystem[F]].raiseError(new NotImplementedError("Mock pool stats"))
+      def health: F[PoolHealth] =
+        implicitly[EffectSystem[F]].raiseError(new NotImplementedError("Mock pool health"))
     }
 
     def mockTransactionManager[F[_]: EffectSystem]: TransactionManager[F] =
@@ -669,8 +678,10 @@ object ReaderPattern {
       }
 
     def mockMigrationService[F[_]: EffectSystem]: MigrationService[F] = new MigrationService[F] {
-      def runMigrations: F[MigrationResult]                      = ???
-      def rollbackMigration(version: String): F[MigrationResult] = ???
+      def runMigrations: F[MigrationResult] =
+        implicitly[EffectSystem[F]].raiseError(new NotImplementedError("Mock migration"))
+      def rollbackMigration(version: String): F[MigrationResult] =
+        implicitly[EffectSystem[F]].raiseError(new NotImplementedError("Mock rollback"))
       def migrationStatus: F[List[MigrationInfo]] = implicitly[EffectSystem[F]].delay(List.empty)
     }
 
@@ -686,7 +697,8 @@ object ReaderPattern {
 
     def mockQueueService[F[_]: EffectSystem]: QueueService[F] = new QueueService[F] {
       def publish[A](queue: String, message: A): F[Unit] = implicitly[EffectSystem[F]].delay(())
-      def subscribe[A](queue: String): F[QueueSubscription[F, A]] = ???
+      def subscribe[A](queue: String): F[QueueSubscription[F, A]] =
+        implicitly[EffectSystem[F]].raiseError(new NotImplementedError("Mock queue subscription"))
       def createQueue(name: String, config: QueueConfig): F[Unit] =
         implicitly[EffectSystem[F]].delay(())
       def deleteQueue(name: String): F[Unit] = implicitly[EffectSystem[F]].delay(())

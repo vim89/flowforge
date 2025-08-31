@@ -1,9 +1,9 @@
 package com.flowforge.core.instances
 
-import cats.data.{ Kleisli, Validated, ValidatedNel }
+import cats.data.{Kleisli, NonEmptyList, Validated, ValidatedNel}
 import cats.implicits._
-import cats.{ Applicative, Functor, Monad, Show }
-import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
+import cats.{Applicative, Functor, Monad, Show}
+import com.flowforge.core.algebra.{DataAlgebra, EffectSystem}
 import com.flowforge.core.patterns.ReaderPattern.ResourceConfig
 import com.flowforge.core.syntax.ValidationSyntax._
 import com.flowforge.core.types._
@@ -417,65 +417,65 @@ object DataInstances {
   /**
    * Helper to create DataAlgebra instances for different effect systems
    */
-  def createMockDataAlgebra[F[_]: EffectSystem]: DataAlgebra[F] = ??? /* new DataAlgebra[F] {
+  def createMockDataAlgebra[F[_]: EffectSystem]: DataAlgebra[F] = new DataAlgebra[F] {
     import DataAlgebra._
 
     val F: EffectSystem[F] = implicitly[EffectSystem[F]]
 
     /**
-   * Read data from a source with automatic resource management
-   */
-    override def read[A: algebra.DataDecoder](source: DataSource): F[Dataset[A]] =
+     * Read data from a source with automatic resource management
+     */
+    override def read[A: DataDecoder](source: DataSource): F[Dataset[A]] =
       F.delay(Dataset.empty[A])
 
     /**
-   * Read data with schema validation
-   */
-    override def readWithSchema[A: algebra.DataDecoder: SchemaValidator](
+     * Read data with schema validation
+     */
+    override def readWithSchema[A: DataDecoder: SchemaValidator](
       source: DataSource,
       expectedSchema: types.DataSchema
     ): F[Either[FlowForgeError, Dataset[A]]] = F.delay(Right(Dataset.empty[A]))
 
     /**
-   * Stream data for large datasets
-   */
-    override def stream[A: algebra.DataDecoder](source: DataSource): F[DataStream[F, A]] =
+     * Stream data for large datasets
+     */
+    override def stream[A: DataDecoder](source: DataSource): F[DataStream[F, A]] =
       F.raiseError(new NotImplementedError("Streaming not implemented in mock"))
 
     /**
-   * Batch read with configurable size
-   */
-    override def readBatch[A: algebra.DataDecoder](
+     * Batch read with configurable size
+     */
+    override def readBatch[A: DataDecoder](
       source: DataSource,
       batchSize: Int
     ): F[List[Dataset[A]]] = F.delay(List(Dataset.empty[A]))
 
     /**
-   * Apply a transformation to a dataset
-   */
-    override def transform[A, B: algebra.DataEncoder](
+     * Apply a transformation to a dataset
+     */
+    override def transform[A, B: DataEncoder](
       dataset: Dataset[A],
       transformation: A => F[B]
     ): F[Dataset[B]] = F.delay(Dataset.empty[B])
 
     /**
-   * Apply multiple transformations in sequence
-   */
-    override def transformPipeline[A, B: algebra.DataEncoder](
+     * Apply multiple transformations in sequence
+     */
+    override def transformPipeline[A, B: DataEncoder](
       dataset: Dataset[A],
       transformations: NonEmptyList[A => F[B]]
     ): F[Dataset[B]] = F.delay(Dataset.empty[B])
 
     /**
-   * Filter data based on predicate
-   */
+     * Filter data based on predicate
+     */
     override def filter[A](dataset: Dataset[A], predicate: A => Boolean): F[Dataset[A]] =
       F.delay(dataset.filter(predicate))
 
     /**
-   * Map over dataset with effect support
-   */
-    override def mapWithEffect[A, B: algebra.DataEncoder](
+     * Map over dataset with effect support
+     */
+    override def mapWithEffect[A, B: DataEncoder](
       dataset: Dataset[A],
       f: A => F[B]
     ): F[Dataset[B]] = dataset.data
@@ -483,26 +483,26 @@ object DataInstances {
       .map(transformedData => Dataset.fromList(transformedData, s"${dataset.id}_mapped"))
 
     /**
-   * FlatMap over dataset for nested operations
-   */
-    override def flatMapWithEffect[A, B: algebra.DataEncoder](
+     * FlatMap over dataset for nested operations
+     */
+    override def flatMapWithEffect[A, B: DataEncoder](
       dataset: Dataset[A],
       f: A => F[Dataset[B]]
     ): F[Dataset[B]] = F.delay(Dataset.empty[B])
 
     /**
-   * Group by key with aggregation
-   */
-    override def groupBy[A, K, V: algebra.DataEncoder](
+     * Group by key with aggregation
+     */
+    override def groupBy[A, K, V: DataEncoder](
       dataset: Dataset[A],
       keyExtractor: A => K,
       aggregator: List[A] => V
     ): F[Dataset[(K, V)]] = F.delay(Dataset.empty[(K, V)])
 
     /**
-   * Join two datasets
-   */
-    override def join[A, B, K, C: algebra.DataEncoder](
+     * Join two datasets
+     */
+    override def join[A, B, K, C: DataEncoder](
       left: Dataset[A],
       right: Dataset[B],
       leftKey: A => K,
@@ -511,11 +511,11 @@ object DataInstances {
     ): F[Dataset[C]] = F.delay(Dataset.empty[C])
 
     /**
-   * Validate dataset against data contract
-   */
+     * Validate dataset against data contract
+     */
     override def validate[A](
       dataset: Dataset[A],
-      contract: algebra.DataContract[A]
+      contract: DataContract[A]
     ): F[QualityResult[Dataset[A]]] =
       F.delay(
         QualityResult(
@@ -528,29 +528,39 @@ object DataInstances {
       )
 
     /**
-   * Run specific quality checks
-   */
+     * Run specific quality checks
+     */
     override def runQualityChecks[A](
       dataset: Dataset[A],
       checks: NonEmptyList[QualityCheck[A]]
     ): F[List[QualityCheckResult]] = F.delay(List.empty)
 
     /**
-   * Profile dataset to understand data characteristics
-   */
-    override def profile[A](dataset: Dataset[A]): F[DataProfile[A]] = ???
+     * Profile dataset to understand data characteristics
+     */
+    override def profile[A](dataset: Dataset[A]): F[DataProfile[A]] =
+      F.delay(
+        DataProfile[A](
+          recordCount = dataset.data.length.toLong,
+          nullCounts = Map.empty,
+          uniqueCounts = Map.empty,
+          dataTypes = Map.empty,
+          statistics = Map.empty,
+          schema = dataset.schema
+        )
+      )
 
     /**
-   * Clean dataset based on quality rules
-   */
+     * Clean dataset based on quality rules
+     */
     override def clean[A](
       dataset: Dataset[A],
       cleaningRules: List[CleaningRule[A]]
     ): F[Dataset[A]] = F.delay(dataset)
 
     /**
-   * Detect anomalies in dataset
-   */
+     * Detect anomalies in dataset
+     */
     override def detectAnomalies[A](
       dataset: Dataset[A],
       detectors: List[AnomalyDetector[A]]
@@ -565,22 +575,22 @@ object DataInstances {
     )
 
     /**
-   * Extract schema from dataset
-   */
+     * Extract schema from dataset
+     */
     override def extractSchema[A](dataset: Dataset[A]): F[types.DataSchema] =
       F.delay(dataset.schema)
 
     /**
-   * Evolve schema with migrations
-   */
-    override def evolveSchema[A, B: algebra.DataEncoder](
+     * Evolve schema with migrations
+     */
+    override def evolveSchema[A, B: DataEncoder](
       dataset: Dataset[A],
       migration: SchemaMigration[A, B]
     ): F[Dataset[B]] = F.delay(Dataset.empty[B])
 
     /**
-   * Compare schemas for compatibility
-   */
+     * Compare schemas for compatibility
+     */
     override def compareSchemas(
       source: types.DataSchema,
       target: types.DataSchema
@@ -593,17 +603,17 @@ object DataInstances {
     )
 
     /**
-   * Validate schema compliance
-   */
+     * Validate schema compliance
+     */
     override def validateSchema[A](
       dataset: Dataset[A],
       schema: types.DataSchema
     ): F[ValidatedNel[FlowForgeError, Dataset[A]]] = F.delay(dataset.validNel)
 
     /**
-   * Write dataset to sink
-   */
-    override def write[A: algebra.DataEncoder](
+     * Write dataset to sink
+     */
+    override def write[A: DataEncoder](
       dataset: Dataset[A],
       sink: DataSink
     ): F[WriteResult] = F.delay(
@@ -618,9 +628,9 @@ object DataInstances {
     )
 
     /**
-   * Write with options (partitioning, compression, etc.)
-   */
-    override def writeWithOptions[A: algebra.DataEncoder](
+     * Write with options (partitioning, compression, etc.)
+     */
+    override def writeWithOptions[A: DataEncoder](
       dataset: Dataset[A],
       sink: DataSink,
       options: WriteOptions
@@ -636,31 +646,31 @@ object DataInstances {
     )
 
     /**
-   * Stream write for large datasets
-   */
-    override def writeStream[A: algebra.DataEncoder](
+     * Stream write for large datasets
+     */
+    override def writeStream[A: DataEncoder](
       stream: DataStream[F, A],
       sink: DataSink
     ): F[WriteResult] =
       F.raiseError(new NotImplementedError("Stream writing not implemented in mock"))
 
     /**
-   * Batch write with configurable size
-   */
-    override def writeBatch[A: algebra.DataEncoder](
+     * Batch write with configurable size
+     */
+    override def writeBatch[A: DataEncoder](
       datasets: List[Dataset[A]],
       sink: DataSink
     ): F[List[WriteResult]] = datasets.traverse(write(_, sink))
 
     /**
-   * Extract metadata from dataset
-   */
+     * Extract metadata from dataset
+     */
     override def extractMetadata[A](dataset: Dataset[A]): F[DatasetMetadata] =
       F.delay(dataset.metadata)
 
     /**
-   * Track data lineage
-   */
+     * Track data lineage
+     */
     override def trackLineage[A](
       dataset: Dataset[A],
       operation: DataOperation,
@@ -678,47 +688,47 @@ object DataInstances {
     )
 
     /**
-   * Query lineage information
-   */
+     * Query lineage information
+     */
     override def queryLineage(datasetId: String, query: LineageQuery): F[List[LineageRecord]] =
       F.delay(List.empty)
 
     /**
-   * Count records in dataset
-   */
+     * Count records in dataset
+     */
     override def count[A](dataset: Dataset[A]): F[Long] = F.delay(dataset.size.toLong)
 
     /**
-   * Check if dataset is empty
-   */
+     * Check if dataset is empty
+     */
     override def isEmpty[A](dataset: Dataset[A]): F[Boolean] = F.delay(dataset.isEmpty)
 
     /**
-   * Take first N records
-   */
+     * Take first N records
+     */
     override def take[A](dataset: Dataset[A], n: Int): F[Dataset[A]] =
       F.delay(dataset.copy(data = dataset.data.take(n)))
 
     /**
-   * Sample dataset
-   */
+     * Sample dataset
+     */
     override def sample[A](dataset: Dataset[A], fraction: Double): F[Dataset[A]] =
       F.delay(dataset.copy(data = dataset.data.take((dataset.size * fraction).toInt)))
 
     /**
-   * Cache dataset in memory/disk
-   */
+     * Cache dataset in memory/disk
+     */
     override def cache[A](dataset: Dataset[A], strategy: CacheStrategy): F[Dataset[A]] =
       F.delay(dataset)
 
     /**
-   * Partition dataset
-   */
+     * Partition dataset
+     */
     override def partition[A](
       dataset: Dataset[A],
       partitioner: Partitioner[A]
     ): F[Map[String, Dataset[A]]] = F.delay(Map("default" -> dataset))
-  } */
+  }
 
   // ===============================
   // IMPLICIT SUMMONERS
