@@ -182,17 +182,17 @@ class EffectSystemContractSpec
 
   describe("EffectSystem error handling") {
 
-    /*    it("should handle and recover from errors") {
+    it("should handle and recover from errors") {
       val es = EffectSystem[IO]
       val testError = new RuntimeException("Test error")
 
       val failingOperation = es.raiseError[String](testError)
-      val recovered = es.handleError(failingOperation)(_ => es.pure("recovered"))
+      val recovered = es.handleErrorWith(failingOperation)(_ => es.pure("recovered"))
 
       recovered.map { result =>
         result should equal("recovered")
       }
-    }*/
+    }
 
     it("should chain error handlers properly") {
       val es            = EffectSystem[IO]

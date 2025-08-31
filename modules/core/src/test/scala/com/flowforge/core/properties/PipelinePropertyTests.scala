@@ -5,7 +5,7 @@
  * mathematical properties regardless of input. Critical for catching edge cases in data
  * transformations.
  */
-/* package com.flowforge.core.properties
+package com.flowforge.core.properties
 
 import cats.effect.IO
 import cats.effect.testing.scalatest.AsyncIOSpec
@@ -15,6 +15,8 @@ import com.flowforge.core.instances.EffectInstances._
 import org.scalacheck.Gen
 import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
+
+import scala.concurrent.duration.DurationInt
 
 class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaCheckPropertyChecks {
 
@@ -121,7 +123,7 @@ class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaChe
       val retriedOperation = es.retryWithBackoff(
         alwaysFailingOperation,
         maxRetries = maxRetries,
-        initialDelay = scala.concurrent.duration.1.millis
+        initialDelay = 1.millis
       ).attempt
 
       retriedOperation.map { result =>
@@ -135,11 +137,9 @@ class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaChe
     val largeSize = 100000
     val largeList = (1 to largeSize).toList
 
-    val stackSafeOperation = es.tailRecM(largeList) { remaining =>
-      remaining match {
-        case Nil => es.pure(Right(0))
-        case head :: tail => es.pure(Left(tail))
-      }
+    val stackSafeOperation = es.tailRecM(largeList) {
+      case Nil => es.pure(Right(0))
+      case head :: tail => es.pure(Left(tail))
     }
 
     stackSafeOperation.map { result =>
@@ -156,7 +156,7 @@ class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaChe
     val cancellationTest = for {
       start <- es.delay(System.currentTimeMillis())
       fiber <- es.start(neverCompletingOperation)
-      _ <- es.sleep(scala.concurrent.duration.50.millis)
+      _ <- es.sleep(50.millis)
       _ <- fiber.cancel
       end <- es.delay(System.currentTimeMillis())
     } yield end - start
@@ -190,4 +190,4 @@ class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaChe
       assert(memoryMB < 100) // Less than 100MB for processing 1M integers
     }
   }
-}*/
+}

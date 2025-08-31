@@ -1,4 +1,4 @@
-/*/**
+/**
  * Property-based tests for EffectSystem instances to verify Monad laws.
  *
  * These tests ensure that our EffectSystem instances satisfy the mathematical
@@ -114,4 +114,4 @@ class EffectInstancesLawsSpec
 
   // ZIO tests would go here if ZIO test dependencies were available
   // For now, focusing on Cats-Effect which is more commonly used
-}*/
+}

@@ -5,7 +5,7 @@
  * processing scenarios.
  */
 
-/* package com.flowforge.core.integration
+package com.flowforge.core.integration
 
 import cats.effect.IO
 import cats.effect.testing.scalatest.AsyncIOSpec
@@ -19,7 +19,7 @@ import scala.concurrent.duration._
 
 class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Matchers {
 
-  // implicit val es: EffectSystem[IO] = EffectSystem[IO]
+  implicit val es: EffectSystem[IO] = EffectSystem[IO]
 
   // Mock data types for testing
   case class RawData(id: String, value: Double, timestamp: Long)
@@ -250,5 +250,3 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
     }
   }
 }
-
- */
