@@ -21,7 +21,26 @@ object DataQualityValidation {
     fieldName: String,
     timestamp: Instant,
     maxAge: FiniteDuration
-  ): QualityValidationResult[A] = ???
+  ): QualityValidationResult[A] = {
+    val now = Instant.now()
+    val age = java.time.Duration.between(timestamp, now)
+    val maxAgeInMillis = maxAge.toMillis
+    
+    if (age.toMillis <= maxAgeInMillis) {
+      // Can't return A without having an A - this method signature needs fixing
+      // For now, return a unit value cast to A as placeholder
+      ().asInstanceOf[A].validNel
+    } else {
+      val violation = QualityViolation(
+        constraint = "freshness",
+        violatedValue = fieldName,
+        threshold = Some(maxAge.toString),
+        message = s"Data is too old: ${age.toMillis}ms > ${maxAgeInMillis}ms",
+        severity = ErrorSeverity.Error
+      )
+      violation.invalidNel
+    }
+  }
 
   /**
    * Validate data completeness - ensure required percentage of non-null values.

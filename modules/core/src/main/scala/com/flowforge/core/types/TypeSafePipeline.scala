@@ -126,13 +126,10 @@ object TypeSafeStage {
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "sink"
   ) extends TypeSafeStage[F, A, Unit] {
-    def execute: Kleisli[F, A, Unit] = ??? // Kleisli { data =>
-    // TODO: Implement via DataAlgebra when available
-    // For now, provide a placeholder that maintains type safety
-    // import com.flowforge.core.algebra.EffectSystem
-    // implicitly[EffectSystem[F]].raiseError(
-    //  new NotImplementedError("SinkStage.execute requires DataAlgebra implementation")
-    // )
+    def execute: Kleisli[F, A, Unit] = Kleisli { data =>
+      // TODO: Implement via DataAlgebra when available
+      throw new NotImplementedError("SinkStage.execute requires DataAlgebra implementation")
+    }
   }
 }
 

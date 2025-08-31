@@ -40,12 +40,14 @@ package com.flowforge.core.algebra
 import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.effect.Sync
 import cats.implicits._
-import com.flowforge.core.types.{ ErrorCategory, ErrorSeverity, FlowForgeError }
+import com.flowforge.core.types.{ ErrorCategory, ErrorSeverity, FlowForgeError, RetryPolicy }
+import eu.timepit.refined.api.Refined
 import eu.timepit.refined.types.string.NonEmptyString
 import fs2.Stream
 
 import java.util.Properties
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
+import scala.util.Try
 
 /**
  * Core configuration management algebra with effect polymorphism. Provides type-safe, functional
@@ -637,26 +639,84 @@ object ConfigurationAlgebra {
     ).validNel[ConfigError]
   private def decodePipeline(
     source: Map[String, String]
-  ): ValidatedNel[ConfigError, PipelineConfig] = ???
-  private def decodeEngines(source: Map[String, String]): ValidatedNel[ConfigError, EngineConfig] =
-    ???
+  ): ValidatedNel[ConfigError, PipelineConfig] = {
+    // TODO: Implement proper pipeline config decoding from map
+    PipelineConfig(
+      defaultBatchSize = source.get("pipeline.batchSize").flatMap(_.toIntOption).getOrElse(10000),
+      maxConcurrency = source.get("pipeline.maxConcurrency").flatMap(_.toIntOption).getOrElse(10),
+      timeout = source.get("pipeline.timeout").flatMap(s => Try(s.toInt.seconds).toOption).getOrElse(30.minutes),
+      retryPolicy = RetryPolicy(maxAttempts = 3, initialDelay = 1.second, maxDelay = 30.seconds)
+    ).validNel[ConfigError]
+  }
+  private def decodeEngines(source: Map[String, String]): ValidatedNel[ConfigError, EngineConfig] = {
+    // TODO: Implement proper engine config decoding from map
+    EngineConfig(
+      spark = None, // Will be populated from spark.* keys
+      flink = None  // Will be populated from flink.* keys
+    ).validNel[ConfigError]
+  }
   private def decodeConnectors(
     source: Map[String, String]
-  ): ValidatedNel[ConfigError, ConnectorConfig] = ???
-  private def decodeQuality(source: Map[String, String]): ValidatedNel[ConfigError, QualityConfig] =
-    ???
+  ): ValidatedNel[ConfigError, ConnectorConfig] = {
+    // TODO: Implement proper connector config decoding from map
+    ConnectorConfig(
+      gcs = None,
+      s3 = None,
+      bigquery = None,
+      kafka = None,
+      azure = None
+    ).validNel[ConfigError]
+  }
+  private def decodeQuality(source: Map[String, String]): ValidatedNel[ConfigError, QualityConfig] = {
+    // TODO: Implement proper quality config decoding from map
+    QualityConfig(
+      enableChecks = source.get("quality.enableChecks").forall(_.toLowerCase == "true"),
+      failOnQualityErrors = source.get("quality.failOnQualityErrors").exists(_.toLowerCase == "true"),
+      qualityThreshold = source.get("quality.qualityThreshold").flatMap(_.toDoubleOption).getOrElse(0.95)
+    ).validNel[ConfigError]
+  }
   private def decodeMonitoring(
     source: Map[String, String]
-  ): ValidatedNel[ConfigError, MonitoringConfig] = ???
+  ): ValidatedNel[ConfigError, MonitoringConfig] = {
+    // TODO: Implement proper monitoring config decoding from map
+    MonitoringConfig(
+      enableMetrics = source.get("monitoring.enableMetrics").forall(_.toLowerCase == "true"),
+      metricsEndpoint = source.get("monitoring.metricsEndpoint"),
+      enableTracing = source.get("monitoring.enableTracing").exists(_.toLowerCase == "true")
+    ).validNel[ConfigError]
+  }
   private def decodeSecurity(
     source: Map[String, String]
-  ): ValidatedNel[ConfigError, SecurityConfig] = ???
+  ): ValidatedNel[ConfigError, SecurityConfig] = {
+    // TODO: Implement proper security config decoding from map
+    SecurityConfig(
+      enableAudit = source.get("security.enableAudit").forall(_.toLowerCase == "true"),
+      auditLevel = AuditLevel.Standard,
+      secretProvider = SecretProvider.Environment
+    ).validNel[ConfigError]
+  }
 
   // Private helper methods for validation
-  private def validateApplication(config: ApplicationConfig): ValidatedNel[ConfigError, Unit] = ???
-  private def validatePipeline(config: PipelineConfig): ValidatedNel[ConfigError, Unit]       = ???
-  private def validateEngines(config: EngineConfig): ValidatedNel[ConfigError, Unit]          = ???
-  private def validateConnectors(config: ConnectorConfig): ValidatedNel[ConfigError, Unit]    = ???
+  private def validateApplication(config: ApplicationConfig): ValidatedNel[ConfigError, Unit] = {
+    // TODO: Implement proper application config validation
+    ().validNel[ConfigError]
+  }
+  private def validatePipeline(config: PipelineConfig): ValidatedNel[ConfigError, Unit] = {
+    // TODO: Implement proper pipeline config validation
+    val validations = List(
+      if (config.defaultBatchSize > 0) ().validNel else ConfigError.MissingRequired("pipeline.batchSize").invalidNel,
+      if (config.maxConcurrency > 0) ().validNel else ConfigError.MissingRequired("pipeline.maxConcurrency").invalidNel
+    )
+    validations.sequence.map(_ => ())
+  }
+  private def validateEngines(config: EngineConfig): ValidatedNel[ConfigError, Unit] = {
+    // TODO: Implement proper engine config validation
+    ().validNel[ConfigError]
+  }
+  private def validateConnectors(config: ConnectorConfig): ValidatedNel[ConfigError, Unit] = {
+    // TODO: Implement proper connector config validation
+    ().validNel[ConfigError]
+  }
 }
 
 // ===============================

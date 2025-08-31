@@ -84,8 +84,10 @@ object GADTStage {
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "source"
   ) extends GADTStage[F, Unit, Output] {
-    def execute: Kleisli[F, Unit, Output] =
-      Kleisli.liftF(???) // Implementation delegates to DataAlgebra
+    def execute: Kleisli[F, Unit, Output] = Kleisli { _ =>
+      // TODO: Implement via DataAlgebra when available
+      throw new NotImplementedError("Source.execute requires DataAlgebra implementation")
+    }
   }
 
   /**
@@ -130,8 +132,10 @@ object GADTStage {
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "sink"
   ) extends GADTStage[F, Input, Unit] {
-    def execute: Kleisli[F, Input, Unit] =
-      Kleisli.liftF(???) // Implementation delegates to DataAlgebra
+    def execute: Kleisli[F, Input, Unit] = Kleisli { input =>
+      // TODO: Implement via DataAlgebra when available
+      throw new NotImplementedError("Sink.execute requires DataAlgebra implementation")
+    }
   }
 
   /**
