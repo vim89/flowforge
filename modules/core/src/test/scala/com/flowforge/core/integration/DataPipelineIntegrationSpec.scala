@@ -11,7 +11,6 @@ import cats.effect.IO
 import cats.effect.testing.scalatest.AsyncIOSpec
 import cats.implicits._
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.instances.EffectInstances._
 import org.scalatest.funspec.AsyncFunSpec
 import org.scalatest.matchers.should.Matchers
 
