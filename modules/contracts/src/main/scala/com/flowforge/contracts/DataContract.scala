@@ -6,12 +6,11 @@
  */
 package com.flowforge.contracts
 
-import cats.data.{ NonEmptyList, ValidatedNel }
+import cats.data.{NonEmptyList, ValidatedNel}
 import cats.implicits._
-import com.flowforge.core.types._
-import eu.timepit.refined.api.Refined
+import com.flowforge.contracts.FieldConstraint.Pattern
+import com.flowforge.core.algebra.SchemaVersion
 import eu.timepit.refined.types.string.NonEmptyString
-
 import java.time.Instant
 import scala.util.matching.Regex
 
@@ -144,7 +143,7 @@ object ValidationRules {
         if (regex.matches(value)) {
           ().validNel
         } else {
-          ContractViolation.PatternMismatch(fieldName, value, regex.pattern).invalidNel
+          ContractViolation.PatternMismatch(fieldName, value, Pattern(regex)).invalidNel
         }
       }
     }
@@ -153,7 +152,7 @@ object ValidationRules {
     ruleName: String
   )(validator: A => ValidatedNel[ContractViolation, Unit]): ValidationRule[A] =
     new ValidationRule[A] {
-      val name                                                     = ruleName
+      val name: String = ruleName
       def validate(data: A): ValidatedNel[ContractViolation, Unit] = validator(data)
     }
 }
@@ -184,7 +183,7 @@ object ContractViolation {
     val message = s"Field '$fieldName' value '$value' is outside range [$min, $max]"
   }
 
-  case class PatternMismatch(fieldName: String, value: String, pattern: String)
+  case class PatternMismatch(fieldName: String, value: String, pattern: Pattern)
       extends ContractViolation {
     val message = s"Field '$fieldName' value '$value' does not match pattern '$pattern'"
   }
@@ -283,7 +282,6 @@ class DataContractBuilder[A] {
  * Standard contract instances for common types
  */
 object StandardContracts {
-
   // Example: Sales data contract
   case class SalesData(
     invoiceNumber: String,
