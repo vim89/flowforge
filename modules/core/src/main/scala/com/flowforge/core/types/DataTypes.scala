@@ -594,6 +594,17 @@ sealed trait DataSource extends Product with Serializable {
   def schema: Option[DataSchema]
 }
 
+/**
+ * Local file system data source (extension for sealed trait)
+ */
+case class LocalDataSource(
+  location: String,
+  format: DataFormat,
+  compression: CompressionType = CompressionType.None,
+  schema: Option[DataSchema] = None,
+  id: Option[String] = None
+) extends DataSource
+
 object DataSource {
 
   /**
@@ -711,6 +722,17 @@ sealed trait DataSink extends Product with Serializable {
 
   def writeMode: WriteMode
 }
+
+/**
+ * Local file system data sink (extension for sealed trait)
+ */
+case class LocalDataSink(
+  location: String,
+  format: DataFormat,
+  compression: CompressionType = CompressionType.None,
+  writeMode: DataSink.WriteMode = DataSink.WriteMode.Append,
+  id: Option[String] = None
+) extends DataSink
 
 object DataSink {
 

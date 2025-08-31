@@ -1,9 +1,8 @@
 /**
  * Property-based tests for EffectSystem instances to verify Monad laws.
  *
- * These tests ensure that our EffectSystem instances satisfy the mathematical
- * laws required for proper monadic behavior, preventing subtle bugs in
- * pipeline composition.
+ * These tests ensure that our EffectSystem instances satisfy the mathematical laws required for
+ * proper monadic behavior, preventing subtle bugs in pipeline composition.
  */
 package com.flowforge.core.instances
 
@@ -31,7 +30,7 @@ class EffectInstancesLawsSpec
 
   describe("Cats-Effect EffectSystem instance") {
 
-/*    it("should satisfy Monad laws") {
+    /*    it("should satisfy Monad laws") {
       // Test basic monad laws: left identity, right identity, associativity
       forAll { (a: Int, f: Int => Int, g: Int => Int) =>
         val fa = IO.pure(a)
@@ -62,15 +61,17 @@ class EffectInstancesLawsSpec
 
     it("should handle errors properly in bracket operations") {
       var resourceReleased = false
-      val testError = new RuntimeException("Test error")
+      val testError        = new RuntimeException("Test error")
 
-      val result = EffectSystem[IO].bracket(
-        acquire = IO.pure("resource")
-      )(
-        use = _ => IO.raiseError[String](testError)
-      )(
-        release = _ => IO.delay { resourceReleased = true }
-      ).attempt
+      val result = EffectSystem[IO]
+        .bracket(
+          acquire = IO.pure("resource")
+        )(
+          use = _ => IO.raiseError[String](testError)
+        )(
+          release = _ => IO.delay { resourceReleased = true }
+        )
+        .attempt
 
       result.map { either =>
         either should be(Left(testError))
@@ -82,8 +83,8 @@ class EffectInstancesLawsSpec
       val neverCompleting = IO.never[Int]
 
       val test = for {
-        fiber <- EffectSystem[IO].start(neverCompleting)
-        _ <- fiber.cancel
+        fiber  <- EffectSystem[IO].start(neverCompleting)
+        _      <- fiber.cancel
         result <- fiber.join.timeout(1.second).attempt
       } yield result
 

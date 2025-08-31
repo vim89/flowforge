@@ -108,7 +108,7 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
         }
 
         // Verify aggregations
-        val totalOriginalCount = processed.length
+        val totalOriginalCount   = processed.length
         val totalAggregatedCount = aggregated.map(_.count).sum
         totalAggregatedCount should equal(totalOriginalCount)
       }
@@ -117,13 +117,15 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
     it("should handle pipeline failures gracefully") {
       var cleanupCalled = false
 
-      val failingPipeline = es.bracket(
-        acquire = es.delay("database-connection")
-      )(
-        use = _ => es.raiseError(new RuntimeException("Pipeline processing failed"))
-      )(
-        release = _ => es.delay { cleanupCalled = true }
-      ).attempt
+      val failingPipeline = es
+        .bracket(
+          acquire = es.delay("database-connection")
+        )(
+          use = _ => es.raiseError(new RuntimeException("Pipeline processing failed"))
+        )(
+          release = _ => es.delay { cleanupCalled = true }
+        )
+        .attempt
 
       failingPipeline.map { result =>
         result shouldBe a[Left[_, _]]
@@ -154,12 +156,26 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
     }
 
     it("should maintain data lineage through transformations") {
-      case class LineageRecord(operation: String, inputIds: List[String], outputIds: List[String], timestamp: Long)
+      case class LineageRecord(
+        operation: String,
+        inputIds: List[String],
+        outputIds: List[String],
+        timestamp: Long
+      )
 
       var lineageRecords = List.empty[LineageRecord]
 
-      def recordLineage(operation: String, inputIds: List[String], outputIds: List[String]): IO[Unit] = es.delay {
-        lineageRecords = LineageRecord(operation, inputIds, outputIds, System.currentTimeMillis()) :: lineageRecords
+      def recordLineage(
+        operation: String,
+        inputIds: List[String],
+        outputIds: List[String]
+      ): IO[Unit] = es.delay {
+        lineageRecords = LineageRecord(
+          operation,
+          inputIds,
+          outputIds,
+          System.currentTimeMillis()
+        ) :: lineageRecords
       }
 
       val input = List("raw-1", "raw-2", "raw-3")
@@ -167,7 +183,7 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
       val pipelineWithLineage = for {
         // Transform step 1
         step1Results <- es.traverse(input)(id => es.pure(s"$id-transformed"))
-        _ <- recordLineage("transform", input, step1Results)
+        _            <- recordLineage("transform", input, step1Results)
 
         // Transform step 2 (aggregation)
         step2Result = List(s"aggregated-${step1Results.length}-records")
@@ -226,13 +242,13 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
       )
 
       val invalidData = List(
-        ProcessedData("", 0.5, "medium"),      // Invalid: empty ID
-        ProcessedData("2", 1.5, "high"),       // Invalid: out of range
-        ProcessedData("3", 0.2, "invalid")     // Invalid: bad category
+        ProcessedData("", 0.5, "medium"),  // Invalid: empty ID
+        ProcessedData("2", 1.5, "high"),   // Invalid: out of range
+        ProcessedData("3", 0.2, "invalid") // Invalid: bad category
       )
 
       val validationTest = for {
-        validResult <- validateDataQuality(validData)
+        validResult   <- validateDataQuality(validData)
         invalidResult <- validateDataQuality(invalidData)
       } yield (validResult, invalidResult)
 

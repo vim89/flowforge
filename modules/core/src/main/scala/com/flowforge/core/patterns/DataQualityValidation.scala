@@ -22,10 +22,10 @@ object DataQualityValidation {
     timestamp: Instant,
     maxAge: FiniteDuration
   ): QualityValidationResult[A] = {
-    val now = Instant.now()
-    val age = java.time.Duration.between(timestamp, now)
+    val now            = Instant.now()
+    val age            = java.time.Duration.between(timestamp, now)
     val maxAgeInMillis = maxAge.toMillis
-    
+
     if (age.toMillis <= maxAgeInMillis) {
       // Can't return A without having an A - this method signature needs fixing
       // For now, return a unit value cast to A as placeholder

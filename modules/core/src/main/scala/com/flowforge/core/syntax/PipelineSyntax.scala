@@ -258,10 +258,13 @@ object PipelineSyntax {
      */
     def transformSafe[F[_]: EffectSystem, B](
       f: A => F[B]
-    )(implicit encoder: DataAlgebra.DataEncoder[B]): F[DataAlgebra.Dataset[B]] = {
+    )(implicit encoder: DataAlgebra.DataEncoder[B]): F[DataAlgebra.Dataset[B]] =
       // TODO: Implement safe transformation with proper error handling
-      EffectSystem[F].pure(dataset.map(x => throw new NotImplementedError("transformSafe requires DataAlgebra integration"))(encoder))
-    }
+      EffectSystem[F].pure(
+        dataset.map(x =>
+          throw new NotImplementedError("transformSafe requires DataAlgebra integration")
+        )(encoder)
+      )
 
     /**
      * Apply validation to all records
@@ -271,15 +274,13 @@ object PipelineSyntax {
     ): F[ValidationResult[DataAlgebra.Dataset[A]]] = {
       // TODO: Implement validation for all records in dataset
       val validationResults = dataset.data.map(validator)
-      val combined = validationResults.sequence
+      val combined          = validationResults.sequence
       combined match {
-        case cats.data.Validated.Valid(validData) => {
+        case cats.data.Validated.Valid(validData) =>
           val validatedDataset = dataset.copy(data = validData)
           EffectSystem[F].pure(validatedDataset.validNel)
-        }
-        case cats.data.Validated.Invalid(errors) => {
+        case cats.data.Validated.Invalid(errors) =>
           EffectSystem[F].pure(errors.invalid)
-        }
       }
     }
 
@@ -595,13 +596,12 @@ object PipelineSyntax {
      */
     def diPipeline[F[_]: EffectSystem](
       name: String
-    ): FlowForgeReaderT[F, String] = {
+    ): FlowForgeReaderT[F, String] =
       // TODO: Implement Reader-based pipeline with dependency injection
       // Using ReaderT from cats as FlowForgeReaderT alias
       ReaderT { (config: String) =>
         EffectSystem[F].pure(s"Pipeline '$name' with config: $config")
       }
-    }
   }
 
   // ===============================

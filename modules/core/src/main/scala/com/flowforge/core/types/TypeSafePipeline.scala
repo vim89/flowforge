@@ -36,7 +36,7 @@
  */
 package com.flowforge.core.types
 
-import cats.data.{Kleisli, ValidatedNel}
+import cats.data.{ Kleisli, ValidatedNel }
 import cats.implicits._
 import com.flowforge.core.algebra.EffectSystem
 

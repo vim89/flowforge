@@ -61,7 +61,7 @@ package com.flowforge.core.instances
 import cats.effect.{ IO, Outcome }
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
-// import zio.{ Task, ZIO }  // Commented out - ZIO dependencies are "provided"
+import zio.{ Task, ZIO }
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ ExecutionContext, Future }
@@ -248,12 +248,9 @@ object EffectInstances {
   }
 
   // ===============================
-  // ZIO TASK IMPLEMENTATION - COMMENTED OUT
+  // ZIO TASK IMPLEMENTATION
   // ===============================
-  // Note: ZIO implementation is commented out because ZIO dependencies are marked as "provided"
-  // and not available at runtime by default. Uncomment when ZIO is explicitly added as dependency.
 
-  /*
   /**
    * EffectSystem instance for ZIO Task.
    *
@@ -451,7 +448,6 @@ object EffectInstances {
     }
 
   }
-  */
 
   // ===============================
   // ADDITIONAL INSTANCES
@@ -486,10 +482,8 @@ object EffectInstances {
    */
   object EffectUtils {
 
-    /*
     /**
      * Run the same computation with different effect systems for comparison.
-     * Note: Commented out due to ZIO being "provided" dependency
      */
     def raceEffectSystems[A](
       ioComputation: IO[A],
@@ -503,6 +497,5 @@ object EffectInstances {
           zio.Runtime.default.unsafe.runToFuture(zioComputation)
         }))
       )
-    */
   }
 }

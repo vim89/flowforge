@@ -106,11 +106,11 @@ object Dependencies {
     val all: Seq[ModuleID] = functional ++ typeSafety ++ json ++ logging ++ validation
   }
 
-  // Effect systems (provided dependencies)
+  // Effect systems (both available for developer choice)
   val effectSystems = Seq(
-    "org.typelevel" %% "cats-effect"      % Versions.catsEffect     % "provided",
-    "dev.zio"       %% "zio"              % Versions.zio            % "provided",
-    "dev.zio"       %% "zio-interop-cats" % Versions.zioInteropCats % "provided"
+    "org.typelevel" %% "cats-effect"      % Versions.catsEffect,
+    "dev.zio"       %% "zio"              % Versions.zio,
+    "dev.zio"       %% "zio-interop-cats" % Versions.zioInteropCats
   )
 
   // Engines

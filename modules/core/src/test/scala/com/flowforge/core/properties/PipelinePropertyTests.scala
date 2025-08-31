@@ -10,7 +10,6 @@ package com.flowforge.core.properties
 import cats.effect.IO
 import cats.effect.testing.scalatest.AsyncIOSpec
 import cats.implicits._
-import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.instances.EffectInstances._
 import org.scalacheck.Gen
 import org.scalatest.funsuite.AsyncFunSuite
@@ -20,11 +19,11 @@ import scala.concurrent.duration.DurationInt
 
 class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaCheckPropertyChecks {
 
-  implicit val es: EffectSystem[IO] = EffectSystem[IO]
+  implicit val es = catsEffectSystemInstance
 
   // Custom generators for testing edge cases
   val nonEmptyIntListGen: Gen[List[Int]] = Gen.nonEmptyListOf(Gen.chooseNum(-1000, 1000))
-  val validStringGen: Gen[String] = Gen.alphaNumStr.filter(_.nonEmpty)
+  val validStringGen: Gen[String]        = Gen.alphaNumStr.filter(_.nonEmpty)
 
   test("Data transformation should preserve list length") {
     forAll(nonEmptyIntListGen) { (input: List[Int]) =>
@@ -41,29 +40,27 @@ class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaChe
 
   test("Parallel and sequential operations should produce same results") {
     forAll(Gen.listOfN(50, Gen.chooseNum(1, 100))) { (input: List[Int]) =>
-      val expensiveOperation = (x: Int) => es.delay {
-        Thread.sleep(1) // Simulate work
-        x * x + 1
-      }
+      val expensiveOperation = (x: Int) =>
+        es.delay {
+          Thread.sleep(1) // Simulate work
+          x * x + 1
+        }
 
       val sequentialResult = es.traverse(input)(expensiveOperation)
-      val parallelResult = es.parTraverse(input)(expensiveOperation)
+      val parallelResult   = es.parTraverse(input)(expensiveOperation)
 
       for {
         seq <- sequentialResult
         par <- parallelResult
-      } yield {
-        assert(seq == par)
-      }
+      } yield assert(seq == par)
     }
   }
 
   test("Error handling should be consistent") {
     forAll(nonEmptyIntListGen) { (input: List[Int]) =>
-      val flakyOperation = (x: Int) => {
+      val flakyOperation = (x: Int) =>
         if (x % 7 == 0) es.raiseError(new RuntimeException(s"Unlucky number: $x"))
         else es.pure(x * 2)
-      }
 
       val pipeline = es.traverse(input)(flakyOperation).attempt
 
@@ -92,14 +89,13 @@ class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaChe
         s"resource-$resourcesAcquired"
       }
 
-      val releaseResource = (resource: String) => es.delay {
-        resourcesReleased += 1
-      }
+      val releaseResource = (resource: String) =>
+        es.delay {
+          resourcesReleased += 1
+        }
 
       val useResources = (0 until numResources).toList.traverse { i =>
-        es.bracket(acquireResource)(
-          resource => es.pure(s"$resource-processed")
-        )(releaseResource)
+        es.bracket(acquireResource)(resource => es.pure(s"$resource-processed"))(releaseResource)
       }
 
       useResources.map { results =>
@@ -120,11 +116,13 @@ class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaChe
         throw new RuntimeException(s"Attempt $attempts failed")
       }
 
-      val retriedOperation = es.retryWithBackoff(
-        alwaysFailingOperation,
-        maxRetries = maxRetries,
-        initialDelay = 1.millis
-      ).attempt
+      val retriedOperation = es
+        .retryWithBackoff(
+          alwaysFailingOperation,
+          maxRetries = maxRetries,
+          initialDelay = 1.millis
+        )
+        .attempt
 
       retriedOperation.map { result =>
         assert(result.isLeft)
@@ -138,7 +136,7 @@ class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaChe
     val largeList = (1 to largeSize).toList
 
     val stackSafeOperation = es.tailRecM(largeList) {
-      case Nil => es.pure(Right(0))
+      case Nil          => es.pure(Right(0))
       case head :: tail => es.pure(Left(tail))
     }
 
@@ -156,9 +154,9 @@ class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaChe
     val cancellationTest = for {
       start <- es.delay(System.currentTimeMillis())
       fiber <- es.start(neverCompletingOperation)
-      _ <- es.sleep(50.millis)
-      _ <- fiber.cancel
-      end <- es.delay(System.currentTimeMillis())
+      _     <- es.sleep(50.millis)
+      _     <- fiber.cancel
+      end   <- es.delay(System.currentTimeMillis())
     } yield end - start
 
     cancellationTest.map { elapsed =>
@@ -168,7 +166,7 @@ class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaChe
 
   test("Memory usage should be bounded for streaming operations") {
     // Simulate processing a large stream without loading all into memory
-    val streamSize = 1000000
+    val streamSize     = 1000000
     var maxMemoryUsage = 0L
 
     def processChunk(chunk: List[Int]): IO[List[Int]] = es.delay {
