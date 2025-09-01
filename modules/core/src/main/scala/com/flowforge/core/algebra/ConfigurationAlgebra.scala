@@ -40,7 +40,7 @@ package com.flowforge.core.algebra
 import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.effect.Sync
 import cats.implicits._
-import com.flowforge.core.types.{ ErrorCategory, ErrorSeverity, FlowForgeError }
+import com.flowforge.core.types.{ ConfigError, FlowForgeError }
 import eu.timepit.refined.types.string.NonEmptyString
 import fs2.Stream
 
@@ -337,58 +337,7 @@ object ConfigConstraint {
   case class OneOf[A](fieldName: String, allowedValues: Set[String]) extends ConfigConstraint[A]
 }
 
-/**
- * Configuration error types with detailed context.
- */
-sealed trait ConfigError extends FlowForgeError
-object ConfigError {
-  case class MissingRequired(key: String) extends ConfigError {
-    val message       = s"Required configuration key '$key' is missing"
-    val category      = ErrorCategory.Configuration
-    val severity      = ErrorSeverity.Error
-    val context       = Map("key" -> key)
-    val cause         = None
-    val timestamp     = java.time.Instant.now()
-    val errorId       = java.util.UUID.randomUUID().toString
-    val isRetryable   = false
-    val recoveryHints = List(s"Provide configuration for key '$key'", "Check configuration source")
-
-    def withContext(additionalContext: Map[String, Any]) = this
-    def withCause(underlyingCause: Throwable)            = this
-  }
-
-  case class InvalidFormat(key: String, expected: String, actual: String) extends ConfigError {
-    val message  = s"Configuration key '$key' has invalid format. Expected: $expected, Got: $actual"
-    val category = ErrorCategory.Configuration
-    val severity = ErrorSeverity.Error
-    val context  = Map("key" -> key, "expected" -> expected, "actual" -> actual)
-    val cause    = None
-    val timestamp   = java.time.Instant.now()
-    val errorId     = java.util.UUID.randomUUID().toString
-    val isRetryable = false
-    val recoveryHints =
-      List(s"Fix format for key '$key'", s"Ensure value matches pattern: $expected")
-
-    def withContext(additionalContext: Map[String, Any]) = this
-    def withCause(underlyingCause: Throwable)            = this
-  }
-
-  case class ValidationFailed(key: String, constraint: String) extends ConfigError {
-    val message     = s"Configuration validation failed for '$key': $constraint"
-    val category    = ErrorCategory.Configuration
-    val severity    = ErrorSeverity.Error
-    val context     = Map("key" -> key, "constraint" -> constraint)
-    val cause       = None
-    val timestamp   = java.time.Instant.now()
-    val errorId     = java.util.UUID.randomUUID().toString
-    val isRetryable = false
-    val recoveryHints =
-      List(s"Fix validation constraint for '$key'", s"Check constraint: $constraint")
-
-    def withContext(additionalContext: Map[String, Any]) = this
-    def withCause(underlyingCause: Throwable)            = this
-  }
-}
+// ConfigError definitions moved to ConfigTypes.scala to avoid duplication
 
 /**
  * Configuration health status.
@@ -833,16 +782,9 @@ object ConfigurationMigration {
             val emptyConfig = Map.empty[String, String]
             ConfigDecoder[T].decode(emptyConfig)
           }
-          configs.sequence.andThen { configList =>
-            if (configList.isEmpty) {
-              com.flowforge.core.types.ConfigError
-                .CustomError("No configurations to merge")
-                .invalidNel
-            } else {
-              val merger = implicitly[ConfigMerger[T]]
-              val nel    = cats.data.NonEmptyList.fromListUnsafe(configList)
-              merger.merge(nel).validNel
-            }
+          configs.sequence.map { configList =>
+            val merger = implicitly[ConfigMerger[T]]
+            merger.merge(configList)
           }
         }
     }

@@ -80,7 +80,7 @@ def moduleProject(name: String): Project =
 lazy val root = (project in file("."))
   .aggregate(
     core,
-    safety,
+    framework,
     contracts,
     connectors,
     connectorsGcs,
@@ -114,15 +114,15 @@ lazy val core = moduleProject("core")
     libraryDependencies ++= Dependencies.forModule("core")
   )
 
-lazy val safety = moduleProject("safety")
-  .dependsOn(core)
+lazy val framework = moduleProject("framework")
+  .dependsOn(core, contracts)
   .settings(
-    description := "Effect-safe operations for any effect system",
-    libraryDependencies ++= Dependencies.forModule("safety")
+    description := "Advanced pipeline combinators and orchestration",
+    libraryDependencies ++= Dependencies.forModule("framework")
   )
 
 lazy val contracts = moduleProject("contracts")
-  .dependsOn(core, safety)
+  .dependsOn(core)
   .settings(
     description := "Compile-time and runtime data contracts",
     libraryDependencies ++= Dependencies.forModule("contracts")
@@ -130,7 +130,7 @@ lazy val contracts = moduleProject("contracts")
 
 // ===== CONNECTOR MODULES =====
 lazy val connectors = moduleProject("connectors")
-  .dependsOn(core, safety, contracts)
+  .dependsOn(core, contracts)
   .settings(
     description := "Base connector abstractions",
     libraryDependencies ++= Dependencies.forModule("connectors")
@@ -173,7 +173,7 @@ lazy val connectorsAzure = moduleProject("connectors-azure")
 
 // ===== ENGINE MODULES =====
 lazy val engines = moduleProject("engines")
-  .dependsOn(core, safety, contracts)
+  .dependsOn(core, contracts, framework)
   .settings(
     description := "Base execution engine abstractions",
     libraryDependencies ++= Dependencies.forModule("engines")
@@ -195,7 +195,7 @@ lazy val enginesFlink = moduleProject("engines-flink")
 
 // ===== QUALITY MODULES =====
 lazy val quality = moduleProject("quality")
-  .dependsOn(core, safety, contracts)
+  .dependsOn(core, contracts, framework)
   .settings(
     description := "Data quality framework",
     libraryDependencies ++= Dependencies.forModule("quality")
@@ -210,21 +210,21 @@ lazy val qualityDeequ = moduleProject("quality-deequ")
 
 // ===== SUPPORT MODULES =====
 lazy val templates = moduleProject("templates")
-  .dependsOn(core, safety, contracts, quality)
+  .dependsOn(core, contracts, framework, quality)
   .settings(
     description := "Pipeline Giter8 templates and code generation",
     libraryDependencies ++= Dependencies.forModule("templates")
   )
 
 lazy val monitoring = moduleProject("monitoring")
-  .dependsOn(core, safety)
+  .dependsOn(core, framework)
   .settings(
     description := "Monitoring and observability",
     libraryDependencies ++= Dependencies.forModule("monitoring")
   )
 
 lazy val testing = moduleProject("testing")
-  .dependsOn(core, safety, contracts, quality)
+  .dependsOn(core, contracts, framework, quality)
   .settings(
     description := "Testing utilities and frameworks",
     libraryDependencies ++= Dependencies.forModule("testing")
@@ -232,7 +232,7 @@ lazy val testing = moduleProject("testing")
 
 // ===== EXAMPLE & EXPERIMENTAL MODULES =====
 lazy val examples = moduleProject("examples")
-  .dependsOn(core, safety, contracts, connectors, connectorsGcs, engines, enginesSpark, quality)
+  .dependsOn(core, contracts, framework, connectors, connectorsGcs, engines, enginesSpark, quality)
   .settings(
     description := "Example implementations",
     libraryDependencies ++= Dependencies.forModule("examples"),
@@ -240,7 +240,7 @@ lazy val examples = moduleProject("examples")
   )
 
 lazy val experimental = moduleProject("experimental")
-  .dependsOn(core, safety)
+  .dependsOn(core, framework)
   .settings(
     description := "Experimental features & prototypes: ML, distributed computing, Kyo, Caprese",
     crossScalaVersions := Seq(Dependencies.Versions.scala213),
@@ -250,7 +250,7 @@ lazy val experimental = moduleProject("experimental")
 
 // ===== ADDITIONAL MODULES =====
 lazy val benchmarks = (project in file("benchmarks"))
-  .dependsOn(core, safety, examples)
+  .dependsOn(core, framework, examples)
   .settings(
     name        := "flowforge-benchmarks",
     description := "Performance benchmarks",

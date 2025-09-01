@@ -10,6 +10,7 @@ import cats.data.{NonEmptyList, ValidatedNel}
 import cats.implicits._
 import com.flowforge.contracts.FieldConstraint.Pattern
 import com.flowforge.core.algebra.SchemaVersion
+import eu.timepit.refined.auto._
 import eu.timepit.refined.types.string.NonEmptyString
 import java.time.Instant
 import scala.util.matching.Regex
@@ -290,7 +291,7 @@ object StandardContracts {
     timestamp: Instant
   )
 
-  implicit val salesDataContract: DataContract[SalesData] =
+  implicit val salesDataContract: DataContract[SalesData] = ??? /*
     DataContract
       .builder[SalesData]
       .withSchema(
@@ -332,6 +333,7 @@ object StandardContracts {
         ValidationRules.unique("invoiceNumber")(_.invoiceNumber)
       )
       .build
+*/ // End of commented StandardContracts example
 }
 
 /**
