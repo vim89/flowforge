@@ -1,29 +1,8 @@
 package com.flowforge.core.algebra
 
-import cats.data.{ Kleisli, NonEmptyList, ValidatedNel }
-import cats.{ Functor, Monad }
-import com.flowforge.core.algebra.DataAlgebra.{
-  AnomalyDetector,
-  AnomalyReport,
-  CacheStrategy,
-  CleaningRule,
-  DataOperation,
-  DataProfile,
-  DataStream,
-  Dataset,
-  DatasetMetadata,
-  LineageContext,
-  LineageQuery,
-  LineageRecord,
-  Partitioner,
-  QualityCheckResult,
-  QualityResult,
-  SchemaCompatibilityReport,
-  SchemaMigration,
-  SchemaValidator,
-  WriteOptions,
-  WriteResult
-}
+import cats.data.{Kleisli, NonEmptyList, ValidatedNel}
+import cats.{Functor, Monad}
+import com.flowforge.core.algebra.DataAlgebra.{AnomalyDetector, AnomalyReport, CacheStrategy, CleaningRule, DataOperation, DataProfile, DataStream, Dataset, DatasetMetadata, LineageContext, LineageQuery, LineageRecord, Partitioner, QualityCheckResult, QualityResult, SchemaCompatibilityReport, SchemaMigration, SchemaValidator, WriteOptions, WriteResult}
 import com.flowforge.core.types._
 import com.flowforge.core.types.PipelineTypes._
 import com.flowforge.core.types.RefinedTypes.FieldName
@@ -31,6 +10,7 @@ import eu.timepit.refined.types.string.NonEmptyString
 
 import java.time.Instant
 import scala.concurrent.duration.FiniteDuration
+import scala.reflect.ClassTag
 
 /**
  * 🚀 **FlowForge Data Algebra - Universal Data Operations**
@@ -570,7 +550,10 @@ object DataAlgebra {
     name: String,
     apply: A => A,
     condition: A => Boolean
-  )
+  ) {
+    def clean(value: A): A =
+      ??? // TODO Assumed in SparkDataAlgebera to-be implemented here but then what is apply which is also A => A
+  }
 
   case class AnomalyDetector[A](
     name: String,
@@ -743,23 +726,23 @@ trait CDCOperations[F[_]] {
    * Perform CDC between source and target datasets. Enhanced version of reference ETL.performDelta
    * with type safety.
    */
-  def performDelta[A: DataDecoder: DataEncoder](
+  def performDelta[A: ClassTag](
     source: Dataset[A],
     target: Dataset[A],
     primaryKeys: NonEmptyList[FieldName],
     config: CDCConfig = CDCConfig.default
-  ): F[CDCResult[A]]
+  )(implicit dec: DataDecoder[A], enc: DataEncoder[A]): F[CDCResult[A]]
 
   /**
    * Perform incremental CDC with watermark tracking.
    */
-  def performIncrementalDelta[A: DataDecoder: DataEncoder](
+  def performIncrementalDelta[A: ClassTag](
     source: Dataset[A],
     target: Dataset[A],
     watermark: Option[Instant],
     primaryKeys: NonEmptyList[FieldName],
     config: CDCConfig = CDCConfig.default
-  ): F[(CDCResult[A], Instant)]
+  )(implicit dec: DataDecoder[A], enc: DataEncoder[A]): F[CDCResult[A]]
 
   /**
    * Compute change hash for record comparison.

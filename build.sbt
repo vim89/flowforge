@@ -70,7 +70,7 @@ ThisBuild / Test / testOptions += Tests.Argument("-oDF")
 
 // Helper function for module projects
 def moduleProject(name: String): Project =
-  Project(name.replace("-", ""), file(s"modules/$name"))
+  Project(name, file(s"modules/$name"))
     .settings(
       moduleName := s"flowforge-$name",
       libraryDependencies ++= Dependencies.common
