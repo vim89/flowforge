@@ -6,12 +6,12 @@
  */
 package com.flowforge.contracts
 
-import cats.data.{NonEmptyList, ValidatedNel}
+import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.implicits._
 import com.flowforge.contracts.FieldConstraint.Pattern
 import com.flowforge.core.algebra.SchemaVersion
-import eu.timepit.refined.auto._
 import eu.timepit.refined.types.string.NonEmptyString
+
 import java.time.Instant
 import scala.util.matching.Regex
 
@@ -153,7 +153,7 @@ object ValidationRules {
     ruleName: String
   )(validator: A => ValidatedNel[ContractViolation, Unit]): ValidationRule[A] =
     new ValidationRule[A] {
-      val name: String = ruleName
+      val name: String                                             = ruleName
       def validate(data: A): ValidatedNel[ContractViolation, Unit] = validator(data)
     }
 }
@@ -333,7 +333,7 @@ object StandardContracts {
         ValidationRules.unique("invoiceNumber")(_.invoiceNumber)
       )
       .build
-*/ // End of commented StandardContracts example
+   */ // End of commented StandardContracts example
 }
 
 /**

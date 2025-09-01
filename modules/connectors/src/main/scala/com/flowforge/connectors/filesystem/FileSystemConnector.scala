@@ -18,19 +18,14 @@
  */
 package com.flowforge.connectors.filesystem
 
-import cats.data.{ NonEmptyList, ValidatedNel }
-import cats.effect.Resource
 import cats.implicits._
+import com.flowforge.connectors._
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.types._
-import com.flowforge.connectors._
 
-import java.io.{ File, FileInputStream, FileOutputStream }
 import java.nio.file.{ Files, Path, Paths, StandardOpenOption }
 import java.time.Instant
 import java.util.stream.Collectors
-import scala.jdk.CollectionConverters._
-import scala.util.{ Failure, Success, Try }
 
 /**
  * File system connector trait providing unified interface for different storage systems

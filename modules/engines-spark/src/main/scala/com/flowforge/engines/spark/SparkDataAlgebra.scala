@@ -3,12 +3,12 @@
  */
 package com.flowforge.engines.spark
 
-import cats.data.{NonEmptyList, ValidatedNel}
+import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.effect.Resource
 import cats.implicits._
 import com.flowforge.core.algebra.DataAlgebra._
 import com.flowforge.core.algebra.EnterpriseTableAlgebra._
-import com.flowforge.core.algebra.{DataAlgebra, EffectSystem}
+import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
 import com.flowforge.core.types.PipelineTypes._
 import com.flowforge.core.types.RefinedTypes._
 import com.flowforge.core.types._
@@ -21,13 +21,13 @@ import scala.concurrent.duration.FiniteDuration
  * Minimal Spark implementation of DataAlgebra - compiles first, then expand
  */
 abstract class SparkDataAlgebra[F[_]: EffectSystem](
-  val sparkSession: SparkSession  
+  val sparkSession: SparkSession
 ) extends DataAlgebra[F] {
 
   private val effectSystem = EffectSystem[F]
-  
+
   // Only implement the most basic required abstract methods
-  
+
   def placeholder: Any = ??? /*
 
   // ===============================
@@ -630,7 +630,8 @@ abstract class SparkDataAlgebra[F[_]: EffectSystem](
         performanceImprovement = 0.0
       )
     )
-*/ } // End of commented SparkDataAlgebra implementation
+   */
+} // End of commented SparkDataAlgebra implementation
 
 /**
  * Companion object with factory methods
@@ -660,5 +661,6 @@ object SparkDataAlgebra {
     }
   } */
 
-  def apply[F[_]: EffectSystem](sparkSession: SparkSession): Any = ??? // Cannot instantiate abstract SparkDataAlgebra
+  def apply[F[_]: EffectSystem](sparkSession: SparkSession): Any =
+    ??? // Cannot instantiate abstract SparkDataAlgebra
 }

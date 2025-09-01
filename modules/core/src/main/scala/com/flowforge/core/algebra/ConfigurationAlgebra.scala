@@ -40,7 +40,7 @@ package com.flowforge.core.algebra
 import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.effect.Sync
 import cats.implicits._
-import com.flowforge.core.types.{ ConfigError, FlowForgeError }
+import com.flowforge.core.types.ConfigError
 import eu.timepit.refined.types.string.NonEmptyString
 import fs2.Stream
 
