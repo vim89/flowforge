@@ -287,8 +287,8 @@ lazy val experimental = moduleProject("experimental")
 lazy val benchmarks = (project in file("benchmarks"))
   .dependsOn(core, framework, examples)
   .settings(
-    name        := "flowforge-benchmarks",
-    description := "Performance benchmarks",
+    name        := "benchmarks",
+    description := "Flowforge Performance benchmarks",
     libraryDependencies ++= Dependencies.common,
     publish / skip := true
   )
@@ -296,8 +296,8 @@ lazy val benchmarks = (project in file("benchmarks"))
 lazy val it = (project in file("integration-tests"))
   .dependsOn(examples, testing, connectorsGcs, connectorsBigQuery, enginesSpark, qualityDeequ)
   .settings(
-    name           := "flowforge-integration-tests",
-    description    := "Integration tests",
+    name           := "integration-tests",
+    description    := "Flowforge Integration tests",
     publish / skip := true,
     Test / fork    := true
   )
