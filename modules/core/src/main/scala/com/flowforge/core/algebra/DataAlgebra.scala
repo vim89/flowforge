@@ -1,15 +1,13 @@
 package com.flowforge.core.algebra
 
-import cats.data.{ Kleisli, NonEmptyList, ValidatedNel }
-import cats.{ Functor, Monad }
-import com.flowforge.core.types._
+import cats.data.{ NonEmptyList, ValidatedNel }
 import com.flowforge.core.types.PipelineTypes._
 import com.flowforge.core.types.RefinedTypes.FieldName
+import com.flowforge.core.types._
 import eu.timepit.refined.types.string.NonEmptyString
 
 import java.time.Instant
 import scala.concurrent.duration.FiniteDuration
-import scala.reflect.ClassTag
 
 /**
  * 🚀 **FlowForge Data Algebra - Effect System Research Applied**
@@ -282,6 +280,10 @@ object DataAlgebra {
     def data: List[A]
     def schema: DataSchema
     def metadata: DatasetMetadata
+
+    // Back-compat convenience
+    def size: Int        = data.size
+    def isEmpty: Boolean = data.isEmpty
   }
 
   /**

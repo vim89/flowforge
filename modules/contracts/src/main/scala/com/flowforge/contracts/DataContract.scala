@@ -296,28 +296,28 @@ object StandardContracts {
       .builder[SalesData]
       .withSchema(
         ContractSchema(
-          name = "SalesData".refined,
+          name = NonEmptyString.unsafeFrom("SalesData"),
           fields = List(
             FieldContract(
-              name = "invoiceNumber".refined,
+              name = NonEmptyString.unsafeFrom("invoiceNumber"),
               dataType = FieldType.StringType,
               nullable = false,
               constraints = List(FieldConstraint.MinLength(1))
             ),
             FieldContract(
-              name = "customerId".refined,
+              name = NonEmptyString.unsafeFrom("customerId"),
               dataType = FieldType.StringType,
               nullable = false,
               constraints = List(FieldConstraint.MinLength(1))
             ),
             FieldContract(
-              name = "amount".refined,
+              name = NonEmptyString.unsafeFrom("amount"),
               dataType = FieldType.DoubleType,
               nullable = false,
               constraints = List(FieldConstraint.Range(0.0, Double.MaxValue))
             ),
             FieldContract(
-              name = "timestamp".refined,
+              name = NonEmptyString.unsafeFrom("timestamp"),
               dataType = FieldType.TimestampType,
               nullable = false
             )

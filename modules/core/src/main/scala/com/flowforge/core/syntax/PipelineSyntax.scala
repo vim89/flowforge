@@ -257,13 +257,8 @@ object PipelineSyntax {
      */
     def transformSafe[F[_]: EffectSystem, B](
       f: A => F[B]
-    )(implicit encoder: DataAlgebra.DataEncoder[B]): F[DataAlgebra.Dataset[B]] =
-      // TODO: Implement safe transformation with proper error handling
-      EffectSystem[F].pure(
-        dataset.map(x =>
-          throw new NotImplementedError("transformSafe requires DataAlgebra integration")
-        )(encoder)
-      )
+    )(implicit encoder: DataEncoder[B], algebra: DataAlgebra[F]): F[DataAlgebra.Dataset[B]] =
+      algebra.transformWithEffect(dataset, f)
 
     /**
      * Apply validation to all records
@@ -273,13 +268,9 @@ object PipelineSyntax {
     ): F[ValidationResult[DataAlgebra.Dataset[A]]] = {
       // TODO: Implement validation for all records in dataset
       val validationResults = dataset.data.map(validator)
-      val combined          = validationResults.sequence
-      combined match {
-        case cats.data.Validated.Valid(validData) =>
-          val validatedDataset = dataset.copy(data = validData)
-          EffectSystem[F].pure(validatedDataset.validNel)
-        case cats.data.Validated.Invalid(errors) =>
-          EffectSystem[F].pure(errors.invalid)
+      validationResults.sequence match {
+        case cats.data.Validated.Valid(_)      => EffectSystem[F].pure(dataset.validNel)
+        case cats.data.Validated.Invalid(errs) => EffectSystem[F].pure(errs.invalid)
       }
     }
 
@@ -306,17 +297,17 @@ object PipelineSyntax {
     def transform[B](
       transformation: A => F[B]
     )(implicit encoder: DataEncoder[B]): F[DatasetPipelineBuilder[F, B]] =
-      dataAlgebra.mapWithEffect(dataset, transformation).map { newDataset =>
+      dataAlgebra.transformWithEffect(dataset, transformation).map { newDataset =>
         DatasetPipelineBuilder(newDataset, dataAlgebra)
       }
 
     /**
      * Apply filter
      */
-    def filter(predicate: A => Boolean): F[DatasetPipelineBuilder[F, A]] =
-      dataAlgebra.filter(dataset, predicate).map { filtered =>
-        DatasetPipelineBuilder(filtered, dataAlgebra)
-      }
+    def filter(predicate: A => Boolean): F[DatasetPipelineBuilder[F, A]] = {
+      val filtered = dataAlgebra.filter(dataset, predicate)
+      F.pure(DatasetPipelineBuilder(filtered, dataAlgebra))
+    }
 
     /**
      * Apply quality check
@@ -618,13 +609,6 @@ object PipelineSyntax {
 
   // Provide default quality result for testing
   object QualityResult {
-    def passed[A](data: A): DataAlgebra.QualityResult[A] =
-      DataAlgebra.QualityResult(
-        data = data,
-        score = 1.0,
-        checks = List.empty,
-        passed = true,
-        metadata = Map.empty
-      )
+    def passed[A](data: A): DataAlgebra.QualityResult[A] = ???
   }
 }

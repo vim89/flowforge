@@ -681,6 +681,24 @@ Instead:
 
 This supports code clarity, discoverability, and matches Scala community conventions.
 
+#### More Guidelines
+
+1. **Commit Messages**: Use [Conventional Commits](https://www.conventionalcommits.org/) format. Examples include:
+- `feat:` for new features
+- `fix:` for bug fixes
+- `docs:` for documentation changes
+- `test:` for test-related changes
+- `chore:` for maintenance tasks
+
+2. **Simplicity First**: Prefer simpler implementations over overly complex solutions.
+
+3. **Uniform Structure**: Maintain a consistent code structure across modules so files and packages are easy to navigate.
+
+4. **Explain Why**: Add comments explaining *why* something is done if it is not obvious from code alone.
+
+5. **Architectural Decision Records (ADRs)**: For non-trivial design choices, add a short ADR (docs/adr/NNN-*.md) explaining context, the decision, and alternatives.
+
+
 ---
 
 ####  Why This Matters (Supported by Scala Style Guides)
