@@ -1,6 +1,6 @@
 package com.flowforge.engines.spark
 
-import cats.data.{NonEmptyList, ValidatedNel}
+import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.effect.Resource
 import cats.implicits._
 import com.flowforge.core.algebra._
@@ -37,7 +37,10 @@ object SparkDataAlgebra {
     /**
      * Read data with schema validation
      */
-    override def readWithSchema[A: DataDecoder : DataAlgebra.SchemaValidator](source: DataSource, expectedSchema: DataSchema): F[Either[FlowForgeError, DataAlgebra.Dataset[A]]] = ???
+    override def readWithSchema[A: DataDecoder: DataAlgebra.SchemaValidator](
+      source: DataSource,
+      expectedSchema: DataSchema
+    ): F[Either[FlowForgeError, DataAlgebra.Dataset[A]]] = ???
 
     /**
      * Stream data for large datasets
@@ -47,47 +50,78 @@ object SparkDataAlgebra {
     /**
      * Batch read with configurable size
      */
-    override def readBatch[A: DataDecoder](source: DataSource, batchSize: Int): F[List[DataAlgebra.Dataset[A]]] = ???
+    override def readBatch[A: DataDecoder](
+      source: DataSource,
+      batchSize: Int
+    ): F[List[DataAlgebra.Dataset[A]]] = ???
 
     /**
      * Apply a transformation to a dataset
      */
-    override def transform[A, B: DataEncoder](dataset: DataAlgebra.Dataset[A], transformation: A => F[B]): F[DataAlgebra.Dataset[B]] = ???
+    override def transform[A, B: DataEncoder](
+      dataset: DataAlgebra.Dataset[A],
+      transformation: A => F[B]
+    ): F[DataAlgebra.Dataset[B]] = ???
 
     /**
      * Apply multiple transformations in sequence
      */
-    override def transformPipeline[A, B: DataEncoder](dataset: DataAlgebra.Dataset[A], transformations: NonEmptyList[A => F[B]]): F[DataAlgebra.Dataset[B]] = ???
+    override def transformPipeline[A, B: DataEncoder](
+      dataset: DataAlgebra.Dataset[A],
+      transformations: NonEmptyList[A => F[B]]
+    ): F[DataAlgebra.Dataset[B]] = ???
 
     /**
      * Filter data based on predicate
      */
-    override def filter[A](dataset: DataAlgebra.Dataset[A], predicate: A => Boolean): F[DataAlgebra.Dataset[A]] = ???
+    override def filter[A](
+      dataset: DataAlgebra.Dataset[A],
+      predicate: A => Boolean
+    ): F[DataAlgebra.Dataset[A]] = ???
 
     /**
      * Map over dataset with effect support
      */
-    override def mapWithEffect[A, B: DataEncoder](dataset: DataAlgebra.Dataset[A], f: A => F[B]): F[DataAlgebra.Dataset[B]] = ???
+    override def mapWithEffect[A, B: DataEncoder](
+      dataset: DataAlgebra.Dataset[A],
+      f: A => F[B]
+    ): F[DataAlgebra.Dataset[B]] = ???
 
     /**
      * FlatMap over dataset for nested operations
      */
-    override def flatMapWithEffect[A, B: DataEncoder](dataset: DataAlgebra.Dataset[A], f: A => F[DataAlgebra.Dataset[B]]): F[DataAlgebra.Dataset[B]] = ???
+    override def flatMapWithEffect[A, B: DataEncoder](
+      dataset: DataAlgebra.Dataset[A],
+      f: A => F[DataAlgebra.Dataset[B]]
+    ): F[DataAlgebra.Dataset[B]] = ???
 
     /**
      * Group by key with aggregation
      */
-    override def groupBy[A, K, V: DataEncoder](dataset: DataAlgebra.Dataset[A], keyExtractor: A => K, aggregator: List[A] => V): F[DataAlgebra.Dataset[(K, V)]] = ???
+    override def groupBy[A, K, V: DataEncoder](
+      dataset: DataAlgebra.Dataset[A],
+      keyExtractor: A => K,
+      aggregator: List[A] => V
+    ): F[DataAlgebra.Dataset[(K, V)]] = ???
 
     /**
      * Join two datasets
      */
-    override def join[A, B, K, C: DataEncoder](left: DataAlgebra.Dataset[A], right: DataAlgebra.Dataset[B], leftKey: A => K, rightKey: B => K, combiner: (A, B) => C): F[DataAlgebra.Dataset[C]] = ???
+    override def join[A, B, K, C: DataEncoder](
+      left: DataAlgebra.Dataset[A],
+      right: DataAlgebra.Dataset[B],
+      leftKey: A => K,
+      rightKey: B => K,
+      combiner: (A, B) => C
+    ): F[DataAlgebra.Dataset[C]] = ???
 
     /**
      * Run specific quality checks
      */
-    override def runQualityChecks[A](dataset: DataAlgebra.Dataset[A], checks: NonEmptyList[QualityCheck[A]]): F[List[DataAlgebra.QualityCheckResult]] = ???
+    override def runQualityChecks[A](
+      dataset: DataAlgebra.Dataset[A],
+      checks: NonEmptyList[QualityCheck[A]]
+    ): F[List[DataAlgebra.QualityCheckResult]] = ???
 
     /**
      * Profile dataset to understand data characteristics
@@ -97,12 +131,18 @@ object SparkDataAlgebra {
     /**
      * Clean dataset based on quality rules
      */
-    override def clean[A](dataset: DataAlgebra.Dataset[A], cleaningRules: List[DataAlgebra.CleaningRule[A]]): F[DataAlgebra.Dataset[A]] = ???
+    override def clean[A](
+      dataset: DataAlgebra.Dataset[A],
+      cleaningRules: List[DataAlgebra.CleaningRule[A]]
+    ): F[DataAlgebra.Dataset[A]] = ???
 
     /**
      * Detect anomalies in dataset
      */
-    override def detectAnomalies[A](dataset: DataAlgebra.Dataset[A], detectors: List[DataAlgebra.AnomalyDetector[A]]): F[DataAlgebra.AnomalyReport[A]] = ???
+    override def detectAnomalies[A](
+      dataset: DataAlgebra.Dataset[A],
+      detectors: List[DataAlgebra.AnomalyDetector[A]]
+    ): F[DataAlgebra.AnomalyReport[A]] = ???
 
     /**
      * Extract schema from dataset
@@ -112,52 +152,83 @@ object SparkDataAlgebra {
     /**
      * Evolve schema with migrations
      */
-    override def evolveSchema[A, B: DataEncoder](dataset: DataAlgebra.Dataset[A], migration: DataAlgebra.SchemaMigration[A, B]): F[DataAlgebra.Dataset[B]] = ???
+    override def evolveSchema[A, B: DataEncoder](
+      dataset: DataAlgebra.Dataset[A],
+      migration: DataAlgebra.SchemaMigration[A, B]
+    ): F[DataAlgebra.Dataset[B]] = ???
 
     /**
      * Compare schemas for compatibility
      */
-    override def compareSchemas(source: DataSchema, target: DataSchema): F[DataAlgebra.SchemaCompatibilityReport] = ???
+    override def compareSchemas(
+      source: DataSchema,
+      target: DataSchema
+    ): F[DataAlgebra.SchemaCompatibilityReport] = ???
 
     /**
      * Validate schema compliance
      */
-    override def validateSchema[A](dataset: DataAlgebra.Dataset[A], schema: DataSchema): F[ValidatedNel[FlowForgeError, DataAlgebra.Dataset[A]]] = ???
+    override def validateSchema[A](
+      dataset: DataAlgebra.Dataset[A],
+      schema: DataSchema
+    ): F[ValidatedNel[FlowForgeError, DataAlgebra.Dataset[A]]] = ???
 
     /**
      * Write dataset to sink
      */
-    override def write[A: DataEncoder](dataset: DataAlgebra.Dataset[A], sink: DataSink): F[DataAlgebra.WriteResult] = ???
+    override def write[A: DataEncoder](
+      dataset: DataAlgebra.Dataset[A],
+      sink: DataSink
+    ): F[DataAlgebra.WriteResult] = ???
 
     /**
      * Write with options (partitioning, compression, etc.)
      */
-    override def writeWithOptions[A: DataEncoder](dataset: DataAlgebra.Dataset[A], sink: DataSink, options: DataAlgebra.WriteOptions): F[DataAlgebra.WriteResult] = ???
+    override def writeWithOptions[A: DataEncoder](
+      dataset: DataAlgebra.Dataset[A],
+      sink: DataSink,
+      options: DataAlgebra.WriteOptions
+    ): F[DataAlgebra.WriteResult] = ???
 
     /**
      * Stream write for large datasets
      */
-    override def writeStream[A: DataEncoder](stream: DataAlgebra.DataStream[F, A], sink: DataSink): F[DataAlgebra.WriteResult] = ???
+    override def writeStream[A: DataEncoder](
+      stream: DataAlgebra.DataStream[F, A],
+      sink: DataSink
+    ): F[DataAlgebra.WriteResult] = ???
 
     /**
      * Batch write with configurable size
      */
-    override def writeBatch[A: DataEncoder](datasets: List[DataAlgebra.Dataset[A]], sink: DataSink): F[List[DataAlgebra.WriteResult]] = ???
+    override def writeBatch[A: DataEncoder](
+      datasets: List[DataAlgebra.Dataset[A]],
+      sink: DataSink
+    ): F[List[DataAlgebra.WriteResult]] = ???
 
     /**
      * Extract metadata from dataset
      */
-    override def extractMetadata[A](dataset: DataAlgebra.Dataset[A]): F[DataAlgebra.DatasetMetadata] = ???
+    override def extractMetadata[A](
+      dataset: DataAlgebra.Dataset[A]
+    ): F[DataAlgebra.DatasetMetadata] = ???
 
     /**
      * Track data lineage
      */
-    override def trackLineage[A](dataset: DataAlgebra.Dataset[A], operation: DataAlgebra.DataOperation, context: DataAlgebra.LineageContext): F[DataAlgebra.LineageRecord] = ???
+    override def trackLineage[A](
+      dataset: DataAlgebra.Dataset[A],
+      operation: DataAlgebra.DataOperation,
+      context: DataAlgebra.LineageContext
+    ): F[DataAlgebra.LineageRecord] = ???
 
     /**
      * Query lineage information
      */
-    override def queryLineage(datasetId: String, query: DataAlgebra.LineageQuery): F[List[DataAlgebra.LineageRecord]] = ???
+    override def queryLineage(
+      datasetId: String,
+      query: DataAlgebra.LineageQuery
+    ): F[List[DataAlgebra.LineageRecord]] = ???
 
     /**
      * Count records in dataset
@@ -177,29 +248,45 @@ object SparkDataAlgebra {
     /**
      * Sample dataset
      */
-    override def sample[A](dataset: DataAlgebra.Dataset[A], fraction: Double): F[DataAlgebra.Dataset[A]] = ???
+    override def sample[A](
+      dataset: DataAlgebra.Dataset[A],
+      fraction: Double
+    ): F[DataAlgebra.Dataset[A]] = ???
 
     /**
      * Cache dataset in memory/disk
      */
-    override def cache[A](dataset: DataAlgebra.Dataset[A], strategy: DataAlgebra.CacheStrategy): F[DataAlgebra.Dataset[A]] = ???
+    override def cache[A](
+      dataset: DataAlgebra.Dataset[A],
+      strategy: DataAlgebra.CacheStrategy
+    ): F[DataAlgebra.Dataset[A]] = ???
 
     /**
      * Partition dataset
      */
-    override def partition[A](dataset: DataAlgebra.Dataset[A], partitioner: DataAlgebra.Partitioner[A]): F[Map[String, DataAlgebra.Dataset[A]]] = ???
+    override def partition[A](
+      dataset: DataAlgebra.Dataset[A],
+      partitioner: DataAlgebra.Partitioner[A]
+    ): F[Map[String, DataAlgebra.Dataset[A]]] = ???
 
     /**
-     * Perform CDC between source and target datasets. Enhanced version of reference ETL.performDelta
-     * with type safety.
+     * Perform CDC between source and target datasets. Enhanced version of reference
+     * ETL.performDelta with type safety.
      */
-    override def performDelta[A: ClassTag](source: DataAlgebra.Dataset[A], target: DataAlgebra.Dataset[A], primaryKeys: NonEmptyList[FieldName], config: CDCOperations.CDCConfig)(implicit dec: DataDecoder[A], enc: DataEncoder[A]): F[CDCOperations.CDCResult[A]] = {
+    override def performDelta[A: ClassTag](
+      source: DataAlgebra.Dataset[A],
+      target: DataAlgebra.Dataset[A],
+      primaryKeys: NonEmptyList[FieldName],
+      config: CDCOperations.CDCConfig
+    )(implicit dec: DataDecoder[A], enc: DataEncoder[A]): F[CDCOperations.CDCResult[A]] = {
       val F = EffectSystem[F]
 
       F.delay {
-        val srcRDD = sparkSession.sparkContext.parallelize(source.data)
+        val srcRDD = sparkSession.sparkContext
+          .parallelize(source.data)
           .map(a => (primaryKeys.toList.map(pk => a.toString).mkString("||"), a))
-        val tgtRDD = sparkSession.sparkContext.parallelize(target.data)
+        val tgtRDD = sparkSession.sparkContext
+          .parallelize(target.data)
           .map(a => (primaryKeys.toList.map(pk => a.toString).mkString("||"), a))
         val joined = srcRDD.fullOuterJoin(tgtRDD)
 
@@ -208,9 +295,9 @@ object SparkDataAlgebra {
             (srcOpt, tgtOpt) match {
               case (Some(s), Some(t)) if s != t => (i, u + 1, d, n)
               case (Some(s), Some(t)) if s == t => (i, u, d, n + 1)
-              case (Some(_), None) => (i + 1, u, d, n)
-              case (None, Some(_)) => (i, u, d + 1, n)
-              case _ => (i, u, d, n)
+              case (Some(_), None)              => (i + 1, u, d, n)
+              case (None, Some(_))              => (i, u, d + 1, n)
+              case _                            => (i, u, d, n)
             }
           },
           { case ((i1, u1, d1, n1), (i2, u2, d2, n2)) =>
@@ -232,84 +319,108 @@ object SparkDataAlgebra {
     /**
      * Compute change hash for record comparison.
      */
-    override def computeChangeHash[A](record: A, hashColumns: NonEmptyList[FieldName]): F[String] = ???
+    override def computeChangeHash[A](record: A, hashColumns: NonEmptyList[FieldName]): F[String] =
+      ???
 
     /**
-     * Repair and refresh table metadata. Enhanced version of reference Table.repairRefreshTable with
-     * safety.
+     * Repair and refresh table metadata. Enhanced version of reference Table.repairRefreshTable
+     * with safety.
      */
-    override def repairRefreshTable(table: TableOperations.TableName): F[TableOperations.TableOperationResult] = ???
+    override def repairRefreshTable(
+      table: TableOperations.TableName
+    ): F[TableOperations.TableOperationResult] = ???
 
     /**
      * Get table location with validation. Enhanced version of reference Table.getTableLocation.
      */
-    override def getTableLocation(table: TableOperations.TableName): F[ValidatedNel[FlowForgeError, String]] = ???
+    override def getTableLocation(
+      table: TableOperations.TableName
+    ): F[ValidatedNel[FlowForgeError, String]] = ???
 
     /**
      * Get affected partitions for time range. Enhanced version of reference
      * Table.getAffectedPartitions.
      */
-    override def getAffectedPartitions(table: TableOperations.TableName, startTime: Instant, endTime: Instant): F[List[TableOperations.PartitionSpec]] = ???
+    override def getAffectedPartitions(
+      table: TableOperations.TableName,
+      startTime: Instant,
+      endTime: Instant
+    ): F[List[TableOperations.PartitionSpec]] = ???
 
     /**
      * Safe deletion of table location. Enhanced version of reference Table.deleteDfsLocation with
      * safety checks.
      */
-    override def deleteDfsLocation(location: String, dryRun: Boolean): F[TableOperations.TableOperationResult] = ???
+    override def deleteDfsLocation(
+      location: String,
+      dryRun: Boolean
+    ): F[TableOperations.TableOperationResult] = ???
 
     /**
      * Analyze table and compute statistics.
      */
-    override def analyzeTable(table: TableOperations.TableName, partitions: Option[NonEmptyList[TableOperations.PartitionSpec]]): F[TableOperations.TableOperationResult] = ???
+    override def analyzeTable(
+      table: TableOperations.TableName,
+      partitions: Option[NonEmptyList[TableOperations.PartitionSpec]]
+    ): F[TableOperations.TableOperationResult] = ???
 
     /**
      * Vacuum table to optimize storage.
      */
-    override def vacuumTable(table: TableOperations.TableName, retentionHours: Int, dryRun: Boolean): F[TableOperations.TableOperationResult] = ???
+    override def vacuumTable(
+      table: TableOperations.TableName,
+      retentionHours: Int,
+      dryRun: Boolean
+    ): F[TableOperations.TableOperationResult] = ???
 
     /**
      * Validate dataset against data contract
      */
-    override def validate[A](dataset: DataAlgebra.Dataset[A], contract: PipelineTypes.DataContract[A]): F[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]] = ???
+    override def validate[A](
+      dataset: DataAlgebra.Dataset[A],
+      contract: PipelineTypes.DataContract[A]
+    ): F[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]] = ???
 
     /**
      * Perform incremental CDC with watermark tracking.
      */
-    override def performIncrementalDelta[A: ClassTag](source: DataAlgebra.Dataset[A], target: DataAlgebra.Dataset[A], watermark: Option[Instant], primaryKeys: NonEmptyList[FieldName], config: CDCOperations.CDCConfig)(implicit dec: DataDecoder[A], enc: DataEncoder[A]): F[CDCOperations.CDCResult[A]] = {
-      {
-        val F = EffectSystem[F]
+    override def performIncrementalDelta[A: ClassTag](
+      source: DataAlgebra.Dataset[A],
+      target: DataAlgebra.Dataset[A],
+      watermark: Option[Instant],
+      primaryKeys: NonEmptyList[FieldName],
+      config: CDCOperations.CDCConfig
+    )(implicit dec: DataDecoder[A], enc: DataEncoder[A]): F[CDCOperations.CDCResult[A]] =
+    val F = EffectSystem[F]
 
-        // val currentWatermark = watermark.getOrElse(java.time.Instant.EPOCH)
-        val newData = source.data // TODO: filter by event timestamp > currentWatermark when timestamp field available
-        val newDataset = DataAlgebra.Dataset[A](
-          id = s"incremental-${UUID.randomUUID()}",
-          data = newData,
-          schema = source.schema,
-          metadata = source.metadata.copy(
-            name = source.metadata.name + "_incremental",
-            updatedAt = Instant.now(),
-            size = newData.size
-          ),
-          lineage = None
-        )
+    // val currentWatermark = watermark.getOrElse(java.time.Instant.EPOCH)
+    val newData =
+      source.data // TODO: filter by event timestamp > currentWatermark when timestamp field available
+    val newDataset = DataAlgebra.Dataset[A](
+      id = s"incremental-${UUID.randomUUID()}",
+      data = newData,
+      schema = source.schema,
+      metadata = source.metadata.copy(
+        name = source.metadata.name + "_incremental",
+        updatedAt = Instant.now(),
+        size = newData.size
+      ),
+      lineage = None
+    )
 
-        for {
-          result <- performDelta(newDataset, target, primaryKeys, config)
-          // updatedWatermark = Instant.now()
-        } yield result
+    for {
+      result <- performDelta(newDataset, target, primaryKeys, config)
+      // updatedWatermark = Instant.now()
+    } yield result
 
-        // TODO: Delta Lake optimized implementation:
-        // val deltaTable = io.delta.tables.DeltaTable.forName(sparkSession, targetTableName)
-        // deltaTable.as("tgt")
-        //   .merge(newDF.as("src"), "src.key = tgt.key")
-        //   .whenMatched().updateAll()
-        //   .whenNotMatched().insertAll()
-        //   .execute()
-      }
-    }
+    // TODO: Delta Lake optimized implementation:
+    // val deltaTable = io.delta.tables.DeltaTable.forName(sparkSession, targetTableName)
+    // deltaTable.as("tgt")
+    //   .merge(newDF.as("src"), "src.key = tgt.key")
+    //   .whenMatched().updateAll()
+    //   .whenNotMatched().insertAll()
+    //   .execute()
   }
-
-
 
   /*{ COMMENTED: Use only as reference
 
@@ -320,8 +431,8 @@ object SparkDataAlgebra {
     val F: EffectSystem[F] = implicitly[EffectSystem[F]]
 
     /**
-     * Read data from a source with automatic resource management
-     */
+   * Read data from a source with automatic resource management
+   */
     override def read[A: algebra.DataDecoder](source: DataSource): F[Dataset[A]] =
       F.delay {
         // Use Spark to read data based on source type and format
@@ -385,8 +496,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Read data with schema validation
-     */
+   * Read data with schema validation
+   */
     override def readWithSchema[A: algebra.DataDecoder: SchemaValidator](
       source: DataSource,
       expectedSchema: DataSchema
@@ -450,8 +561,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Stream data for large datasets
-     */
+   * Stream data for large datasets
+   */
     override def stream[A: algebra.DataDecoder](source: DataSource): F[DataStream[F, A]] =
       F.delay {
         // Use Spark Structured Streaming for real streaming capabilities
@@ -502,8 +613,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Batch read with configurable size
-     */
+   * Batch read with configurable size
+   */
     override def readBatch[A: algebra.DataDecoder](
       source: DataSource,
       batchSize: Int
@@ -546,8 +657,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Apply a transformation to a dataset
-     */
+   * Apply a transformation to a dataset
+   */
     override def transform[A: ClassTag, B: ClassTag : algebra.DataEncoder](
       dataset: Dataset[A],
       transformation: A => F[B]
@@ -576,8 +687,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Apply multiple transformations in sequence
-     */
+   * Apply multiple transformations in sequence
+   */
     override def transformPipeline[A: ClassTag, B: ClassTag : algebra.DataEncoder](
       dataset: Dataset[A],
       transformations: NonEmptyList[A => F[B]]
@@ -607,8 +718,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Filter data based on predicate
-     */
+   * Filter data based on predicate
+   */
     override def filter[A: ClassTag](dataset: Dataset[A], predicate: A => Boolean): F[Dataset[A]] =
       F.delay {
         // Use Spark's distributed filtering
@@ -627,8 +738,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Map over dataset with effect support
-     */
+   * Map over dataset with effect support
+   */
     override def mapWithEffect[A, B: ClassTag : algebra.DataEncoder](
       dataset: Dataset[A],
       f: A => F[B]
@@ -648,8 +759,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * FlatMap over dataset for nested operations
-     */
+   * FlatMap over dataset for nested operations
+   */
     override def flatMapWithEffect[A: ClassTag, B: ClassTag : algebra.DataEncoder](
       dataset: Dataset[A],
       f: A => F[Dataset[B]]
@@ -676,8 +787,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Group by key with aggregation
-     */
+   * Group by key with aggregation
+   */
     override def groupBy[A: ClassTag, K: ClassTag, V: ClassTag : algebra.DataEncoder](
       dataset: Dataset[A],
       keyExtractor: A => K,
@@ -705,8 +816,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Join two datasets
-     */
+   * Join two datasets
+   */
     override def join[A: ClassTag, B: ClassTag, K: ClassTag, C: ClassTag : algebra.DataEncoder](
       left: Dataset[A],
       right: Dataset[B],
@@ -739,8 +850,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Validate dataset against data contract
-     */
+   * Validate dataset against data contract
+   */
     override def validate[A: ClassTag](
       dataset: Dataset[A],
       contract: DataContract[A]
@@ -786,8 +897,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Run specific quality checks
-     */
+   * Run specific quality checks
+   */
     override def runQualityChecks[A: ClassTag](
       dataset: Dataset[A],
       checks: NonEmptyList[QualityCheck[A]]
@@ -823,8 +934,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Profile dataset to understand data characteristics
-     */
+   * Profile dataset to understand data characteristics
+   */
     override def profile[A: ClassTag](dataset: Dataset[A]): F[DataProfile[A]] =
       F.delay {
         // Use Spark's statistical functions for distributed profiling
@@ -852,8 +963,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Clean dataset based on quality rules
-     */
+   * Clean dataset based on quality rules
+   */
     override def clean[A: ClassTag](
       dataset: Dataset[A],
       cleaningRules: List[CleaningRule[A]]
@@ -882,8 +993,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Detect anomalies in dataset using Spark MLlib
-     */
+   * Detect anomalies in dataset using Spark MLlib
+   */
     override def detectAnomalies[A: ClassTag](
       dataset: Dataset[A],
       detectors: List[AnomalyDetector[A]]
@@ -927,8 +1038,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Extract schema from dataset using Spark's schema inference
-     */
+   * Extract schema from dataset using Spark's schema inference
+   */
     override def extractSchema[A: ClassTag](dataset: Dataset[A]): F[DataSchema] =
       F.delay {
         // Use Spark to infer schema from data
@@ -963,8 +1074,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Evolve schema with migrations
-     */
+   * Evolve schema with migrations
+   */
     override def evolveSchema[A, B: algebra.DataEncoder](
       dataset: Dataset[A],
       migration: SchemaMigration[A, B]
@@ -972,8 +1083,8 @@ object SparkDataAlgebra {
       F.delay(Dataset.empty[B])
 
     /**
-     * Compare schemas for compatibility
-     */
+   * Compare schemas for compatibility
+   */
     override def compareSchemas(
       source: DataSchema,
       target: DataSchema
@@ -987,8 +1098,8 @@ object SparkDataAlgebra {
       )
 
     /**
-     * Validate schema compliance
-     */
+   * Validate schema compliance
+   */
     override def validateSchema[A](
       dataset: Dataset[A],
       schema: DataSchema
@@ -996,8 +1107,8 @@ object SparkDataAlgebra {
       F.delay(Validated.valid(dataset))
 
     /**
-     * Write dataset to sink
-     */
+   * Write dataset to sink
+   */
     override def write[A: ClassTag: algebra.DataEncoder](
       dataset: Dataset[A],
       sink: DataSink
@@ -1081,8 +1192,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Write with options (partitioning, compression, etc.)
-     */
+   * Write with options (partitioning, compression, etc.)
+   */
     override def writeWithOptions[A: ClassTag : algebra.DataEncoder](
       dataset: Dataset[A],
       sink: DataSink,
@@ -1091,8 +1202,8 @@ object SparkDataAlgebra {
       write(dataset, sink) // Delegate to main write method
 
     /**
-     * Stream write for large datasets
-     */
+   * Stream write for large datasets
+   */
     override def writeStream[A: algebra.DataEncoder](
       stream: DataStream[F, A],
       sink: DataSink
@@ -1100,8 +1211,8 @@ object SparkDataAlgebra {
       F.raiseError(new NotImplementedError("Spark streaming write not implemented in this version"))
 
     /**
-     * Batch write with configurable size
-     */
+   * Batch write with configurable size
+   */
     override def writeBatch[A: ClassTag : algebra.DataEncoder](
       datasets: List[Dataset[A]],
       sink: DataSink
@@ -1109,14 +1220,14 @@ object SparkDataAlgebra {
       datasets.traverse(write(_, sink))
 
     /**
-     * Extract metadata from dataset
-     */
+   * Extract metadata from dataset
+   */
     override def extractMetadata[A](dataset: Dataset[A]): F[DatasetMetadata] =
       F.delay(dataset.metadata)
 
     /**
-     * Track data lineage
-     */
+   * Track data lineage
+   */
     override def trackLineage[A](
       dataset: Dataset[A],
       operation: DataOperation,
@@ -1135,14 +1246,14 @@ object SparkDataAlgebra {
       )
 
     /**
-     * Query lineage information
-     */
+   * Query lineage information
+   */
     override def queryLineage(datasetId: String, query: LineageQuery): F[List[LineageRecord]] =
       F.delay(List.empty)
 
     /**
-     * Count records in dataset using Spark's distributed counting
-     */
+   * Count records in dataset using Spark's distributed counting
+   */
     override def count[A: ClassTag](dataset: Dataset[A]): F[Long] =
       F.delay {
         // Use Spark RDD count for distributed counting
@@ -1152,8 +1263,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Check if dataset is empty using Spark's distributed check
-     */
+   * Check if dataset is empty using Spark's distributed check
+   */
     override def isEmpty[A: ClassTag](dataset: Dataset[A]): F[Boolean] =
       F.delay {
         // Use Spark RDD isEmpty for efficient distributed check
@@ -1163,14 +1274,14 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Take first N records
-     */
+   * Take first N records
+   */
     override def take[A](dataset: Dataset[A], n: Int): F[Dataset[A]] =
       F.delay(dataset.copy(data = dataset.data.take(n)))
 
     /**
-     * Sample dataset
-     */
+   * Sample dataset
+   */
     override def sample[A: ClassTag](dataset: Dataset[A], fraction: Double): F[Dataset[A]] =
       F.delay {
         val rdd = sparkSession.sparkContext.parallelize(dataset.data)
@@ -1186,8 +1297,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Cache dataset in memory/disk
-     */
+   * Cache dataset in memory/disk
+   */
     override def cache[A: ClassTag](dataset: Dataset[A], strategy: CacheStrategy): F[Dataset[A]] =
       F.delay {
         // Use Spark's caching capabilities
@@ -1207,8 +1318,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Partition dataset
-     */
+   * Partition dataset
+   */
     override def partition[A: ClassTag](
       dataset: Dataset[A],
       partitioner: Partitioner[A]
@@ -1232,8 +1343,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Perform CDC between source and target datasets using Spark
-     */
+   * Perform CDC between source and target datasets using Spark
+   */
     override def performDelta[A: ClassTag: algebra.DataDecoder: algebra.DataEncoder](
       source: Dataset[A],
       target: Dataset[A],
@@ -1266,8 +1377,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Perform incremental CDC with watermark tracking using Spark streaming
-     */
+   * Perform incremental CDC with watermark tracking using Spark streaming
+   */
     override def performIncrementalDelta[A: ClassTag: algebra.DataDecoder: algebra.DataEncoder](
       source: Dataset[A],
       target: Dataset[A],
@@ -1297,8 +1408,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Compute change hash for record comparison using Spark's hashing
-     */
+   * Compute change hash for record comparison using Spark's hashing
+   */
     override def computeChangeHash[A](record: A, hashColumns: NonEmptyList[FieldName]): F[String] =
       F.delay {
         // Use Spark's hash functions for distributed hashing
@@ -1308,8 +1419,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Repair and refresh table metadata using Spark Catalog API
-     */
+   * Repair and refresh table metadata using Spark Catalog API
+   */
     override def repairRefreshTable(
       table: TableOperations.TableName
     ): F[TableOperations.TableOperationResult] =
@@ -1340,8 +1451,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Get table location using Spark Catalog API
-     */
+   * Get table location using Spark Catalog API
+   */
     override def getTableLocation(
       table: TableOperations.TableName
     ): F[ValidatedNel[FlowForgeError, String]] =
@@ -1364,8 +1475,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Get affected partitions using Spark Catalog API
-     */
+   * Get affected partitions using Spark Catalog API
+   */
     override def getAffectedPartitions(
       table: TableOperations.TableName,
       startTime: Instant,
@@ -1389,8 +1500,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Safe deletion of table location with Spark file operations
-     */
+   * Safe deletion of table location with Spark file operations
+   */
     override def deleteDfsLocation(
       location: String,
       dryRun: Boolean
@@ -1439,8 +1550,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Analyze table using Spark SQL ANALYZE TABLE command
-     */
+   * Analyze table using Spark SQL ANALYZE TABLE command
+   */
     override def analyzeTable(
       table: TableOperations.TableName,
       partitions: Option[NonEmptyList[TableOperations.PartitionSpec]]
@@ -1472,8 +1583,8 @@ object SparkDataAlgebra {
       }
 
     /**
-     * Vacuum table using Spark's VACUUM command (for Delta Lake compatibility)
-     */
+   * Vacuum table using Spark's VACUUM command (for Delta Lake compatibility)
+   */
     override def vacuumTable(
       table: TableOperations.TableName,
       retentionHours: Int,

@@ -224,18 +224,20 @@ object Dependencies {
     deps ++ providedLibs.map(_ % "provided")
 
   def forModule(moduleName: String): Seq[ModuleID] = moduleName match {
-    case "core"   => Core.all ++ Testing.unit
+    case "core" => Core.all ++ Testing.unit
     // Infrastructure Layer modules
     case "safety" => Core.functional ++ effectSystems ++ Testing.unit
-    case "config" => Core.functional ++ effectSystems ++ Testing.unit ++ Seq(
-      "com.typesafe" % "config" % "1.4.3",
-      "com.github.scopt" %% "scopt" % "4.1.0"
-    )
-    case "logging" => Core.functional ++ effectSystems ++ Testing.unit ++ Seq(
-      "com.typesafe.scala-logging" %% "scala-logging" % Versions.scalaLogging,
-      "ch.qos.logback" % "logback-classic" % Versions.logback,
-      "org.slf4j" % "slf4j-api" % "2.0.9"
-    )
+    case "config" =>
+      Core.functional ++ effectSystems ++ Testing.unit ++ Seq(
+        "com.typesafe"      % "config" % "1.4.3",
+        "com.github.scopt" %% "scopt"  % "4.1.0"
+      )
+    case "logging" =>
+      Core.functional ++ effectSystems ++ Testing.unit ++ Seq(
+        "com.typesafe.scala-logging" %% "scala-logging"   % Versions.scalaLogging,
+        "ch.qos.logback"              % "logback-classic" % Versions.logback,
+        "org.slf4j"                   % "slf4j-api"       % "2.0.9"
+      )
     case "infrastructure" => Core.all ++ effectSystems ++ Testing.integration ++ Monitoring.all
     case "contracts" =>
       Core.all ++ Testing.unit ++ Seq(

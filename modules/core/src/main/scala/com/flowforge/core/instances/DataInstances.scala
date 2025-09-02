@@ -1,10 +1,10 @@
 package com.flowforge.core.instances
 
-import cats.data.{Kleisli, NonEmptyList, Validated, ValidatedNel}
+import cats.data.{ Kleisli, NonEmptyList, Validated, ValidatedNel }
 import cats.implicits._
-import cats.{Applicative, Functor, Monad, Show}
+import cats.{ Applicative, Functor, Monad, Show }
 import com.flowforge.core.algebra
-import com.flowforge.core.algebra.{CDCOperations, DataAlgebra, EffectSystem, TableOperations}
+import com.flowforge.core.algebra.{ CDCOperations, DataAlgebra, EffectSystem, TableOperations }
 import com.flowforge.core.algebra.DataAlgebra._
 import com.flowforge.core.patterns.ReaderPattern.ResourceConfig
 import com.flowforge.core.syntax.ValidationSyntax._
@@ -383,7 +383,12 @@ object DataInstances {
        * Perform CDC between source and target datasets. Enhanced version of reference
        * ETL.performDelta with type safety.
        */
-      override def performDelta[A: ClassTag](source: Dataset[A], target: Dataset[A], primaryKeys: NonEmptyList[FieldName], config: CDCConfig)(implicit dec: algebra.DataDecoder[A], enc: algebra.DataEncoder[A]): F[CDCResult[A]] =
+      override def performDelta[A: ClassTag](
+        source: Dataset[A],
+        target: Dataset[A],
+        primaryKeys: NonEmptyList[FieldName],
+        config: CDCConfig
+      )(implicit dec: algebra.DataDecoder[A], enc: algebra.DataEncoder[A]): F[CDCResult[A]] =
         F.delay(
           CDCResult[A](
             processedRecords = 0L,
@@ -394,7 +399,6 @@ object DataInstances {
             processingTime = 0.seconds
           )
         )
-
 
       /**
        * Compute change hash for record comparison.
@@ -501,18 +505,23 @@ object DataInstances {
       /**
        * Perform incremental CDC with watermark tracking.
        */
-      override def performIncrementalDelta[A: ClassTag](source: Dataset[A], target: Dataset[A], watermark: Option[Instant], primaryKeys: NonEmptyList[FieldName], config: CDCConfig)(implicit dec: algebra.DataDecoder[A], enc: algebra.DataEncoder[A]): F[CDCResult[A]] = {
+      override def performIncrementalDelta[A: ClassTag](
+        source: Dataset[A],
+        target: Dataset[A],
+        watermark: Option[Instant],
+        primaryKeys: NonEmptyList[FieldName],
+        config: CDCConfig
+      )(implicit dec: algebra.DataDecoder[A], enc: algebra.DataEncoder[A]): F[CDCResult[A]] =
         F.delay(
-            CDCResult[A](
-              processedRecords = 0L,
-              insertCount = 0L,
-              updateCount = 0L,
-              deleteCount = 0L,
-              noChangeCount = 0L,
-              processingTime = 0.seconds
-            )
+          CDCResult[A](
+            processedRecords = 0L,
+            insertCount = 0L,
+            updateCount = 0L,
+            deleteCount = 0L,
+            noChangeCount = 0L,
+            processingTime = 0.seconds
+          )
         )
-      }
     }
 
   // ===============================

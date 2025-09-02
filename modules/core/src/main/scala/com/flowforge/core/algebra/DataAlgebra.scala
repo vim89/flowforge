@@ -1,7 +1,7 @@
 package com.flowforge.core.algebra
 
-import cats.data.{Kleisli, NonEmptyList, ValidatedNel}
-import cats.{Functor, Monad}
+import cats.data.{ Kleisli, NonEmptyList, ValidatedNel }
+import cats.{ Functor, Monad }
 import com.flowforge.core.types._
 import com.flowforge.core.types.PipelineTypes._
 import com.flowforge.core.types.RefinedTypes.FieldName
@@ -15,12 +15,12 @@ import scala.reflect.ClassTag
  * 🚀 **FlowForge Data Algebra - Effect System Research Applied**
  *
  * CRITICAL ARCHITECTURAL CHANGE: This implementation applies the Effect System research findings.
- * 
+ *
  * **Effect Usage Separation (Non-negotiable):**
- * 1. **Pure Data Transformations**: Return Dataset[A] directly, no F[_] wrapper
- * 2. **External IO Operations**: Use F[_] with proper resource management
- * 3. **Pipeline Orchestration**: Use F[_] for composing heterogeneous systems
- * 4. **Configuration/Metadata**: Use F[_] for schema registry, config loading, audit logging
+ *   1. **Pure Data Transformations**: Return Dataset[A] directly, no F[_] wrapper 2. **External IO
+ *      Operations**: Use F[_] with proper resource management 3. **Pipeline Orchestration**: Use
+ *      F[_] for composing heterogeneous systems 4. **Configuration/Metadata**: Use F[_] for schema
+ *      registry, config loading, audit logging
  *
  * **Key Design Principles:**
  *   - **Effect Polymorphism**: F[_] only where external effects are needed
@@ -30,11 +30,12 @@ import scala.reflect.ClassTag
  *   - **Error Handling**: ValidatedNel for multi-error scenarios
  *   - **Spark Compliance**: Pure Spark operations are direct Dataset operations
  *
- * @author FlowForge Core Team
+ * @author
+ *   FlowForge Core Team
  * @since 0.1.0
  */
 trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
-  
+
   // Import companion object types
   import DataAlgebra._
 
@@ -43,14 +44,14 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   // ===============================
 
   /**
-   * Read data from external source with resource management.
-   * Uses F[_] because it involves external IO (JDBC, file system, network).
+   * Read data from external source with resource management. Uses F[_] because it involves external
+   * IO (JDBC, file system, network).
    */
   def read[A: DataDecoder](source: DataSource): F[Dataset[A]]
 
   /**
-   * Read data with schema validation from external source.
-   * Uses F[_] for IO and ValidatedNel for multi-error validation.
+   * Read data with schema validation from external source. Uses F[_] for IO and ValidatedNel for
+   * multi-error validation.
    */
   def readWithSchema[A: DataDecoder](
     source: DataSource,
@@ -58,14 +59,14 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   ): F[ValidatedNel[FlowForgeError, Dataset[A]]]
 
   /**
-   * Stream data for large external datasets.
-   * Uses F[_] because streaming involves external resource management.
+   * Stream data for large external datasets. Uses F[_] because streaming involves external resource
+   * management.
    */
   def stream[A: DataDecoder](source: DataSource): F[DataStream[F, A]]
 
   /**
-   * Write data to external sink with resource management.
-   * Uses F[_] because it involves external IO and resource cleanup.
+   * Write data to external sink with resource management. Uses F[_] because it involves external IO
+   * and resource cleanup.
    */
   def write[A: DataEncoder](
     dataset: Dataset[A],
@@ -74,8 +75,7 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   ): F[WriteResult]
 
   /**
-   * Write data with validation to external sink.
-   * Uses F[_] for IO operations and validation.
+   * Write data with validation to external sink. Uses F[_] for IO operations and validation.
    */
   def writeWithValidation[A: DataEncoder](
     dataset: Dataset[A],
@@ -89,26 +89,26 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   // ===============================
 
   /**
-   * Filter data based on predicate.
-   * PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
+   * Filter data based on predicate. PURE OPERATION: No F[_] wrapper - direct Dataset
+   * transformation.
    */
   def filter[A](dataset: Dataset[A], predicate: A => Boolean): Dataset[A]
 
   /**
-   * Map over dataset with pure function.
-   * PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
+   * Map over dataset with pure function. PURE OPERATION: No F[_] wrapper - direct Dataset
+   * transformation.
    */
   def map[A, B: DataEncoder](dataset: Dataset[A], f: A => B): Dataset[B]
 
   /**
-   * FlatMap over dataset for pure nested operations.
-   * PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
+   * FlatMap over dataset for pure nested operations. PURE OPERATION: No F[_] wrapper - direct
+   * Dataset transformation.
    */
   def flatMap[A, B: DataEncoder](dataset: Dataset[A], f: A => Dataset[B]): Dataset[B]
 
   /**
-   * Group by key with pure aggregation.
-   * PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
+   * Group by key with pure aggregation. PURE OPERATION: No F[_] wrapper - direct Dataset
+   * transformation.
    */
   def groupBy[A, K, V: DataEncoder](
     dataset: Dataset[A],
@@ -117,8 +117,8 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   ): Dataset[(K, V)]
 
   /**
-   * Join two datasets with pure combination function.
-   * PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
+   * Join two datasets with pure combination function. PURE OPERATION: No F[_] wrapper - direct
+   * Dataset transformation.
    */
   def join[A, B, K, C: DataEncoder](
     left: Dataset[A],
@@ -129,26 +129,22 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   ): Dataset[C]
 
   /**
-   * Union two datasets.
-   * PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
+   * Union two datasets. PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
    */
   def union[A](left: Dataset[A], right: Dataset[A]): Dataset[A]
 
   /**
-   * Sort dataset by key.
-   * PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
+   * Sort dataset by key. PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
    */
   def sortBy[A, K: Ordering](dataset: Dataset[A], keyExtractor: A => K): Dataset[A]
 
   /**
-   * Take first N elements.
-   * PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
+   * Take first N elements. PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
    */
   def take[A](dataset: Dataset[A], n: Int): Dataset[A]
 
   /**
-   * Drop first N elements.
-   * PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
+   * Drop first N elements. PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
    */
   def drop[A](dataset: Dataset[A], n: Int): Dataset[A]
 
@@ -157,8 +153,8 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   // ===============================
 
   /**
-   * Transform with effectful function (e.g., external API calls).
-   * Uses F[_] because transformation involves external effects.
+   * Transform with effectful function (e.g., external API calls). Uses F[_] because transformation
+   * involves external effects.
    */
   def transformWithEffect[A, B: DataEncoder](
     dataset: Dataset[A],
@@ -166,8 +162,8 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   ): F[Dataset[B]]
 
   /**
-   * Apply multiple effectful transformations in sequence.
-   * Uses F[_] because transformations involve external effects.
+   * Apply multiple effectful transformations in sequence. Uses F[_] because transformations involve
+   * external effects.
    */
   def transformPipeline[A, B: DataEncoder](
     dataset: Dataset[A],
@@ -179,14 +175,14 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   // ===============================
 
   /**
-   * Extract schema from dataset with metadata service calls.
-   * Uses F[_] because it may involve external schema registry.
+   * Extract schema from dataset with metadata service calls. Uses F[_] because it may involve
+   * external schema registry.
    */
   def extractSchema[A](dataset: Dataset[A]): F[DataSchema]
 
   /**
-   * Evolve schema with migrations from external registry.
-   * Uses F[_] because it involves external schema service.
+   * Evolve schema with migrations from external registry. Uses F[_] because it involves external
+   * schema service.
    */
   def evolveSchema[A, B: DataEncoder](
     dataset: Dataset[A],
@@ -194,8 +190,8 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   ): F[Dataset[B]]
 
   /**
-   * Compare schemas using external compatibility service.
-   * Uses F[_] because it may involve external schema service.
+   * Compare schemas using external compatibility service. Uses F[_] because it may involve external
+   * schema service.
    */
   def compareSchemas(
     schema1: DataSchema,
@@ -207,8 +203,8 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   // ===============================
 
   /**
-   * Record lineage information to external tracking system.
-   * Uses F[_] because it involves external audit/lineage service.
+   * Record lineage information to external tracking system. Uses F[_] because it involves external
+   * audit/lineage service.
    */
   def recordLineage[A](
     dataset: Dataset[A],
@@ -217,8 +213,8 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   ): F[LineageRecord]
 
   /**
-   * Query lineage from external tracking system.
-   * Uses F[_] because it involves external lineage service.
+   * Query lineage from external tracking system. Uses F[_] because it involves external lineage
+   * service.
    */
   def queryLineage(query: LineageQuery): F[List[LineageRecord]]
 
@@ -227,14 +223,14 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   // ===============================
 
   /**
-   * Validate dataset against external data contract service.
-   * Uses F[_] because it may involve external validation service.
+   * Validate dataset against external data contract service. Uses F[_] because it may involve
+   * external validation service.
    */
   def validate[A](dataset: Dataset[A], contract: DataContract[A]): F[QualityResult[Dataset[A]]]
 
   /**
-   * Run quality checks that may involve external services.
-   * Uses F[_] because checks may involve external quality services.
+   * Run quality checks that may involve external services. Uses F[_] because checks may involve
+   * external quality services.
    */
   def runQualityChecks[A](
     dataset: Dataset[A],
@@ -242,8 +238,8 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   ): F[List[QualityCheckResult]]
 
   /**
-   * Profile dataset with external profiling service.
-   * Uses F[_] because profiling may involve external analytics service.
+   * Profile dataset with external profiling service. Uses F[_] because profiling may involve
+   * external analytics service.
    */
   def profile[A](dataset: Dataset[A]): F[DataProfile[A]]
 
@@ -252,26 +248,23 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   // ===============================
 
   /**
-   * Count records in dataset.
-   * PURE OPERATION: No F[_] wrapper - direct Dataset operation.
+   * Count records in dataset. PURE OPERATION: No F[_] wrapper - direct Dataset operation.
    */
   def count[A](dataset: Dataset[A]): Long
 
   /**
-   * Check if dataset is empty.
-   * PURE OPERATION: No F[_] wrapper - direct Dataset operation.
+   * Check if dataset is empty. PURE OPERATION: No F[_] wrapper - direct Dataset operation.
    */
   def isEmpty[A](dataset: Dataset[A]): Boolean
 
   /**
-   * Cache dataset for reuse.
-   * Uses F[_] because caching involves resource management.
+   * Cache dataset for reuse. Uses F[_] because caching involves resource management.
    */
   def cache[A](dataset: Dataset[A], strategy: CacheStrategy): F[Dataset[A]]
 
   /**
-   * Partition dataset for parallel processing.
-   * PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
+   * Partition dataset for parallel processing. PURE OPERATION: No F[_] wrapper - direct Dataset
+   * transformation.
    */
   def partition[A](dataset: Dataset[A], partitioner: Partitioner[A]): List[Dataset[A]]
 }
@@ -328,10 +321,10 @@ object DataAlgebra {
    */
   sealed trait WriteMode
   object WriteMode {
-    case object Append extends WriteMode
-    case object Overwrite extends WriteMode
+    case object Append        extends WriteMode
+    case object Overwrite     extends WriteMode
     case object ErrorIfExists extends WriteMode
-    case object Ignore extends WriteMode
+    case object Ignore        extends WriteMode
   }
 
   /**
@@ -396,8 +389,8 @@ object DataAlgebra {
 
   sealed trait SchemaChange
   object SchemaChange {
-    case class FieldAdded(name: String) extends SchemaChange
-    case class FieldRemoved(name: String) extends SchemaChange
+    case class FieldAdded(name: String)                                         extends SchemaChange
+    case class FieldRemoved(name: String)                                       extends SchemaChange
     case class FieldTypeChanged(name: String, oldType: String, newType: String) extends SchemaChange
   }
 
@@ -440,8 +433,8 @@ object DataAlgebra {
    */
   sealed trait CacheStrategy
   object CacheStrategy {
-    case object Memory extends CacheStrategy
-    case object Disk extends CacheStrategy
+    case object Memory        extends CacheStrategy
+    case object Disk          extends CacheStrategy
     case object MemoryAndDisk extends CacheStrategy
   }
 
@@ -466,8 +459,8 @@ object DataAlgebra {
   sealed trait ViolationSeverity
   object ViolationSeverity {
     case object Critical extends ViolationSeverity
-    case object Warning extends ViolationSeverity
-    case object Info extends ViolationSeverity
+    case object Warning  extends ViolationSeverity
+    case object Info     extends ViolationSeverity
   }
 }
 
@@ -476,8 +469,8 @@ object DataAlgebra {
 // ===============================
 
 /**
- * Change Data Capture operations mixin for DataAlgebra.
- * Uses F[_] because CDC involves external systems and state management.
+ * Change Data Capture operations mixin for DataAlgebra. Uses F[_] because CDC involves external
+ * systems and state management.
  */
 trait CDCOperations[F[_]] {
   self: DataAlgebra[F] =>
@@ -485,8 +478,8 @@ trait CDCOperations[F[_]] {
   import CDCOperations._
 
   /**
-   * Perform delta/incremental processing between source and target.
-   * Uses F[_] because it involves external system comparison.
+   * Perform delta/incremental processing between source and target. Uses F[_] because it involves
+   * external system comparison.
    */
   def performDelta[A: DataContract](
     source: DataAlgebra.Dataset[A],
@@ -495,8 +488,8 @@ trait CDCOperations[F[_]] {
   ): F[CDCResult[A]]
 
   /**
-   * Compute CDC operations (insert, update, delete) for synchronization.
-   * Uses F[_] because it may involve external metadata services.
+   * Compute CDC operations (insert, update, delete) for synchronization. Uses F[_] because it may
+   * involve external metadata services.
    */
   def computeCDCOperations[A](
     source: DataAlgebra.Dataset[A],
@@ -505,8 +498,8 @@ trait CDCOperations[F[_]] {
   ): F[CDCOperations.CDCOperationSet[A]]
 
   /**
-   * Apply CDC operations to target system.
-   * Uses F[_] because it involves external system modification.
+   * Apply CDC operations to target system. Uses F[_] because it involves external system
+   * modification.
    */
   def applyCDCOperations[A](
     operations: CDCOperations.CDCOperationSet[A],
@@ -554,8 +547,8 @@ object CDCOperations {
 // ===============================
 
 /**
- * Table management operations mixin for DataAlgebra.
- * Uses F[_] because table operations involve external metadata systems.
+ * Table management operations mixin for DataAlgebra. Uses F[_] because table operations involve
+ * external metadata systems.
  */
 trait TableOperations[F[_]] {
   self: DataAlgebra[F] =>
@@ -563,20 +556,19 @@ trait TableOperations[F[_]] {
   import TableOperations._
 
   /**
-   * Repair and refresh table metadata.
-   * Uses F[_] because it involves external metadata system operations.
+   * Repair and refresh table metadata. Uses F[_] because it involves external metadata system
+   * operations.
    */
   def repairRefreshTable(table: TableName): F[TableOperationResult]
 
   /**
-   * Get table location with validation.
-   * Uses F[_] because it involves external metadata lookup.
+   * Get table location with validation. Uses F[_] because it involves external metadata lookup.
    */
   def getTableLocation(table: TableName): F[ValidatedNel[FlowForgeError, String]]
 
   /**
-   * Get affected partitions for time range.
-   * Uses F[_] because it involves external metadata queries.
+   * Get affected partitions for time range. Uses F[_] because it involves external metadata
+   * queries.
    */
   def getAffectedPartitions(
     table: TableName,
@@ -585,8 +577,8 @@ trait TableOperations[F[_]] {
   ): F[List[PartitionSpec]]
 
   /**
-   * Safe deletion of table location with external filesystem operations.
-   * Uses F[_] because it involves external filesystem operations.
+   * Safe deletion of table location with external filesystem operations. Uses F[_] because it
+   * involves external filesystem operations.
    */
   def deleteDfsLocation(
     location: String,
@@ -594,8 +586,8 @@ trait TableOperations[F[_]] {
   ): F[TableOperationResult]
 
   /**
-   * Analyze table and compute statistics.
-   * Uses F[_] because it involves external metadata system updates.
+   * Analyze table and compute statistics. Uses F[_] because it involves external metadata system
+   * updates.
    */
   def analyzeTable(
     table: TableName,
@@ -603,8 +595,8 @@ trait TableOperations[F[_]] {
   ): F[TableOperationResult]
 
   /**
-   * Vacuum table to optimize storage.
-   * Uses F[_] because it involves external storage system operations.
+   * Vacuum table to optimize storage. Uses F[_] because it involves external storage system
+   * operations.
    */
   def vacuumTable(
     table: TableName,
