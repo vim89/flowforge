@@ -79,6 +79,12 @@ def moduleProject(name: String): Project =
 // ===== ROOT PROJECT =====
 lazy val root = (project in file("."))
   .aggregate(
+    // Infrastructure Layer (NEW)
+    safety,
+    config,
+    logging,
+    infrastructure,
+    // Existing modules
     core,
     framework,
     contracts,
@@ -105,6 +111,35 @@ lazy val root = (project in file("."))
     name               := "flowforge",
     publish / skip     := true,
     crossScalaVersions := Nil
+  )
+
+// ===== INFRASTRUCTURE LAYER (NEW) =====
+lazy val safety = moduleProject("safety")
+  .dependsOn(core)
+  .settings(
+    description := "Resource safety and bracket patterns",
+    libraryDependencies ++= Dependencies.forModule("safety")
+  )
+
+lazy val config = moduleProject("config")
+  .dependsOn(core, safety)
+  .settings(
+    description := "Type-safe configuration management (CCM replacement)",
+    libraryDependencies ++= Dependencies.forModule("config")
+  )
+
+lazy val logging = moduleProject("logging")
+  .dependsOn(core, config)
+  .settings(
+    description := "Structured logging and observability framework",
+    libraryDependencies ++= Dependencies.forModule("logging")
+  )
+
+lazy val infrastructure = moduleProject("infrastructure")
+  .dependsOn(safety, config, logging)
+  .settings(
+    description := "Complete infrastructure layer with testing framework",
+    libraryDependencies ++= Dependencies.forModule("infrastructure")
   )
 
 // ===== CORE MODULES =====
