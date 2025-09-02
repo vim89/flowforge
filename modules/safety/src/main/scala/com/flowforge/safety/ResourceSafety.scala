@@ -1,7 +1,7 @@
 package com.flowforge.safety
 
 import cats.effect.kernel.MonadCancel
-import cats.effect.{Resource, Sync}
+import cats.effect.{ Resource, Sync }
 
 /**
  * Resource safety framework providing automatic resource management with bracket patterns. This is

@@ -35,28 +35,46 @@ object SparkDataAlgebra {
      * Read data from external source with resource management. Uses F[_] because it involves
      * external IO (JDBC, file system, network).
      */
-    override def read[A: DataDecoder](source: DataSource): F[DataAlgebra.Dataset[A]] = source match {
-      case LocalDataSource(path, format, _, schemaOpt, _) =>
-        F.blocking {
-          val bytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path))
-          val rows: List[A] = format match {
-            case DataFormat.JSONL =>
-              new String(bytes, "UTF-8").linesIterator.toList
-                .filter(_.trim.nonEmpty)
-                .flatMap { line => DataDecoder[A].decode(EncodedData(line.getBytes("UTF-8"), format), format).toOption }
-            case DataFormat.JSON =>
-              DataDecoder[A].decode(EncodedData(bytes, format), format).toOption.toList
-            case DataFormat.CSV =>
-              val lines = new String(bytes, "UTF-8").linesIterator.toList
-              val dataLines = if (lines.nonEmpty) lines.tail else lines
-              dataLines.flatMap { line => DataDecoder[A].decode(EncodedData(line.getBytes("UTF-8"), format), format).toOption }
-            case _ => throw new UnsupportedOperationException(s"Unsupported format: $format")
+    override def read[A: DataDecoder](source: DataSource): F[DataAlgebra.Dataset[A]] =
+      source match {
+        case LocalDataSource(path, format, _, schemaOpt, _) =>
+          F.blocking {
+            val bytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path))
+            val rows: List[A] = format match {
+              case DataFormat.JSONL =>
+                new String(bytes, "UTF-8").linesIterator.toList
+                  .filter(_.trim.nonEmpty)
+                  .flatMap { line =>
+                    DataDecoder[A]
+                      .decode(EncodedData(line.getBytes("UTF-8"), format), format)
+                      .toOption
+                  }
+              case DataFormat.JSON =>
+                DataDecoder[A].decode(EncodedData(bytes, format), format).toOption.toList
+              case DataFormat.CSV =>
+                val lines     = new String(bytes, "UTF-8").linesIterator.toList
+                val dataLines = if (lines.nonEmpty) lines.tail else lines
+                dataLines.flatMap { line =>
+                  DataDecoder[A]
+                    .decode(EncodedData(line.getBytes("UTF-8"), format), format)
+                    .toOption
+                }
+              case _ => throw new UnsupportedOperationException(s"Unsupported format: $format")
+            }
+            val schema = schemaOpt.getOrElse(DataEncoder[A].schema(format))
+            SimpleDataset(
+              rows,
+              schema,
+              DataAlgebra.DatasetMetadata(rows.size.toLong, schema, 1, Instant.now(), Some(source))
+            )
           }
-          val schema = schemaOpt.getOrElse(DataEncoder[A].schema(format))
-          SimpleDataset(rows, schema, DataAlgebra.DatasetMetadata(rows.size.toLong, schema, 1, Instant.now(), Some(source)))
-        }
-      case _ => F.raiseError(new UnsupportedOperationException(s"Unsupported DataSource: ${source.getClass.getSimpleName}"))
-    }
+        case _ =>
+          F.raiseError(
+            new UnsupportedOperationException(
+              s"Unsupported DataSource: ${source.getClass.getSimpleName}"
+            )
+          )
+      }
 
     /**
      * Read data with schema validation from external source. Uses F[_] for IO and ValidatedNel for
@@ -67,7 +85,8 @@ object SparkDataAlgebra {
       expectedSchema: DataSchema
     ): F[ValidatedNel[FlowForgeError, DataAlgebra.Dataset[A]]] =
       F.map(read[A](source)) { ds =>
-        if (ds.schema.fieldNames.toSet == expectedSchema.fieldNames.toSet) cats.data.Validated.valid(ds)
+        if (ds.schema.fieldNames.toSet == expectedSchema.fieldNames.toSet)
+          cats.data.Validated.valid(ds)
         else cats.data.Validated.invalidNel(SchemaIncompatible(expectedSchema, ds.schema))
       }
 
@@ -93,12 +112,24 @@ object SparkDataAlgebra {
           val bytes: Array[Byte] = format match {
             case DataFormat.JSONL =>
               dataset.data
-                .map(a => DataEncoder[A].encode(a, format).fold(e => throw new RuntimeException(e.message), _.data))
-                .map(b => new String(b, "UTF-8")).mkString("\n").getBytes("UTF-8")
+                .map(a =>
+                  DataEncoder[A]
+                    .encode(a, format)
+                    .fold(e => throw new RuntimeException(e.message), _.data)
+                )
+                .map(b => new String(b, "UTF-8"))
+                .mkString("\n")
+                .getBytes("UTF-8")
             case DataFormat.CSV =>
-              val header = dataset.schema.fieldNames match { case Nil => None; case xs => Some(xs.mkString(",")) }
+              val header = dataset.schema.fieldNames match {
+                case Nil => None; case xs => Some(xs.mkString(","))
+              }
               val body = dataset.data
-                .map(a => DataEncoder[A].encode(a, format).fold(e => throw new RuntimeException(e.message), _.data))
+                .map(a =>
+                  DataEncoder[A]
+                    .encode(a, format)
+                    .fold(e => throw new RuntimeException(e.message), _.data)
+                )
                 .map(b => new String(b, "UTF-8"))
               (header.toList ++ body).mkString("\n").getBytes("UTF-8")
             case _ => throw new UnsupportedOperationException(s"Unsupported write format: $format")
@@ -107,7 +138,10 @@ object SparkDataAlgebra {
           java.nio.file.Files.write(p, bytes)
           DataAlgebra.WriteResult(dataset.data.size.toLong, 1, bytes.length.toLong, success = true)
         }
-      case _ => F.raiseError(new UnsupportedOperationException(s"Unsupported DataSink: ${sink.getClass.getSimpleName}"))
+      case _ =>
+        F.raiseError(
+          new UnsupportedOperationException(s"Unsupported DataSink: ${sink.getClass.getSimpleName}")
+        )
     }
 
     /**
@@ -121,7 +155,10 @@ object SparkDataAlgebra {
     ): F[ValidatedNel[FlowForgeError, DataAlgebra.WriteResult]] =
       validate(dataset, contract).flatMap { qr =>
         if (qr.passed) write(dataset, sink, options).map(cats.data.Validated.valid)
-        else F.pure(cats.data.Validated.invalidNel(ContractViolation("Quality checks failed", Map.empty)))
+        else
+          F.pure(
+            cats.data.Validated.invalidNel(ContractViolation("Quality checks failed", Map.empty))
+          )
       }
 
     /**
@@ -131,7 +168,8 @@ object SparkDataAlgebra {
     override def filter[A](
       dataset: DataAlgebra.Dataset[A],
       predicate: A => Boolean
-    ): DataAlgebra.Dataset[A] = SimpleDataset(dataset.data.filter(predicate), dataset.schema, dataset.metadata)
+    ): DataAlgebra.Dataset[A] =
+      SimpleDataset(dataset.data.filter(predicate), dataset.schema, dataset.metadata)
 
     /**
      * Map over dataset with pure function. PURE OPERATION: No F[_] wrapper - direct Dataset
@@ -169,7 +207,8 @@ object SparkDataAlgebra {
       aggregator: List[A] => V
     ): DataAlgebra.Dataset[(K, V)] = {
       val grouped = dataset.data.groupBy(keyExtractor).view.mapValues(aggregator).toList
-      val sch = DataSchema.builder.addField("key", DataType.String).addField("value", DataType.String).build
+      val sch =
+        DataSchema.builder.addField("key", DataType.String).addField("value", DataType.String).build
       SimpleDataset(grouped, sch, dataset.metadata.copy(recordCount = grouped.size.toLong))
     }
 
@@ -185,7 +224,9 @@ object SparkDataAlgebra {
       combiner: (A, B) => C
     ): DataAlgebra.Dataset[C] = {
       val rIndex = right.data.groupBy(rightKey)
-      val out = left.data.flatMap { la => rIndex.getOrElse(leftKey(la), Nil).map(rb => combiner(la, rb)) }
+      val out = left.data.flatMap { la =>
+        rIndex.getOrElse(leftKey(la), Nil).map(rb => combiner(la, rb))
+      }
       val sch = DataEncoder[C].schema(DataFormat.JSON)
       SimpleDataset(out, sch, left.metadata.copy(recordCount = out.size.toLong))
     }
@@ -196,7 +237,11 @@ object SparkDataAlgebra {
     override def union[A](
       left: DataAlgebra.Dataset[A],
       right: DataAlgebra.Dataset[A]
-    ): DataAlgebra.Dataset[A] = SimpleDataset(left.data ++ right.data, left.schema, left.metadata.copy(recordCount = (left.data.size + right.data.size).toLong))
+    ): DataAlgebra.Dataset[A] = SimpleDataset(
+      left.data ++ right.data,
+      left.schema,
+      left.metadata.copy(recordCount = (left.data.size + right.data.size).toLong)
+    )
 
     /**
      * Sort dataset by key. PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
@@ -204,17 +249,28 @@ object SparkDataAlgebra {
     override def sortBy[A, K: Ordering](
       dataset: DataAlgebra.Dataset[A],
       keyExtractor: A => K
-    ): DataAlgebra.Dataset[A] = SimpleDataset(dataset.data.sortBy(keyExtractor), dataset.schema, dataset.metadata)
+    ): DataAlgebra.Dataset[A] =
+      SimpleDataset(dataset.data.sortBy(keyExtractor), dataset.schema, dataset.metadata)
 
     /**
      * Take first N elements. PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
      */
-    override def take[A](dataset: DataAlgebra.Dataset[A], n: Int): DataAlgebra.Dataset[A] = SimpleDataset(dataset.data.take(n), dataset.schema, dataset.metadata.copy(recordCount = math.min(dataset.data.size, n).toLong))
+    override def take[A](dataset: DataAlgebra.Dataset[A], n: Int): DataAlgebra.Dataset[A] =
+      SimpleDataset(
+        dataset.data.take(n),
+        dataset.schema,
+        dataset.metadata.copy(recordCount = math.min(dataset.data.size, n).toLong)
+      )
 
     /**
      * Drop first N elements. PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
      */
-    override def drop[A](dataset: DataAlgebra.Dataset[A], n: Int): DataAlgebra.Dataset[A] = SimpleDataset(dataset.data.drop(n), dataset.schema, dataset.metadata.copy(recordCount = math.max(0, dataset.data.size - n).toLong))
+    override def drop[A](dataset: DataAlgebra.Dataset[A], n: Int): DataAlgebra.Dataset[A] =
+      SimpleDataset(
+        dataset.data.drop(n),
+        dataset.schema,
+        dataset.metadata.copy(recordCount = math.max(0, dataset.data.size - n).toLong)
+      )
 
     /**
      * Transform with effectful function (e.g., external API calls). Uses F[_] because
@@ -236,7 +292,9 @@ object SparkDataAlgebra {
       dataset: DataAlgebra.Dataset[A],
       transformations: NonEmptyList[A => F[B]]
     ): F[DataAlgebra.Dataset[B]] = {
-      val composed = transformations.reduceLeft { (f, g) => a => F.flatMap(f(a))(b => g(a).map(_ => b)) }
+      val composed = transformations.reduceLeft { (f, g) => a =>
+        F.flatMap(f(a))(b => g(a).map(_ => b))
+      }
       transformWithEffect(dataset, composed)
     }
 
@@ -244,7 +302,8 @@ object SparkDataAlgebra {
      * Extract schema from dataset with metadata service calls. Uses F[_] because it may involve
      * external schema registry.
      */
-    override def extractSchema[A](dataset: DataAlgebra.Dataset[A]): F[DataSchema] = F.pure(dataset.schema)
+    override def extractSchema[A](dataset: DataAlgebra.Dataset[A]): F[DataSchema] =
+      F.pure(dataset.schema)
 
     /**
      * Evolve schema with migrations from external registry. Uses F[_] because it involves external
@@ -253,7 +312,8 @@ object SparkDataAlgebra {
     override def evolveSchema[A, B: DataEncoder](
       dataset: DataAlgebra.Dataset[A],
       migration: DataAlgebra.SchemaMigration[A, B]
-    ): F[DataAlgebra.Dataset[B]] = F.raiseError(new NotImplementedError("Schema migration not implemented"))
+    ): F[DataAlgebra.Dataset[B]] =
+      F.raiseError(new NotImplementedError("Schema migration not implemented"))
 
     /**
      * Compare schemas using external compatibility service. Uses F[_] because it may involve
@@ -262,7 +322,13 @@ object SparkDataAlgebra {
     override def compareSchemas(
       schema1: DataSchema,
       schema2: DataSchema
-    ): F[DataAlgebra.SchemaCompatibilityReport] = F.pure(DataAlgebra.SchemaCompatibilityReport(schema1.fieldNames.toSet == schema2.fieldNames.toSet, Nil, Nil))
+    ): F[DataAlgebra.SchemaCompatibilityReport] = F.pure(
+      DataAlgebra.SchemaCompatibilityReport(
+        schema1.fieldNames.toSet == schema2.fieldNames.toSet,
+        Nil,
+        Nil
+      )
+    )
 
     /**
      * Record lineage information to external tracking system. Uses F[_] because it involves
@@ -272,13 +338,24 @@ object SparkDataAlgebra {
       dataset: DataAlgebra.Dataset[A],
       operation: String,
       context: DataAlgebra.LineageContext
-    ): F[DataAlgebra.LineageRecord] = F.pure(DataAlgebra.LineageRecord(UUID.randomUUID().toString, dataset.metadata.source.getOrElse(LocalDataSource("unknown", DataFormat.JSON)), None, operation, context, List(dataset.schema), Some(dataset.schema)))
+    ): F[DataAlgebra.LineageRecord] = F.pure(
+      DataAlgebra.LineageRecord(
+        UUID.randomUUID().toString,
+        dataset.metadata.source.getOrElse(LocalDataSource("unknown", DataFormat.JSON)),
+        None,
+        operation,
+        context,
+        List(dataset.schema),
+        Some(dataset.schema)
+      )
+    )
 
     /**
      * Query lineage from external tracking system. Uses F[_] because it involves external lineage
      * service.
      */
-    override def queryLineage(query: DataAlgebra.LineageQuery): F[List[DataAlgebra.LineageRecord]] = F.pure(Nil)
+    override def queryLineage(query: DataAlgebra.LineageQuery): F[List[DataAlgebra.LineageRecord]] =
+      F.pure(Nil)
 
     /**
      * Validate dataset against external data contract service. Uses F[_] because it may involve
@@ -287,7 +364,8 @@ object SparkDataAlgebra {
     override def validate[A](
       dataset: DataAlgebra.Dataset[A],
       contract: DataContract[A]
-    ): F[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]] = F.pure(DataAlgebra.QualityResult(dataset, passed = true, violations = Nil, score = 1.0))
+    ): F[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]] =
+      F.pure(DataAlgebra.QualityResult(dataset, passed = true, violations = Nil, score = 1.0))
 
     /**
      * Run quality checks that may involve external services. Uses F[_] because checks may involve
@@ -307,7 +385,15 @@ object SparkDataAlgebra {
      * external analytics service.
      */
     override def profile[A](dataset: DataAlgebra.Dataset[A]): F[DataAlgebra.DataProfile[A]] =
-      F.pure(DataAlgebra.DataProfile(dataset.data.size.toLong, 0L, dataset.data.distinct.size.toLong, dataset.schema, Map.empty))
+      F.pure(
+        DataAlgebra.DataProfile(
+          dataset.data.size.toLong,
+          0L,
+          dataset.data.distinct.size.toLong,
+          dataset.schema,
+          Map.empty
+        )
+      )
 
     /**
      * Count records in dataset. PURE OPERATION: No F[_] wrapper - direct Dataset operation.
@@ -334,7 +420,10 @@ object SparkDataAlgebra {
     override def partition[A](
       dataset: DataAlgebra.Dataset[A],
       partitioner: DataAlgebra.Partitioner[A]
-    ): List[DataAlgebra.Dataset[A]] = dataset.data.groupBy(partitioner.partition).toList.map { case (_, chunk) => SimpleDataset(chunk, dataset.schema, dataset.metadata.copy(recordCount = chunk.size.toLong)) }
+    ): List[DataAlgebra.Dataset[A]] =
+      dataset.data.groupBy(partitioner.partition).toList.map { case (_, chunk) =>
+        SimpleDataset(chunk, dataset.schema, dataset.metadata.copy(recordCount = chunk.size.toLong))
+      }
 
     /**
      * Perform delta/incremental processing between source and target. Uses F[_] because it involves
@@ -354,7 +443,8 @@ object SparkDataAlgebra {
       source: DataAlgebra.Dataset[A],
       target: DataAlgebra.Dataset[A],
       keyColumns: NonEmptyList[FieldName]
-    ): F[CDCOperations.CDCOperationSet[A]] = F.raiseError(new NotImplementedError("CDC not implemented"))
+    ): F[CDCOperations.CDCOperationSet[A]] =
+      F.raiseError(new NotImplementedError("CDC not implemented"))
 
     /**
      * Apply CDC operations to target system. Uses F[_] because it involves external system
@@ -371,14 +461,16 @@ object SparkDataAlgebra {
      */
     override def repairRefreshTable(
       table: TableOperations.TableName
-    ): F[TableOperations.TableOperationResult] = F.raiseError(new NotImplementedError("Table ops not implemented"))
+    ): F[TableOperations.TableOperationResult] =
+      F.raiseError(new NotImplementedError("Table ops not implemented"))
 
     /**
      * Get table location with validation. Uses F[_] because it involves external metadata lookup.
      */
     override def getTableLocation(
       table: TableOperations.TableName
-    ): F[ValidatedNel[FlowForgeError, String]] = F.raiseError(new NotImplementedError("Table ops not implemented"))
+    ): F[ValidatedNel[FlowForgeError, String]] =
+      F.raiseError(new NotImplementedError("Table ops not implemented"))
 
     /**
      * Get affected partitions for time range. Uses F[_] because it involves external metadata
@@ -388,7 +480,8 @@ object SparkDataAlgebra {
       table: TableOperations.TableName,
       startTime: Instant,
       endTime: Instant
-    ): F[List[TableOperations.PartitionSpec]] = F.raiseError(new NotImplementedError("Table ops not implemented"))
+    ): F[List[TableOperations.PartitionSpec]] =
+      F.raiseError(new NotImplementedError("Table ops not implemented"))
 
     /**
      * Safe deletion of table location with external filesystem operations. Uses F[_] because it
@@ -397,7 +490,8 @@ object SparkDataAlgebra {
     override def deleteDfsLocation(
       location: String,
       dryRun: Boolean
-    ): F[TableOperations.TableOperationResult] = F.raiseError(new NotImplementedError("Table ops not implemented"))
+    ): F[TableOperations.TableOperationResult] =
+      F.raiseError(new NotImplementedError("Table ops not implemented"))
 
     /**
      * Analyze table and compute statistics. Uses F[_] because it involves external metadata system
@@ -406,7 +500,8 @@ object SparkDataAlgebra {
     override def analyzeTable(
       table: TableOperations.TableName,
       partitions: Option[NonEmptyList[TableOperations.PartitionSpec]]
-    ): F[TableOperations.TableOperationResult] = F.raiseError(new NotImplementedError("Table ops not implemented"))
+    ): F[TableOperations.TableOperationResult] =
+      F.raiseError(new NotImplementedError("Table ops not implemented"))
 
     /**
      * Vacuum table to optimize storage. Uses F[_] because it involves external storage system
@@ -416,7 +511,8 @@ object SparkDataAlgebra {
       table: TableOperations.TableName,
       retentionHours: Int,
       dryRun: Boolean
-    ): F[TableOperations.TableOperationResult] = F.raiseError(new NotImplementedError("Table ops not implemented"))
+    ): F[TableOperations.TableOperationResult] =
+      F.raiseError(new NotImplementedError("Table ops not implemented"))
   }
 
   /*{ COMMENTED: Use only as reference
