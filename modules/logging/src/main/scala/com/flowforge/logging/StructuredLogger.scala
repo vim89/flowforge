@@ -3,8 +3,10 @@ package com.flowforge.logging
 import cats.effect.Sync
 import cats.syntax.all._
 import com.typesafe.scalalogging.Logger
-import org.slf4j.{ LoggerFactory, MDC }
+import org.slf4j.{LoggerFactory, MDC}
+
 import scala.collection.mutable
+import scala.jdk.CollectionConverters.MapHasAsScala
 
 /**
  * Structured logging framework for FlowForge Infrastructure Layer. Provides type-safe, contextual
@@ -154,20 +156,6 @@ object StructuredLogger {
         }
       }
 
-    override def withContext[A](context: Map[String, String])(operation: F[A]): F[A] =
-      Sync[F].delay {
-        val originalMDC = getCurrentMDC
-        context.foreach { case (k, v) => MDC.put(k, v) }
-        originalMDC
-      }.bracket { _ =>
-        operation
-      } { originalMDC =>
-        Sync[F].delay {
-          MDC.clear()
-          originalMDC.foreach { case (k, v) => MDC.put(k, v) }
-        }
-      }
-
     override def logOperation[A](operationName: String, context: Map[String, String] = Map.empty)(
       operation: F[A]
     ): F[A] = {
@@ -228,6 +216,12 @@ object StructuredLogger {
         case Some(mdcMap) => mdcMap.asScala.toMap
         case None         => Map.empty
       }
+
+    /**
+     * Execute operation with additional logging context. Context is automatically added to all log
+     * messages within the operation.
+     */
+    override def withContext[A](context: Map[String, String])(operation: F[A]): F[A] = ???
   }
 }
 

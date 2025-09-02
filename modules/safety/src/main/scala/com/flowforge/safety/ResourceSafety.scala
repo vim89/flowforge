@@ -17,18 +17,6 @@ trait ResourceSafety[F[_]] {
   def bracket[A, B](acquire: F[A])(use: A => F[B])(release: A => F[Unit]): F[B]
 
   /**
-   * Advanced bracket with exit case handling. Provides information about how the use operation
-   * completed.
-   */
-  def bracketCase[A, B](
-    acquire: F[A]
-  )(
-    use: A => F[B]
-  )(
-    release: (A, ExitCase[Throwable]) => F[Unit]
-  ): F[B]
-
-  /**
    * Convert acquire/release pair into a Resource for composition.
    */
   def resource[A](acquire: F[A])(release: A => F[Unit]): Resource[F, A]
@@ -54,57 +42,6 @@ object ResourceSafety {
    */
   def apply[F[_]: ResourceSafety]: ResourceSafety[F] = implicitly[ResourceSafety[F]]
 
-  /**
-   * Default implementation using Cats Effect's resource management.
-   */
-  implicit def forCatsEffect[F[_]: Sync: MonadCancel[*[_], Throwable]]: ResourceSafety[F] =
-    new CatsEffectResourceSafety[F]
-
-  /**
-   * Concrete implementation using Cats Effect primitives.
-   */
-  private class CatsEffectResourceSafety[F[_]: Sync: MonadCancel[*[_], Throwable]]
-      extends ResourceSafety[F] {
-
-    override def bracket[A, B](
-      acquire: F[A]
-    )(
-      use: A => F[B]
-    )(
-      release: A => F[Unit]
-    ): F[B] = {
-      val F = MonadCancel[F, Throwable]
-      F.bracket(acquire)(use)(release)
-    }
-
-    override def bracketCase[A, B](
-      acquire: F[A]
-    )(
-      use: A => F[B]
-    )(
-      release: (A, ExitCase[Throwable]) => F[Unit]
-    ): F[B] = {
-      val F = MonadCancel[F, Throwable]
-      F.bracketCase(acquire)(use)(release)
-    }
-
-    override def resource[A](acquire: F[A])(release: A => F[Unit]): Resource[F, A] =
-      Resource.make(acquire)(release)
-
-    override def combineResources[A, B](
-      resourceA: Resource[F, A],
-      resourceB: Resource[F, B]
-    ): Resource[F, (A, B)] =
-      for {
-        a <- resourceA
-        b <- resourceB
-      } yield (a, b)
-
-    override def ensuring[A](operation: F[A])(cleanup: F[Unit]): F[A] = {
-      val F = MonadCancel[F, Throwable]
-      F.bracket(Sync[F].unit)(_ => operation)(_ => cleanup)
-    }
-  }
 }
 
 /**
@@ -151,8 +88,6 @@ object CloudResourceSafety {
   /**
    * Create CloudResourceSafety instance that extends basic ResourceSafety.
    */
-  implicit def forCloudProvider[F[_]: ResourceSafety: Sync]: CloudResourceSafety[F] =
-    new DefaultCloudResourceSafety[F]
 
   private class DefaultCloudResourceSafety[F[_]: ResourceSafety: Sync]
       extends CloudResourceSafety[F] {
@@ -161,15 +96,6 @@ object CloudResourceSafety {
 
     override def bracket[A, B](acquire: F[A])(use: A => F[B])(release: A => F[Unit]): F[B] =
       safety.bracket(acquire)(use)(release)
-
-    override def bracketCase[A, B](
-      acquire: F[A]
-    )(
-      use: A => F[B]
-    )(
-      release: (A, ExitCase[Throwable]) => F[Unit]
-    ): F[B] =
-      safety.bracketCase(acquire)(use)(release)
 
     override def resource[A](acquire: F[A])(release: A => F[Unit]): Resource[F, A] =
       safety.resource(acquire)(release)

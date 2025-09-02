@@ -187,11 +187,9 @@ object InfrastructureLayer {
    */
   private class DefaultInfrastructureLayer[F[_]: Sync] extends InfrastructureLayer[F] {
 
-    override val resourceSafety: ResourceSafety[F] =
-      ResourceSafety.forCatsEffect[F]
+    override val resourceSafety: ResourceSafety[F] = ???
 
-    override val cloudResourceSafety: CloudResourceSafety[F] =
-      CloudResourceSafety.forCloudProvider[F]
+    override val cloudResourceSafety: CloudResourceSafety[F] = ???
 
     override val configurationManagement: ConfigurationManagement[F] =
       ConfigurationManagement.forTypesafeConfig[F]
@@ -333,23 +331,6 @@ object syntax {
     /**
      * Load configuration with error handling and logging.
      */
-    def loadConfigWithLogging[T: com.flowforge.config.ConfigDecoder](key: String): F[T] = {
-      import cats.syntax.all._
-
-      for {
-        _            <- infrastructure.structuredLogger.debug(s"Loading configuration: $key")
-        configResult <- infrastructure.configurationManagement.loadTypeSafeConfig[T](key)
-        result <- configResult.fold(
-          errors => {
-            val errorMsg =
-              s"Configuration errors for key '$key': ${errors.map(_.message).toList.mkString(", ")}"
-            infrastructure.structuredLogger.error(errorMsg) >>
-              cats.effect.Sync[F].raiseError(new RuntimeException(errorMsg))
-          },
-          config => cats.effect.Sync[F].pure(config)
-        )
-        _ <- infrastructure.structuredLogger.debug(s"Successfully loaded configuration: $key")
-      } yield result
-    }
+    def loadConfigWithLogging[T: com.flowforge.config.ConfigDecoder](key: String): F[T] = ???
   }
 }

@@ -35,46 +35,7 @@ object SparkDataAlgebra {
      * Read data from external source with resource management. Uses F[_] because it involves
      * external IO (JDBC, file system, network).
      */
-    override def read[A: DataDecoder](source: DataSource): F[DataAlgebra.Dataset[A]] =
-      source match {
-        case LocalDataSource(path, format, _, schemaOpt, _) =>
-          F.blocking {
-            val bytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path))
-            val rows: List[A] = format match {
-              case DataFormat.JSONL =>
-                new String(bytes, "UTF-8").linesIterator.toList
-                  .filter(_.trim.nonEmpty)
-                  .flatMap { line =>
-                    DataDecoder[A]
-                      .decode(EncodedData(line.getBytes("UTF-8"), format), format)
-                      .toOption
-                  }
-              case DataFormat.JSON =>
-                DataDecoder[A].decode(EncodedData(bytes, format), format).toOption.toList
-              case DataFormat.CSV =>
-                val lines     = new String(bytes, "UTF-8").linesIterator.toList
-                val dataLines = if (lines.nonEmpty) lines.tail else lines
-                dataLines.flatMap { line =>
-                  DataDecoder[A]
-                    .decode(EncodedData(line.getBytes("UTF-8"), format), format)
-                    .toOption
-                }
-              case _ => throw new UnsupportedOperationException(s"Unsupported format: $format")
-            }
-            val schema = schemaOpt.getOrElse(DataEncoder[A].schema(format))
-            SimpleDataset(
-              rows,
-              schema,
-              DataAlgebra.DatasetMetadata(rows.size.toLong, schema, 1, Instant.now(), Some(source))
-            )
-          }
-        case _ =>
-          F.raiseError(
-            new UnsupportedOperationException(
-              s"Unsupported DataSource: ${source.getClass.getSimpleName}"
-            )
-          )
-      }
+    override def read[A: DataDecoder](source: DataSource): F[DataAlgebra.Dataset[A]] = ???
 
     /**
      * Read data with schema validation from external source. Uses F[_] for IO and ValidatedNel for
@@ -105,44 +66,7 @@ object SparkDataAlgebra {
       dataset: DataAlgebra.Dataset[A],
       sink: DataSink,
       options: DataAlgebra.WriteOptions
-    ): F[DataAlgebra.WriteResult] = sink match {
-      case LocalDataSink(path, format, _, writeMode, _) =>
-        F.blocking {
-          val p = java.nio.file.Paths.get(path)
-          val bytes: Array[Byte] = format match {
-            case DataFormat.JSONL =>
-              dataset.data
-                .map(a =>
-                  DataEncoder[A]
-                    .encode(a, format)
-                    .fold(e => throw new RuntimeException(e.message), _.data)
-                )
-                .map(b => new String(b, "UTF-8"))
-                .mkString("\n")
-                .getBytes("UTF-8")
-            case DataFormat.CSV =>
-              val header = dataset.schema.fieldNames match {
-                case Nil => None; case xs => Some(xs.mkString(","))
-              }
-              val body = dataset.data
-                .map(a =>
-                  DataEncoder[A]
-                    .encode(a, format)
-                    .fold(e => throw new RuntimeException(e.message), _.data)
-                )
-                .map(b => new String(b, "UTF-8"))
-              (header.toList ++ body).mkString("\n").getBytes("UTF-8")
-            case _ => throw new UnsupportedOperationException(s"Unsupported write format: $format")
-          }
-          Option(p.getParent).foreach(java.nio.file.Files.createDirectories)
-          java.nio.file.Files.write(p, bytes)
-          DataAlgebra.WriteResult(dataset.data.size.toLong, 1, bytes.length.toLong, success = true)
-        }
-      case _ =>
-        F.raiseError(
-          new UnsupportedOperationException(s"Unsupported DataSink: ${sink.getClass.getSimpleName}")
-        )
-    }
+    ): F[DataAlgebra.WriteResult] = ???
 
     /**
      * Write data with validation to external sink. Uses F[_] for IO operations and validation.
@@ -152,15 +76,7 @@ object SparkDataAlgebra {
       sink: DataSink,
       contract: DataContract[A],
       options: DataAlgebra.WriteOptions
-    ): F[ValidatedNel[FlowForgeError, DataAlgebra.WriteResult]] =
-      validate(dataset, contract).flatMap { qr =>
-        if (qr.passed) write(dataset, sink, options).map(cats.data.Validated.valid)
-        else
-          F.pure(
-            cats.data.Validated.invalidNel(ContractViolation("Quality checks failed", Map.empty))
-          )
-      }
-
+    ): F[ValidatedNel[FlowForgeError, DataAlgebra.WriteResult]] = ???
     /**
      * Filter data based on predicate. PURE OPERATION: No F[_] wrapper - direct Dataset
      * transformation.
@@ -291,12 +207,7 @@ object SparkDataAlgebra {
     override def transformPipeline[A, B: DataEncoder](
       dataset: DataAlgebra.Dataset[A],
       transformations: NonEmptyList[A => F[B]]
-    ): F[DataAlgebra.Dataset[B]] = {
-      val composed = transformations.reduceLeft { (f, g) => a =>
-        F.flatMap(f(a))(b => g(a).map(_ => b))
-      }
-      transformWithEffect(dataset, composed)
-    }
+    ): F[DataAlgebra.Dataset[B]] = ???
 
     /**
      * Extract schema from dataset with metadata service calls. Uses F[_] because it may involve
