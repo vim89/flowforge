@@ -77,6 +77,7 @@ object SparkDataAlgebra {
       contract: DataContract[A],
       options: DataAlgebra.WriteOptions
     ): F[ValidatedNel[FlowForgeError, DataAlgebra.WriteResult]] = ???
+
     /**
      * Filter data based on predicate. PURE OPERATION: No F[_] wrapper - direct Dataset
      * transformation.

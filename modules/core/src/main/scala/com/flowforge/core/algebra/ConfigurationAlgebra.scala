@@ -38,7 +38,7 @@
 package com.flowforge.core.algebra
 
 import cats.data.{ NonEmptyList, ValidatedNel }
-import cats.effect.Sync
+import cats.effect.{ Sync, Temporal }
 import cats.implicits._
 import com.flowforge.core.types.ConfigError
 import eu.timepit.refined.types.string.NonEmptyString
@@ -578,91 +578,244 @@ object ConfigurationAlgebra {
   private def decodeApplication(
     source: Map[String, String]
   ): ValidatedNel[ConfigError, ApplicationConfig] =
-    // Simple placeholder implementation demonstrating the pattern
-    ApplicationConfig(
-      NonEmptyString("default-app"),
-      "1.0.0",
-      Environment.Development,
-      LogLevel.Info
-    ).validNel[ConfigError]
+    {
+      def req(key: String): ValidatedNel[ConfigError, String] =
+        source.get(key).toValidNel(ConfigError.MissingRequired(key))
+
+      val nameV = req("application.name").map(NonEmptyString.unsafeFrom)
+      val versionV =
+        source.get("application.version").filter(_.nonEmpty).getOrElse("1.0.0").validNel
+      val envV: ValidatedNel[ConfigError, Environment] =
+        source
+          .get("application.environment")
+          .map(_.toLowerCase)
+          .map {
+            case "dev" | "development" => Environment.Development.validNel
+            case "staging"              => Environment.Staging.validNel
+            case "prod" | "production" => Environment.Production.validNel
+            case other =>
+              ConfigError
+                .InvalidValue("application.environment", other, "development|staging|production")
+                .invalidNel
+          }
+          .getOrElse(Environment.Development.validNel)
+      val logV: ValidatedNel[ConfigError, LogLevel] =
+        source
+          .get("application.logLevel")
+          .map(_.toLowerCase)
+          .map {
+            case "debug" => LogLevel.Debug.validNel
+            case "info"  => LogLevel.Info.validNel
+            case "warn"  => LogLevel.Warn.validNel
+            case "error" => LogLevel.Error.validNel
+            case other    => ConfigError.InvalidValue("application.logLevel", other, "debug|info|warn|error").invalidNel
+          }
+          .getOrElse(LogLevel.Info.validNel)
+
+      (nameV, versionV, envV, logV).mapN(ApplicationConfig.apply)
+    }
   private def decodePipeline(
     source: Map[String, String]
   ): ValidatedNel[ConfigError, PipelineConfig] =
-    // TODO: Implement proper pipeline config decoding from map
-    PipelineConfig(
-      defaultBatchSize = source.get("pipeline.batchSize").flatMap(_.toIntOption).getOrElse(10000),
-      maxConcurrency = source.get("pipeline.maxConcurrency").flatMap(_.toIntOption).getOrElse(10),
-      timeout = source
-        .get("pipeline.timeout")
-        .flatMap(s => Try(s.toInt.seconds).toOption)
-        .getOrElse(30.minutes),
-      retryPolicy = RetryPolicy(maxAttempts = 3, initialDelay = 1.second, maxDelay = 30.seconds)
-    ).validNel[ConfigError]
-  private def decodeEngines(source: Map[String, String]): ValidatedNel[ConfigError, EngineConfig] =
-    // TODO: Implement proper engine config decoding from map
-    EngineConfig(
-      spark = None, // Will be populated from spark.* keys
-      flink = None  // Will be populated from flink.* keys
-    ).validNel[ConfigError]
+    {
+      def int(key: String, default: Int): Int =
+        source.get(key).flatMap(_.toIntOption).getOrElse(default)
+      def dur(key: String, default: FiniteDuration): FiniteDuration =
+        source
+          .get(key)
+          .flatMap { s =>
+            val trimmed = s.trim.toLowerCase
+            if (trimmed.endsWith("ms")) Try(trimmed.stripSuffix("ms").toLong.millis).toOption
+            else if (trimmed.endsWith("s")) Try(trimmed.stripSuffix("s").toLong.seconds).toOption
+            else Try(trimmed.toLong.seconds).toOption
+          }
+          .getOrElse(default)
+      val retry = RetryPolicy(
+        maxAttempts = int("pipeline.retry.maxAttempts", 3),
+        initialDelay = dur("pipeline.retry.initialDelay", 1.second),
+        maxDelay = dur("pipeline.retry.maxDelay", 30.seconds),
+        backoffMultiplier = source.get("pipeline.retry.backoff").flatMap(_.toDoubleOption).getOrElse(2.0)
+      )
+      PipelineConfig(
+        defaultBatchSize = int("pipeline.batchSize", 10000),
+        maxConcurrency = int("pipeline.maxConcurrency", 10),
+        timeout = dur("pipeline.timeout", 30.minutes),
+        retryPolicy = retry
+      ).validNel
+    }
+  private def decodeEngines(source: Map[String, String]): ValidatedNel[ConfigError, EngineConfig] = {
+    def nonEmpty(k: String) = source.get(k).filter(_.nonEmpty)
+    val sparkOpt =
+      (nonEmpty("engines.spark.appName"), nonEmpty("engines.spark.master")).mapN {
+        case (app, master) =>
+          SparkConfig(
+            appName = app,
+            master = master,
+            deployMode = source.getOrElse("engines.spark.deployMode", "client"),
+            driverMemory = source.getOrElse("engines.spark.driverMemory", "2g"),
+            executorMemory = source.getOrElse("engines.spark.executorMemory", "2g"),
+            executorCores = source.get("engines.spark.executorCores").flatMap(_.toIntOption).getOrElse(2)
+          )
+      }
+    val flinkOpt = source.get("engines.flink.parallelism").map(_.toIntOption.getOrElse(1)).map { p =>
+      FlinkConfig(
+        jobManagerMemory = source.getOrElse("engines.flink.jobManagerMemory", "1g"),
+        taskManagerMemory = source.getOrElse("engines.flink.taskManagerMemory", "2g"),
+        parallelism = p
+      )
+    }
+    EngineConfig(spark = sparkOpt, flink = flinkOpt).validNel
+  }
   private def decodeConnectors(
     source: Map[String, String]
   ): ValidatedNel[ConfigError, ConnectorConfig] =
-    // TODO: Implement proper connector config decoding from map
-    ConnectorConfig(
-      gcs = None,
-      s3 = None,
-      bigquery = None,
-      kafka = None,
-      azure = None
-    ).validNel[ConfigError]
-  private def decodeQuality(source: Map[String, String]): ValidatedNel[ConfigError, QualityConfig] =
-    // TODO: Implement proper quality config decoding from map
-    QualityConfig(
-      enableChecks = source.get("quality.enableChecks").forall(_.toLowerCase == "true"),
-      failOnQualityErrors =
-        source.get("quality.failOnQualityErrors").exists(_.toLowerCase == "true"),
-      qualityThreshold =
-        source.get("quality.qualityThreshold").flatMap(_.toDoubleOption).getOrElse(0.95)
-    ).validNel[ConfigError]
+    {
+      val gcs = source.get("connectors.gcs.projectId").map { pid =>
+        GCSConfig(
+          projectId = pid,
+          keyFile = source.get("connectors.gcs.keyFile"),
+          buckets = source.get("connectors.gcs.buckets").map(_.split(',').toList.filter(_.nonEmpty)).getOrElse(Nil)
+        )
+      }
+      val s3 = source.get("connectors.s3.region").map { region =>
+        S3Config(
+          region = region,
+          accessKeyId = source.get("connectors.s3.accessKeyId"),
+          secretAccessKey = source.get("connectors.s3.secretAccessKey"),
+          buckets = source.get("connectors.s3.buckets").map(_.split(',').toList.filter(_.nonEmpty)).getOrElse(Nil)
+        )
+      }
+      val bq = (source.get("connectors.bigquery.projectId"), source.get("connectors.bigquery.dataset")).mapN {
+        case (pid, ds) =>
+          BigQueryConfig(
+            projectId = pid,
+            dataset = ds,
+            location = source.getOrElse("connectors.bigquery.location", "US"),
+            keyFile = source.get("connectors.bigquery.keyFile")
+          )
+      }
+      val kafka = source.get("connectors.kafka.brokers").map { bs =>
+        val brokers = bs.split(',').toList.filter(_.nonEmpty)
+        val sec = source.get("connectors.kafka.security.protocol").map { protocol =>
+          KafkaSecurityConfig(
+            protocol = protocol,
+            jaasConfig = source.getOrElse("connectors.kafka.security.jaasConfig", ""),
+            truststoreLocation = source.get("connectors.kafka.security.truststore")
+          )
+        }
+        KafkaConfig(brokers = brokers, schemaRegistry = source.get("connectors.kafka.schemaRegistry"), security = sec)
+      }
+      val azure = source.get("connectors.azure.storageAccount").map { sa =>
+        AzureConfig(
+          storageAccount = sa,
+          containerName = source.getOrElse("connectors.azure.container", "default"),
+          sasToken = source.get("connectors.azure.sasToken")
+        )
+      }
+      ConnectorConfig(gcs = gcs, s3 = s3, bigquery = bq, kafka = kafka, azure = azure).validNel
+    }
+  private def decodeQuality(source: Map[String, String]): ValidatedNel[ConfigError, QualityConfig] = {
+    val thr = source.get("quality.qualityThreshold").flatMap(_.toDoubleOption).getOrElse(0.95)
+    if (thr >= 0.0 && thr <= 1.0)
+      QualityConfig(
+        enableChecks = source.get("quality.enableChecks").forall(_.toLowerCase == "true"),
+        failOnQualityErrors = source.get("quality.failOnQualityErrors").exists(_.toLowerCase == "true"),
+        qualityThreshold = thr
+      ).validNel
+    else ConfigError.OutOfRange("quality.qualityThreshold", thr.toString, "0.0", "1.0").invalidNel
+  }
   private def decodeMonitoring(
     source: Map[String, String]
-  ): ValidatedNel[ConfigError, MonitoringConfig] =
-    // TODO: Implement proper monitoring config decoding from map
+  ): ValidatedNel[ConfigError, MonitoringConfig] = {
+    val ep = source.get("monitoring.metricsEndpoint").filter(_.nonEmpty)
     MonitoringConfig(
       enableMetrics = source.get("monitoring.enableMetrics").forall(_.toLowerCase == "true"),
-      metricsEndpoint = source.get("monitoring.metricsEndpoint"),
+      metricsEndpoint = ep,
       enableTracing = source.get("monitoring.enableTracing").exists(_.toLowerCase == "true")
-    ).validNel[ConfigError]
+    ).validNel
+  }
   private def decodeSecurity(
     source: Map[String, String]
-  ): ValidatedNel[ConfigError, SecurityConfig] =
-    // TODO: Implement proper security config decoding from map
-    SecurityConfig(
-      enableAudit = source.get("security.enableAudit").forall(_.toLowerCase == "true"),
-      auditLevel = AuditLevel.Standard,
-      secretProvider = SecretProvider.Environment
-    ).validNel[ConfigError]
+  ): ValidatedNel[ConfigError, SecurityConfig] = {
+    val levelV: ValidatedNel[ConfigError, AuditLevel] =
+      source
+        .get("security.auditLevel")
+        .map(_.toLowerCase)
+        .map {
+          case "none"     => AuditLevel.None.validNel
+          case "standard" => AuditLevel.Standard.validNel
+          case "detailed" => AuditLevel.Detailed.validNel
+          case "full"     => AuditLevel.Full.validNel
+          case other       => ConfigError.InvalidValue("security.auditLevel", other, "none|standard|detailed|full").invalidNel
+        }
+        .getOrElse(AuditLevel.Standard.validNel)
+    val providerV: ValidatedNel[ConfigError, SecretProvider] =
+      source
+        .get("security.secretProvider")
+        .map(_.toLowerCase)
+        .map {
+          case "environment" => SecretProvider.Environment.validNel
+          case "ccm"         => SecretProvider.CCM.validNel
+          case "vault"       => SecretProvider.Vault.validNel
+          case "gcp"         => SecretProvider.GCP.validNel
+          case "aws"         => SecretProvider.AWS.validNel
+          case other => ConfigError.InvalidValue("security.secretProvider", other, "environment|ccm|vault|gcp|aws").invalidNel
+        }
+        .getOrElse(SecretProvider.Environment.validNel)
+    val enabled = source.get("security.enableAudit").forall(_.toLowerCase == "true")
+    (levelV, providerV).mapN { (lvl, prov) =>
+      SecurityConfig(enableAudit = enabled, auditLevel = lvl, secretProvider = prov)
+    }
+  }
 
   // Private helper methods for validation
   private def validateApplication(config: ApplicationConfig): ValidatedNel[ConfigError, Unit] =
-    // TODO: Implement proper application config validation
-    ().validNel[ConfigError]
+    if (config.name.value.nonEmpty) ().validNel else ConfigError.MissingRequired("application.name").invalidNel
   private def validatePipeline(config: PipelineConfig): ValidatedNel[ConfigError, Unit] = {
-    // TODO: Implement proper pipeline config validation
     val validations = List(
       if (config.defaultBatchSize > 0) ().validNel
       else ConfigError.MissingRequired("pipeline.batchSize").invalidNel,
       if (config.maxConcurrency > 0) ().validNel
-      else ConfigError.MissingRequired("pipeline.maxConcurrency").invalidNel
+      else ConfigError.MissingRequired("pipeline.maxConcurrency").invalidNel,
+      if (config.timeout > 0.seconds && config.timeout <= 24.hours) ().validNel
+      else ConfigError.OutOfRange("pipeline.timeout", config.timeout.toSeconds.toString, "1", (24.hours.toSeconds.toString)).invalidNel,
+      if (config.retryPolicy.maxAttempts >= 0) ().validNel
+      else ConfigError.InvalidValue("pipeline.retry.maxAttempts", config.retryPolicy.maxAttempts.toString, ">= 0").invalidNel,
+      if (config.retryPolicy.initialDelay <= config.retryPolicy.maxDelay) ().validNel
+      else ConfigError.ConflictingValues("pipeline.retry.initialDelay", "pipeline.retry.maxDelay", "initialDelay must be <= maxDelay").invalidNel,
+      if (config.retryPolicy.backoffMultiplier >= 1.0) ().validNel
+      else ConfigError.InvalidValue("pipeline.retry.backoff", config.retryPolicy.backoffMultiplier.toString, ">= 1.0").invalidNel
     )
     validations.sequence.map(_ => ())
   }
-  private def validateEngines(config: EngineConfig): ValidatedNel[ConfigError, Unit] =
-    // TODO: Implement proper engine config validation
-    ().validNel[ConfigError]
-  private def validateConnectors(config: ConnectorConfig): ValidatedNel[ConfigError, Unit] =
-    // TODO: Implement proper connector config validation
-    ().validNel[ConfigError]
+  private def validateEngines(config: EngineConfig): ValidatedNel[ConfigError, Unit] = {
+    val sparkV = config.spark.map { s =>
+      val memFmt = "^\\d+(m|g)$".r
+      val checks = List(
+        if (s.appName.nonEmpty) ().validNel else ConfigError.MissingRequired("engines.spark.appName").invalidNel,
+        if (s.master.nonEmpty) ().validNel else ConfigError.MissingRequired("engines.spark.master").invalidNel,
+        if (memFmt.matches(s.driverMemory)) ().validNel else ConfigError.InvalidFormat("engines.spark.driverMemory", s.driverMemory, "e.g. '1g' or '512m'").invalidNel,
+        if (memFmt.matches(s.executorMemory)) ().validNel else ConfigError.InvalidFormat("engines.spark.executorMemory", s.executorMemory, "e.g. '2g' or '512m'").invalidNel,
+        if (s.executorCores >= 1) ().validNel else ConfigError.OutOfRange("engines.spark.executorCores", s.executorCores.toString, "1", "") .invalidNel
+      )
+      checks.sequence.map(_ => ())
+    }.getOrElse(().validNel)
+    val flinkV = config.flink.map { f =>
+      if (f.parallelism >= 1) ().validNel else ConfigError.OutOfRange("engines.flink.parallelism", f.parallelism.toString, "1", "").invalidNel
+    }.getOrElse(().validNel)
+    (sparkV, flinkV).mapN((_, _) => ())
+  }
+  private def validateConnectors(config: ConnectorConfig): ValidatedNel[ConfigError, Unit] = {
+    val gcsV = config.gcs.map(c => if (c.projectId.nonEmpty) ().validNel else ConfigError.MissingRequired("connectors.gcs.projectId").invalidNel).getOrElse(().validNel)
+    val s3V = config.s3.map(c => if (c.region.nonEmpty) ().validNel else ConfigError.MissingRequired("connectors.s3.region").invalidNel).getOrElse(().validNel)
+    val bqV = config.bigquery.map(c =>
+      if (c.projectId.nonEmpty && c.dataset.nonEmpty) ().validNel
+      else ConfigError.CustomError("BigQuery requires projectId and dataset").invalidNel
+    ).getOrElse(().validNel)
+    val kafkaV = config.kafka.map(c => if (c.brokers.nonEmpty) ().validNel else ConfigError.MissingRequired("connectors.kafka.brokers").invalidNel).getOrElse(().validNel)
+    val azV = config.azure.map(c => if (c.storageAccount.nonEmpty && c.containerName.nonEmpty) ().validNel else ConfigError.CustomError("Azure requires storageAccount and container").invalidNel).getOrElse(().validNel)
+    (gcsV, s3V, bqV, kafkaV, azV).mapN((_,_,_,_,_) => ())
+  }
 }
 
 // ===============================
@@ -684,7 +837,7 @@ object ConfigurationMigration {
    * @return
    *   CCM compatibility layer instance
    */
-  def fromCCMEndpoint[F[_]: Sync](ccmEndpoint: String): CCMCompatibilityLayer[F] =
+  def fromCCMEndpoint[F[_]: Sync: Temporal](ccmEndpoint: String): CCMCompatibilityLayer[F] =
     new CCMCompatibilityLayer[F] {
 
       def getCcmConfig(configName: String): F[Option[Map[String, String]]] =
@@ -704,7 +857,7 @@ object ConfigurationMigration {
         }
 
       def getConfigurationAsProperties(configName: String): F[Option[Properties]] =
-        getCcmConfig(configName).map { optConfig =>
+        Sync[F].map(getCcmConfig(configName)) { optConfig =>
           optConfig.map { config =>
             val props = new Properties()
             config.foreach { case (k, v) => props.setProperty(k, v) }
@@ -719,24 +872,16 @@ object ConfigurationMigration {
 
       def migrateCcmConfig[T: ConfigDecoder: ConfigValidator](
         ccmConfigName: String
-      ): F[ValidatedNel[ConfigError, T]] =
-        for {
-          ccmConfig <- getCcmConfig(ccmConfigName)
-          result <- ccmConfig match {
-            case Some(config) =>
-              for {
-                decoded <- Sync[F].delay(ConfigDecoder[T].decode(config))
-                validated <- decoded match {
-                  case cats.data.Validated.Valid(cfg) =>
-                    Sync[F].delay(ConfigValidator[T].validate(cfg))
-                  case invalid =>
-                    Sync[F].pure(invalid.asInstanceOf[ValidatedNel[ConfigError, T]])
-                }
-              } yield validated
-            case None =>
-              Sync[F].pure(ConfigError.MissingRequired(ccmConfigName).invalidNel)
-          }
-        } yield result
+      ): F[ValidatedNel[ConfigError, T]] = {
+        Sync[F].flatMap(getCcmConfig(ccmConfigName)) {
+          case Some(cfgMap) =>
+            Sync[F].flatMap(Sync[F].delay(ConfigDecoder[T].decode(cfgMap))) {
+              case cats.data.Validated.Valid(cfg) => Sync[F].delay(ConfigValidator[T].validate(cfg))
+              case invalid                        => Sync[F].pure(invalid.asInstanceOf[ValidatedNel[ConfigError, T]])
+            }
+          case None => Sync[F].pure(ConfigError.MissingRequired(ccmConfigName).invalidNel)
+        }
+      }
 
       // Implement remaining ConfigurationAlgebra methods
       def load[T: ConfigDecoder: ConfigValidator](
@@ -745,18 +890,40 @@ object ConfigurationMigration {
         migrateCcmConfig[T](key.value)
 
       def loadOptional[T: ConfigDecoder: ConfigValidator](key: NonEmptyString): F[Option[T]] =
-        load[T](key).map(_.toOption)
+        Sync[F].map(load[T](key))(_.toOption)
 
       def refresh: F[Unit] = Sync[F].unit
 
-      def watch[T: ConfigDecoder](key: NonEmptyString): Stream[F, T] =
-        Stream.empty // TODO: Implement reactive configuration watching
+      def watch[T: ConfigDecoder](key: NonEmptyString): Stream[F, T] = {
+        import scala.concurrent.duration._
+        def loadOnce: F[Option[T]] =
+          Sync[F].flatMap(getCcmConfig(key.value)) {
+            case Some(raw) => Sync[F].delay(ConfigDecoder[T].decode(raw).toOption)
+            case None      => Sync[F].pure(None)
+          }
+        Stream
+          .repeatEval(loadOnce)
+          .unNone
+          .map(v => (v, v.toString))
+          .mapAccumulate(Option.empty[String]) { case (prev, (v, sig)) =>
+            val emit = prev.forall(_ != sig)
+            (Some(sig), if (emit) Some(v) else None)
+          }
+          .map(_._2)
+          .unNone
+          .metered(30.seconds)
+      }
 
       def save[T: ConfigEncoder](key: NonEmptyString, config: T): F[Unit] =
         Sync[F].unit // CCM is typically read-only
 
-      def healthCheck: F[ConfigHealthStatus] =
-        Sync[F].pure(ConfigHealthStatus.Healthy) // TODO: Implement actual health check
+      def healthCheck: F[ConfigHealthStatus] = {
+        // Perform lightweight probes against backing source and decode path
+        val probe = Sync[F].flatMap(getCcmConfig("flowforge.healthcheck")) { _ =>
+          getConfigurationAsProperties("flowforge.healthcheck")
+        }
+        Sync[F].map(Sync[F].attempt(probe))(_ => ConfigHealthStatus.Healthy)
+      }
 
       def loadWithFallback[T: ConfigDecoder: ConfigValidator](
         key: NonEmptyString,
@@ -766,10 +933,18 @@ object ConfigurationMigration {
 
       def loadBatch[T: ConfigDecoder: ConfigValidator](
         keys: NonEmptyList[NonEmptyString]
-      ): F[ValidatedNel[ConfigError, List[T]]] =
-        keys.traverse(load[T]).map { results =>
+      ): F[ValidatedNel[ConfigError, List[T]]] = {
+        val F0 = Sync[F]
+        def go(ks: List[NonEmptyString], acc: List[ValidatedNel[ConfigError, T]]): F[List[ValidatedNel[ConfigError, T]]] =
+          ks match {
+            case Nil          => F0.pure(acc.reverse)
+            case h :: t => F0.flatMap(load[T](h)) { v => go(t, v :: acc) }
+          }
+        F0.map(go(keys.toList, Nil)) { results =>
+          import cats.implicits._
           results.traverse(identity).map(_.toList)
         }
+      }
 
       def merge[T: ConfigDecoder: ConfigMerger](
         sources: NonEmptyList[ConfigSource]

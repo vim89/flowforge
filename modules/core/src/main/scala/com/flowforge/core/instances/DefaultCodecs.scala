@@ -12,6 +12,19 @@ import io.circe.{ parser, Json }
  *   - String
  */
 object DefaultCodecs {
+  implicit val intEncoder: DataEncoder[Int] = new DataEncoder[Int] {
+    def encode(data: Int, format: DataFormat) =
+      Right(EncodedData(data.toString.getBytes("UTF-8"), format))
+    def schema(format: DataFormat): DataSchema =
+      DataSchema.builder.addField("value", DataType.Integer).build
+    def estimateSize(data: Int, format: DataFormat): Long = 8L
+    def supportsFormat(format: DataFormat): Boolean          =
+      format match {
+        case DataFormat.JSON | DataFormat.JSONL | DataFormat.CSV => true
+        case _                                                   => false
+      }
+    def optimizationHints(data: Int, format: DataFormat): EncodingHints = EncodingHints.default
+  }
 
   implicit val stringEncoder: DataEncoder[String] = new DataEncoder[String] {
     def encode(data: String, format: DataFormat) =
@@ -42,7 +55,11 @@ object DefaultCodecs {
      * @return
      *   True if format is supported
      */
-    override def supportsFormat(format: DataFormat): Boolean = ???
+    override def supportsFormat(format: DataFormat): Boolean =
+      format match {
+        case DataFormat.JSON | DataFormat.JSONL | DataFormat.CSV => true
+        case _                                                   => false
+      }
   }
 
   implicit val jsonEncoder: DataEncoder[Json] = new DataEncoder[Json] {
@@ -78,7 +95,11 @@ object DefaultCodecs {
      * @return
      *   True if format is supported
      */
-    override def supportsFormat(format: DataFormat): Boolean = ???
+    override def supportsFormat(format: DataFormat): Boolean =
+      format match {
+        case DataFormat.JSON | DataFormat.JSONL => true
+        case _                                  => false
+      }
   }
 
   implicit val mapStringStringEncoder: DataEncoder[Map[String, String]] =
@@ -141,6 +162,10 @@ object DefaultCodecs {
        * @return
        *   True if format is supported
        */
-      override def supportsFormat(format: DataFormat): Boolean = ???
+      override def supportsFormat(format: DataFormat): Boolean =
+        format match {
+          case DataFormat.JSON | DataFormat.JSONL | DataFormat.CSV => true
+          case _                                                   => false
+        }
     }
 }

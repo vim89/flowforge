@@ -609,6 +609,12 @@ object PipelineSyntax {
 
   // Provide default quality result for testing
   object QualityResult {
-    def passed[A](data: A): DataAlgebra.QualityResult[A] = ???
+    def passed[A](data: A): DataAlgebra.QualityResult[A] =
+      DataAlgebra.QualityResult[A](
+        data = data,
+        passed = true,
+        violations = Nil,
+        score = 1.0
+      )
   }
 }

@@ -3,7 +3,7 @@ package com.flowforge.logging
 import cats.effect.Sync
 import cats.syntax.all._
 import com.typesafe.scalalogging.Logger
-import org.slf4j.{LoggerFactory, MDC}
+import org.slf4j.{ LoggerFactory, MDC }
 
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.MapHasAsScala

@@ -649,12 +649,11 @@ object ReaderPattern {
     }
 
     def mockResourceManager[F[_]: EffectSystem]: ResourceManager[F] = new ResourceManager[F] {
-      def acquireResource[R](name: String, config: ResourceConfig): Resource[F, R] =
-        Resource.eval(
-          implicitly[EffectSystem[F]].raiseError(
-            new NotImplementedError("Mock resource acquisition")
-          )
-        )
+      def acquireResource[R](name: String, config: ResourceConfig): Resource[F, R] = {
+        // Safe no-op resource that yields a null placeholder of requested type R
+        val F = implicitly[EffectSystem[F]]
+        Resource.make[F, R](F.pure(null.asInstanceOf[R]))(_ => F.unit)
+      }
       def releaseResource(name: String): F[Unit] = implicitly[EffectSystem[F]].delay(())
       def listResources: F[List[ResourceInfo]]   = implicitly[EffectSystem[F]].delay(List.empty)
       def healthCheck: F[Map[String, ResourceHealth]] = implicitly[EffectSystem[F]].delay(Map.empty)
@@ -662,12 +661,19 @@ object ReaderPattern {
 
     // Database mocks
     def mockConnectionPool[F[_]: EffectSystem]: ConnectionPool[F] = new ConnectionPool[F] {
-      def withConnection[A](operation: Connection[F] => F[A]): F[A] =
-        implicitly[EffectSystem[F]].raiseError(new NotImplementedError("Mock connection"))
-      def stats: F[PoolStats] =
-        implicitly[EffectSystem[F]].raiseError(new NotImplementedError("Mock pool stats"))
-      def health: F[PoolHealth] =
-        implicitly[EffectSystem[F]].raiseError(new NotImplementedError("Mock pool health"))
+      def withConnection[A](operation: Connection[F] => F[A]): F[A] = {
+        val F = implicitly[EffectSystem[F]]
+        val conn = new Connection[F] {
+          def query[A](sql: String, params: List[Any]): F[List[A]] = F.pure(Nil)
+          def execute(sql: String, params: List[Any]): F[Int]       = F.pure(0)
+          def batch(operations: List[SqlOperation]): F[List[Int]]   = F.pure(List.fill(operations.size)(0))
+        }
+        operation(conn)
+      }
+      def stats: F[PoolStats] = implicitly[EffectSystem[F]].pure(PoolStats(active = 0, idle = 0, max = 0))
+      def health: F[PoolHealth] = implicitly[EffectSystem[F]].pure(
+        PoolHealth(healthy = true, message = "mock healthy", stats = PoolStats(0, 0, 0))
+      )
     }
 
     def mockTransactionManager[F[_]: EffectSystem]: TransactionManager[F] =
@@ -679,9 +685,9 @@ object ReaderPattern {
 
     def mockMigrationService[F[_]: EffectSystem]: MigrationService[F] = new MigrationService[F] {
       def runMigrations: F[MigrationResult] =
-        implicitly[EffectSystem[F]].raiseError(new NotImplementedError("Mock migration"))
+        implicitly[EffectSystem[F]].pure(MigrationResult(success = true, version = "mock", message = "no-op"))
       def rollbackMigration(version: String): F[MigrationResult] =
-        implicitly[EffectSystem[F]].raiseError(new NotImplementedError("Mock rollback"))
+        implicitly[EffectSystem[F]].pure(MigrationResult(success = true, version = version, message = "no-op"))
       def migrationStatus: F[List[MigrationInfo]] = implicitly[EffectSystem[F]].delay(List.empty)
     }
 
@@ -697,8 +703,17 @@ object ReaderPattern {
 
     def mockQueueService[F[_]: EffectSystem]: QueueService[F] = new QueueService[F] {
       def publish[A](queue: String, message: A): F[Unit] = implicitly[EffectSystem[F]].delay(())
-      def subscribe[A](queue: String): F[QueueSubscription[F, A]] =
-        implicitly[EffectSystem[F]].raiseError(new NotImplementedError("Mock queue subscription"))
+      def subscribe[A](queue: String): F[QueueSubscription[F, A]] = {
+        val F = implicitly[EffectSystem[F]]
+        F.pure(
+          QueueSubscription[F, A](
+            queue = queue,
+            receive = F.pure(None),
+            ack = (_: A) => F.unit,
+            nack = (_: A) => F.unit
+          )
+        )
+      }
       def createQueue(name: String, config: QueueConfig): F[Unit] =
         implicitly[EffectSystem[F]].delay(())
       def deleteQueue(name: String): F[Unit] = implicitly[EffectSystem[F]].delay(())

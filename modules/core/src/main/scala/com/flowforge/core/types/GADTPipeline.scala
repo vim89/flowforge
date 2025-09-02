@@ -83,10 +83,20 @@ object GADTStage {
     outputType: GADTOutputType[Output] = GADTOutputType[Output](),
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "source"
-  ) extends GADTStage[F, Unit, Output] {
+  )(implicit da: com.flowforge.core.algebra.DataAlgebra[F],
+    F: com.flowforge.core.algebra.EffectSystem[F],
+    dec: com.flowforge.core.algebra.DataDecoder[Output]) extends GADTStage[F, Unit, Output] {
     def execute: Kleisli[F, Unit, Output] = Kleisli { _ =>
-      // TODO: Implement via DataAlgebra when available
-      throw new NotImplementedError("Source.execute requires DataAlgebra implementation")
+      import com.flowforge.core.algebra.DataAlgebra.Dataset
+      da.read[Output](source).flatMap { ds: Dataset[Output] =>
+        ds.data.headOption match {
+          case Some(value) => F.pure(value)
+          case None => F.raiseError(
+              com.flowforge.core.types.PipelineError
+                .StageExecutionError(stageName, "empty dataset from source")
+            )
+        }
+      }
     }
   }
 
@@ -131,10 +141,20 @@ object GADTStage {
     inputType: GADTInputType[Input] = GADTInputType[Input](),
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "sink"
-  ) extends GADTStage[F, Input, Unit] {
+  )(implicit da: com.flowforge.core.algebra.DataAlgebra[F],
+    F: com.flowforge.core.algebra.EffectSystem[F],
+    enc: com.flowforge.core.algebra.DataEncoder[Input]) extends GADTStage[F, Input, Unit] {
     def execute: Kleisli[F, Input, Unit] = Kleisli { input =>
-      // TODO: Implement via DataAlgebra when available
-      throw new NotImplementedError("Sink.execute requires DataAlgebra implementation")
+      import com.flowforge.core.algebra.DataAlgebra.{ DatasetMetadata, WriteOptions }
+      import com.flowforge.core.impl.SimpleDataset
+      import com.flowforge.core.types.DataSchema
+      val schema = enc.schema(com.flowforge.core.types.DataFormat.JSON)
+      val ds = SimpleDataset(
+        data = List(input),
+        schema = schema,
+        metadata = DatasetMetadata(1L, schema, 1, java.time.Instant.now(), None)
+      )
+      da.write(ds, sink, WriteOptions.default).map(_ => ())
     }
   }
 
@@ -202,7 +222,9 @@ case class GADTPipelineBuilder[
    * Add source - only available on empty builder
    */
   def source[SourceOutput](dataSource: DataSource)(implicit
-    ev: State =:= GADTEmpty
+    ev: State =:= GADTEmpty,
+    da: com.flowforge.core.algebra.DataAlgebra[F],
+    dec: com.flowforge.core.algebra.DataDecoder[SourceOutput]
   ): GADTPipelineBuilder[F, GADTHasSource, Unit, SourceOutput] = {
     val sourceStage = GADTStage.Source[F, SourceOutput](
       source = dataSource,
@@ -269,7 +291,9 @@ case class GADTPipelineBuilder[
    * Add sink - only available after quality, completes pipeline
    */
   def sink(dataSink: DataSink)(implicit
-    ev: State =:= GADTHasQuality
+    ev: State =:= GADTHasQuality,
+    da: com.flowforge.core.algebra.DataAlgebra[F],
+    enc: com.flowforge.core.algebra.DataEncoder[Output]
   ): GADTPipelineBuilder[F, GADTComplete, Input, Unit] = {
     val sinkStage = GADTStage.Sink[F, Output](
       sink = dataSink,
@@ -514,6 +538,9 @@ object GADTPipelineExamples {
    */
   def createTypeSafePipeline[F[_]: EffectSystem]
     : ValidatedNel[FlowForgeError, GADTPipeline[F, Unit, Unit]] = {
+    import com.flowforge.core.instances.DefaultCodecs._
+    implicit val da: com.flowforge.core.algebra.DataAlgebra[F] =
+      new com.flowforge.core.impl.InMemoryDataAlgebra[F]()(implicitly)
 
     // This construction is 100% type-safe - no casting possible
     val builder = GADTPipelineBuilder[F]
@@ -531,6 +558,9 @@ object GADTPipelineExamples {
    * Demonstration of compile-time type checking. These examples will fail to compile if attempted:
    */
   def typeCheckingExamples[F[_]: EffectSystem]: Unit = {
+    import com.flowforge.core.instances.DefaultCodecs._
+    implicit val da: com.flowforge.core.algebra.DataAlgebra[F] =
+      new com.flowforge.core.impl.InMemoryDataAlgebra[F]()(implicitly)
     val builder = GADTPipelineBuilder[F]
 
     // ✅ VALID: Correct stage order
