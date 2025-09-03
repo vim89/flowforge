@@ -1,5 +1,8 @@
 # 🔥 FlowForge - Data Engineering Excellence Platform
 
+Reality note (2025-09-03)
+- This reference outlines end-state goals. The current implementation is an architectural scaffold with selected features working. Consult docs/design/GROUND_REALITY_REPORT.md for a module-by-module status and timelines.
+
 Owner: Vitthal Mirji
 Status: In progress
 

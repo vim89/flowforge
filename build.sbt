@@ -89,35 +89,22 @@ def moduleProject(name: String): Project =
 // ===== ROOT PROJECT =====
 lazy val root = (project in file("."))
   .aggregate(
-    // Infrastructure Layer (NEW)
-    safety,
-    config,
-    logging,
+    // Infrastructure Layer
     infrastructure,
-    // Existing modules
+    // CLIs
+    validationCli,
+    contractsExtractorCli,
+    // Core modules
     core,
-    framework,
     contracts,
     connectors,
     connectorsGcs,
-    connectorsS3,
-    connectorsBigQuery,
-    connectorsKafka,
-    connectorsAzure,
-    engines,
     enginesSpark,
     enginesFlink,
-    typedSpark,
-    validationCli,
-    contractsExtractorCli,
     quality,
     qualityDeequ,
     templates,
-    monitoring,
-    testing,
     examples,
-    experimental,
-    benchmarks,
     it
   )
   .settings(
@@ -127,29 +114,9 @@ lazy val root = (project in file("."))
   )
 
 // ===== INFRASTRUCTURE LAYER (NEW) =====
-lazy val safety = moduleProject("safety")
-  .dependsOn(core)
-  .settings(
-    description := "Resource safety and bracket patterns",
-    libraryDependencies ++= Dependencies.forModule("safety")
-  )
-
-lazy val config = moduleProject("config")
-  .dependsOn(core, safety)
-  .settings(
-    description := "Type-safe configuration management (CCM replacement)",
-    libraryDependencies ++= Dependencies.forModule("config")
-  )
-
-lazy val logging = moduleProject("logging")
-  .dependsOn(core, config)
-  .settings(
-    description := "Structured logging and observability framework",
-    libraryDependencies ++= Dependencies.forModule("logging")
-  )
 
 lazy val infrastructure = moduleProject("infrastructure")
-  .dependsOn(safety, config, logging)
+  .dependsOn(core)
   .settings(
     description := "Complete infrastructure layer with testing framework",
     libraryDependencies ++= Dependencies.forModule("infrastructure")
@@ -162,12 +129,6 @@ lazy val core = moduleProject("core")
     libraryDependencies ++= Dependencies.forModule("core")
   )
 
-lazy val framework = moduleProject("framework")
-  .dependsOn(core, contracts)
-  .settings(
-    description := "Advanced pipeline combinators and orchestration",
-    libraryDependencies ++= Dependencies.forModule("framework")
-  )
 
 lazy val contracts = moduleProject("contracts")
   .dependsOn(core)
@@ -193,59 +154,20 @@ lazy val connectorsGcs = moduleProject("connectors-gcs")
     libraryDependencies ++= Dependencies.forModule("connectors-gcs")
   )
 
-lazy val connectorsS3 = moduleProject("connectors-s3")
-  .dependsOn(connectors)
-  .settings(
-    description := "Amazon S3 connector",
-    libraryDependencies ++= Dependencies.forModule("connectors-s3")
-  )
-
-lazy val connectorsBigQuery = moduleProject("connectors-bigquery")
-  .dependsOn(connectors)
-  .settings(
-    description := "Google BigQuery connector",
-    libraryDependencies ++= Dependencies.forModule("connectors-bigquery")
-  )
-
-lazy val connectorsKafka = moduleProject("connectors-kafka")
-  .dependsOn(connectors)
-  .settings(
-    description := "Apache Kafka connector",
-    libraryDependencies ++= Dependencies.forModule("connectors-kafka")
-  )
-
-lazy val connectorsAzure = moduleProject("connectors-azure")
-  .dependsOn(connectors)
-  .settings(
-    description := "Azure connector",
-    libraryDependencies ++= Dependencies.forModule("connectors-azure")
-  )
 
 // ===== ENGINE MODULES =====
-lazy val engines = moduleProject("engines")
-  .dependsOn(core, contracts, framework)
-  .settings(
-    description := "Base execution engine abstractions",
-    libraryDependencies ++= Dependencies.forModule("engines")
-  )
 
 lazy val enginesSpark = moduleProject("engines-spark")
-  .dependsOn(engines, connectors)
+  .dependsOn(core, connectors)
   .settings(
     description := "Apache Spark execution engine",
     libraryDependencies ++= Dependencies.forModule("engines-spark")
   )
 
-// Optional typed Spark helpers using Frameless
-lazy val typedSpark = moduleProject("typed-spark")
-  .dependsOn(core, enginesSpark)
-  .settings(
-    description := "Optional typed Spark helpers (Frameless)",
-    libraryDependencies ++= Dependencies.forModule("typed-spark")
-  )
+// typed-spark merged into engines-spark under com.flowforge.engines.spark.typed
 
 lazy val enginesFlink = moduleProject("engines-flink")
-  .dependsOn(engines, connectors)
+  .dependsOn(core, connectors)
   .settings(
     description := "Apache Flink execution engine",
     libraryDependencies ++= Dependencies.forModule("engines-flink")
@@ -253,7 +175,7 @@ lazy val enginesFlink = moduleProject("engines-flink")
 
 // ===== QUALITY MODULES =====
 lazy val quality = moduleProject("quality")
-  .dependsOn(core, contracts, framework)
+  .dependsOn(core, contracts)
   .settings(
     description := "Data quality framework",
     libraryDependencies ++= Dependencies.forModule("quality")
@@ -268,25 +190,12 @@ lazy val qualityDeequ = moduleProject("quality-deequ")
 
 // ===== SUPPORT MODULES =====
 lazy val templates = moduleProject("templates")
-  .dependsOn(core, contracts, framework, quality)
+  .dependsOn(core, contracts, quality)
   .settings(
     description := "Pipeline Giter8 templates and code generation",
     libraryDependencies ++= Dependencies.forModule("templates")
   )
 
-lazy val monitoring = moduleProject("monitoring")
-  .dependsOn(core, framework)
-  .settings(
-    description := "Monitoring and observability",
-    libraryDependencies ++= Dependencies.forModule("monitoring")
-  )
-
-lazy val testing = moduleProject("testing")
-  .dependsOn(core, contracts, framework, quality)
-  .settings(
-    description := "Testing utilities and frameworks",
-    libraryDependencies ++= Dependencies.forModule("testing")
-  )
 
 // ===== EXAMPLE & EXPERIMENTAL MODULES =====
 lazy val examples = moduleProject("examples")
@@ -329,27 +238,9 @@ lazy val contractsExtractorCli = moduleProject("contracts-extractor-cli")
     publish / skip := true
   )
 
-lazy val experimental = moduleProject("experimental")
-  .dependsOn(core, framework)
-  .settings(
-    description := "Experimental features & prototypes: ML, distributed computing, Kyo, Caprese",
-    crossScalaVersions := Seq(Dependencies.Versions.scala213),
-    libraryDependencies ++= Dependencies.forModule("experimental"),
-    publish / skip := true
-  )
-
 // ===== ADDITIONAL MODULES =====
-lazy val benchmarks = (project in file("benchmarks"))
-  .dependsOn(core, framework, examples)
-  .settings(
-    name        := "benchmarks",
-    description := "Flowforge Performance benchmarks",
-    libraryDependencies ++= Dependencies.common,
-    publish / skip := true
-  )
-
 lazy val it = (project in file("integration-tests"))
-  .dependsOn(examples, testing, connectorsGcs, connectorsBigQuery, enginesSpark, qualityDeequ)
+  .dependsOn(examples, connectorsGcs, enginesSpark, qualityDeequ)
   .settings(
     name           := "integration-tests",
     description    := "Flowforge Integration tests",

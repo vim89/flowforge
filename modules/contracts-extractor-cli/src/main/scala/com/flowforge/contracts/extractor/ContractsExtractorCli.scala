@@ -1,12 +1,12 @@
 package com.flowforge.contracts.extractor
 
-import cats.effect.{ IO, IOApp, Resource }
+import cats.effect.{ ExitCode, IO, IOApp, Resource }
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.instances.EffectInstances._
 import org.apache.spark.sql.{ DataFrame, SparkSession }
 import scopt.OParser
 
-object ContractsExtractorCli extends IOApp.Simple {
+object ContractsExtractorCli extends IOApp {
 
   sealed trait Mode
   object Mode {
@@ -54,12 +54,11 @@ object ContractsExtractorCli extends IOApp.Simple {
     )
   }
 
-  def run: IO[Unit] = {
-    OParser.parse(parser, sys.args, Args()) match {
-      case Some(cfg) => extract(cfg)
-      case None      => IO.unit
+  def run(args: List[String]): IO[ExitCode] =
+    OParser.parse(parser, args, Args()) match {
+      case Some(cfg) => extract(cfg).as(ExitCode.Success)
+      case None      => IO.pure(ExitCode(2))
     }
-  }
 
   private def sparkResource(master: Option[String]): Resource[IO, SparkSession] =
     Resource.make {
@@ -89,11 +88,15 @@ object ContractsExtractorCli extends IOApp.Simple {
 
   // Very small Avro generator from Spark StructType (flat/nested basic support)
   object Avro {
-    import io.circe.Json
+    import io.circe.{ Encoder, Json }
     import io.circe.syntax._
+    import io.circe.generic.semiauto._
 
     final case class Field(name: String, `type`: Json)
     final case class Record(`type`: String = "record", name: String, namespace: String, fields: List[Field])
+
+    implicit val fieldEncoder: Encoder[Field]   = deriveEncoder[Field]
+    implicit val recordEncoder: Encoder[Record] = deriveEncoder[Record]
 
     def fromSpark(df: DataFrame, namespace: String, recordName: String): String = {
       val fields = df.schema.fields.toList.map { f => Field(f.name, sparkTypeToAvro(f.dataType, f.nullable)) }
@@ -173,4 +176,3 @@ object ContractsExtractorCli extends IOApp.Simple {
     }
   }
 }
-

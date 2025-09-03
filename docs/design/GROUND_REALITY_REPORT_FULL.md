@@ -46,7 +46,7 @@ Notes: File list per module is provided in Appendix A.
   - Types and errors (refined wrappers, ValidatedNel, typed errors): ✅ baseline; schema logic mostly runtime. (`core/types/*.scala`).
 
 - Framework Layer
-  - Pipeline combinators and execution (Kleisli-based): ✅ minimal but present. (`modules/framework/*`).
+  - Pipeline combinators and execution (Kleisli-based): ✅ minimal but present. (now under `modules/core/src/main/scala/com/flowforge/framework/*`).
   - Typed builders with phantom/generic gates: 🟡 prototypes exist (`PipelineBuilder2.scala`, `TypeSafePipeline.scala`), not fully enforced across engines/connectors.
 
 - Domain Layer
@@ -61,9 +61,9 @@ Notes: File list per module is provided in Appendix A.
   - Monitoring: 🟡 Prometheus counters present (`core/observability/*`); cohesive tracing/OTel/micrometer wiring ❌.
 
 - Infrastructure Layer
-  - Resource safety: 🟡 scaffolding (`modules/safety/ResourceSafety.scala`).
-  - Config: 🟡 type-safe config decoder base present (`modules/config/ConfigurationManagement.scala`).
-  - Logging: ✅ structured logger (`modules/logging/StructuredLogger.scala`).
+  - Resource safety: 🟡 scaffolding (`modules/infrastructure/src/main/scala/com/flowforge/safety/ResourceSafety.scala`).
+  - Config: 🟡 type-safe config decoder base present (`modules/infrastructure/src/main/scala/com/flowforge/config/ConfigurationManagement.scala`).
+  - Logging: ✅ structured logger (`modules/infrastructure/src/main/scala/com/flowforge/logging/StructuredLogger.scala`).
 
 - Application Layer
   - Templates: 🟡 minimal Giter8 demo under `templates/data-pipeline.g8` (self-contained Spark/Delta demo), not contract-first FlowForge project.
@@ -153,9 +153,10 @@ Key claim patterns found: compile-time guarantees/gates, multi-engine, cloud por
 
 ## Appendix A — Per-Module Scala Files
 
-config:
-- modules/config/src/main/scala/com/flowforge/config/ConfigurationManagement.scala
-- modules/config/src/test/scala/com/flowforge/config/CDCConfigDecoderSpec.scala
+infrastructure:
+- modules/infrastructure/src/main/scala/com/flowforge/config/ConfigurationManagement.scala
+- modules/infrastructure/src/main/scala/com/flowforge/logging/StructuredLogger.scala
+- modules/infrastructure/src/main/scala/com/flowforge/safety/ResourceSafety.scala
 
 connectors:
 - modules/connectors/src/main/scala/com/flowforge/connectors/package.scala
@@ -168,6 +169,8 @@ contracts:
 - modules/contracts/src/main/scala/com/flowforge/contracts/CompileTimeContracts.scala
 
 core:
+- modules/core/src/main/scala/com/flowforge/framework/PipelineCombinators.scala
+- modules/core/src/main/scala/com/flowforge/framework/PipelineExecution.scala
 - modules/core/src/main/scala/com/flowforge/core/algebra/EnterpriseTableAlgebra.scala
 - modules/core/src/main/scala/com/flowforge/core/algebra/TypeClasses.scala
 - modules/core/src/main/scala/com/flowforge/core/algebra/DataAlgebra.scala

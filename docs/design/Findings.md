@@ -366,8 +366,8 @@ This section inventories current modules and highlights any scaffolding, ???, or
 
 ### Known TODO/??? Hotspots
 - modules/infrastructure/InfrastructureLayer.scala: resourceSafety, cloudResourceSafety, loadConfigWithLogging — implement.
-- modules/logging/StructuredLogger.scala: withContext — implement.
-- modules/framework/PipelineCombinators.scala: placeholder — replace/remove.
+- modules/infrastructure/src/main/scala/com/flowforge/logging/StructuredLogger.scala: withContext — implement.
+- modules/core/src/main/scala/com/flowforge/framework/PipelineCombinators.scala: placeholder — replace/remove.
 
 ### Cross‑Cutting Risks
 - Overuse of UnsupportedOperationException guard rails in Spark paths; convert to domain errors where appropriate.

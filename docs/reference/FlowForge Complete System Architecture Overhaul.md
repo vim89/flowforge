@@ -1,5 +1,8 @@
 # 🚀 FlowForge: Complete System Architecture Overhaul
 
+Reality note (2025-09-03)
+- This document reflects an ambitious overhaul plan. The current FlowForge repo implements a subset of these ideas; please see docs/design/GROUND_REALITY_REPORT.md for current implementation status and gaps.
+
 Status: Not started
 
 ## 🎯 **Executive Vision**

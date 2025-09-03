@@ -39,9 +39,9 @@ val pipeline = DataPipelineFactory[IO]
 // Run it with automatic retry, monitoring, and error handling
 pipeline.run.unsafeRunSync()
 ```
-**Today:** Type-safe interfaces, effect-safe orchestration, runtime contracts, scaffolding in place.  
-**Now implemented:** Compile-time schema gates via typed sources/contracts/sinks; untyped APIs are deprecated and treated as errors in this repo to ensure mismatch code does not compile.  
-**Roadmap:** Production-hardening and full auditing.
+**Today (2025-09-03):** Type-safe interfaces, effect-safe orchestration, runtime contracts, scaffolding in place.  
+**Partially implemented:** Compile-time schema gates are available via the typed path (TypedSource/TypedSink/PipelineBuilder2 with shapeless LabelledGeneric evidence). Legacy/untyped APIs still exist; CI/scalafix enforcement to block them is planned but not yet active.  
+**Roadmap:** Build-time physical schema checks (sbt plugin), deprecate/unify public APIs as typed-only, production-hardening and full auditing.
 
 For an honest, module-by-module status: see `docs/design/GROUND_REALITY_REPORT.md` (updated 2025-09-03).
 

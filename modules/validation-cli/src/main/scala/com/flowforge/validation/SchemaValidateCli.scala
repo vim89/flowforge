@@ -10,7 +10,8 @@ import scopt.OParser
  * Minimal CLI to validate physical schemas (Delta/Parquet/Hive) against an expected JSON schema
  * file. Intended for CI use. Spark is used for schema discovery; no data scan performed.
  */
-object SchemaValidateCli extends IOApp.Simple {
+import cats.effect.ExitCode
+object SchemaValidateCli extends IOApp {
 
   sealed trait Mode
   object Mode {
@@ -54,15 +55,11 @@ object SchemaValidateCli extends IOApp.Simple {
     )
   }
 
-  def run: IO[Unit] = {
-    EffectSystem[IO].delay(OParser.parse(parser, sys.props.toSeq.map{case (k,v)=>s"--$k=$v"}.toArray, Args())).flatMap { _ =>
-      // scopt expects real argv; since examples run with IOApp, parse from sys.args
-      OParser.parse(parser, sys.args, Args()) match {
-        case Some(cfg) => validate(cfg)
-        case None      => IO.unit
-      }
+  def run(args: List[String]): IO[ExitCode] =
+    OParser.parse(parser, args, Args()) match {
+      case Some(cfg) => validate(cfg).as(ExitCode.Success)
+      case None      => IO.pure(ExitCode(2))
     }
-  }
 
   private def sparkResource(master: Option[String]): Resource[IO, SparkSession] =
     Resource.make {

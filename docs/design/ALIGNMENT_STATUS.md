@@ -1,6 +1,6 @@
 # FlowForge Alignment Status Tracking
 
-*Last Updated: 2025-09-02*
+*Last Updated: 2025-09-03*
 
 ## 📊 Document vs Codebase Alignment Status
 
@@ -11,6 +11,8 @@
 | **design.md** | "Complete implementations" | Significant gaps in concrete methods | ⚠️ **MISALIGNED** | 🔄 **IN PROGRESS** |
 | **IMPLEMENTATION_TODO.md** | "4 key methods missing" | 50+ methods need implementation | ⚠️ **MISALIGNED** | ✅ **CORRECTED** - Realistic scope documented |
 | **CLAUDE.md** | Effect system guidelines | Missing Effect System research application | ⚠️ **MISALIGNED** | ✅ **CORRECTED** - Added implementation rules |
+| **README.md** | "30-second, zero errors" | Architectural scaffold; typed path only | ✅ **ALIGNED** | ✅ Updated with reality-first note |
+| **AGENTS.md** | "typed-only enforced" | Typed gates exist; not enforced | ✅ **ALIGNED** | ✅ Wording corrected |
 
 ## 🔧 Critical Architectural Inconsistencies
 
@@ -167,13 +169,14 @@
 | Templates | Giter8 archetypes with effect choice | Dirs exist; no content | High | Build “data-pipeline” template first (Cats‑Effect) |
 | Foundation | Safety, Config, Logging, Testing | Partially documented; implementations partial | High | Implement MVPs + tests |
 
-### Changes Logged Today (2025-09-02)
+### Changes Logged Today (2025-09-03)
 - Engines-Spark: Conditional Delta MERGE; SCD2 generalized via CDCConfig; hashing excludes audit/SCD2 by default; Parquet SCD1 upsert; metrics for CDC latency.
 - Streaming: Added `StreamingCDC.performDeltaStreamed` helper with unit test.
 - Templates: Added initial `data-pipeline.g8` scaffold (Cats-Effect) with sample wiring notes.
 - Connectors: FileSystem connector present; GCS/S3/BigQuery modules exist as scaffolds (no implementations yet).
 - Build: `delta-spark` remains the Delta dependency; Spark artifacts are `provided`.
 - Compilation: `sbt compile` succeeds across modules (modules without sources trivially compile).
+ - Docs: README reality-first update; AGENTS wording corrected; Ground Reality report expanded with repo stats.
 
 ### Next 10 Working Days — Execution Plan
 1. Core hardening (EffectSystem laws, error ADTs, codecs/schemas, PipelineBuilder2 behaviors, remove placeholder combinators).
@@ -187,8 +190,8 @@
 | File | Problem | Action | Owner | Status |
 |---|---|---|---|---|
 | modules/infrastructure/InfrastructureLayer.scala | ??? resourceSafety/cloudResourceSafety/loadConfigWithLogging | Implement using ResourceSafety + ConfigurationManagement | Core | Pending |
-| modules/logging/StructuredLogger.scala | ??? withContext (MDC) | Push/pop MDC around effect using EffectSystem.delay/suspend | Core | Pending |
-| modules/framework/PipelineCombinators.scala | Placeholder combinators | Replace/remove; rely on PipelineBuilder2 Kleisli | Core | Pending |
+| modules/infrastructure/src/main/scala/com/flowforge/logging/StructuredLogger.scala | ??? withContext (MDC) | Push/pop MDC around effect using EffectSystem.delay/suspend | Core | Pending |
+| modules/core/src/main/scala/com/flowforge/framework/PipelineCombinators.scala | Placeholder combinators | Replace/remove; rely on PipelineBuilder2 Kleisli | Core | Pending |
 | modules/engines-spark/SparkDataAlgebra.scala | Missing SCD2/partition/streaming/encoders | Implement; add tests | Engines | Pending |
 | modules/contracts/DataContract.scala | Example StandardContracts commented | Provide strict examples + tests | Core | Pending |
 | modules/templates/* | Empty g8 templates | Implement data-pipeline.g8 v0 | DX | Pending |

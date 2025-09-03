@@ -451,3 +451,7 @@ This creates, configures, tests, and deploys in a single command!
 2. 📱 **Get Help**: Join our Discord for real-time support
 3. 📚 **Learn More**: Check out advanced tutorials
 4. 🚀 **Share**: Tell us about your 30-minute success story!
+# 30-Minute Production Setup Goal
+
+Reality note (2025-09-03)
+- This document is aspirational. Current repo offers a minimal giter8 scaffold and core libraries, but not a turnkey 30‑minute production setup. See docs/design/GROUND_REALITY_REPORT.md for the current status and roadmap.

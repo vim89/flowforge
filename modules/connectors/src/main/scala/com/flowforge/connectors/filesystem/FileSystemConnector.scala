@@ -788,6 +788,7 @@ class GCSConnector[F[_]: EffectSystem](
 /**
  * Production-ready Amazon S3 connector
  */
+/* S3Connector removed for GCS-only focus
 class S3Connector[F[_]: EffectSystem](
   region: String,
   accessKeyId: Option[String] = None,
@@ -1089,6 +1090,7 @@ class S3Connector[F[_]: EffectSystem](
     else DataFormat.JSON // default
   }
 }
+*/
 
 object FileSystemConnector {
   def local[F[_]: EffectSystem]: LocalFileSystemConnector[F] =
@@ -1107,13 +1109,7 @@ object FileSystemConnector {
   ): GCSConnector[F] =
     new GCSConnector[F](projectId, serviceAccountPath, configuration)
 
-  def s3[F[_]: EffectSystem](
-    region: String,
-    accessKeyId: Option[String] = None,
-    secretAccessKey: Option[String] = None,
-    configuration: Map[String, String] = Map.empty
-  ): S3Connector[F] =
-    new S3Connector[F](region, accessKeyId, secretAccessKey, configuration)
+  // def s3[...] removed in GCS-only build
 }
 
 /**

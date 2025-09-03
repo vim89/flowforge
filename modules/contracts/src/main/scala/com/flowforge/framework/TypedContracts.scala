@@ -43,10 +43,11 @@ object TypedContractsSyntax {
                 message = s"Data contract failed: $msg"
               )
               F.raiseError(err)
+            }
           }
-        }
       )
       b.copy(stages = b.stages :+ stage)
     }
   }
 }
+

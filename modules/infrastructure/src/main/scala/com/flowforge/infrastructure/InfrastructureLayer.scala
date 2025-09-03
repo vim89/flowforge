@@ -1,11 +1,11 @@
 package com.flowforge.infrastructure
 
-import cats.effect.{ Resource, Sync }
+import cats.effect.{Resource, Sync}
 import cats.syntax.all._
-import cats.syntax.all._
-import com.flowforge.safety.{ CloudResourceSafety, ResourceSafety }
-import com.flowforge.config.{ ConfigurationManagement, FlowForgeConfig }
-import com.flowforge.logging.{ DistributedTracing, MetricsCollector, StructuredLogger }
+import com.flowforge.config.{ConfigurationManagement, ConfigError, ConfigDecoder}
+import com.flowforge.core.algebra.FlowForgeConfig
+import com.flowforge.logging.StructuredLogger
+import com.flowforge.safety.{ResourceSafety, CloudResourceSafety}
 
 /**
  * Complete Infrastructure Layer providing all cross-cutting concerns. This is the foundation layer
@@ -52,7 +52,7 @@ trait InfrastructureLayer[F[_]] {
    * Load complete FlowForge configuration with validation.
    */
   def loadFlowForgeConfig
-    : F[cats.data.ValidatedNel[com.flowforge.config.ConfigError, FlowForgeConfig]]
+    : F[cats.data.ValidatedNel[ConfigError, FlowForgeConfig]]
 
   /**
    * Initialize infrastructure layer with proper resource management.
@@ -264,8 +264,10 @@ object InfrastructureLayer {
       new DefaultTestingFramework[F]()
 
     override def loadFlowForgeConfig
-      : F[cats.data.ValidatedNel[com.flowforge.config.ConfigError, FlowForgeConfig]] =
+      : F[cats.data.ValidatedNel[ConfigError, FlowForgeConfig]] = {
+      import com.flowforge.config.ConfigurationManagement.flowForgeConfigDecoder
       configurationManagement.loadTypeSafeConfig[FlowForgeConfig]("flowforge")
+    }
 
     override def initialize: F[Unit] =
       for {
@@ -388,7 +390,7 @@ object syntax {
     /**
      * Load configuration with error handling and logging.
      */
-    def loadConfigWithLogging[T: com.flowforge.config.ConfigDecoder](
+    def loadConfigWithLogging[T: ConfigDecoder](
       key: String
     )(implicit S: Sync[F]): F[T] = {
       import cats.data.Validated

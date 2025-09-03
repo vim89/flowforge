@@ -3,7 +3,7 @@ FlowForge Data Pipeline Template (giter8)
 
 Purpose
 - Bootstrap a Cats-Effect based FlowForge project with:
-  - Compile-time schema gates using typed sources/contracts/sinks (shapeless LabelledGeneric)
+  - Compile-time schema gates on the typed path using typed sources/contracts/sinks (shapeless LabelledGeneric)
   - Type-safe pipelines and effect-polymorphic orchestration
   - Spark engine wiring option
   - Metrics/logging hooks
@@ -19,3 +19,4 @@ Notes
 - This is an initial scaffold. Engine and connector dependencies are left as version variables.
 - Choose your effect runtime (Cats-Effect default). ZIO variant can be added later.
 - To upgrade to FlowForge APIs, add published artifacts for `flowforge-core`, `flowforge-framework`, and `flowforge-engines-spark` in `build.sbt`, then replace the demo with FlowForge pipeline wiring.
+- Reality note (2025-09-03): Physical schema checks during build and CI enforcement of typed-only usage are not included in this template yet.

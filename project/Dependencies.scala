@@ -155,29 +155,7 @@ object Dependencies {
       "com.google.cloud" % "google-cloud-secretmanager" % Versions.gcpStorage
     )
 
-    val s3 = Seq(
-      "software.amazon.awssdk" % "s3"             % Versions.aws,
-      "software.amazon.awssdk" % "secretsmanager" % Versions.aws
-    )
-
-    val bigquery = Seq(
-      "com.google.cloud" % "google-cloud-bigquery" % Versions.bigquery
-    )
-
-    val kafka = Seq(
-      "org.apache.kafka" % "kafka-clients" % Versions.kafka,
-      "com.github.fd4s" %% "fs2-kafka"     % Versions.fs2Kafka
-        exclude ("org.apache.kafka", "kafka-clients")
-        exclude ("org.typelevel", "cats-effect")
-        exclude ("org.scala-lang", "scala3-library")
-    )
-
-    val azure = Seq(
-      "com.azure" % "azure-storage-blob" % Versions.azure,
-      "com.azure" % "azure-identity"     % "1.10.4"
-    )
-
-    val all: Seq[ModuleID] = hadoop ++ gcs ++ s3 ++ bigquery ++ kafka ++ azure
+    val all: Seq[ModuleID] = hadoop ++ gcs
   }
 
   // ===== QUALITY DEPENDENCIES =====
@@ -243,31 +221,18 @@ object Dependencies {
   def forModule(moduleName: String): Seq[ModuleID] = moduleName match {
     case "core" => Core.all ++ Monitoring.prometheus ++ Testing.unit
     // Infrastructure Layer modules
-    case "safety" => Core.functional ++ effectSystems ++ Testing.unit
-    case "config" =>
-      Core.functional ++ effectSystems ++ Testing.unit ++ Seq(
-        "com.typesafe"      % "config" % "1.4.3",
-        "com.github.scopt" %% "scopt"  % "4.1.0"
+    case "infrastructure" =>
+      Core.all ++ effectSystems ++ Testing.integration ++ Monitoring.all ++ Seq(
+        "com.typesafe" % "config" % "1.4.3"
       )
-    case "logging" =>
-      Core.functional ++ effectSystems ++ Testing.unit ++ Seq(
-        "com.typesafe.scala-logging" %% "scala-logging"   % Versions.scalaLogging,
-        "ch.qos.logback"              % "logback-classic" % Versions.logback,
-        "org.slf4j"                   % "slf4j-api"       % "2.0.9"
-      )
-    case "infrastructure" => Core.all ++ effectSystems ++ Testing.integration ++ Monitoring.all
     case "contracts" =>
       Core.all ++ Testing.unit ++ Seq(
         "org.apache.spark" %% "spark-sql" % Versions.spark % "provided"
       )
     case "connectors"          => Core.functional ++ Testing.unit ++ Connectors.all
+    case "connectors-s3"       => common ++ Connectors.hadoop
     case "connectors-gcs"      => common ++ Connectors.gcs
-    case "connectors-s3"       => common ++ Connectors.s3
-    case "connectors-bigquery" => common ++ Connectors.bigquery
-    case "connectors-kafka"    => common ++ Connectors.kafka
-    case "connectors-azure"    => common ++ Connectors.azure
-    case "engines"             => Core.functional ++ Testing.unit
-    case "engines-spark"       => common ++ Engines.spark
+    case "engines-spark"       => common ++ Engines.spark ++ TypedSpark.frameless
     case "engines-flink"       => common ++ Engines.flink
     case "quality"             => Core.functional ++ Testing.unit
     case "quality-deequ"       => common ++ Quality.deequ
@@ -275,14 +240,7 @@ object Dependencies {
       common ++ Seq(
         "org.foundweekends.giter8" %% "giter8-lib" % Versions.sbtGiter8
       )
-    case "monitoring" => common ++ Monitoring.all
-    case "testing"    => common ++ Testing.integration
     case "examples"   => common
-    case "typed-spark" => common ++ TypedSpark.frameless ++ Engines.spark
-    case "experimental" =>
-      common ++ Seq(
-        "io.getkyo" %% "kyo-core" % Versions.kyo
-      )
     case _ => common
   }
 

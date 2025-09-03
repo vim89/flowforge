@@ -114,3 +114,4 @@ object PipelineCombinators {
     Pipeline(run, pipeline.metadata.copy(name = s"batch(${pipeline.metadata.name}, $batchSize)"))
   }
 }
+
