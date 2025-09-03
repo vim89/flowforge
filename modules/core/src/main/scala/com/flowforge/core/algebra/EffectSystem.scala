@@ -33,7 +33,7 @@
  *
  * Usage Examples:
  * ```scala
- * def processData[F[_]: EffectSystem](data: List[String]): F[List[ProcessedData]] =
+ * def processData[F[_]: EffectSystem](data: List[String]): F[List[ProcessedData] ] =
  *   for {
  *     // Parallel processing of data chunks
  *     processed <- EffectSystem[F].parTraverse(data)(processItem)
@@ -44,8 +44,8 @@
  *   } yield result
  *
  * // Works with any F[_] that has an EffectSystem instance
- * val zioResult: Task[List[ProcessedData]] = processData(data)
- * val catsResult: IO[List[ProcessedData]]  = processData(data)
+ * val zioResult: Task[List[ProcessedData] ] = processData(data)
+ * val catsResult: IO[List[ProcessedData] ]  = processData(data)
  * ```
  *
  * @author
@@ -383,7 +383,7 @@ trait EffectSystem[F[_]] extends MonadError[F, Throwable] {
    */
   def traverse[A, B](list: List[A])(f: A => F[B]): F[List[B]] =
     list.foldRight(pure(List.empty[B])) { (a, acc) =>
-      // Use the typeclass methods directly to avoid relying on extension syntax on F[_]
+      // Use the type class methods directly to avoid relying on extension syntax on F[_]
       flatMap(f(a)) { b =>
         map(acc) { bs =>
           b :: bs
