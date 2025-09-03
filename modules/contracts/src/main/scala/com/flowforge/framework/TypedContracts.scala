@@ -3,7 +3,7 @@ package com.flowforge.framework
 import cats.data.Validated
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.types.{ FlowForgeError, PipelineStage, PipelineBuilder2, BusinessError }
+import com.flowforge.core.types.{ BusinessError, FlowForgeError, PipelineBuilder2, PipelineStage }
 import com.flowforge.contracts.{ ContractViolation, DataContract }
 import shapeless.{ HList, LabelledGeneric }
 
@@ -17,9 +17,10 @@ final case class TypedContract[A, R <: HList](dc: DataContract[A])(implicit
 
 object TypedContractsSyntax {
 
-  /** PipelineBuilder2 syntax to attach a typed contract stage. Enforces at compile time that
-    * Out’s labelled-generic representation matches the contract’s type-level schema R.
-    */
+  /**
+   * PipelineBuilder2 syntax to attach a typed contract stage. Enforces at compile time that Out’s
+   * labelled-generic representation matches the contract’s type-level schema R.
+   */
   implicit final class PipelineBuilder2ContractsOps[F[_], In, Out](
     private val b: PipelineBuilder2[F, In, Out]
   ) extends AnyVal {
@@ -43,11 +44,10 @@ object TypedContractsSyntax {
                 message = s"Data contract failed: $msg"
               )
               F.raiseError(err)
-            }
           }
+        }
       )
       b.copy(stages = b.stages :+ stage)
     }
   }
 }
-

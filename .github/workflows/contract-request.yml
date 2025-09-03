@@ -68,6 +68,14 @@ jobs:
             --output "contracts" \
             --master "local[*]"
 
+      - name: Generate SDK
+        run: |
+          JAR=$(ls modules/contracts-extractor-cli/target/scala-2.13/*assembly*.jar)
+          java -cp "$JAR" com.flowforge.contracts.extractor.ContractsExtractorCli \
+            --mode "generate-sdk" \
+            --input "contracts" \
+            --output "sdk"
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
@@ -79,7 +87,13 @@ jobs:
             Source: `${{ steps.parse.outputs.sourceType }}` at `${{ steps.parse.outputs.location }}`
             Owners: `${{ steps.parse.outputs.owners }}`
             Compatibility: `${{ steps.parse.outputs.compatibility }}`
+            
+            📦 **Generated Contract SDK**:
+            - Case classes with proper field types
+            - TypedSource/TypedSink with compile-time schema validation
+            - SchemaEq evidence for PipelineBuilder2 integration
           add-paths: |
             contracts/**
+            sdk/**
           labels: contract
 

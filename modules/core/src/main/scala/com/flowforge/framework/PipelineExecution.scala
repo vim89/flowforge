@@ -21,4 +21,3 @@ object PipelineExecution {
     F.parTraverse(inputs)(pipeline.run.run)
   }
 }
-

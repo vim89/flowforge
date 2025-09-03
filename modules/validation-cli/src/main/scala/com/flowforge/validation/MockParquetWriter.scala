@@ -11,10 +11,18 @@ object MockParquetWriter extends IOApp.Simple {
   final case class rec(invoiceNumber: String, customerId: String, amount: Double, eventTs: Long)
 
   def run: IO[Unit] = F.blocking {
-    val spark = SparkSession.builder().appName("mock-parquet-writer").master("local[2]").config("spark.ui.enabled", "false").getOrCreate()
+    val spark = SparkSession
+      .builder()
+      .appName("mock-parquet-writer")
+      .master("local[2]")
+      .config("spark.ui.enabled", "false")
+      .getOrCreate()
     import spark.implicits._
-    Seq(rec("INV-9", "C-9", 99.0, System.currentTimeMillis())).toDS().write.mode("overwrite").parquet(sys.props.getOrElse("ff.mock.output", "/tmp/mock.parquet"))
+    Seq(rec("INV-9", "C-9", 99.0, System.currentTimeMillis()))
+      .toDS()
+      .write
+      .mode("overwrite")
+      .parquet(sys.props.getOrElse("ff.mock.output", "/tmp/mock.parquet"))
     spark.stop()
   }
 }
-

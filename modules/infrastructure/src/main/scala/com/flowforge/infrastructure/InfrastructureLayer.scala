@@ -1,11 +1,11 @@
 package com.flowforge.infrastructure
 
-import cats.effect.{Resource, Sync}
+import cats.effect.{ Resource, Sync }
 import cats.syntax.all._
-import com.flowforge.config.{ConfigurationManagement, ConfigError, ConfigDecoder}
+import com.flowforge.config.{ ConfigDecoder, ConfigError, ConfigurationManagement }
 import com.flowforge.core.algebra.FlowForgeConfig
 import com.flowforge.logging.StructuredLogger
-import com.flowforge.safety.{ResourceSafety, CloudResourceSafety}
+import com.flowforge.safety.{ CloudResourceSafety, ResourceSafety }
 
 /**
  * Complete Infrastructure Layer providing all cross-cutting concerns. This is the foundation layer
@@ -51,8 +51,7 @@ trait InfrastructureLayer[F[_]] {
   /**
    * Load complete FlowForge configuration with validation.
    */
-  def loadFlowForgeConfig
-    : F[cats.data.ValidatedNel[ConfigError, FlowForgeConfig]]
+  def loadFlowForgeConfig: F[cats.data.ValidatedNel[ConfigError, FlowForgeConfig]]
 
   /**
    * Initialize infrastructure layer with proper resource management.
@@ -263,8 +262,7 @@ object InfrastructureLayer {
     override val testingFramework: TestingFramework[F] =
       new DefaultTestingFramework[F]()
 
-    override def loadFlowForgeConfig
-      : F[cats.data.ValidatedNel[ConfigError, FlowForgeConfig]] = {
+    override def loadFlowForgeConfig: F[cats.data.ValidatedNel[ConfigError, FlowForgeConfig]] = {
       import com.flowforge.config.ConfigurationManagement.flowForgeConfigDecoder
       configurationManagement.loadTypeSafeConfig[FlowForgeConfig]("flowforge")
     }

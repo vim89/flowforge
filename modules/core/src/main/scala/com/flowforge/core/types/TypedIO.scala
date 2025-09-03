@@ -1,6 +1,6 @@
 package com.flowforge.core.types
 
-import shapeless.{ HList }
+import shapeless.HList
 
 /**
  * Convenience constructors for typed sources and sinks. These simply wrap existing untyped
@@ -30,4 +30,3 @@ object TypedIO {
   def s3ParquetSink[R <: HList](bucket: String, prefix: String): TypedSink[R] =
     TypedSink[R](DataSink.s3(bucket, prefix, DataFormat.Parquet))
 }
-

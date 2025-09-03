@@ -20,4 +20,3 @@ object CompileTimeContracts {
     ev: LabelledGeneric.Aux[A, R]
   ): DataContract[A] = dc
 }
-

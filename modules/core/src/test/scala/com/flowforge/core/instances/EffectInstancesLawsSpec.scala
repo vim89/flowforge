@@ -16,17 +16,14 @@ import org.scalatest.funspec.AsyncFunSpec
 import org.scalatest.matchers.should.Matchers
 import scala.concurrent.duration._
 
-class EffectInstancesLawsSpec
-    extends AsyncFunSpec
-    with AsyncIOSpec
-    with Matchers {
+class EffectInstancesLawsSpec extends AsyncFunSpec with AsyncIOSpec with Matchers {
 
   val effectSystem: EffectSystem[IO] = catsEffectSystemInstance
 
   describe("Cats-Effect EffectSystem instance") {
 
     it("satisfies Monad left identity") {
-      val a = 42
+      val a                 = 42
       val f: Int => IO[Int] = x => IO.pure(x + 1)
       val left              = IO.pure(a).flatMap(f)
       val right             = f(a)
@@ -34,14 +31,14 @@ class EffectInstancesLawsSpec
     }
 
     it("satisfies Monad right identity") {
-      val a = 42
+      val a    = 42
       val fa   = IO.pure(a)
       val left = fa.flatMap(IO.pure)
       (left, fa).parMapN(_ should equal(_))
     }
 
     it("satisfies Monad associativity") {
-      val a = 42
+      val a                 = 42
       val f: Int => IO[Int] = x => IO.pure(x + 2)
       val g: Int => IO[Int] = x => IO.pure(x * 3)
       val left              = IO.pure(a).flatMap(f).flatMap(g)

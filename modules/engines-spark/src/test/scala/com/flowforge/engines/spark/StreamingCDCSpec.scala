@@ -35,7 +35,7 @@ class StreamingCDCSpec extends AnyFunSuite {
   test("performDeltaStreamed aggregates micro-batch results") {
     import StreamingCDC._
     implicit val dc: DataContract[Rec] = DataContract.empty[Rec]
-    
+
     val batches = List(ds(List(Rec(1, "a"))), ds(List(Rec(1, "b"), Rec(2, "x"))))
     val target  = ds(Nil)
     val cfg     = CDCOperations.CDCConfig(keyColumns = NonEmptyList.one(FieldName.unsafeFrom("id")))

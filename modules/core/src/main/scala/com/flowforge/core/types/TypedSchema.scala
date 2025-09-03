@@ -10,12 +10,12 @@ import shapeless.{ HList, LabelledGeneric }
 object TypedSchema {
   type Repr[A] = HList
 
-  /** Evidence that type `A` has labelled-generic representation `R` (an HList of fields).
-    * If this implicit cannot be resolved, the types do not match and compilation fails.
-    */
+  /**
+   * Evidence that type `A` has labelled-generic representation `R` (an HList of fields). If this
+   * implicit cannot be resolved, the types do not match and compilation fails.
+   */
   type Matches[A, R <: HList] = LabelledGeneric.Aux[A, R]
 
   /** Helper summon; primarily for examples/tests. */
   def matches[A, R <: HList](implicit ev: Matches[A, R]): Matches[A, R] = ev
 }
-

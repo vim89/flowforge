@@ -329,8 +329,8 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
             FileSystemResult.success(bytes)
           }
         }
-      } { fs => effectSystem.blocking(fs.close()).void }
-    } { error => FileSystemResult.failure(FileSystemError.ReadError(location, error.getMessage)) }
+      }(fs => effectSystem.blocking(fs.close()).void)
+    }(error => FileSystemResult.failure(FileSystemError.ReadError(location, error.getMessage)))
   }
 
   def write(sink: DataSink, data: Array[Byte]): F[FileSystemResult[WriteMetadata]] = {
@@ -346,10 +346,12 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
           outputStream.write(data)
           outputStream.flush()
           outputStream.close()
-          FileSystemResult.success(WriteMetadata(path = location, bytesWritten = data.length.toLong))
+          FileSystemResult.success(
+            WriteMetadata(path = location, bytesWritten = data.length.toLong)
+          )
         }
-      } { fs => effectSystem.blocking(fs.close()).void }
-    } { error => FileSystemResult.failure(FileSystemError.WriteError(location, error.getMessage)) }
+      }(fs => effectSystem.blocking(fs.close()).void)
+    }(error => FileSystemResult.failure(FileSystemError.WriteError(location, error.getMessage)))
   }
 
   def listFiles(path: String): F[FileSystemResult[List[FileMetadata]]] =
@@ -1090,7 +1092,7 @@ class S3Connector[F[_]: EffectSystem](
     else DataFormat.JSON // default
   }
 }
-*/
+ */
 
 object FileSystemConnector {
   def local[F[_]: EffectSystem]: LocalFileSystemConnector[F] =

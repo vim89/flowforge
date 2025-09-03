@@ -8,7 +8,9 @@ import scala.annotation.implicitNotFound
  * Evidence that a case class A has a labelled-generic representation R. This is used as a
  * human-friendly gate so compile errors explain schema mismatches clearly.
  */
-@implicitNotFound("FlowForge: Pipeline type ${A} does not match the required contract schema. Make sure fields and types align exactly with the contract (order and names matter in this phase).")
+@implicitNotFound(
+  "FlowForge: Pipeline type ${A} does not match the required contract schema. Make sure fields and types align exactly with the contract (order and names matter in this phase)."
+)
 trait SchemaEq[A, R <: HList]
 
 object SchemaEq {
@@ -20,12 +22,14 @@ object SchemaEq {
 /** Policy marker types for schema conformance at compile time. */
 sealed trait SchemaPolicy
 object SchemaPolicy {
-  sealed trait Exact     extends SchemaPolicy
+  sealed trait Exact          extends SchemaPolicy
   sealed trait ExactUnordered extends SchemaPolicy // same fields/types, order-insensitive
 }
 
 /** Dispatcher for policy-driven conformance at compile time. */
-@implicitNotFound("FlowForge: Pipeline type does not conform to the required contract under the selected policy.")
+@implicitNotFound(
+  "FlowForge: Pipeline type does not conform to the required contract under the selected policy."
+)
 trait SchemaConforms[A, R <: HList, P <: SchemaPolicy]
 object SchemaConforms {
   import SchemaPolicy._

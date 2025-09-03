@@ -130,7 +130,10 @@ case class PipelineBuilder2[F[_]: EffectSystem, In, Out] private (
   def addTypedSink[R <: HList](
     sink: TypedSink[R],
     writer: (Out, DataSink) => F[Unit]
-  )(implicit eq: SchemaEq[Out, R], L: LabelledGeneric.Aux[Out, R]): PipelineBuilder2[F, In, Unit] = {
+  )(implicit
+    eq: SchemaEq[Out, R],
+    L: LabelledGeneric.Aux[Out, R]
+  ): PipelineBuilder2[F, In, Unit] = {
     val stage = PipelineStage.Sink[F, Out](
       name = s"typed-sink-${stages.size}",
       description = s"Write to ${sink.underlying.format} (typed)",
@@ -160,7 +163,9 @@ case class PipelineBuilder2[F[_]: EffectSystem, In, Out] private (
   def addTypedSinkExactUnordered[R <: HList](
     sink: TypedSink[R],
     writer: (Out, DataSink) => F[Unit]
-  )(implicit conf: SchemaConforms[Out, R, SchemaPolicy.ExactUnordered]): PipelineBuilder2[F, In, Unit] =
+  )(implicit
+    conf: SchemaConforms[Out, R, SchemaPolicy.ExactUnordered]
+  ): PipelineBuilder2[F, In, Unit] =
     addTypedSinkWithPolicy[R, SchemaPolicy.ExactUnordered](sink, writer)
 
   // build returns a typed Pipeline[F, In, Out]

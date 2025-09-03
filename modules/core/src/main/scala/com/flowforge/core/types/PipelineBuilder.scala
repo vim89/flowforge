@@ -6,7 +6,8 @@ import com.flowforge.core.algebra.EffectSystem
 import eu.timepit.refined.api.Refined
 
 /**
- * Fluent builder for pipeline construction (legacy). Prefer PipelineBuilder2 for compile-time type safety.
+ * Fluent builder for pipeline construction (legacy). Prefer PipelineBuilder2 for compile-time type
+ * safety.
  */
 case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
   name: String,

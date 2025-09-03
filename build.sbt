@@ -129,7 +129,6 @@ lazy val core = moduleProject("core")
     libraryDependencies ++= Dependencies.forModule("core")
   )
 
-
 lazy val contracts = moduleProject("contracts")
   .dependsOn(core)
   .settings(
@@ -153,7 +152,6 @@ lazy val connectorsGcs = moduleProject("connectors-gcs")
     description := "Google Cloud Storage connector",
     libraryDependencies ++= Dependencies.forModule("connectors-gcs")
   )
-
 
 // ===== ENGINE MODULES =====
 
@@ -196,10 +194,9 @@ lazy val templates = moduleProject("templates")
     libraryDependencies ++= Dependencies.forModule("templates")
   )
 
-
 // ===== EXAMPLE & EXPERIMENTAL MODULES =====
 lazy val examples = moduleProject("examples")
-  .dependsOn(core)
+  .dependsOn(core, contracts)
   .settings(
     description := "Example implementations",
     libraryDependencies ++= Dependencies.forModule("examples"),
@@ -212,14 +209,14 @@ lazy val validationCli = moduleProject("validation-cli")
   .settings(
     description := "FlowForge Schema Validation CLI",
     libraryDependencies ++= Dependencies.forModule("examples") ++ Seq(
-      "com.github.scopt" %% "scopt"     % "4.1.0",
-      "io.circe"         %% "circe-core" % Dependencies.Versions.circe,
+      "com.github.scopt" %% "scopt"        % "4.1.0",
+      "io.circe"         %% "circe-core"   % Dependencies.Versions.circe,
       "io.circe"         %% "circe-parser" % Dependencies.Versions.circe,
       // Bring Spark runtime for standalone CLI jar; keep only spark-sql for Parquet mode
       "org.apache.spark" %% "spark-sql" % Dependencies.Versions.spark
     ),
     Compile / mainClass := Some("com.flowforge.validation.SchemaValidateCli"),
-    publish / skip := true
+    publish / skip      := true
   )
 
 // CLI to infer contracts from physical sources and emit .avsc + dq/metadata YAML
@@ -228,14 +225,14 @@ lazy val contractsExtractorCli = moduleProject("contracts-extractor-cli")
   .settings(
     description := "FlowForge Contracts Extractor CLI",
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt"        % "4.1.0",
-      "io.circe"         %% "circe-core"   % Dependencies.Versions.circe,
-      "io.circe"         %% "circe-generic"% Dependencies.Versions.circe,
-      "io.circe"         %% "circe-parser" % Dependencies.Versions.circe,
-      "org.apache.spark" %% "spark-sql"    % Dependencies.Versions.spark
+      "com.github.scopt" %% "scopt"         % "4.1.0",
+      "io.circe"         %% "circe-core"    % Dependencies.Versions.circe,
+      "io.circe"         %% "circe-generic" % Dependencies.Versions.circe,
+      "io.circe"         %% "circe-parser"  % Dependencies.Versions.circe,
+      "org.apache.spark" %% "spark-sql"     % Dependencies.Versions.spark
     ),
     Compile / mainClass := Some("com.flowforge.contracts.extractor.ContractsExtractorCli"),
-    publish / skip := true
+    publish / skip      := true
   )
 
 // ===== ADDITIONAL MODULES =====

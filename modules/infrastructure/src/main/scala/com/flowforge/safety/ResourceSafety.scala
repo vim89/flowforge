@@ -8,7 +8,10 @@ import cats.effect.Resource
 trait ResourceSafety[F[_]] {
   def bracket[A, B](acquire: F[A])(use: A => F[B])(release: A => F[Unit]): F[B]
   def resource[A](acquire: F[A])(release: A => F[Unit]): Resource[F, A]
-  def combineResources[A, B](resourceA: Resource[F, A], resourceB: Resource[F, B]): Resource[F, (A, B)]
+  def combineResources[A, B](
+    resourceA: Resource[F, A],
+    resourceB: Resource[F, B]
+  ): Resource[F, (A, B)]
   def ensuring[A](operation: F[A])(cleanup: F[Unit]): F[A]
 }
 
@@ -18,7 +21,9 @@ trait ResourceSafety[F[_]] {
 trait CloudResourceSafety[F[_]] extends ResourceSafety[F] {
   def safeConnection[Provider, A](provider: Provider)(use: Connection[Provider] => F[A]): F[A]
   def safeFileHandle[A](path: CloudPath)(use: FileHandle => F[A]): F[A]
-  def safeStreamProcessing[A, B](inputStream: F[Stream[A]])(process: Stream[A] => F[Stream[B]]): F[Stream[B]]
+  def safeStreamProcessing[A, B](inputStream: F[Stream[A]])(
+    process: Stream[A] => F[Stream[B]]
+  ): F[Stream[B]]
 }
 
 // Supporting types for cloud resource safety
@@ -33,8 +38,7 @@ object ResourceSafety {
   ): F[B] =
     F.flatMap(acquire) { a =>
       F.handleErrorWith(
-        F.flatMap(use(a))(b => F.map(release(a))(_ => b)
-        )
+        F.flatMap(use(a))(b => F.map(release(a))(_ => b))
       )(e => F.flatMap(release(a))(_ => F.raiseError(e)))
     }
 
@@ -43,4 +47,3 @@ object ResourceSafety {
   ): Resource[F, A] =
     Resource.make(acquire)(release)
 }
-

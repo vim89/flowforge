@@ -39,19 +39,41 @@ object SchemaValidateCli extends IOApp {
     OParser.sequence(
       programName("ff-validate-schema"),
       head("FlowForge", "schema-validate"),
-      opt[String]("mode").required().action((m, a) => a.copy(mode = m.toLowerCase match {
-        case "parquet" => Mode.Parquet
-        case "delta"   => Mode.Delta
-        case "hive"    => Mode.Hive
-        case other      => throw new IllegalArgumentException(s"Unknown mode: $other")
-      })).text("parquet | delta | hive"),
-      opt[String]("input").required().action((p, a) => a.copy(pathOrTable = p)).text("path or table"),
-      opt[java.io.File]("expected-json").required().action((f, a) => a.copy(expectedSchemaJson = f)).text("expected schema file (Spark JSON or Avro or JSON Schema)"),
-      opt[String]("expected-format").optional().action((s, a) => a.copy(expectedFormat = s.toLowerCase match {
-        case "spark" | "" => ExpectedFormat.Spark
-        case other          => throw new IllegalArgumentException(s"Unsupported expected-format: $other (only 'spark' supported in this build)")
-      })).text("spark (default)"),
-      opt[String]("master").optional().action((m, a) => a.copy(master = Some(m))).text("Spark master, e.g., local[*]")
+      opt[String]("mode")
+        .required()
+        .action((m, a) =>
+          a.copy(mode = m.toLowerCase match {
+            case "parquet" => Mode.Parquet
+            case "delta"   => Mode.Delta
+            case "hive"    => Mode.Hive
+            case other     => throw new IllegalArgumentException(s"Unknown mode: $other")
+          })
+        )
+        .text("parquet | delta | hive"),
+      opt[String]("input")
+        .required()
+        .action((p, a) => a.copy(pathOrTable = p))
+        .text("path or table"),
+      opt[java.io.File]("expected-json")
+        .required()
+        .action((f, a) => a.copy(expectedSchemaJson = f))
+        .text("expected schema file (Spark JSON or Avro or JSON Schema)"),
+      opt[String]("expected-format")
+        .optional()
+        .action((s, a) =>
+          a.copy(expectedFormat = s.toLowerCase match {
+            case "spark" | "" => ExpectedFormat.Spark
+            case other =>
+              throw new IllegalArgumentException(
+                s"Unsupported expected-format: $other (only 'spark' supported in this build)"
+              )
+          })
+        )
+        .text("spark (default)"),
+      opt[String]("master")
+        .optional()
+        .action((m, a) => a.copy(master = Some(m)))
+        .text("Spark master, e.g., local[*]")
     )
   }
 
@@ -64,15 +86,16 @@ object SchemaValidateCli extends IOApp {
   private def sparkResource(master: Option[String]): Resource[IO, SparkSession] =
     Resource.make {
       EffectSystem[IO].blocking {
-        val b = SparkSession.builder().appName("ff-validate-schema").config("spark.ui.enabled", "false")
+        val b =
+          SparkSession.builder().appName("ff-validate-schema").config("spark.ui.enabled", "false")
         master.foreach(b.master)
         b.getOrCreate()
       }
-    } { s => EffectSystem[IO].blocking(s.stop()).void }
+    }(s => EffectSystem[IO].blocking(s.stop()).void)
 
-  private def validate(args: Args): IO[Unit] = {
+  private def validate(args: Args): IO[Unit] =
     sparkResource(args.master).use { spark =>
-      val expectedRaw = scala.io.Source.fromFile(args.expectedSchemaJson).mkString
+      val expectedRaw       = scala.io.Source.fromFile(args.expectedSchemaJson).mkString
       val expectedCanonical = Canonical.fromFile(expectedRaw, args.expectedFormat)
       val df = args.mode match {
         case Mode.Parquet => spark.read.parquet(args.pathOrTable)
@@ -81,11 +104,10 @@ object SchemaValidateCli extends IOApp {
       }
       val actualCanonical = Canonical.fromSpark(df.schema)
       Canonical.diff(expectedCanonical, actualCanonical) match {
-        case Nil  => IO.println("OK: Schemas match")
+        case Nil   => IO.println("OK: Schemas match")
         case diffs => IO.raiseError(new RuntimeException(Canonical.prettyDiffs(diffs)))
       }
     }
-  }
 
   // Canonical model for schema diffs
   object Canonical {
@@ -94,9 +116,9 @@ object SchemaValidateCli extends IOApp {
 
     sealed trait Diff
     object Diff {
-      case class MissingField(name: String) extends Diff
-      case class ExtraField(name: String) extends Diff
-      case class TypeMismatch(name: String, expected: String, actual: String) extends Diff
+      case class MissingField(name: String)                                            extends Diff
+      case class ExtraField(name: String)                                              extends Diff
+      case class TypeMismatch(name: String, expected: String, actual: String)          extends Diff
       case class NullabilityMismatch(name: String, expected: Boolean, actual: Boolean) extends Diff
     }
 
@@ -104,7 +126,7 @@ object SchemaValidateCli extends IOApp {
     import io.circe.parser._
 
     def fromSpark(s: org.apache.spark.sql.types.StructType): Model = {
-      val fields = s.fields.toList.map { f => Field(f.name, f.dataType.typeName, f.nullable) }
+      val fields = s.fields.toList.map(f => Field(f.name, f.dataType.typeName, f.nullable))
       Model(fields)
     }
 
@@ -116,8 +138,12 @@ object SchemaValidateCli extends IOApp {
               val c = j.hcursor
               for {
                 name <- c.get[String]("name").toOption
-                tpe  <- c.downField("type").get[String]("type").orElse(c.get[String]("type")).toOption
-                nul  <- c.get[Boolean]("nullable").toOption
+                tpe <- c
+                  .downField("type")
+                  .get[String]("type")
+                  .orElse(c.get[String]("type"))
+                  .toOption
+                nul <- c.get[Boolean]("nullable").toOption
               } yield Field(name, tpe, nul)
             }
             Model(fields)
@@ -126,24 +152,29 @@ object SchemaValidateCli extends IOApp {
     }
 
     private def normalizeTypeName(s: String): String = s.toLowerCase match {
-      case "int" | "integer"     => "integer"
-      case "long"                => "long"
-      case "double"              => "double"
-      case "float"               => "float"
-      case "string"              => "string"
-      case "boolean"             => "boolean"
-      case other                  => other
+      case "int" | "integer" => "integer"
+      case "long"            => "long"
+      case "double"          => "double"
+      case "float"           => "float"
+      case "string"          => "string"
+      case "boolean"         => "boolean"
+      case other             => other
     }
 
     def diff(expected: Model, actual: Model): List[Diff] = {
-      val expMap = expected.fields.map(f => f.name -> f).toMap
-      val actMap = actual.fields.map(f => f.name -> f).toMap
+      val expMap  = expected.fields.map(f => f.name -> f).toMap
+      val actMap  = actual.fields.map(f => f.name -> f).toMap
       val missing = expMap.keySet.diff(actMap.keySet).toList.map(Diff.MissingField)
       val extra   = actMap.keySet.diff(expMap.keySet).toList.map(Diff.ExtraField)
-      val common  = expMap.keySet.intersect(actMap.keySet).toList.flatMap { n =>
+      val common = expMap.keySet.intersect(actMap.keySet).toList.flatMap { n =>
         val e = expMap(n); val a = actMap(n)
-        val d1 = if (normalizeTypeName(e.tpe) != normalizeTypeName(a.tpe)) Some(Diff.TypeMismatch(n, e.tpe, a.tpe)) else None
-        val d2 = if (e.nullable != a.nullable) Some(Diff.NullabilityMismatch(n, e.nullable, a.nullable)) else None
+        val d1 =
+          if (normalizeTypeName(e.tpe) != normalizeTypeName(a.tpe))
+            Some(Diff.TypeMismatch(n, e.tpe, a.tpe))
+          else None
+        val d2 =
+          if (e.nullable != a.nullable) Some(Diff.NullabilityMismatch(n, e.nullable, a.nullable))
+          else None
         List(d1, d2).flatten
       }
       missing ++ extra ++ common
@@ -151,10 +182,11 @@ object SchemaValidateCli extends IOApp {
 
     def prettyDiffs(ds: List[Diff]): String = {
       val lines = ds.map {
-        case Diff.MissingField(n)            => s"- Missing field: $n"
-        case Diff.ExtraField(n)              => s"- Extra field: $n"
-        case Diff.TypeMismatch(n, e, a)      => s"- Type mismatch for $n: expected=$e actual=$a"
-        case Diff.NullabilityMismatch(n,e,a) => s"- Nullability mismatch for $n: expected=$e actual=$a"
+        case Diff.MissingField(n)       => s"- Missing field: $n"
+        case Diff.ExtraField(n)         => s"- Extra field: $n"
+        case Diff.TypeMismatch(n, e, a) => s"- Type mismatch for $n: expected=$e actual=$a"
+        case Diff.NullabilityMismatch(n, e, a) =>
+          s"- Nullability mismatch for $n: expected=$e actual=$a"
       }
       ("Schema differences:" :: lines).mkString("\n")
     }

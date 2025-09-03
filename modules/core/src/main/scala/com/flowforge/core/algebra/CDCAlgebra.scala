@@ -145,8 +145,7 @@ trait CDCAlgebra[F[_]] {
     source: Dataset[A],
     target: Dataset[A],
     config: CDCConfig
-  )(implicit contract: PDataContract[A]
-  ): F[CDCResult[A]]
+  )(implicit contract: PDataContract[A]): F[CDCResult[A]]
 
   /**
    * Compute hash for change detection.
@@ -179,8 +178,7 @@ trait CDCAlgebra[F[_]] {
     sourceRecords: List[A],
     targetRecords: List[A],
     config: CDCConfig
-  )(implicit contract: PDataContract[A]
-  ): F[List[(A, ChangeOperation)]]
+  )(implicit contract: PDataContract[A]): F[List[(A, ChangeOperation)]]
 
   /**
    * Apply CDC changes to target dataset.
@@ -195,8 +193,7 @@ trait CDCAlgebra[F[_]] {
   def applyChanges[A](
     changes: List[(A, ChangeOperation)],
     target: Dataset[A]
-  )(implicit contract: PDataContract[A]
-  ): F[Dataset[A]]
+  )(implicit contract: PDataContract[A]): F[Dataset[A]]
 
   /**
    * Validate CDC configuration against dataset schema.
@@ -236,8 +233,7 @@ trait CDCAlgebra[F[_]] {
     target: Dataset[A],
     watermark: Option[Instant],
     config: CDCConfig
-  )(implicit contract: PDataContract[A]
-  ): F[(CDCResult[A], Instant)]
+  )(implicit contract: PDataContract[A]): F[(CDCResult[A], Instant)]
 
   /**
    * Merge CDC results from multiple sources.

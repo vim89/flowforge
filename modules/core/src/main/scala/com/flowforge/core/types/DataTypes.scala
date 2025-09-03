@@ -821,15 +821,14 @@ object DataSink {
 // ===============================
 
 /**
- * A sink that encodes its expected schema at the type level as an HList of labelled fields.
- * Use with PipelineBuilder2.addTypedSink to enforce compile-time schema compatibility between
- * pipeline output type and sink expectation.
+ * A sink that encodes its expected schema at the type level as an HList of labelled fields. Use
+ * with PipelineBuilder2.addTypedSink to enforce compile-time schema compatibility between pipeline
+ * output type and sink expectation.
  */
 final case class TypedSink[R <: HList](underlying: DataSink)
 
 /** A source that encodes its expected schema at the type level. */
 final case class TypedSource[R <: HList](underlying: DataSource)
-
 
 // ===============================
 // DATA QUALITY TYPES

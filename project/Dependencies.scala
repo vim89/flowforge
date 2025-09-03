@@ -88,7 +88,7 @@ object Dependencies {
     )
 
     val typeSafety = Seq(
-      "eu.timepit" %% "refined"   % Versions.refined,
+      "eu.timepit"  %% "refined"   % Versions.refined,
       "com.chuusai" %% "shapeless" % Versions.shapeless
     )
 
@@ -229,19 +229,19 @@ object Dependencies {
       Core.all ++ Testing.unit ++ Seq(
         "org.apache.spark" %% "spark-sql" % Versions.spark % "provided"
       )
-    case "connectors"          => Core.functional ++ Testing.unit ++ Connectors.all
-    case "connectors-s3"       => common ++ Connectors.hadoop
-    case "connectors-gcs"      => common ++ Connectors.gcs
-    case "engines-spark"       => common ++ Engines.spark ++ TypedSpark.frameless
-    case "engines-flink"       => common ++ Engines.flink
-    case "quality"             => Core.functional ++ Testing.unit
-    case "quality-deequ"       => common ++ Quality.deequ
+    case "connectors"     => Core.functional ++ Testing.unit ++ Connectors.all
+    case "connectors-s3"  => common ++ Connectors.hadoop
+    case "connectors-gcs" => common ++ Connectors.gcs
+    case "engines-spark"  => common ++ Engines.spark ++ TypedSpark.frameless
+    case "engines-flink"  => common ++ Engines.flink
+    case "quality"        => Core.functional ++ Testing.unit
+    case "quality-deequ"  => common ++ Quality.deequ
     case "templates" =>
       common ++ Seq(
         "org.foundweekends.giter8" %% "giter8-lib" % Versions.sbtGiter8
       )
-    case "examples"   => common
-    case _ => common
+    case "examples" => common
+    case _          => common
   }
 
   // ===== DEPENDENCY OVERRIDES =====
