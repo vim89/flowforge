@@ -107,6 +107,9 @@ lazy val root = (project in file("."))
     engines,
     enginesSpark,
     enginesFlink,
+    typedSpark,
+    validationCli,
+    contractsExtractorCli,
     quality,
     qualityDeequ,
     templates,
@@ -173,6 +176,8 @@ lazy val contracts = moduleProject("contracts")
     libraryDependencies ++= Dependencies.forModule("contracts")
   )
 
+// Sample "contract SDK" to demonstrate typed endpoints without local codegen
+
 // ===== CONNECTOR MODULES =====
 lazy val connectors = moduleProject("connectors")
   .dependsOn(core, contracts)
@@ -231,6 +236,14 @@ lazy val enginesSpark = moduleProject("engines-spark")
     libraryDependencies ++= Dependencies.forModule("engines-spark")
   )
 
+// Optional typed Spark helpers using Frameless
+lazy val typedSpark = moduleProject("typed-spark")
+  .dependsOn(core, enginesSpark)
+  .settings(
+    description := "Optional typed Spark helpers (Frameless)",
+    libraryDependencies ++= Dependencies.forModule("typed-spark")
+  )
+
 lazy val enginesFlink = moduleProject("engines-flink")
   .dependsOn(engines, connectors)
   .settings(
@@ -277,10 +290,42 @@ lazy val testing = moduleProject("testing")
 
 // ===== EXAMPLE & EXPERIMENTAL MODULES =====
 lazy val examples = moduleProject("examples")
-  .dependsOn(core, contracts, framework, connectors, connectorsGcs, engines, enginesSpark, quality)
+  .dependsOn(core)
   .settings(
     description := "Example implementations",
     libraryDependencies ++= Dependencies.forModule("examples"),
+    publish / skip := true
+  )
+
+// CLI for physical schema validation (Delta/Hive/Parquet) for CI usage
+lazy val validationCli = moduleProject("validation-cli")
+  .dependsOn(core, enginesSpark)
+  .settings(
+    description := "FlowForge Schema Validation CLI",
+    libraryDependencies ++= Dependencies.forModule("examples") ++ Seq(
+      "com.github.scopt" %% "scopt"     % "4.1.0",
+      "io.circe"         %% "circe-core" % Dependencies.Versions.circe,
+      "io.circe"         %% "circe-parser" % Dependencies.Versions.circe,
+      // Bring Spark runtime for standalone CLI jar; keep only spark-sql for Parquet mode
+      "org.apache.spark" %% "spark-sql" % Dependencies.Versions.spark
+    ),
+    Compile / mainClass := Some("com.flowforge.validation.SchemaValidateCli"),
+    publish / skip := true
+  )
+
+// CLI to infer contracts from physical sources and emit .avsc + dq/metadata YAML
+lazy val contractsExtractorCli = moduleProject("contracts-extractor-cli")
+  .dependsOn(core, enginesSpark)
+  .settings(
+    description := "FlowForge Contracts Extractor CLI",
+    libraryDependencies ++= Seq(
+      "com.github.scopt" %% "scopt"        % "4.1.0",
+      "io.circe"         %% "circe-core"   % Dependencies.Versions.circe,
+      "io.circe"         %% "circe-generic"% Dependencies.Versions.circe,
+      "io.circe"         %% "circe-parser" % Dependencies.Versions.circe,
+      "org.apache.spark" %% "spark-sql"    % Dependencies.Versions.spark
+    ),
+    Compile / mainClass := Some("com.flowforge.contracts.extractor.ContractsExtractorCli"),
     publish / skip := true
   )
 

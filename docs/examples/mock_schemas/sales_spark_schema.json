@@ -1,0 +1,24 @@
+{
+  "type" : "struct",
+  "fields" : [ {
+    "name" : "invoiceNumber",
+    "type" : "string",
+    "nullable" : false,
+    "metadata" : { }
+  }, {
+    "name" : "customerId",
+    "type" : "string",
+    "nullable" : false,
+    "metadata" : { }
+  }, {
+    "name" : "amount",
+    "type" : "double",
+    "nullable" : false,
+    "metadata" : { }
+  }, {
+    "name" : "eventTs",
+    "type" : "long",
+    "nullable" : false,
+    "metadata" : { }
+  } ]
+}

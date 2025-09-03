@@ -67,6 +67,8 @@ object Dependencies {
     val mdoc      = "2.5.1"
     val unidoc    = "0.5.0"
     val assembly  = "2.1.4"
+    // Choose a widely available artifact for generic frameless-dataset
+    val frameless = "0.15.0"
   }
 
   val validation = Seq(
@@ -105,6 +107,12 @@ object Dependencies {
     )
 
     val all: Seq[ModuleID] = functional ++ typeSafety ++ json ++ logging ++ validation
+  }
+
+  object TypedSpark {
+    val frameless = Seq(
+      "org.typelevel" %% "frameless-dataset" % Versions.frameless
+    )
   }
 
   // Effect systems (both available for developer choice)
@@ -270,6 +278,7 @@ object Dependencies {
     case "monitoring" => common ++ Monitoring.all
     case "testing"    => common ++ Testing.integration
     case "examples"   => common
+    case "typed-spark" => common ++ TypedSpark.frameless ++ Engines.spark
     case "experimental" =>
       common ++ Seq(
         "io.getkyo" %% "kyo-core" % Versions.kyo

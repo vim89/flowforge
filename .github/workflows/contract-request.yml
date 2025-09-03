@@ -1,0 +1,85 @@
+name: Contract Request
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+
+jobs:
+  make-pr:
+    if: contains(github.event.issue.labels.*.name, 'contract-request')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
+
+      - name: Parse issue form
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.issue.body || ''
+            function pick(label){
+              const rx = new RegExp(`${label}\\n+([\\s\\S]*?)\\n\\n`, 'm')
+              const m = body.match(rx)
+              if (m && m[1]) return m[1].trim()
+              const rx2 = new RegExp(`${label}:\\s*(.+)`) // fallback
+              const m2 = body.match(rx2)
+              return m2 ? m2[1].trim() : ''
+            }
+            const res = {
+              domain: pick('Domain'),
+              entity: pick('Entity (record name)'),
+              sourceType: pick('Source Type'),
+              location: pick('Path / Table / JDBC table'),
+              owners: pick('Owners (comma-separated)'),
+              compatibility: pick('Compatibility Policy')
+            }
+            core.setOutput('domain', res.domain)
+            core.setOutput('entity', res.entity)
+            core.setOutput('sourceType', res.sourceType)
+            core.setOutput('location', res.location)
+            core.setOutput('owners', res.owners)
+            core.setOutput('compatibility', res.compatibility)
+
+      - name: Build extractor
+        run: sbt -v "contracts-extractor-cli/assembly"
+
+      - name: Extract to contracts/
+        run: |
+          JAR=$(ls modules/contracts-extractor-cli/target/scala-2.13/*assembly*.jar)
+          java -cp "$JAR" com.flowforge.contracts.extractor.ContractsExtractorCli \
+            --mode "${{ steps.parse.outputs.sourceType }}" \
+            --input "${{ steps.parse.outputs.location }}" \
+            --domain "${{ steps.parse.outputs.domain }}" \
+            --entity "${{ steps.parse.outputs.entity }}" \
+            --namespace "com.acme.${{ steps.parse.outputs.domain }}" \
+            --output "contracts" \
+            --master "local[*]"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: contract/${{ steps.parse.outputs.domain }}/${{ steps.parse.outputs.entity }}
+          commit-message: "Add contract ${{ steps.parse.outputs.domain }}/${{ steps.parse.outputs.entity }}"
+          title: "Contract: ${{ steps.parse.outputs.domain }}/${{ steps.parse.outputs.entity }}"
+          body: |
+            Auto-generated from Issue #${{ github.event.issue.number }}.
+            Source: `${{ steps.parse.outputs.sourceType }}` at `${{ steps.parse.outputs.location }}`
+            Owners: `${{ steps.parse.outputs.owners }}`
+            Compatibility: `${{ steps.parse.outputs.compatibility }}`
+          add-paths: |
+            contracts/**
+          labels: contract
+
