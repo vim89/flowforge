@@ -32,6 +32,7 @@ package com.flowforge.core.types
 import cats.FlatMap
 import cats.data.{ Kleisli, ValidatedNel }
 import cats.implicits._
+import cats.effect.Sync
 import com.flowforge.core.algebra.EffectSystem
 
 import java.util.UUID
@@ -541,11 +542,11 @@ object GADTPipelineExamples {
    * Example of 100% type-safe pipeline construction. This pipeline will fail to compile if types
    * don't align correctly.
    */
-  def createTypeSafePipeline[F[_]: EffectSystem]
+  def createTypeSafePipeline[F[_]: EffectSystem: Sync]
     : ValidatedNel[FlowForgeError, GADTPipeline[F, Unit, Unit]] = {
     import com.flowforge.core.instances.DefaultCodecs._
     implicit val da: com.flowforge.core.algebra.DataAlgebra[F] =
-      new com.flowforge.core.impl.InMemoryDataAlgebra[F]()(implicitly)
+      new com.flowforge.core.impl.InMemoryDataAlgebra[F]()
 
     // This construction is 100% type-safe - no casting possible
     val builder = GADTPipelineBuilder[F]
@@ -562,10 +563,10 @@ object GADTPipelineExamples {
   /**
    * Demonstration of compile-time type checking. These examples will fail to compile if attempted:
    */
-  def typeCheckingExamples[F[_]: EffectSystem]: Unit = {
+  def typeCheckingExamples[F[_]: EffectSystem: Sync]: Unit = {
     import com.flowforge.core.instances.DefaultCodecs._
     implicit val da: com.flowforge.core.algebra.DataAlgebra[F] =
-      new com.flowforge.core.impl.InMemoryDataAlgebra[F]()(implicitly)
+      new com.flowforge.core.impl.InMemoryDataAlgebra[F]()
     val builder = GADTPipelineBuilder[F]
 
     // ✅ VALID: Correct stage order

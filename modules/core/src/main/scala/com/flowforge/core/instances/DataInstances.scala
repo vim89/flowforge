@@ -10,6 +10,6 @@ object DataInstances {
   /**
    * Create a working, effect-separated in-memory DataAlgebra foundation.
    */
-  def createMockDataAlgebra[F[_]: EffectSystem]: DataAlgebra[F] =
+  def createMockDataAlgebra[F[_]: EffectSystem: cats.effect.Sync]: DataAlgebra[F] =
     new com.flowforge.core.impl.InMemoryDataAlgebra[F]
 }

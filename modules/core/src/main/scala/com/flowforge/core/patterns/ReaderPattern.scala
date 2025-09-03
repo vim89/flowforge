@@ -1,7 +1,7 @@
 package com.flowforge.core.patterns
 
 import cats.data.{ Kleisli, Reader, ReaderT }
-import cats.effect.Resource
+import cats.effect.{ Resource, Sync }
 import cats.implicits._
 import cats.{ Applicative, Monad }
 import com.flowforge.core.algebra.{ DataAlgebra, DataDecoder, EffectSystem }
@@ -435,8 +435,7 @@ object ReaderPattern {
   /**
    * Create a test context with mock dependencies
    */
-  def testContext[F[_]: EffectSystem]: AppContext[F] = {
-    implicit val F = implicitly[EffectSystem[F]]
+  def testContext[F[_]: EffectSystem: Sync]: AppContext[F] = {
 
     AppContext[F](
       core = FlowForgeDependencies[F](
@@ -449,26 +448,26 @@ object ReaderPattern {
           retryPolicy = RetryPolicy.default,
           qualityRules = QualityRules.empty
         ),
-        dataAlgebra = TestImplementations.mockDataAlgebra[F](F),
-        logger = TestImplementations.mockLogger[F](F),
-        metrics = TestImplementations.mockMetrics[F](F),
-        auditService = TestImplementations.mockAuditService[F](F),
-        secretManager = TestImplementations.mockSecretManager[F](F),
-        resourceManager = TestImplementations.mockResourceManager[F](F)
+        dataAlgebra = TestImplementations.mockDataAlgebra[F],
+        logger = TestImplementations.mockLogger[F],
+        metrics = TestImplementations.mockMetrics[F],
+        auditService = TestImplementations.mockAuditService[F],
+        secretManager = TestImplementations.mockSecretManager[F],
+        resourceManager = TestImplementations.mockResourceManager[F]
       ),
       database = Some(
         DatabaseDependencies[F](
-          connectionPool = TestImplementations.mockConnectionPool[F](F),
-          transactionManager = TestImplementations.mockTransactionManager[F](F),
-          migrationService = TestImplementations.mockMigrationService[F](F)
+          connectionPool = TestImplementations.mockConnectionPool[F],
+          transactionManager = TestImplementations.mockTransactionManager[F],
+          migrationService = TestImplementations.mockMigrationService[F]
         )
       ),
       cloud = Some(
         CloudDependencies[F](
-          storageService = TestImplementations.mockStorageService[F](F),
-          queueService = TestImplementations.mockQueueService[F](F),
-          notificationService = TestImplementations.mockNotificationService[F](F),
-          monitoringService = TestImplementations.mockMonitoringService[F](F)
+          storageService = TestImplementations.mockStorageService[F],
+          queueService = TestImplementations.mockQueueService[F],
+          notificationService = TestImplementations.mockNotificationService[F],
+          monitoringService = TestImplementations.mockMonitoringService[F]
         )
       ),
       environment = Environment.Testing,
@@ -603,7 +602,7 @@ object ReaderPattern {
 
   private object TestImplementations {
 
-    def mockDataAlgebra[F[_]: EffectSystem]: DataAlgebra[F] = DataInstances.createMockDataAlgebra[F]
+    def mockDataAlgebra[F[_]: EffectSystem: Sync]: DataAlgebra[F] = DataInstances.createMockDataAlgebra[F]
 
     def mockLogger[F[_]: EffectSystem]: Logger[F] = new Logger[F] {
       def debug(message: String): F[Unit] =
