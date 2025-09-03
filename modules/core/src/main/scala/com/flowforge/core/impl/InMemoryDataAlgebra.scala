@@ -4,30 +4,52 @@ import cats.data.{ NonEmptyList, Validated, ValidatedNel }
 import cats.implicits._
 import com.flowforge.core.algebra._
 import com.flowforge.core.algebra.DataAlgebra._
-import com.flowforge.core.types.PipelineTypes.{ DataContract, QualityCheck }
+import com.flowforge.core.types.PipelineTypes.{ DataContract => PDataContract, QualityCheck }
 import com.flowforge.core.types.RefinedTypes.FieldName
 import com.flowforge.core.types._
 
 import java.nio.file.{ Files, Paths }
 import java.time.Instant
 
+// TODO: PRODUCTION - This is a TOY implementation for testing only!
+//
+// CRITICAL PRODUCTION ISSUES:
+// 1. Files.readAllBytes() loads entire file into memory - will crash with large datasets
+// 2. Naive CSV parsing with line.split() - no escape handling, quotes, embedded newlines
+// 3. No streaming support - defeats the purpose of functional streams (fs2)
+// 4. No error recovery - any parse failure loses entire dataset
+// 5. No schema validation - just accepts whatever schema is provided
+//
+// PRODUCTION REQUIREMENTS:
+// - fs2.Stream integration for memory-efficient processing
+// - Proper CSV library (jackson-csv, univocity, etc.)
+// - Schema validation against actual data structure
+// - Incremental error handling with ValidatedNel
+// - Support for compressed files, remote sources
+//
+// ESTIMATED EFFORT: 1-2 weeks for proper streaming implementation
+//
+// CURRENT STATUS: Suitable for testing with small files only (< 10MB)
 final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataAlgebra[F] {
 
-  // ---------- External IO ----------
+  // ---------- External IO (TOY IMPLEMENTATION) ----------
   override def read[A: DataDecoder](source: DataSource): F[Dataset[A]] = source match {
     case LocalDataSource(path, format, _, schemaOpt, _) =>
       F.blocking {
-        val bytes = Files.readAllBytes(Paths.get(path))
+        // TODO: PRODUCTION - Replace with fs2.Stream for memory safety
+        val bytes = Files.readAllBytes(Paths.get(path)) // ← WRONG: Loads entire file into memory
         val records: List[A] = format match {
           case DataFormat.JSONL =>
             new String(bytes, "UTF-8").linesIterator.toList
               .filter(_.trim.nonEmpty)
               .flatMap { line =>
+                // TODO: PRODUCTION - No error aggregation, loses failed records silently
                 DataDecoder[A].decode(EncodedData(line.getBytes("UTF-8"), format), format).toOption
               }
           case DataFormat.JSON =>
             DataDecoder[A].decode(EncodedData(bytes, format), format).toOption.toList
           case DataFormat.CSV =>
+            // TODO: PRODUCTION - Naive CSV parsing, no escape handling!
             val lines     = new String(bytes, "UTF-8").linesIterator.toList
             val dataLines = if (lines.nonEmpty) lines.tail else lines
             dataLines.flatMap { line =>
@@ -36,11 +58,18 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
           case other => throw new UnsupportedOperationException(s"Unsupported format: $other")
         }
         val schema = schemaOpt.getOrElse(DataSchema.builder.build)
-        SimpleDataset(
+        val ds = SimpleDataset(
           records,
           schema,
           DatasetMetadata(records.size.toLong, schema, 1, Instant.now(), Some(source))
         )
+        // Prometheus metrics (best-effort)
+        try
+          com.flowforge.core.observability.PrometheusMetrics.Data.readTotal
+            .labels("inmemory", format.toString)
+            .inc()
+        catch { case _: Throwable => () }
+        ds
       }
     case _ =>
       F.raiseError(
@@ -114,7 +143,13 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
           java.nio.file.StandardOpenOption.TRUNCATE_EXISTING,
           java.nio.file.StandardOpenOption.WRITE
         )
-        WriteResult(dataset.data.size.toLong, 1, bytes.length.toLong, success = true)
+        val wr = WriteResult(dataset.data.size.toLong, 1, bytes.length.toLong, success = true)
+        try
+          com.flowforge.core.observability.PrometheusMetrics.Data.writeTotal
+            .labels("inmemory", format.toString)
+            .inc()
+        catch { case _: Throwable => () }
+        wr
       }
     case _ =>
       F.raiseError(new UnsupportedOperationException("Unsupported sink for in-memory algebra"))
@@ -123,7 +158,7 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
   override def writeWithValidation[A: DataEncoder](
     dataset: Dataset[A],
     sink: DataSink,
-    contract: DataContract[A],
+    contract: PDataContract[A],
     options: WriteOptions
   ): F[ValidatedNel[FlowForgeError, WriteResult]] =
     write(dataset, sink, options).map(Validated.valid)
@@ -260,7 +295,7 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
   // ---------- Quality ----------
   override def validate[A](
     dataset: Dataset[A],
-    contract: DataContract[A]
+    contract: PDataContract[A]
   ): F[QualityResult[Dataset[A]]] =
     F.pure(QualityResult(dataset, passed = true, violations = Nil, score = 1.0))
 
@@ -295,7 +330,7 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
   // ---------- CDC (SCD1 and Delta-like semantics) ----------
   private case class RowSig(key: String, hash: String)
 
-  def performDelta[A: DataContract](
+  override def performDelta[A: DataContract](
     source: Dataset[A],
     target: Dataset[A],
     config: CDCOperations.CDCConfig
@@ -305,7 +340,8 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
       val inserted = ops.inserts.size.toLong
       val updated  = ops.updates.size.toLong
       val deleted  = ops.deletes.size.toLong
-      val unchanged = (target.data.size + source.data.size - (inserted + updated + deleted)).max(0).toLong
+      val unchanged =
+        (target.data.size + source.data.size - (inserted + updated + deleted)).max(0).toLong
       val end = java.time.Instant.now()
       val dur = java.time.Duration.between(start, end).toMillis
       F.pure(
@@ -315,14 +351,15 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
           deleted = if (config.deleteDetection) deleted else 0L,
           unchanged = unchanged,
           errors = 0L,
-          processingTime = scala.concurrent.duration.FiniteDuration(dur, scala.concurrent.duration.MILLISECONDS),
+          processingTime =
+            scala.concurrent.duration.FiniteDuration(dur, scala.concurrent.duration.MILLISECONDS),
           success = true
         )
       )
     }
   }
 
-  def computeCDCOperations[A](
+  override def computeCDCOperations[A](
     source: Dataset[A],
     target: Dataset[A],
     keyColumns: NonEmptyList[FieldName]
@@ -331,8 +368,12 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
     // and JSON schema-aware key extractor for richer CDC semantics.
     def keyFor(a: A): Option[RowSig] = Some(RowSig(a.toString, a.toString))
 
-    val srcMap: Map[String, (A, String)] = source.data.flatMap { a => keyFor(a).map(sig => sig.key -> (a, sig.hash)) }.toMap
-    val tgtMap: Map[String, (A, String)] = target.data.flatMap { a => keyFor(a).map(sig => sig.key -> (a, sig.hash)) }.toMap
+    val srcMap: Map[String, (A, String)] = source.data.flatMap { a =>
+      keyFor(a).map(sig => sig.key -> (a, sig.hash))
+    }.toMap
+    val tgtMap: Map[String, (A, String)] = target.data.flatMap { a =>
+      keyFor(a).map(sig => sig.key -> (a, sig.hash))
+    }.toMap
 
     val srcKeys = srcMap.keySet
     val tgtKeys = tgtMap.keySet
@@ -350,7 +391,7 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
     F.pure(CDCOperations.CDCOperationSet(inserts = inserts, updates = updates, deletes = deletes))
   }
 
-  def applyCDCOperations[A](
+  override def applyCDCOperations[A](
     operations: CDCOperations.CDCOperationSet[A],
     target: DataSink
   ): F[CDCOperations.CDCResult[A]] = {
@@ -471,4 +512,5 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
         errors = List(PipelineError.StageExecutionError("table-op", "operation not supported"))
       )
     )
+
 }

@@ -221,7 +221,22 @@ object StructuredLogger {
      * Execute operation with additional logging context. Context is automatically added to all log
      * messages within the operation.
      */
-    override def withContext[A](context: Map[String, String])(operation: F[A]): F[A] = ???
+    override def withContext[A](context: Map[String, String])(operation: F[A]): F[A] =
+      // Use bracket-style pattern to push MDC before running the effect and restore afterward
+      Sync[F].bracket(
+        acquire = Sync[F].delay(getCurrentMDC)
+      )(
+        use = original =>
+          Sync[F].delay {
+            context.foreach { case (k, v) => MDC.put(k, v) }
+          } *> operation
+      )(
+        release = original =>
+          Sync[F].delay {
+            MDC.clear()
+            original.foreach { case (k, v) => MDC.put(k, v) }
+          }
+      )
   }
 }
 

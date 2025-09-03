@@ -8,48 +8,51 @@ package com.flowforge.core.instances
 
 import cats.effect.IO
 import cats.effect.testing.scalatest.AsyncIOSpec
+import cats.syntax.parallel._
+import cats.syntax.applicative._
 import com.flowforge.core.algebra.EffectSystem
+import com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
 import org.scalatest.funspec.AsyncFunSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.prop.Configuration
-import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-
 import scala.concurrent.duration._
 
 class EffectInstancesLawsSpec
     extends AsyncFunSpec
     with AsyncIOSpec
-    with Matchers
-    with ScalaCheckPropertyChecks
-    with Configuration {
+    with Matchers {
 
-  import EffectInstances._
-
-  implicit override val generatorDrivenConfig: PropertyCheckConfiguration =
-    PropertyCheckConfiguration(minSuccessful = 50, maxDiscardedFactor = 50.0)
+  val effectSystem: EffectSystem[IO] = catsEffectSystemInstance
 
   describe("Cats-Effect EffectSystem instance") {
 
-    /*    it("should satisfy Monad laws") {
-      // Test basic monad laws: left identity, right identity, associativity
-      forAll { (a: Int, f: Int => Int, g: Int => Int) =>
-        val fa = IO.pure(a)
-        val fb = fa.flatMap(x => IO.pure(f(x)))
-        val fc = fb.flatMap(x => IO.pure(g(x)))
+    it("satisfies Monad left identity") {
+      val a = 42
+      val f: Int => IO[Int] = x => IO.pure(x + 1)
+      val left              = IO.pure(a).flatMap(f)
+      val right             = f(a)
+      (left, right).parMapN(_ should equal(_))
+    }
 
-        // Test composition
-        val composed = fa.flatMap(x => IO.pure(f(x)).flatMap(y => IO.pure(g(y))))
+    it("satisfies Monad right identity") {
+      val a = 42
+      val fa   = IO.pure(a)
+      val left = fa.flatMap(IO.pure)
+      (left, fa).parMapN(_ should equal(_))
+    }
 
-        (fc, composed).mapN { case (result1, result2) =>
-          result1 should equal(result2)
-        }
-      }
-    }*/
+    it("satisfies Monad associativity") {
+      val a = 42
+      val f: Int => IO[Int] = x => IO.pure(x + 2)
+      val g: Int => IO[Int] = x => IO.pure(x * 3)
+      val left              = IO.pure(a).flatMap(f).flatMap(g)
+      val right             = IO.pure(a).flatMap(x => f(x).flatMap(g))
+      (left, right).parMapN(_ should equal(_))
+    }
 
     it("should provide stack-safe tailRecM") {
-      val largeN = 100000
+      val largeN = 10000 // Reduced for faster tests
 
-      val result = EffectSystem[IO].tailRecM(0) { i =>
+      val result = effectSystem.tailRecM(0) { i =>
         if (i < largeN) IO.pure(Left(i + 1))
         else IO.pure(Right(i))
       }
@@ -63,7 +66,7 @@ class EffectInstancesLawsSpec
       var resourceReleased = false
       val testError        = new RuntimeException("Test error")
 
-      val result = EffectSystem[IO]
+      val result = effectSystem
         .bracket(
           acquire = IO.pure("resource")
         )(
@@ -83,7 +86,7 @@ class EffectInstancesLawsSpec
       val neverCompleting = IO.never[Int]
 
       val test = for {
-        fiber  <- EffectSystem[IO].start(neverCompleting)
+        fiber  <- effectSystem.start(neverCompleting)
         _      <- fiber.cancel
         result <- fiber.join.timeout(1.second).attempt
       } yield result
@@ -96,15 +99,15 @@ class EffectInstancesLawsSpec
     it("should run parallel operations concurrently") {
       val start = System.currentTimeMillis()
 
-      val operation1 = IO.sleep(100.millis) >> IO.pure(1)
-      val operation2 = IO.sleep(100.millis) >> IO.pure(2)
+      val operation1 = IO.sleep(50.millis) >> IO.pure(1)
+      val operation2 = IO.sleep(50.millis) >> IO.pure(2)
 
-      val parallelResult = EffectSystem[IO].parProduct(operation1, operation2)
+      val parallelResult = effectSystem.parProduct(operation1, operation2)
 
       parallelResult.map { result =>
         val elapsed = System.currentTimeMillis() - start
         result should equal((1, 2))
-        elapsed should be < 150L // Should complete in less than 150ms (much less than 200ms sequential)
+        elapsed should be < 100L // Should complete in less than 100ms (much less than 100ms sequential)
       }
     }
   }

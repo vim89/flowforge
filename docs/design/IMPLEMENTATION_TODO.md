@@ -119,6 +119,50 @@ class SparkDataAlgebra[F[_]: EffectSystem](
 **Lines:** 588-594  
 **Methods:** `decodePipeline`, `decodeEngines`, `decodeConnectors`
 
+---
+
+## Consolidated TODO (Reality‑Based Tracker) — 2025-09-02
+
+### Priority A — Core 100% (Production‑Ready)
+- [ ] EffectSystem laws and property tests (IO/ZIO instances)
+- [ ] Finalize FlowForgeError ADTs and typed error guidelines
+- [ ] DataEncoder/Decoder coverage + schema derivation + size estimates
+- [ ] PipelineBuilder2 behaviors (filter/compact/collect/combinators) finalized
+- [ ] Remove/replace Framework PipelineCombinators placeholder
+- [ ] Observability SPI stabilized (metrics/logging) without backend coupling
+- [ ] Unit/property/law tests; coverage ≥ 80%
+
+### Priority A — Foundation MVPs
+- [ ] ResourceSafety + CloudResourceSafety concrete implementations
+- [ ] ConfigurationManagement decoding/validation for FlowForgeConfig + examples
+- [ ] Logging SPI + MDC helpers
+- [ ] In‑memory interpreters for base algebras (engines/connectors/quality) for tests
+- [ ] CI hygiene: fmt/fix/lint/coverage/publish; matrix 2.12/2.13
+
+### Priority B — Engines & Connectors
+- [ ] Spark SCD2 + partition strategies + streaming + schema‑aware encoders
+- [ ] CDC tests on temp Delta/Parquet
+- [ ] Retries/backoff around cloud ops; error types (no generic UnsupportedOperationException)
+- [ ] BigQuery/Kafka/Azure initial interpreters
+
+### Priority B — Contracts & Quality
+- [ ] StandardContracts strict examples + tests
+- [ ] Schema evolution utilities + compatibility checks
+- [ ] Deequ wiring with common checks
+
+### Priority C — Templates & DX
+- [ ] data-pipeline.g8 (Cats‑Effect) with compile‑time contracts and metrics/logging
+- [ ] effect choice (ZIO) variant as follow‑up
+
+### Session TODOs — 2025-09-03 (Typed Pipeline Enforcement)
+- [ ] Add a minimal example in `examples/` using the typed pipeline (TypedIO + TypedContract + contractTyped + addTypedSource/addTypedSink). Include a compile-only example and a small test that typechecks.
+- [ ] Complete idiomatic sweep across all modules per AGENTS.md (replace try/catch/finally with `Try`/`Either`/`bracket`, prefer `Validated` over ad-hoc error flows, ensure FP patterns are followed consistently).
+- [ ] Deprecate untyped flows in docs/examples: update README, template docs, and any examples to show only typed APIs; add migration notes.
+
+### Operating Guardrails
+- Compile gate after each change (sbt compile)
+- No new placeholders/???; document status in Findings & Alignment_Status
+
 **CURRENT STATE:**
 ```scala
 private def decodePipeline(source: Map[String, String]): ValidatedNel[ConfigError, PipelineConfig] =

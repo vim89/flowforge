@@ -35,7 +35,9 @@ package com.flowforge.core.algebra
 import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.implicits._
 import com.flowforge.core.algebra.DataAlgebra.Dataset
-import com.flowforge.core.types.PipelineTypes.DataContract
+import com.flowforge.core.algebra.EffectSystem
+// Use function-style DataContract alias explicitly to avoid clash with type class
+import com.flowforge.core.types.PipelineTypes.{ DataContract => PDataContract }
 import com.flowforge.core.types.RefinedTypes.FieldName
 import com.flowforge.core.types.{ DataSink, DataSource, FlowForgeError }
 import eu.timepit.refined.types.string.NonEmptyString
@@ -139,10 +141,11 @@ trait CDCAlgebra[F[_]] {
    * @return
    *   CDC result with comprehensive metrics
    */
-  def performDelta[A: DataContract](
+  def performDelta[A](
     source: Dataset[A],
     target: Dataset[A],
     config: CDCConfig
+  )(implicit contract: PDataContract[A]
   ): F[CDCResult[A]]
 
   /**
@@ -172,10 +175,11 @@ trait CDCAlgebra[F[_]] {
    * @return
    *   List of changes with operation types
    */
-  def identifyChanges[A: DataContract](
+  def identifyChanges[A](
     sourceRecords: List[A],
     targetRecords: List[A],
     config: CDCConfig
+  )(implicit contract: PDataContract[A]
   ): F[List[(A, ChangeOperation)]]
 
   /**
@@ -188,9 +192,10 @@ trait CDCAlgebra[F[_]] {
    * @return
    *   Updated target dataset
    */
-  def applyChanges[A: DataContract](
+  def applyChanges[A](
     changes: List[(A, ChangeOperation)],
     target: Dataset[A]
+  )(implicit contract: PDataContract[A]
   ): F[Dataset[A]]
 
   /**
@@ -203,9 +208,9 @@ trait CDCAlgebra[F[_]] {
    * @return
    *   Validation result
    */
-  def validateCDCConfig[A: DataContract](
+  def validateCDCConfig[A](
     config: CDCConfig,
-    schema: DataContract[A]
+    schema: PDataContract[A]
   ): ValidatedNel[FlowForgeError, CDCConfig]
 
   // ===============================
@@ -226,11 +231,12 @@ trait CDCAlgebra[F[_]] {
    * @return
    *   CDC result with updated watermark
    */
-  def performIncrementalDelta[A: DataContract](
+  def performIncrementalDelta[A](
     source: Dataset[A],
     target: Dataset[A],
     watermark: Option[Instant],
     config: CDCConfig
+  )(implicit contract: PDataContract[A]
   ): F[(CDCResult[A], Instant)]
 
   /**
@@ -284,10 +290,11 @@ object CDCAlgebra {
   /**
    * Syntax extensions for CDC operations
    */
-  implicit class CDCOps[F[_], A: DataContract](private val source: Dataset[A]) {
+  implicit class CDCOps[F[_], A](private val source: Dataset[A]) {
 
     def deltaWith(target: Dataset[A], config: CDCConfig)(implicit
-      cdc: CDCAlgebra[F]
+      cdc: CDCAlgebra[F],
+      contract: PDataContract[A]
     ): F[CDCResult[A]] =
       cdc.performDelta(source, target, config)
 
@@ -295,7 +302,7 @@ object CDCAlgebra {
       target: Dataset[A],
       watermark: Option[Instant],
       config: CDCConfig
-    )(implicit cdc: CDCAlgebra[F]): F[(CDCResult[A], Instant)] =
+    )(implicit cdc: CDCAlgebra[F], contract: PDataContract[A]): F[(CDCResult[A], Instant)] =
       cdc.performIncrementalDelta(source, target, watermark, config)
   }
 
@@ -305,7 +312,7 @@ object CDCAlgebra {
   implicit class DatasetOps[A](private val dataset: Dataset[A]) {
 
     def validateWith[F[_]](
-      contract: DataContract[A]
+      contract: PDataContract[A]
     )(implicit F: EffectSystem[F]): F[ValidatedNel[FlowForgeError, Dataset[A]]] = {
       import cats.syntax.traverse._
       val validations = dataset.data.traverse(contract)

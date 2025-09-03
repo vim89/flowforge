@@ -6,12 +6,8 @@ import com.flowforge.core.algebra.EffectSystem
 import eu.timepit.refined.api.Refined
 
 /**
- * Fluent builder for pipeline construction.
- *
- * @deprecated
- *   Use PipelineBuilder2 for compile-time type safety. This builder will be removed in version 2.0.
+ * Fluent builder for pipeline construction (legacy). Prefer PipelineBuilder2 for compile-time type safety.
  */
-@deprecated("Use PipelineBuilder2 for compile-time type safety", "1.1.0")
 case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
   name: String,
   description: String = "",

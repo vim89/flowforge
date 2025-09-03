@@ -1,342 +1,116 @@
-/**
- * FlowForge Pipeline Combinators - Type-Safe Pipeline Orchestration
- *
- * Complete pipeline composition framework with Kleisli arrows, effect safety, and compile-time
- * validation for complex data processing workflows.
- */
 package com.flowforge.framework
 
+import cats.data.{ Kleisli, NonEmptyList }
+import cats.syntax.all._
+import com.flowforge.core.algebra.EffectSystem
+
 /**
- * Core pipeline combinator with type-safe composition Complex implementation safely commented out
- * for compilation
+ * Real, minimal pipeline and combinators built on Kleisli and EffectSystem. Focuses on practical,
+ * production-friendly composition without placeholders.
  */
-case class Pipeline[F[_], A, B](
-  run: Any,            // Kleisli[F, A, B] simplified to Any for compilation safety
-  metadata: Any,       // PipelineMetadata simplified
-  contract: Any = None // DataContract simplified
-) {
-  def placeholder: Any = () /*
-
-  def map[C](f: B => C): Pipeline[F, A, C] =
-    Pipeline(run.map(f), metadata.copy(transformations = metadata.transformations + 1))
-
-  def flatMap[C](f: B => F[C]): Pipeline[F, A, C] =
-    Pipeline(run.flatMap(f), metadata.copy(transformations = metadata.transformations + 1))
-
-  def andThen[C](next: Pipeline[F, B, C]): Pipeline[F, A, C] =
+final case class Pipeline[F[_], A, B](run: Kleisli[F, A, B], metadata: PipelineMetadata) {
+  def map[C](f: B => C)(implicit F: EffectSystem[F]): Pipeline[F, A, C] =
     Pipeline(
-      run.andThen(next.run),
-      metadata.combine(next.metadata),
-      next.contract
+      Kleisli(a => F.map(run(a))(f)),
+      metadata.copy(transformations = metadata.transformations + 1)
     )
 
-  def compose[Z](prev: Pipeline[F, Z, A]): Pipeline[F, Z, B] =
+  def flatMap[C](f: B => Kleisli[F, A, C])(implicit F: EffectSystem[F]): Pipeline[F, A, C] =
+    Pipeline(
+      Kleisli(a => F.flatMap(run(a))(b => f(b)(a))),
+      metadata.copy(transformations = metadata.transformations + 1)
+    )
+
+  def andThen[C](next: Pipeline[F, B, C])(implicit F: EffectSystem[F]): Pipeline[F, A, C] =
+    Pipeline(Kleisli(a => F.flatMap(run(a))(b => next.run(b))), metadata.combine(next.metadata))
+
+  def compose[Z](prev: Pipeline[F, Z, A])(implicit F: EffectSystem[F]): Pipeline[F, Z, B] =
     prev.andThen(this)
-
-  def withContract[B1 >: B](contract: DataContract[B1]): Pipeline[F, A, B1] =
-    this.copy(contract = Some(contract.asInstanceOf[DataContract[B]]))
-
-  def validate(implicit ev: DataContract[B], F: EffectSystem[F]): Pipeline[F, A, ValidatedNel[ContractViolation, B]] =
-    Pipeline(
-      run.map(result => ev.validate(result)),
-      metadata.copy(qualityChecks = metadata.qualityChecks + 1)
-    )
-   */
-} // End of commented Pipeline implementation
+}
 
 object Pipeline {
-  def placeholder: Any = () /*
+  def lift[F[_]: EffectSystem, A, B](f: A => F[B], name: String = "anonymous"): Pipeline[F, A, B] =
+    Pipeline(Kleisli(f), PipelineMetadata.single(name))
 
-  def lift[F[_], A, B](f: A => F[B], name: String = "anonymous"): Pipeline[F, A, B] =
-    Pipeline(
-      Kleisli(f),
-      PipelineMetadata.single(name)
-    )
+  def pure[F[_]: EffectSystem, A, B](f: A => B, name: String = "pure"): Pipeline[F, A, B] =
+    Pipeline(Kleisli(a => EffectSystem[F].pure(f(a))), PipelineMetadata.single(name))
 
-  def pure[F[_]: Monad, A, B](f: A => B, name: String = "pure"): Pipeline[F, A, B] =
-    Pipeline(
-      Kleisli(a => Monad[F].pure(f(a))),
-      PipelineMetadata.single(name)
-    )
+  def identity[F[_]: EffectSystem, A]: Pipeline[F, A, A] =
+    Pipeline(Kleisli(a => EffectSystem[F].pure(a)), PipelineMetadata.single("identity"))
+}
 
-  def identity[F[_]: Monad, A]: Pipeline[F, A, A] =
-    Pipeline(
-      Kleisli.ask[F, A],
-      PipelineMetadata.single("identity")
-    )
-   */
-} // End of commented Pipeline object
-
-/**
- * Pipeline metadata for observability and debugging
- */
-case class PipelineMetadata(
-  placeholder: String = "simplified-for-compilation"
+final case class PipelineMetadata(
+  name: String,
+  stages: List[String] = Nil,
+  transformations: Int = 0,
+  qualityChecks: Int = 0,
+  tags: Map[String, String] = Map.empty
 ) {
-  def safeMethod: Any = () /*
-
   def combine(other: PipelineMetadata): PipelineMetadata =
     PipelineMetadata(
       name = s"$name >> ${other.name}",
       stages = stages ++ other.stages,
       transformations = transformations + other.transformations,
       qualityChecks = qualityChecks + other.qualityChecks,
-      estimatedMemory = math.max(estimatedMemory, other.estimatedMemory),
       tags = tags ++ other.tags
     )
-   */
-} // End of commented PipelineMetadata
-
-object PipelineMetadata {
-  def single(name: String): Any = PipelineMetadata(name)
 }
 
-/**
- * Advanced pipeline combinators for complex workflows
- */
+object PipelineMetadata {
+  def single(name: String): PipelineMetadata = PipelineMetadata(name, stages = List(name))
+}
+
 object PipelineCombinators {
-  def placeholder: Any = () /*
-
-  /**
-   * Sequential composition - run pipelines one after another
-   */
-  def sequence[F[_]: Monad, A](
+  def sequence[F[_]: EffectSystem, A](
     pipelines: NonEmptyList[Pipeline[F, A, A]]
-  ): Pipeline[F, A, A] = {
+  ): Pipeline[F, A, A] =
     pipelines.reduceLeft(_ andThen _)
-  }
 
-  /**
-   * Parallel composition - run pipelines concurrently and combine results
-   */
-  def parallel[F[_]: Parallel, A, B, C](
+  def parallel[F[_]: EffectSystem, A, B, C](
     left: Pipeline[F, A, B],
     right: Pipeline[F, A, C]
   )(combine: (B, C) => Pipeline[F, A, (B, C)]): Pipeline[F, A, (B, C)] = {
-    Pipeline(
-      Kleisli { a =>
-        (left.run(a), right.run(a)).parTupled
-      },
-      left.metadata.combine(right.metadata).copy(name = s"parallel(${left.metadata.name}, ${right.metadata.name})")
-    )
+    val F = EffectSystem[F]
+    val run = Kleisli { a: A =>
+      F.parProduct(left.run(a), right.run(a)).flatMap { case (b, c) => combine(b, c).run(a) }
+    }
+    val md = left.metadata
+      .combine(right.metadata)
+      .copy(name = s"parallel(${left.metadata.name}, ${right.metadata.name})")
+    Pipeline(run, md)
   }
 
-  /**
-   * Conditional execution based on predicate
-   */
-  def conditional[F[_]: Monad, A](
+  def conditional[F[_]: EffectSystem, A](
     predicate: A => Boolean,
     ifTrue: Pipeline[F, A, A],
     ifFalse: Pipeline[F, A, A]
   ): Pipeline[F, A, A] = {
-    Pipeline(
-      Kleisli { a =>
-        if (predicate(a)) ifTrue.run(a) else ifFalse.run(a)
-      },
-      PipelineMetadata(
-        name = s"conditional(${ifTrue.metadata.name}, ${ifFalse.metadata.name})",
-        stages = List("conditional") ++ ifTrue.metadata.stages ++ ifFalse.metadata.stages
-      )
-    )
+    val run = Kleisli { a: A => if (predicate(a)) ifTrue.run(a) else ifFalse.run(a) }
+    val md = PipelineMetadata(name = s"conditional", stages = List("conditional"))
+      .combine(ifTrue.metadata)
+      .combine(ifFalse.metadata)
+    Pipeline(run, md)
   }
 
-  /**
-   * Retry combinator with exponential backoff
-   */
-  def retry[F[_]: Sync, A, B](
+  def retry[F[_]: EffectSystem, A, B](
     pipeline: Pipeline[F, A, B],
-    maxRetries: Int = 3,
-    delay: FiniteDuration = scala.concurrent.duration.DurationInt(1).second
+    maxRetries: Int,
+    initialDelay: scala.concurrent.duration.FiniteDuration
   ): Pipeline[F, A, B] = {
-    def retryLogic(attempt: Int): Kleisli[F, A, B] = {
-      Kleisli { a =>
-        pipeline.run(a).handleErrorWith { error =>
-          if (attempt < maxRetries) {
-            Sync[F].sleep(delay * attempt) *> retryLogic(attempt + 1)(a)
-          } else {
-            Sync[F].raiseError(error)
-          }
-        }
-      }
-    }
-
-    Pipeline(
-      retryLogic(1),
-      pipeline.metadata.copy(name = s"retry(${pipeline.metadata.name}, $maxRetries)")
-    )
+    val F   = EffectSystem[F]
+    val run = Kleisli { a: A => F.retryWithBackoff(pipeline.run(a), maxRetries, initialDelay) }
+    Pipeline(run, pipeline.metadata.copy(name = s"retry(${pipeline.metadata.name}, $maxRetries)"))
   }
 
-  /**
-   * Circuit breaker pattern for fault tolerance
-   */
-  def circuitBreaker[F[_]: Sync, A, B](
-    pipeline: Pipeline[F, A, B],
-    failureThreshold: Int = 5,
-    timeoutDuration: FiniteDuration = scala.concurrent.duration.DurationInt(30).seconds
-  ): Pipeline[F, A, B] = {
-    // Simplified implementation - real implementation would maintain state
-    Pipeline(
-      pipeline.run,
-      pipeline.metadata.copy(name = s"circuitBreaker(${pipeline.metadata.name})")
-    )
-  }
-
-  /**
-   * Batch processing combinator
-   */
-  def batch[F[_]: Sync, A, B](
+  def batch[F[_]: EffectSystem, A, B](
     pipeline: Pipeline[F, List[A], List[B]],
     batchSize: Int = 1000
   ): Pipeline[F, List[A], List[B]] = {
-    Pipeline(
-      Kleisli { input =>
-        input.grouped(batchSize).toList.traverse { batch =>
-          pipeline.run(batch)
-        }.map(_.flatten)
-      },
-      pipeline.metadata.copy(name = s"batch(${pipeline.metadata.name}, $batchSize)")
-    )
-  }
-
-  /**
-   * Rate limiting combinator
-   */
-  def rateLimit[F[_]: Sync, A, B](
-    pipeline: Pipeline[F, A, B],
-    requestsPerSecond: Int = 100
-  ): Pipeline[F, A, B] = {
-    val delayBetweenRequests = scala.concurrent.duration.DurationInt(1000 / requestsPerSecond).millis
-
-    Pipeline(
-      Kleisli { a =>
-        Sync[F].sleep(delayBetweenRequests) *> pipeline.run(a)
-      },
-      pipeline.metadata.copy(name = s"rateLimit(${pipeline.metadata.name}, $requestsPerSecond)")
-    )
-  }
-
-  /**
-   * Monitoring and metrics collection
-   */
-  def monitor[F[_]: Sync, A, B](
-    pipeline: Pipeline[F, A, B],
-    onSuccess: B => F[Unit] = (_: B) => Sync[F].unit,
-    onError: Throwable => F[Unit] = (_: Throwable) => Sync[F].unit
-  ): Pipeline[F, A, B] = {
-    Pipeline(
-      Kleisli { a =>
-        pipeline.run(a).attemptT.foldF(
-          error => onError(error) *> Sync[F].raiseError(error),
-          result => onSuccess(result).as(result)
-        )
-      },
-      pipeline.metadata.copy(name = s"monitor(${pipeline.metadata.name})")
-    )
+    val F = EffectSystem[F]
+    val run = Kleisli { input: List[A] =>
+      val groups = input.grouped(batchSize).toList
+      F.parTraverse(groups)(g => pipeline.run(g)).map(_.flatten)
+    }
+    Pipeline(run, pipeline.metadata.copy(name = s"batch(${pipeline.metadata.name}, $batchSize)"))
   }
 }
-
-/**
-   * High-level DSL for pipeline construction
-   */
-object PipelineDSL {
-
-  implicit class PipelineOps[F[_], A, B](pipeline: Pipeline[F, A, B]) {
-    def ~>[C](next: Pipeline[F, B, C]): Pipeline[F, A, C] =
-      pipeline.andThen(next)
-
-    def |[C](other: Pipeline[F, A, C])(implicit P: Parallel[F]): Pipeline[F, A, (B, C)] =
-      PipelineCombinators.parallel(pipeline, other) { (b, c) =>
-        Pipeline.lift[F, A, (B, C)](_ => Monad[F].pure((b, c)), "combine")
-      }
-
-    def when(predicate: A => Boolean)(implicit F: Monad[F]): Pipeline[F, A, B] =
-      PipelineCombinators.conditional(predicate, pipeline, Pipeline.identity[F, A].asInstanceOf[Pipeline[F, A, B]])
-
-    def retryOnFailure(maxRetries: Int = 3)(implicit F: Sync[F]): Pipeline[F, A, B] =
-      PipelineCombinators.retry(pipeline, maxRetries)
-
-    def withCircuitBreaker(failureThreshold: Int = 5)(implicit F: Sync[F]): Pipeline[F, A, B] =
-      PipelineCombinators.circuitBreaker(pipeline, failureThreshold)
-
-    def monitored(
-      onSuccess: B => F[Unit] = (_: B) => Monad[F].unit,
-      onError: Throwable => F[Unit] = (_: Throwable) => Monad[F].unit
-    )(implicit F: Sync[F]): Pipeline[F, A, B] =
-      PipelineCombinators.monitor(pipeline, onSuccess, onError)
-  }
-
-  // Factory methods for common pipeline patterns
-  def extract[F[_]: EffectSystem](source: DataSource): Pipeline[F, Unit, DataSource] =
-    Pipeline.lift(_ => EffectSystem[F].pure(source), "extract")
-
-  def transform[F[_], A, B](f: A => B)(implicit F: Monad[F]): Pipeline[F, A, B] =
-    Pipeline.lift(a => F.pure(f(a)), "transform")
-
-  def validate[F[_], A](contract: DataContract[A])(implicit F: EffectSystem[F]): Pipeline[F, A, ValidatedNel[ContractViolation, A]] =
-    Pipeline.lift(a => F.pure(contract.validate(a)), "validate")
-
-  def load[F[_]: EffectSystem](sink: DataSink): Pipeline[F, Any, Unit] =
-    Pipeline.lift(_ => EffectSystem[F].unit, "load")
-}
-
-/**
-   * Resource-safe pipeline execution with automatic cleanup
-   */
-object PipelineExecution {
-
-  def execute[F[_]: EffectSystem, A, B](
-    pipeline: Pipeline[F, A, B]
-  )(input: A): F[B] = {
-    pipeline.run(input)
-  }
-
-  def executeWithResources[F[_]: EffectSystem, A, B](
-    pipeline: Pipeline[F, A, B],
-    resources: Resource[F, Unit] = Resource.unit[F]
-  )(input: A): F[B] = {
-    resources.use(_ => pipeline.run(input))
-  }
-
-  def executeBatch[F[_]: EffectSystem: Parallel, A, B](
-    pipeline: Pipeline[F, A, B]
-  )(inputs: List[A]): F[List[B]] = {
-    inputs.parTraverse(pipeline.run.run)
-  }
-
-  def executeStream[F[_]: EffectSystem, A, B](
-    pipeline: Pipeline[F, A, B]
-  )(input: Any): Any = ??? /* fs2.Stream[F, B] = {
-    input.evalMap(pipeline.run.run)
-  } */
-    input
-}
-
-/**
-   * Type-safe pipeline builder with phantom types
-   */
-sealed trait PipelineState
-object PipelineState {
-  sealed trait HasSource extends PipelineState
-  sealed trait HasTransform extends PipelineState
-  sealed trait HasSink extends PipelineState
-  sealed trait Complete extends PipelineState
-}
-
-class PipelineBuilder[F[_], State <: PipelineState] private () {
-  // Complex phantom type implementation commented out for compilation safety
-  // private val stages: List[Pipeline[F, Any, Any]] = List.empty
-
-  def source[A](src: DataSource): Any = src /* Complex phantom type methods commented out for compilation safety */
-  def transform[A, B](f: A => B): Any = f
-  def contract[A](implicit dc: DataContract[A]): Any = dc
-  def sink(snk: DataSink): Any = snk
-  def build: Any = ()
-}
-
-object PipelineBuilder {
-  def apply[F[_]]: Any = new PipelineBuilder[F, PipelineState]()
-}
-
-   */ // End of commented out PipelineCombinators implementation
-
-} // End of PipelineCombinators object

@@ -1,0 +1,9 @@
+FROM sbt/sbt:1.10.0-java17
+
+WORKDIR /workspace
+
+# Cache Ivy and Coursier inside container (optional; host volumes recommended when running)
+ENV SBT_OPTS="-Dsbt.boot.directory=/root/.sbt/boot -Dsbt.global.base=/root/.sbt -Dsbt.ivy.home=/root/.ivy2 -Dsbt.coursier.home=/root/.cache/coursier"
+
+CMD ["sbt"]
+

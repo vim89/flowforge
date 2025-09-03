@@ -128,8 +128,77 @@
 - **Implementation Reality**: 20/100 (significant gaps between docs and code)
 - **Production Readiness**: 25/100 (early development stage)
 
+## Milestones & Status
+
+- **MVR (Minimum Viable Run)**
+  - Scope: Spark local SCD1/SCD2, streaming helper, metrics, runnable template demo.
+  - Status: In progress — SCD2 generalized; streaming helper done; template scaffold present; opt‑in IT added.
+  - ETA: 2–3 weeks.
+
+- **MVP (Minimum Viable Product)**
+  - Scope: + Config MVP, S3 connector, baseline DQ (Deequ adapter), opt‑in IT suite, docs.
+  - Status: Pending after MVR.
+  - ETA: 4–6 weeks total.
+
+- **v1.0.0 (Stable)**
+  - Scope: API freeze, effect/purity audit complete, connectors S3+GCS+BigQuery, schema evolution checks, ≥80% coverage, perf baselines, runbooks.
+  - Status: Planned.
+  - ETA: 12–16 weeks total.
+
 **Target Alignment: 90/100** (achievable in 14-20 weeks with focused effort)
 
 ---
 
 *This document will be updated weekly to track alignment progress and ensure FlowForge achieves its architectural vision with honest, verifiable implementation.*
+
+---
+
+## Big Picture Snapshot — 2025-09-02
+
+### End‑Goal Pillars vs Current Status
+
+| Pillar | End‑Goal | Current Status | Gap | Owner/Notes |
+|---|---|---|---|---|
+| Compile‑time Data Contracts | Contracts enforced at build time with helpers in templates | Contract builder + ADTs present; concrete instances/examples missing; templates empty | Medium | Provide strict examples + compile‑time helpers; wire into templates |
+| Effect‑Safe Pipelines | Pure vs effect separation, resource safety, typed errors | Core models correct; some modules misuse F[_]; ResourceSafety utilities missing | Medium | Audit and refactor; add safety utilities; tests |
+| Multi‑Engine Portability | Spark/Flink/Local with same business logic | Spark scaffold improved (Delta MERGE + CDC today); Flink/local interpreters minimal | Medium/High | Finish Spark SCD2/streaming; add Local/Flink interpreters |
+| Data Quality | Built‑in ValidatedNel + optional Deequ | Types exist; Deequ wiring not integrated | Medium | Implement common checks; add Deequ adapter |
+| Observability | Metrics, logging, tracing hooks | Prometheus counters present; added MetricsCollector today; logging SPI TBD | Low/Medium | Add logging SPI; optional OTel bridge later |
+| Templates | Giter8 archetypes with effect choice | Dirs exist; no content | High | Build “data-pipeline” template first (Cats‑Effect) |
+| Foundation | Safety, Config, Logging, Testing | Partially documented; implementations partial | High | Implement MVPs + tests |
+
+### Changes Logged Today (2025-09-02)
+- Engines-Spark: Conditional Delta MERGE; SCD2 generalized via CDCConfig; hashing excludes audit/SCD2 by default; Parquet SCD1 upsert; metrics for CDC latency.
+- Streaming: Added `StreamingCDC.performDeltaStreamed` helper with unit test.
+- Templates: Added initial `data-pipeline.g8` scaffold (Cats-Effect) with sample wiring notes.
+- Connectors: FileSystem connector present; GCS/S3/BigQuery modules exist as scaffolds (no implementations yet).
+- Build: `delta-spark` remains the Delta dependency; Spark artifacts are `provided`.
+- Compilation: `sbt compile` succeeds across modules (modules without sources trivially compile).
+
+### Next 10 Working Days — Execution Plan
+1. Core hardening (EffectSystem laws, error ADTs, codecs/schemas, PipelineBuilder2 behaviors, remove placeholder combinators).
+2. Foundation MVPs (ResourceSafety, Config decoders/validators, logging SPI, in‑memory interpreters).
+3. Template v0 (data-pipeline.g8 with Cats‑Effect choice, strict contract, end‑to‑end example).
+
+---
+
+## Hotspot Tracker (No‑Lose List)
+
+| File | Problem | Action | Owner | Status |
+|---|---|---|---|---|
+| modules/infrastructure/InfrastructureLayer.scala | ??? resourceSafety/cloudResourceSafety/loadConfigWithLogging | Implement using ResourceSafety + ConfigurationManagement | Core | Pending |
+| modules/logging/StructuredLogger.scala | ??? withContext (MDC) | Push/pop MDC around effect using EffectSystem.delay/suspend | Core | Pending |
+| modules/framework/PipelineCombinators.scala | Placeholder combinators | Replace/remove; rely on PipelineBuilder2 Kleisli | Core | Pending |
+| modules/engines-spark/SparkDataAlgebra.scala | Missing SCD2/partition/streaming/encoders | Implement; add tests | Engines | Pending |
+| modules/contracts/DataContract.scala | Example StandardContracts commented | Provide strict examples + tests | Core | Pending |
+| modules/templates/* | Empty g8 templates | Implement data-pipeline.g8 v0 | DX | Pending |
+
+## Acceptance Criteria (Guardrails)
+- Core: zero TODO/???, tests green, coverage ≥ 80%, stable public API, law tests pass.
+- Foundation: Safety/Config/Logging MVPs with tests; base interpreters; CI green on 2.12/2.13.
+- Engines/Connectors: Spark SCD1+SCD2; cloud connectors for HDFS/GCS/S3 tested; graceful error types.
+- Templates: At least one working template that runs end‑to‑end.
+
+## Operating Policies (Compile Gate)
+- Compile after each logical change; stop on any error.
+- No new placeholders accepted; document changes in Findings and this file.

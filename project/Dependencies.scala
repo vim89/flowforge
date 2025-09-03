@@ -86,7 +86,8 @@ object Dependencies {
     )
 
     val typeSafety = Seq(
-      "eu.timepit" %% "refined" % Versions.refined
+      "eu.timepit" %% "refined"   % Versions.refined,
+      "com.chuusai" %% "shapeless" % Versions.shapeless
     )
 
     val json = Seq(
@@ -133,6 +134,14 @@ object Dependencies {
 
   // ===== CONNECTOR DEPENDENCIES =====
   object Connectors {
+    val hadoop = Seq(
+      "org.apache.hadoop" % "hadoop-client-api"     % "3.3.6",
+      "org.apache.hadoop" % "hadoop-client-runtime" % "3.3.6",
+      "org.apache.hadoop" % "hadoop-hdfs-client"    % "3.3.6"
+        exclude ("org.slf4j", "slf4j-log4j12")
+        exclude ("log4j", "log4j")
+    )
+
     val gcs = Seq(
       "com.google.cloud" % "google-cloud-storage"       % Versions.gcpStorage,
       "com.google.cloud" % "google-cloud-secretmanager" % Versions.gcpStorage
@@ -160,7 +169,7 @@ object Dependencies {
       "com.azure" % "azure-identity"     % "1.10.4"
     )
 
-    val all: Seq[ModuleID] = gcs ++ s3 ++ bigquery ++ kafka ++ azure
+    val all: Seq[ModuleID] = hadoop ++ gcs ++ s3 ++ bigquery ++ kafka ++ azure
   }
 
   // ===== QUALITY DEPENDENCIES =====
@@ -224,7 +233,7 @@ object Dependencies {
     deps ++ providedLibs.map(_ % "provided")
 
   def forModule(moduleName: String): Seq[ModuleID] = moduleName match {
-    case "core" => Core.all ++ Testing.unit
+    case "core" => Core.all ++ Monitoring.prometheus ++ Testing.unit
     // Infrastructure Layer modules
     case "safety" => Core.functional ++ effectSystems ++ Testing.unit
     case "config" =>
@@ -243,7 +252,7 @@ object Dependencies {
       Core.all ++ Testing.unit ++ Seq(
         "org.apache.spark" %% "spark-sql" % Versions.spark % "provided"
       )
-    case "connectors"          => Core.functional ++ Testing.unit
+    case "connectors"          => Core.functional ++ Testing.unit ++ Connectors.all
     case "connectors-gcs"      => common ++ Connectors.gcs
     case "connectors-s3"       => common ++ Connectors.s3
     case "connectors-bigquery" => common ++ Connectors.bigquery
@@ -272,6 +281,20 @@ object Dependencies {
   val overrides: Seq[ModuleID] = Seq(
     "org.typelevel"          %% "cats-core"   % Versions.cats,
     "org.typelevel"          %% "cats-kernel" % Versions.cats,
-    "org.scala-lang.modules" %% "scala-xml"   % "2.2.0"
+    "org.scala-lang.modules" %% "scala-xml"   % "2.2.0",
+    // Align Netty across AWS/GCP/Hadoop stacks
+    "io.netty" % "netty-common"      % "4.1.110.Final",
+    "io.netty" % "netty-buffer"      % "4.1.110.Final",
+    "io.netty" % "netty-transport"   % "4.1.110.Final",
+    "io.netty" % "netty-resolver"    % "4.1.110.Final",
+    "io.netty" % "netty-handler"     % "4.1.110.Final",
+    "io.netty" % "netty-codec"       % "4.1.110.Final",
+    "io.netty" % "netty-codec-http"  % "4.1.110.Final",
+    "io.netty" % "netty-codec-http2" % "4.1.110.Final",
+    // Align Google stack
+    "com.google.guava"  % "guava"              % "33.4.0-jre",
+    "com.google.j2objc" % "j2objc-annotations" % "3.0.0",
+    // Align SLF4J
+    "org.slf4j" % "slf4j-api" % "2.0.13"
   )
 }

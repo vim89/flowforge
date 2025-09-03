@@ -1,7 +1,11 @@
 package com.flowforge.core.algebra
 
 import cats.data.{ NonEmptyList, ValidatedNel }
-import com.flowforge.core.types.PipelineTypes._
+// Avoid name clash with the type-class-style DataContract defined in this package
+import com.flowforge.core.types.PipelineTypes.{
+  DataContract => PDataContract,
+  QualityCheck => PQualityCheck
+}
 import com.flowforge.core.types.RefinedTypes.FieldName
 import com.flowforge.core.types._
 import eu.timepit.refined.types.string.NonEmptyString
@@ -78,7 +82,7 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
   def writeWithValidation[A: DataEncoder](
     dataset: Dataset[A],
     sink: DataSink,
-    contract: DataContract[A],
+    contract: PDataContract[A],
     options: WriteOptions = WriteOptions.default
   ): F[ValidatedNel[FlowForgeError, WriteResult]]
 
@@ -224,7 +228,7 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
    * Validate dataset against external data contract service. Uses F[_] because it may involve
    * external validation service.
    */
-  def validate[A](dataset: Dataset[A], contract: DataContract[A]): F[QualityResult[Dataset[A]]]
+  def validate[A](dataset: Dataset[A], contract: PDataContract[A]): F[QualityResult[Dataset[A]]]
 
   /**
    * Run quality checks that may involve external services. Uses F[_] because checks may involve
@@ -232,7 +236,7 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
    */
   def runQualityChecks[A](
     dataset: Dataset[A],
-    checks: NonEmptyList[QualityCheck[A]]
+    checks: NonEmptyList[PQualityCheck[A]]
   ): F[List[QualityCheckResult]]
 
   /**
@@ -518,7 +522,28 @@ object CDCOperations {
     keyColumns: NonEmptyList[FieldName],
     timestampColumn: Option[FieldName] = None,
     deleteDetection: Boolean = true,
-    batchSize: Int = 10000
+    batchSize: Int = 10000,
+    scd2: Option[SCD2Columns] = None,
+    partition: Option[PartitionStrategy] = None,
+    hashColumns: Option[NonEmptyList[FieldName]] = None,
+    optimizeAfterMerge: Boolean = false,
+    zOrderBy: Option[NonEmptyList[FieldName]] = None
+  )
+
+  /**
+   * SCD2 column names to support non-standard conventions.
+   */
+  case class SCD2Columns(
+    effectiveFrom: FieldName,
+    effectiveTo: FieldName,
+    isCurrent: FieldName
+  )
+
+  /**
+   * Optional writer partitioning strategy for sink tables.
+   */
+  case class PartitionStrategy(
+    partitionBy: List[FieldName] = Nil
   )
 
   /**

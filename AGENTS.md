@@ -25,12 +25,12 @@ Let's be honest -
 
 Here's what we do differently:
 
-_🛑 This won't even compile if your schema doesn't match_
+_🛑 Reality-first note (2025-09-03): Current repo provides runtime contract validation and type-safe builders; strict compile-time contract enforcement is on the roadmap._
 ```scala
-// This won't even compile if your schema doesn't match
+// Fails fast via contract validation today; compile-time enforcement planned
 val pipeline = DataPipelineFactory[IO]
   .source(blob"gs://raw-data/sales/*.parquet")
-  .contract(SalesDataContract.strict)  // Compile-time contract validation
+  .contract(SalesDataContract.strict)  // Contract validation (runtime today; compile-time planned)
   .transform(_.filter(_.amount >= 999))    // Type-safe transformations
   .quality(nonNull("invoice_number") and unique("customer_id"))  // Built-in quality checks
   .sink(BigQuerySink("analytics.customers"))
@@ -39,21 +39,25 @@ val pipeline = DataPipelineFactory[IO]
 // Run it with automatic retry, monitoring, and error handling
 pipeline.run.unsafeRunSync()
 ```
-**That's it. Production-ready. Type-safe. Effect-safe. Audited.**
+**Today:** Type-safe interfaces, effect-safe orchestration, runtime contracts, scaffolding in place.  
+**Now implemented:** Compile-time schema gates via typed sources/contracts/sinks; untyped APIs are deprecated and treated as errors in this repo to ensure mismatch code does not compile.  
+**Roadmap:** Production-hardening and full auditing.
 
-### 📊 **Quantified revolution**
+For an honest, module-by-module status: see `docs/design/GROUND_REALITY_REPORT.md` (updated 2025-09-03).
 
-| **Aspect** | **Industry standard** | **FlowForge** | **Improvement** |
-|------------|---------------------|---------------|-----------------|
-| **Setup Time** | 2-3 days | 30 seconds | **99.8% faster** |
-| **Runtime Errors** | Constant | Zero | **100% eliminated** |
-| **Configuration Bugs** | Daily pain | Impossible | **100% eliminated** |
-| **Cloud Portability** | Rewrite everything | Zero changes | **∞ better** |
+### 📊 **Quantified outcomes (targets) vs today**
 
-**FlowForge** represents a paradigm shift in data engineering - from runtime chaos to compile-time confidence. We're building the next-generation Scala data pipeline framework that makes impossible states impossible and turns data engineering into a joy.
+| **Aspect** | **Industry standard** | **Today (MVR)** | **Target (Roadmap)** |
+|------------|-----------------------|------------------|---------------------|
+| Setup Time | 2–3 days | Minutes (g8 scaffold) | ~30 seconds quickstart |
+| Runtime Errors | Frequent | Reduced via contracts/tests | Zero‑class via compile/runtime gates |
+| Config Bugs | Common | Typed decoders + validation | “Impossible” by design + CI gates |
+| Cloud Portability | Rewrites | Local/HDFS implemented | Multi‑cloud adapters (GCS/S3/BQ/Kafka/Azure) |
+
+**FlowForge** represents a shift from runtime chaos toward compile‑time confidence. We’re building the next‑generation Scala data pipeline framework, with today’s repo focused on the foundational architecture and an honest path to production.
 Transform data engineering from error-prone scripting to type-safe, composable, and maintainable pipelines that scale from startup MVPs to enterprise production workloads.
 
-**FlowForge** is a revolutionary **Data Engineering Pipeline Archetype** built with **Scala's modern functional ecosystem**. We leverage **type safety**, **effect systems (ZIO/Cats-Effect)**, and **convention over configuration** to create **production-ready data pipelines** with built-in data quality enforcement.
+**FlowForge** is a **Data Engineering Pipeline Archetype** built with **Scala's modern functional ecosystem**. We leverage **type safety** and **effect systems (ZIO/Cats‑Effect)** with **convention over configuration** to create maintainable pipelines. Production‑ready guarantees are an explicit roadmap item.
 
 
 ### 🔥 **Get ready for the revolution!**
@@ -69,17 +73,17 @@ Let Scala's type & effect systems co-author them with you. We'll show how we bui
 #### **Disclaimer: Kyo & Caprese's effect systems will be experimental at this stage.**
 
 ### Description
-What if your data platform stopped relying on configuration-driven or metadata-driven logicâ€”and postmortemsâ€”and instead enforced correctness, traceability, and effect boundaries at compile time?
+Reality note: Today the repo enforces correctness with runtime contracts and type‑safe APIs; compile‑time enforcement is in progress. What if your data platform stopped relying on configuration‑driven or metadata‑driven logic—and postmortems—and instead enforced correctness, traceability, and effect boundaries at compile time?
 
-In this project, we'll try to design & implement production-ready data pipeline archetype system in Scala.
+In this project, we'll design the architecture and iteratively implement a production‑grade data pipeline archetype in Scala (MVR today; MVP/v1 on the roadmap).
 We will use Giter8 templates to scaffold pipelines that are contract-driven, type-safe, effectful, and pluggable all enforced through the Scala type system and effect libraries.
 
-- Giter8 templates bootstrap consistent, compile-time safe projects
+- Giter8 templates bootstrap consistent projects (compile‑time contracts on the roadmap)
 - Refined types validate configuration before runtime
 - Cats ValidatedNel catches multi-rule violations in DQ checks
 - Type classes enable pluggable validation and ingestion
 - ZIO Layers and Cats Effect offer fiber-safe orchestration
-- Trait-based runners switch between Spark, Flink, and Kafka
+- Trait-based runners target Spark first; Flink/Kafka execution on the roadmap
 - Data Quality and custom rules enforce data contract quality at runtime
 - Strictly Experimental: Kyo and Caprese add effect composition and static guarantees
 
@@ -205,14 +209,14 @@ FlowForge follows a strict layered architecture with clear separation of concern
 - **Logging & Observability**: Structured logging, metrics, and distributed tracing
 
 
-### 🔧 **Key Architectural Principles**
+### 🔧 **Key Architectural Principles (with current status)**
 
 1. **Dependency Inversion**: Higher layers depend on abstractions, not concretions
-2. **Effect Polymorphism**: All operations work with any F[_]: EffectSystem
+2. **Effect Polymorphism**: All operations work with any F[_]: EffectSystem (implemented; IO/ZIO instances provided)
 3. **Type Safety**: Phantom types and refined types prevent runtime errors
 4. **Composability**: Kleisli arrows enable functional pipeline composition
 5. **Resource Safety**: Bracket patterns guarantee cleanup in all execution paths
-6. **Multi-Engine**: Abstract execution allows switching between Spark/Flink/Local
+6. **Multi-Engine**: Abstract execution allows switching between Spark/Flink/Local (Spark implemented; Flink/others planned)
 7. **Plugin Architecture**: Connectors and quality checks are pluggable via type classes
 
 ### 🎯 Low-Level Design & Design Patterns
@@ -264,6 +268,7 @@ Apply only where they fit perfectly to solve that bit of problem or make other t
   - **Decorator Pattern with Effect Systems**: Using the decorator pattern to add additional behavior to existing components in a type-safe manner, while leveraging the capabilities of effect systems like ZIO or Cats Effect to manage side effects and resource safety. time, ensuring robust and reliable applications.
 
 ### 🔬 **Effect System Research Findings & Architecture Decision**
+Note: Interfaces reflect the research (pure Spark ops are not wrapped in F; external IO/orchestration use F). Spark implementation is being hardened to remove in‑memory scaffolding.
 
 Based on comprehensive research and analysis of FlowForge's production-grade pipeline requirements, **Effect Systems are essential** for our data engineering platform. Here are the key findings:
 
@@ -388,6 +393,7 @@ Effect polymorphism enables true multi-engine support:
 This research confirms that Effect Systems are not optional ceremony, but essential infrastructure for production-grade data engineering platforms. They enable composability, testability, resource safety, and typed error handling across heterogeneous systems while maintaining the flexibility to work with multiple execution engines.
 
 ## 🔧 **Critical Implementation Guidelines from Effect System Research**
+Status (2025-09-03): API separation is enforced; engine implementations are being refactored to align fully (removing unnecessary effects around pure Spark transforms).
 
 ### **Mandatory Effect Usage Separation**
 
@@ -774,4 +780,3 @@ When wrapping up, ChatGPT Agents must summarize:
 - **Structured context engineering** lays a predictable foundation for ChatGPT & Agents’ state ([LlamaIndex blog]([llamaindex.ai](https://www.llamaindex.ai/blog/context-engineering-what-it-is-and-techniques-to-consider?utm_source=chatgpt.com)))
 - Summaries and checkpoints reduce token bloat and maintain conversation coherence
 - Conflict detection and small patches dramatically cut down wasted labor and merge conflicts
-

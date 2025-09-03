@@ -3,6 +3,7 @@ package com.flowforge.core.types
 import cats.data.Kleisli
 import com.flowforge.core.algebra.EffectSystem
 import eu.timepit.refined.api.Refined
+import shapeless.{ HList, LabelledGeneric }
 
 /**
  * A small, non-invasive typed builder prototype that enforces stage chaining at compile-time. It
@@ -36,7 +37,9 @@ case class PipelineBuilder2[F[_]: EffectSystem, In, Out] private (
   def withDescription(desc: String): PipelineBuilder2[F, In, Out] = copy(description = desc)
   def withConfig(c: PipelineConfig): PipelineBuilder2[F, In, Out] = copy(config = Some(c))
 
+  @deprecated("Use addTypedSource for compile-time schema enforcement", since = "0.1.0")
   def addSource[C](source: DataSource, reader: DataSource => F[C]): PipelineBuilder2[F, Unit, C] = {
+    // Deprecated in favor of addTypedSource; kept for migration.
     val stage = PipelineStage.Source[F, C](
       name = s"typed-source-${stages.size}",
       description = s"Read from ${source.format}",
@@ -45,6 +48,29 @@ case class PipelineBuilder2[F[_]: EffectSystem, In, Out] private (
     )
     PipelineBuilder2[F, Unit, C](name, description, stages :+ stage, config)
   }
+
+  /**
+   * Add source with compile-time schema evidence for the produced type `C`.
+   */
+  def addTypedSource[C, R <: HList](
+    source: DataSource,
+    reader: DataSource => F[C]
+  )(implicit L: LabelledGeneric.Aux[C, R]): PipelineBuilder2[F, Unit, C] = {
+    val stage = PipelineStage.Source[F, C](
+      name = s"typed-source-${stages.size}",
+      description = s"Read from ${source.format} (typed)",
+      dataSource = source,
+      execute = Kleisli(_ => reader(source))
+    )
+    PipelineBuilder2[F, Unit, C](name, description, stages :+ stage, config)
+  }
+
+  /** Overload that accepts a TypedSource wrapper for ergonomics. */
+  def addTypedSource[C, R <: HList](
+    source: TypedSource[R],
+    reader: DataSource => F[C]
+  )(implicit L: LabelledGeneric.Aux[C, R]): PipelineBuilder2[F, Unit, C] =
+    addTypedSource[C, R](source.underlying, reader)
 
   def addTransform[C](transform: Out => F[C]): PipelineBuilder2[F, In, C] = {
     val stage = PipelineStage.Transform[F, Out, C](
@@ -102,12 +128,34 @@ case class PipelineBuilder2[F[_]: EffectSystem, In, Out] private (
     PipelineBuilder2[F, In, C](name, description, stages :+ stage, config)
   }
 
+  @deprecated("Use addTypedSink for compile-time schema enforcement", since = "0.1.0")
   def addSink(writer: (Out, DataSink) => F[Unit], sink: DataSink): PipelineBuilder2[F, In, Unit] = {
+    // Deprecated in favor of addTypedSink; kept for migration.
     val stage = PipelineStage.Sink[F, Out](
       name = s"typed-sink-${stages.size}",
       description = s"Write to ${sink.format}",
       dataSink = sink,
       execute = Kleisli((b: Out) => writer(b, sink))
+    )
+    PipelineBuilder2[F, In, Unit](name, description, stages :+ stage, config)
+  }
+
+  /**
+   * Add a sink with compile-time schema enforcement.
+   *
+   * Requires evidence that the pipeline's current output type `Out` has a labelled-generic
+   * representation `R` that matches the typed sink's expected schema. If they do not match, this
+   * method cannot be called (compilation fails).
+   */
+  def addTypedSink[R <: HList](
+    sink: TypedSink[R],
+    writer: (Out, DataSink) => F[Unit]
+  )(implicit L: LabelledGeneric.Aux[Out, R]): PipelineBuilder2[F, In, Unit] = {
+    val stage = PipelineStage.Sink[F, Out](
+      name = s"typed-sink-${stages.size}",
+      description = s"Write to ${sink.underlying.format} (typed)",
+      dataSink = sink.underlying,
+      execute = Kleisli((b: Out) => writer(b, sink.underlying))
     )
     PipelineBuilder2[F, In, Unit](name, description, stages :+ stage, config)
   }

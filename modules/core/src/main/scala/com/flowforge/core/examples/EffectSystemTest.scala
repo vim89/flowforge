@@ -19,13 +19,13 @@ object EffectSystemTest extends IOApp.Simple {
   def run: IO[Unit] =
     for {
       _ <- IO.println("🧪 Testing FlowForge Effect System Integration")
-      _ <- IO.println()
+      _ <- IO.println("")
 
       _ <- testCatsEffectIO
-      _ <- IO.println()
+      _ <- IO.println("")
 
       _ <- testZIOTask
-      _ <- IO.println()
+      _ <- IO.println("")
 
       _ <- IO.println("✅ Both effect systems working correctly!")
 

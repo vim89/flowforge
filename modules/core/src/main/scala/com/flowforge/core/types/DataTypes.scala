@@ -66,6 +66,7 @@ package com.flowforge.core.types
 import cats.Show
 import cats.syntax.show._
 import com.flowforge.core.types.DataSink.WriteMode
+import shapeless.HList
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.collection.NonEmpty
 import eu.timepit.refined.numeric.{ NonNegative, Positive }
@@ -814,6 +815,21 @@ object DataSink {
   def s3(bucket: String, prefix: String, format: DataFormat): S3Sink =
     S3Sink(BucketName(bucket), prefix, format)
 }
+
+// ===============================
+// TYPED SINK (COMPILE-TIME SCHEMA)
+// ===============================
+
+/**
+ * A sink that encodes its expected schema at the type level as an HList of labelled fields.
+ * Use with PipelineBuilder2.addTypedSink to enforce compile-time schema compatibility between
+ * pipeline output type and sink expectation.
+ */
+final case class TypedSink[R <: HList](underlying: DataSink)
+
+/** A source that encodes its expected schema at the type level. */
+final case class TypedSource[R <: HList](underlying: DataSource)
+
 
 // ===============================
 // DATA QUALITY TYPES

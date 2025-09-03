@@ -9,7 +9,7 @@ package com.flowforge.contracts
 import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.implicits._
 import com.flowforge.contracts.FieldConstraint.Pattern
-import com.flowforge.core.algebra.SchemaVersion
+import com.flowforge.core.types.RefinedTypes.SchemaVersion
 import eu.timepit.refined.types.string.NonEmptyString
 
 import java.time.Instant
@@ -291,7 +291,7 @@ object StandardContracts {
     timestamp: Instant
   )
 
-  implicit val salesDataContract: DataContract[SalesData] = ??? /*
+  implicit val salesDataContract: DataContract[SalesData] =
     DataContract
       .builder[SalesData]
       .withSchema(
@@ -322,18 +322,18 @@ object StandardContracts {
               nullable = false
             )
           ),
-          version = SchemaVersion(1)
+          version = SchemaVersion.unsafeFrom(1)
         )
       )
       .withVersion(ContractVersion(1, 0, 0))
       .withRules(
         ValidationRules.nonNull("invoiceNumber")(_.invoiceNumber),
         ValidationRules.nonNull("customerId")(_.customerId),
-        ValidationRules.range("amount")(0.0, Double.MaxValue)(_.amount),
-        ValidationRules.unique("invoiceNumber")(_.invoiceNumber)
+        ValidationRules.range("amount")(0.0, Double.MaxValue)(_.amount)
+        // Note: `unique` needs state; enforce at dataset-level instead
       )
       .build
-   */ // End of commented StandardContracts example
+  // End StandardContracts example
 }
 
 /**

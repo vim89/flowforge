@@ -64,6 +64,16 @@ def scalacOptionsForVersion(scalaVersion: String): Seq[String] =
 
 ThisBuild / scalacOptions ++= scalacOptionsForVersion(scalaVersion.value)
 
+// Ensure your app runs in a separate JVM (so sbt memory != app memory)
+fork := true
+
+// Give Spark jobs headroom when you `run` from sbt
+javaOptions ++= Seq(
+  "-Xms2g",
+  "-Xmx6g",
+  "-Duser.timezone=UTC"
+)
+
 // Test settings
 ThisBuild / Test / parallelExecution := false
 ThisBuild / Test / testOptions += Tests.Argument("-oDF")
@@ -337,3 +347,6 @@ ThisBuild / assemblyMergeStrategy := {
   case x if x.endsWith(".xml")        => MergeStrategy.first
   case x                              => MergeStrategy.first
 }
+
+// MVR convenience alias: compile + unit tests only (no opt-in ITs)
+addCommandAlias("mvr", "clean; compileAll; testAll")

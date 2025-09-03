@@ -38,7 +38,7 @@ object FileSystemExample extends IOApp.Simple {
   def run: IO[Unit] =
     for {
       _ <- IO.println("🗂️ FlowForge File System Connector Demo")
-      _ <- IO.println()
+      _ <- IO.println("")
 
       _ <- setupTestEnvironment
       _ <- runBasicFileOperations
@@ -143,7 +143,7 @@ object FileSystemExample extends IOApp.Simple {
       }
 
       _ <- IO.println("   ✅ Basic operations completed")
-      _ <- IO.println()
+      _ <- IO.println("")
 
     } yield ()
   }
@@ -179,7 +179,7 @@ object FileSystemExample extends IOApp.Simple {
       )
 
       _ <- IO.println("   ✅ Batch operations completed")
-      _ <- IO.println()
+      _ <- IO.println("")
 
     } yield ()
 
@@ -227,7 +227,7 @@ object FileSystemExample extends IOApp.Simple {
       _           <- IO.println(s"   Streamed write completed: ${writeResult.bytesWritten} bytes")
 
       _ <- IO.println("   ✅ Streaming operations completed")
-      _ <- IO.println()
+      _ <- IO.println("")
 
     } yield ()
   }
@@ -245,7 +245,7 @@ object FileSystemExample extends IOApp.Simple {
       _      <- IO.println(s"   Output files: ${result.outputFiles.mkString(", ")}")
 
       _ <- IO.println("   ✅ Pipeline integration completed")
-      _ <- IO.println()
+      _ <- IO.println("")
 
     } yield ()
 
@@ -329,7 +329,7 @@ object FileSystemExample extends IOApp.Simple {
       _ <- connector.delete("/tmp/flowforge", recursive = true)
 
       _ <- IO.println("   ✅ Cleanup completed")
-      _ <- IO.println()
+      _ <- IO.println("")
 
     } yield ()
   }

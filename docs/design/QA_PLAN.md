@@ -70,6 +70,15 @@ FlowForge's testing strategy follows a **pyramid approach** with emphasis on pro
   - Quality validation integration
   - Resource cleanup on failures
 
+#### **Spark/Delta CDC Integration (Opt‑in)** 🔄 ADDED
+- Guard: Only runs when `-DwithSparkIT=true` and Spark/Delta classes are present.
+- Location: `engines-spark/src/test/scala/.../SparkDeltaSCD2IT.scala`
+- Verifies:
+  - SCD2 close/open behavior: previous versions closed with `effective_to` and `is_current=false`.
+  - Exactly one current row per key with `effective_to IS NULL` and `is_current=true`.
+  - `effective_from` sourced from `timestampColumn` when provided.
+  - Watermark-like increments do not create duplicate current rows.
+
 ### **4. Performance & Load Tests** 
 *Ensure system performs under production conditions*
 

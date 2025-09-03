@@ -12,6 +12,21 @@
 - **Concrete Implementation**: 15-20% complete (significant gaps)
 - **Production Readiness**: 25/100 (early development stage)
 
+### Milestone Definitions
+- **MVR (Minimum Viable Run)**: Single-engine (Spark local) pipeline that demonstrates contract-first ETL with SCD1/SCD2, micro-batch streaming helper, metrics, and a runnable quickstart (template or example) that runs end-to-end with one command.
+- **MVP (Minimum Viable Product)**: MVR plus configuration MVP, one production cloud connector (S3), baseline DQ (common checks; Deequ adapter), opt-in Spark/Delta integration tests, and developer docs.
+- **v1.0.0 (Stable)**: API stability, purity/effect separation complete, error ADTs finalized, connectors (S3+GCS+BigQuery), schema evolution compatibility checks, ≥80% coverage, performance baselines, full docs and runbooks.
+
+### Delivery Approach
+- Prioritize correctness and compile-time guarantees; avoid config-driven fragility.
+- Keep Spark transformations pure (no F[_]); isolate IO/orchestration in F[_].
+- Deliver smallest runnable path first (MVR), then harden for MVP and stabilize for v1.0.0.
+
+### Target Timelines (focused effort)
+- MVR: 2–3 weeks
+- MVP: 4–6 weeks total
+- v1.0.0: 12–16 weeks total
+
 ## 🚨 CRITICAL CORRECTIONS TO PREVIOUS ASSESSMENTS
 
 ### **⚠️ OBSOLETE ASSESSMENTS - Historical Reference Only**
@@ -238,6 +253,50 @@ def createDataAlgebra[F[_]: EffectSystem]: DataAlgebra[F] = {
 - [ ] **Working SparkDataAlgebra** with DataFrame operations
 - [ ] **Functional configuration system** with proper decoders
 - [ ] **Pipeline execution** integrated with DataAlgebra
+
+---
+
+## Big Picture Status — 2025-09-02
+
+This addendum captures the current code reality, the 100% Core goal, and the Foundation completion plan. It is a working tracker to prevent drift during non‑working hours.
+
+### Current Reality (Code vs Design)
+- Core abstractions are strong; framework combinators now implemented with tests; codecs/schema utilities expanded.
+- Spark engine supports conditional Delta MERGE; SCD2 generalized via CDCConfig; hashing clarified; Parquet SCD1 upsert in place; streaming helper added; partition strategy supported on append.
+- Connectors: FileSystem implemented; GCS/S3/BigQuery directories exist as scaffolds only (no production code yet); Kafka/Azure pending.
+- Foundation (Safety/Config/Logging/Observability/Testing): Partially implemented; configuration decoders and logging SPI still needed; basic Prometheus metrics present.
+- Templates: Initial `data-pipeline.g8` scaffold added; needs runnable demo wiring.
+
+### End‑Goal: Core 100% Production‑Ready (Definition of Done)
+- No TODO/???/placeholders; strict purity/effects separation across core.
+- EffectSystem law‑checked; IO/ZIO instances documented.
+- Error ADTs finalized; consistent typed errors or Throwable channel (documented choice).
+- Data codecs/schemas complete; compatibility utilities; size estimates.
+- PipelineBuilder2 default and complete; framework placeholder removed or replaced by real Kleisli combinators.
+- Observability SPI (metrics/logging) wired without backend coupling; examples and docs included.
+- Tests: unit, property, and law tests; coverage ≥ 80% for core.
+
+### End‑Goal: Foundation 100% Complete (Definition of Done)
+- Safety: ResourceSafety + CloudResourceSafety concrete implementations with tests.
+- Config: Type‑safe decoding/validation for FlowForgeConfig; environment/profile loading; examples + tests.
+- Logging: Thin SPI + MDC helpers; adapters chosen in templates; no core coupling.
+- Base Algebras: Engines/Connectors/Quality base traits with at least one in‑memory interpreter for tests.
+- CI Hygiene: format/lint/fix/coverage; green matrix for 2.12/2.13.
+- Templates: At least one working Giter8 (data‑pipeline) with effect choice, strict contracts, metrics/logging, runnable example.
+
+### Immediate Remediation Checklist (Tracked)
+- Remove ??? in InfrastructureLayer (resourceSafety/cloudResourceSafety/loadConfigWithLogging).
+- Implement StructuredLogger.withContext (MDC push/pop around an effect).
+- Core hardening: EffectSystem laws, error ADTs, codecs/schema utils; finalize PipelineBuilder2 behaviors; remove framework placeholder.
+- Spark engine: SCD2, partitioning, streaming; schema‑aware encoders; CDC tests.
+- Contracts: Provide strict examples in StandardContracts + tests.
+- Foundation MVPs: ResourceSafety, Config decoders/validators, logging SPI, in‑memory interpreters.
+- Templates: Implement data‑pipeline.g8 v0 (Cats‑Effect) first.
+
+### Policies (Never Drift)
+- Compile gate after each change (sbt compile), stop on error.
+- No new placeholders/??? allowed.
+- Update Findings/Alignment_Status after each significant change.
 - [ ] **Basic connector implementations** (filesystem, local)
 - [ ] **Expanded test coverage** to 80%+ with integration tests
 

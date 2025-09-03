@@ -1,9 +1,12 @@
 package com.flowforge.config
 
-import cats.data.{ NonEmptyList, ValidatedNel }
-import cats.effect.{ Resource, Sync }
+import cats.data.{ NonEmptyList, Validated, ValidatedNel }
+import cats.effect.Sync
 import cats.syntax.all._
+import com.flowforge.core.algebra.CDCOperations
+import com.flowforge.core.types.RefinedTypes.FieldName
 import com.typesafe.config.{ Config, ConfigFactory }
+
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success, Try }
 
@@ -276,6 +279,131 @@ object ConfigDecoder {
           case Success(value) => value.validNel
           case Failure(ex)    => ConfigError.ParseError(path, ex.getMessage).invalidNel
         }
+    }
+
+  // ---------- Helpers for lists and NonEmptyList ----------
+  implicit def listDecoder[A](implicit dec: ConfigDecoder[A]): ConfigDecoder[List[A]] =
+    new ConfigDecoder[List[A]] {
+      override def decode(config: Config, path: String): ValidatedNel[ConfigError, List[A]] = {
+        // Try parsing as config list first
+        val configListResult: Option[ValidatedNel[ConfigError, List[A]]] = 
+          Try(config.getConfigList(path)).toOption
+            .map(_.toArray.toList.map(_.asInstanceOf[Config]))
+            .map { cfgs =>
+              cfgs.zipWithIndex.map { case (c, idx) =>
+                dec
+                  .decode(c, "")
+                  .leftMap(_.map(e => ConfigError.ValidationFailed(s"$path[$idx]", e.message)))
+              }.sequence
+                .map(_.toList)
+            }
+
+        // Try parsing as string list if config list fails
+        val stringListResult: Option[ValidatedNel[ConfigError, List[A]]] =
+          Try(config.getStringList(path)).toOption.map { stringList =>
+            val strings = stringList.toArray.toList.map(_.toString).map(_.asInstanceOf[A])
+            Validated.valid[NonEmptyList[ConfigError], List[A]](strings)
+          }
+
+        // Return the first successful result or empty list
+        configListResult
+          .orElse(stringListResult)
+          .getOrElse(Validated.valid[NonEmptyList[ConfigError], List[A]](List.empty[A]))
+      }
+    }
+
+  private def getStringList(config: Config, path: String): Either[ConfigError, List[String]] =
+    Try(config.getStringList(path)).toOption
+      .map(list => list.toArray.toList.map(_.toString))
+      .toRight(ConfigError.MissingKey(path))
+
+  private def decodeFieldName(str: String): ValidatedNel[ConfigError, FieldName] =
+    Either
+      .catchNonFatal(FieldName.unsafeFrom(str))
+      .leftMap(t => ConfigError.ValidationFailed("fieldName", t.getMessage))
+      .toValidatedNel
+
+  private def nelOfFieldNames(
+    config: Config,
+    path: String
+  ): ValidatedNel[ConfigError, NonEmptyList[FieldName]] =
+    if (!config.hasPath(path)) ConfigError.MissingKey(path).invalidNel
+    else {
+      val strs = config.getStringList(path).asInstanceOf[java.util.List[String]]
+      val list = strs.toArray.toList.map(_.toString)
+      NonEmptyList
+        .fromList(list)
+        .toValidNel[ConfigError](ConfigError.ValidationFailed(path, "must be non-empty"))
+        .andThen(_.traverse { s =>
+          Either
+            .catchNonFatal(FieldName.unsafeFrom(s))
+            .leftMap(t => ConfigError.ValidationFailed(path, t.getMessage))
+            .toValidatedNel
+        })
+    }
+
+  private def optFieldName(
+    config: Config,
+    path: String
+  ): ValidatedNel[ConfigError, Option[FieldName]] =
+    if (config.hasPath(path))
+      stringDecoder.decode(config, path).andThen(s => decodeFieldName(s)).map(Some(_))
+    else None.validNel
+
+  // ---------- CDC Config decoders ----------
+  implicit val scd2ColumnsDecoder: ConfigDecoder[CDCOperations.SCD2Columns] =
+    new ConfigDecoder[CDCOperations.SCD2Columns] {
+      override def decode(
+        config: Config,
+        path: String
+      ): ValidatedNel[ConfigError, CDCOperations.SCD2Columns] = {
+        val c = if (path.nonEmpty) config.getConfig(path) else config
+        (
+          stringDecoder.decode(c, "effectiveFrom").andThen(decodeFieldName),
+          stringDecoder.decode(c, "effectiveTo").andThen(decodeFieldName),
+          stringDecoder.decode(c, "isCurrent").andThen(decodeFieldName)
+        ).mapN(CDCOperations.SCD2Columns.apply)
+      }
+    }
+
+  implicit val partitionStrategyDecoder: ConfigDecoder[CDCOperations.PartitionStrategy] =
+    new ConfigDecoder[CDCOperations.PartitionStrategy] {
+      override def decode(
+        config: Config,
+        path: String
+      ): ValidatedNel[ConfigError, CDCOperations.PartitionStrategy] = {
+        val c = if (path.nonEmpty) config.getConfig(path) else config
+        val parts =
+          if (c.hasPath("partitionBy"))
+            getStringList(c, "partitionBy").map(_.map(FieldName.unsafeFrom)).toValidatedNel
+          else List.empty[FieldName].validNel
+        parts.map(lst => CDCOperations.PartitionStrategy(lst))
+      }
+    }
+
+  implicit val cdcConfigDecoder: ConfigDecoder[CDCOperations.CDCConfig] =
+    new ConfigDecoder[CDCOperations.CDCConfig] {
+      override def decode(
+        config: Config,
+        path: String
+      ): ValidatedNel[ConfigError, CDCOperations.CDCConfig] = {
+        val c = if (path.nonEmpty) config.getConfig(path) else config
+        (
+          nelOfFieldNames(c, "keyColumns"),
+          optFieldName(c, "timestampColumn"),
+          booleanDecoder.decode(c, "deleteDetection").orElse(true.validNel),
+          intDecoder.decode(c, "batchSize").orElse(10000.validNel),
+          (if (c.hasPath("scd2")) scd2ColumnsDecoder.decode(c, "scd2").map(Some(_))
+           else None.validNel),
+          (if (c.hasPath("partition")) partitionStrategyDecoder.decode(c, "partition").map(Some(_))
+           else None.validNel),
+          (if (c.hasPath("hashColumns")) nelOfFieldNames(c, "hashColumns").map(Some(_))
+           else None.validNel),
+          booleanDecoder.decode(c, "optimizeAfterMerge").orElse(false.validNel),
+          (if (c.hasPath("zOrderBy")) nelOfFieldNames(c, "zOrderBy").map(Some(_))
+           else None.validNel)
+        ).mapN(CDCOperations.CDCConfig.apply)
+      }
     }
 
   // Complex type decoders

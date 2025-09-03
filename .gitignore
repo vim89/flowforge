@@ -29,3 +29,11 @@ Thumbs.db
 # Logs
 logs/
 *.log
+/.claude/
+/.idea/
+/.ivy2/
+/.sbt-boot/
+/.sbt-global/
+/.coursier/
+/.bsp/
+/.home/

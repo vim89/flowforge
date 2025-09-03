@@ -1,0 +1,8 @@
+-Dfile.encoding=UTF-8
+-Xms1g
+-Xmx4g
+-XX:+UseG1GC
+-XX:MaxGCPauseMillis=200
+# optional: better metaspace for big macro / Spark builds
+-XX:MetaspaceSize=256m
+-XX:MaxMetaspaceSize=1024m

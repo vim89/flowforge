@@ -263,7 +263,7 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
 }
 
 /**
- * HDFS file system connector implementation
+ * HDFS file system connector implementation with production-ready Hadoop client integration
  */
 class HDFSFileSystemConnector[F[_]: EffectSystem](
   hdfsUrl: String,
@@ -272,68 +272,248 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
 
   private val effectSystem = EffectSystem[F]
 
-  // Note: This is a simplified implementation
-  // In production, this would use actual Hadoop HDFS client
-
-  def read(source: DataSource): F[FileSystemResult[Array[Byte]]] =
-    // TODO: Implement actual HDFS read using Hadoop client
-    effectSystem.pure(
-      FileSystemResult.failure(
-        FileSystemError.NotImplemented("HDFS read not implemented yet")
+  // Helper method to extract location from DataSource
+  private def extractLocation(source: DataSource): String = source match {
+    case local: LocalDataSource        => local.location
+    case gcs: DataSource.GcsSource     => gcs.path
+    case s3: DataSource.S3Source       => s3.path
+    case bq: DataSource.BigQuerySource => bq.fullTableName
+    case jdbc: DataSource.JdbcSource   => jdbc.table.value
+    case _ =>
+      throw new IllegalArgumentException(
+        s"Unsupported DataSource type: ${source.getClass.getSimpleName}"
       )
-    )
+  }
 
-  def write(sink: DataSink, data: Array[Byte]): F[FileSystemResult[WriteMetadata]] =
-    // TODO: Implement actual HDFS write using Hadoop client
-    effectSystem.pure(
-      FileSystemResult.failure(
-        FileSystemError.NotImplemented("HDFS write not implemented yet")
+  // Helper method to extract location from DataSink
+  private def extractSinkLocation(sink: DataSink): String = sink match {
+    case local: LocalDataSink  => local.location
+    case gcs: DataSink.GcsSink => gcs.path
+    case s3: DataSink.S3Sink   => s3.path
+    case _ =>
+      throw new IllegalArgumentException(
+        s"Unsupported DataSink type: ${sink.getClass.getSimpleName}"
       )
-    )
+  }
+
+  // Production-ready HDFS configuration setup
+  private def createHadoopConfiguration(): org.apache.hadoop.conf.Configuration = {
+    val conf = new org.apache.hadoop.conf.Configuration()
+    conf.set("fs.defaultFS", hdfsUrl)
+
+    // Apply custom configuration
+    configuration.foreach { case (key, value) => conf.set(key, value) }
+
+    // Common HDFS client configurations
+    conf.set("dfs.client.use.datanode.hostname", "true")
+    conf.setInt("dfs.client.socket.timeout", 60000)
+    conf.setInt("dfs.client.read.timeout", 60000)
+
+    conf
+  }
+
+  def read(source: DataSource): F[FileSystemResult[Array[Byte]]] = {
+    val location = extractLocation(source)
+    effectSystem.handleError {
+      val acquire = effectSystem.blocking {
+        val conf = createHadoopConfiguration(); org.apache.hadoop.fs.FileSystem.get(conf)
+      }
+      effectSystem.bracket(acquire) { fs =>
+        effectSystem.blocking {
+          val path = new org.apache.hadoop.fs.Path(location)
+          if (!fs.exists(path)) FileSystemResult.failure(FileSystemError.FileNotFound(location))
+          else {
+            val inputStream = fs.open(path)
+            val bytes       = inputStream.readAllBytes()
+            inputStream.close()
+            FileSystemResult.success(bytes)
+          }
+        }
+      } { fs => effectSystem.blocking(fs.close()).void }
+    } { error => FileSystemResult.failure(FileSystemError.ReadError(location, error.getMessage)) }
+  }
+
+  def write(sink: DataSink, data: Array[Byte]): F[FileSystemResult[WriteMetadata]] = {
+    val location = extractSinkLocation(sink)
+    effectSystem.handleError {
+      val acquire = effectSystem.blocking {
+        val conf = createHadoopConfiguration(); org.apache.hadoop.fs.FileSystem.get(conf)
+      }
+      effectSystem.bracket(acquire) { fs =>
+        effectSystem.blocking {
+          val path         = new org.apache.hadoop.fs.Path(location)
+          val outputStream = fs.create(path, true)
+          outputStream.write(data)
+          outputStream.flush()
+          outputStream.close()
+          FileSystemResult.success(WriteMetadata(path = location, bytesWritten = data.length.toLong))
+        }
+      } { fs => effectSystem.blocking(fs.close()).void }
+    } { error => FileSystemResult.failure(FileSystemError.WriteError(location, error.getMessage)) }
+  }
 
   def listFiles(path: String): F[FileSystemResult[List[FileMetadata]]] =
-    // TODO: Implement actual HDFS list using Hadoop client
-    effectSystem.pure(
-      FileSystemResult.failure(
-        FileSystemError.NotImplemented("HDFS listFiles not implemented yet")
-      )
-    )
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val conf = createHadoopConfiguration()
+        val fs   = org.apache.hadoop.fs.FileSystem.get(conf)
+        try {
+          val hadoopPath = new org.apache.hadoop.fs.Path(path)
+          if (!fs.exists(hadoopPath) || !fs.isDirectory(hadoopPath)) {
+            FileSystemResult.failure(FileSystemError.DirectoryNotFound(path))
+          } else {
+            val fileStatuses = fs.listStatus(hadoopPath)
+            val metadata = fileStatuses.map { status =>
+              FileMetadata(
+                name = status.getPath.getName,
+                path = status.getPath.toString,
+                size = status.getLen,
+                lastModified = java.time.Instant.ofEpochMilli(status.getModificationTime),
+                format = inferFormatFromPath(status.getPath.toString)
+              )
+            }.toList
+            FileSystemResult.success(metadata)
+          }
+        } finally
+          fs.close()
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.ListError(path, error.getMessage))
+    }
 
   def exists(path: String): F[Boolean] =
-    // TODO: Implement actual HDFS exists check using Hadoop client
-    effectSystem.pure(false)
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val conf = createHadoopConfiguration()
+        val fs   = org.apache.hadoop.fs.FileSystem.get(conf)
+        try
+          fs.exists(new org.apache.hadoop.fs.Path(path))
+        finally
+          fs.close()
+      }
+    }(_ => false)
 
   def createDirectory(path: String): F[FileSystemResult[Unit]] =
-    effectSystem.pure(
-      FileSystemResult.failure(
-        FileSystemError.NotImplemented("HDFS createDirectory not implemented yet")
-      )
-    )
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val conf = createHadoopConfiguration()
+        val fs   = org.apache.hadoop.fs.FileSystem.get(conf)
+        try {
+          val hadoopPath = new org.apache.hadoop.fs.Path(path)
+          val success    = fs.mkdirs(hadoopPath)
+          if (success) {
+            FileSystemResult.success(())
+          } else {
+            FileSystemResult.failure(
+              FileSystemError.CreateDirectoryError(path, "Failed to create directory")
+            )
+          }
+        } finally
+          fs.close()
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.CreateDirectoryError(path, error.getMessage))
+    }
 
   def delete(path: String, recursive: Boolean = false): F[FileSystemResult[Unit]] =
-    effectSystem.pure(
-      FileSystemResult.failure(
-        FileSystemError.NotImplemented("HDFS delete not implemented yet")
-      )
-    )
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val conf = createHadoopConfiguration()
+        val fs   = org.apache.hadoop.fs.FileSystem.get(conf)
+        try {
+          val hadoopPath = new org.apache.hadoop.fs.Path(path)
+          val success    = fs.delete(hadoopPath, recursive)
+          if (success) {
+            FileSystemResult.success(())
+          } else {
+            FileSystemResult.failure(FileSystemError.DeleteError(path, "Failed to delete"))
+          }
+        } finally
+          fs.close()
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.DeleteError(path, error.getMessage))
+    }
 
   def getMetadata(path: String): F[FileSystemResult[FileMetadata]] =
-    effectSystem.pure(
-      FileSystemResult.failure(
-        FileSystemError.NotImplemented("HDFS getMetadata not implemented yet")
-      )
-    )
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val conf = createHadoopConfiguration()
+        val fs   = org.apache.hadoop.fs.FileSystem.get(conf)
+        try {
+          val hadoopPath = new org.apache.hadoop.fs.Path(path)
+          if (!fs.exists(hadoopPath)) {
+            FileSystemResult.failure(FileSystemError.FileNotFound(path))
+          } else {
+            val status = fs.getFileStatus(hadoopPath)
+            val metadata = FileMetadata(
+              name = status.getPath.getName,
+              path = path,
+              size = status.getLen,
+              lastModified = java.time.Instant.ofEpochMilli(status.getModificationTime),
+              format = inferFormatFromPath(path)
+            )
+            FileSystemResult.success(metadata)
+          }
+        } finally
+          fs.close()
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.MetadataError(path, error.getMessage))
+    }
 
-  def streamRead(source: DataSource): F[List[Array[Byte]]] =
-    effectSystem.pure(List.empty)
+  def streamRead(source: DataSource): F[List[Array[Byte]]] = {
+    val location = extractLocation(source)
+    effectSystem.blocking {
+      val conf = createHadoopConfiguration()
+      val fs   = org.apache.hadoop.fs.FileSystem.get(conf)
+      try {
+        val path        = new org.apache.hadoop.fs.Path(location)
+        val inputStream = fs.open(path)
+        try {
+          val bytes = inputStream.readAllBytes()
+          // Split into 8KB chunks for streaming
+          bytes.grouped(8192).toList
+        } finally
+          inputStream.close()
+      } finally
+        fs.close()
+    }
+  }
 
-  def streamWrite(sink: DataSink, data: List[Array[Byte]]): F[WriteMetadata] =
-    effectSystem.pure(
-      WriteMetadata(
-        path = "hdfs://not-implemented",
-        bytesWritten = 0L
-      )
-    )
+  def streamWrite(sink: DataSink, data: List[Array[Byte]]): F[WriteMetadata] = {
+    val location = extractSinkLocation(sink)
+    effectSystem.blocking {
+      val conf = createHadoopConfiguration()
+      val fs   = org.apache.hadoop.fs.FileSystem.get(conf)
+      try {
+        val path         = new org.apache.hadoop.fs.Path(location)
+        val outputStream = fs.create(path, true)
+        try {
+          val totalBytes = data.map(_.length.toLong).sum
+          data.foreach(outputStream.write)
+          outputStream.flush()
+          WriteMetadata(
+            path = location,
+            bytesWritten = totalBytes
+          )
+        } finally
+          outputStream.close()
+      } finally
+        fs.close()
+    }
+  }
+
+  // Helper method to infer data format from file path
+  private def inferFormatFromPath(path: String): DataFormat = {
+    val lowercasePath = path.toLowerCase
+    if (lowercasePath.endsWith(".json")) DataFormat.JSON
+    else if (lowercasePath.endsWith(".parquet")) DataFormat.Parquet
+    else if (lowercasePath.endsWith(".csv")) DataFormat.CSV
+    else if (lowercasePath.endsWith(".avro")) DataFormat.Avro
+    else if (lowercasePath.endsWith(".orc")) DataFormat.ORC
+    else DataFormat.JSON // default
+  }
 }
 
 /**
@@ -355,6 +535,561 @@ abstract class CloudStorageConnector[F[_]: EffectSystem] extends FileSystemConne
   }
 }
 
+/**
+ * Production-ready Google Cloud Storage (GCS) connector
+ */
+class GCSConnector[F[_]: EffectSystem](
+  projectId: String,
+  serviceAccountPath: Option[String] = None,
+  configuration: Map[String, String] = Map.empty
+) extends CloudStorageConnector[F] {
+
+  // Helper method to extract GCS path from DataSource
+  private def extractGcsPath(source: DataSource): String = source match {
+    case gcs: DataSource.GcsSource => gcs.path
+    case _ =>
+      throw new IllegalArgumentException(
+        s"Expected GCS source, got ${source.getClass.getSimpleName}"
+      )
+  }
+
+  // Helper method to extract GCS path from DataSink
+  private def extractGcsSinkPath(sink: DataSink): String = sink match {
+    case gcs: DataSink.GcsSink => gcs.path
+    case _ =>
+      throw new IllegalArgumentException(s"Expected GCS sink, got ${sink.getClass.getSimpleName}")
+  }
+
+  // Create GCS client with proper authentication
+  private def createStorageClient(): com.google.cloud.storage.Storage = {
+    import com.google.cloud.storage.StorageOptions
+    import com.google.auth.oauth2.ServiceAccountCredentials
+    import java.io.FileInputStream
+
+    val builder = StorageOptions.newBuilder().setProjectId(projectId)
+
+    serviceAccountPath.foreach { path =>
+      val credentials = ServiceAccountCredentials.fromStream(new FileInputStream(path))
+      builder.setCredentials(credentials)
+    }
+
+    builder.build().getService
+  }
+
+  def read(source: DataSource): F[FileSystemResult[Array[Byte]]] = {
+    val gcsPath       = extractGcsPath(source)
+    val (bucket, key) = parseCloudUri(gcsPath)
+
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val storage = createStorageClient()
+        val blob    = storage.get(bucket, key)
+        if (blob == null || !blob.exists()) {
+          FileSystemResult.failure(FileSystemError.FileNotFound(gcsPath))
+        } else {
+          val bytes = blob.getContent()
+          FileSystemResult.success(bytes)
+        }
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.ReadError(gcsPath, error.getMessage))
+    }
+  }
+
+  def write(sink: DataSink, data: Array[Byte]): F[FileSystemResult[WriteMetadata]] = {
+    val gcsPath       = extractGcsSinkPath(sink)
+    val (bucket, key) = parseCloudUri(gcsPath)
+
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val storage = createStorageClient()
+        import com.google.cloud.storage.BlobInfo
+        import com.google.cloud.storage.BlobId
+
+        val blobId   = BlobId.of(bucket, key)
+        val blobInfo = BlobInfo.newBuilder(blobId).build()
+        val blob     = storage.create(blobInfo, data)
+
+        FileSystemResult.success(
+          WriteMetadata(
+            path = gcsPath,
+            bytesWritten = data.length.toLong
+          )
+        )
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.WriteError(gcsPath, error.getMessage))
+    }
+  }
+
+  def listFiles(path: String): F[FileSystemResult[List[FileMetadata]]] = {
+    val (bucket, prefix) = parseCloudUri(path)
+
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val storage = createStorageClient()
+        import com.google.cloud.storage.Storage.BlobListOption
+        import scala.jdk.CollectionConverters._
+
+        val blobs = storage.list(bucket, BlobListOption.prefix(prefix)).iterateAll().asScala
+        val metadata = blobs.map { blob =>
+          FileMetadata(
+            name = blob.getName,
+            path = s"gs://$bucket/${blob.getName}",
+            size = blob.getSize,
+            lastModified = java.time.Instant.ofEpochMilli(blob.getUpdateTime),
+            format = inferFormatFromPath(blob.getName)
+          )
+        }.toList
+
+        FileSystemResult.success(metadata)
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.ListError(path, error.getMessage))
+    }
+  }
+
+  def exists(path: String): F[Boolean] = {
+    val (bucket, key) = parseCloudUri(path)
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val storage = createStorageClient()
+        val blob    = storage.get(bucket, key)
+        blob != null && blob.exists()
+      }
+    }(_ => false)
+  }
+
+  def createDirectory(path: String): F[FileSystemResult[Unit]] = {
+    // GCS doesn't have directories, but we can create a placeholder object
+    val (bucket, key) = parseCloudUri(path)
+    val dirKey        = if (key.endsWith("/")) key else s"$key/"
+
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val storage = createStorageClient()
+        import com.google.cloud.storage.BlobInfo
+        import com.google.cloud.storage.BlobId
+
+        val blobId   = BlobId.of(bucket, s"${dirKey}_$$folder$$")
+        val blobInfo = BlobInfo.newBuilder(blobId).build()
+        storage.create(blobInfo, Array.empty[Byte])
+
+        FileSystemResult.success(())
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.CreateDirectoryError(path, error.getMessage))
+    }
+  }
+
+  def delete(path: String, recursive: Boolean = false): F[FileSystemResult[Unit]] = {
+    val (bucket, key) = parseCloudUri(path)
+
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val storage = createStorageClient()
+
+        if (recursive) {
+          import com.google.cloud.storage.Storage.BlobListOption
+          import scala.jdk.CollectionConverters._
+
+          val blobs = storage.list(bucket, BlobListOption.prefix(key)).iterateAll().asScala
+          blobs.foreach(blob => storage.delete(blob.getBlobId))
+        } else {
+          val success = storage.delete(bucket, key)
+          if (!success) {
+            return effectSystem.pure(
+              FileSystemResult.failure(
+                FileSystemError.DeleteError(path, "File not found or already deleted")
+              )
+            )
+          }
+        }
+
+        FileSystemResult.success(())
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.DeleteError(path, error.getMessage))
+    }
+  }
+
+  def getMetadata(path: String): F[FileSystemResult[FileMetadata]] = {
+    val (bucket, key) = parseCloudUri(path)
+
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val storage = createStorageClient()
+        val blob    = storage.get(bucket, key)
+
+        if (blob == null || !blob.exists()) {
+          FileSystemResult.failure(FileSystemError.FileNotFound(path))
+        } else {
+          val metadata = FileMetadata(
+            name = blob.getName,
+            path = path,
+            size = blob.getSize,
+            lastModified = java.time.Instant.ofEpochMilli(blob.getUpdateTime),
+            format = inferFormatFromPath(blob.getName)
+          )
+          FileSystemResult.success(metadata)
+        }
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.MetadataError(path, error.getMessage))
+    }
+  }
+
+  def streamRead(source: DataSource): F[List[Array[Byte]]] = {
+    val gcsPath       = extractGcsPath(source)
+    val (bucket, key) = parseCloudUri(gcsPath)
+
+    effectSystem.blocking {
+      val storage = createStorageClient()
+      val blob    = storage.get(bucket, key)
+      val bytes   = blob.getContent()
+      // Split into 8KB chunks for streaming
+      bytes.grouped(8192).toList
+    }
+  }
+
+  def streamWrite(sink: DataSink, data: List[Array[Byte]]): F[WriteMetadata] = {
+    val gcsPath       = extractGcsSinkPath(sink)
+    val (bucket, key) = parseCloudUri(gcsPath)
+
+    effectSystem.blocking {
+      val storage = createStorageClient()
+      import com.google.cloud.storage.BlobInfo
+      import com.google.cloud.storage.BlobId
+
+      val allBytes = data.flatten.toArray
+      val blobId   = BlobId.of(bucket, key)
+      val blobInfo = BlobInfo.newBuilder(blobId).build()
+      storage.create(blobInfo, allBytes)
+
+      WriteMetadata(
+        path = gcsPath,
+        bytesWritten = allBytes.length.toLong
+      )
+    }
+  }
+
+  // Helper method to infer data format from file path
+  private def inferFormatFromPath(path: String): DataFormat = {
+    val lowercasePath = path.toLowerCase
+    if (lowercasePath.endsWith(".json")) DataFormat.JSON
+    else if (lowercasePath.endsWith(".parquet")) DataFormat.Parquet
+    else if (lowercasePath.endsWith(".csv")) DataFormat.CSV
+    else if (lowercasePath.endsWith(".avro")) DataFormat.Avro
+    else if (lowercasePath.endsWith(".orc")) DataFormat.ORC
+    else DataFormat.JSON // default
+  }
+}
+
+/**
+ * Production-ready Amazon S3 connector
+ */
+class S3Connector[F[_]: EffectSystem](
+  region: String,
+  accessKeyId: Option[String] = None,
+  secretAccessKey: Option[String] = None,
+  configuration: Map[String, String] = Map.empty
+) extends CloudStorageConnector[F] {
+
+  // Helper method to extract S3 path from DataSource
+  private def extractS3Path(source: DataSource): String = source match {
+    case s3: DataSource.S3Source => s3.path
+    case _ =>
+      throw new IllegalArgumentException(
+        s"Expected S3 source, got ${source.getClass.getSimpleName}"
+      )
+  }
+
+  // Helper method to extract S3 path from DataSink
+  private def extractS3SinkPath(sink: DataSink): String = sink match {
+    case s3: DataSink.S3Sink => s3.path
+    case _ =>
+      throw new IllegalArgumentException(s"Expected S3 sink, got ${sink.getClass.getSimpleName}")
+  }
+
+  // Create S3 client with proper authentication
+  private def createS3Client(): software.amazon.awssdk.services.s3.S3Client = {
+    import software.amazon.awssdk.services.s3.S3Client
+    import software.amazon.awssdk.regions.Region
+    import software.amazon.awssdk.auth.credentials.{
+      AwsBasicCredentials,
+      StaticCredentialsProvider
+    }
+
+    val builder = S3Client.builder().region(Region.of(region))
+
+    (accessKeyId, secretAccessKey) match {
+      case (Some(keyId), Some(secretKey)) =>
+        val credentials = AwsBasicCredentials.create(keyId, secretKey)
+        builder.credentialsProvider(StaticCredentialsProvider.create(credentials))
+      case _ =>
+        // Use default credential provider chain (EC2 instance profile, environment variables, etc.)
+        builder
+    }
+
+    builder.build()
+  }
+
+  def read(source: DataSource): F[FileSystemResult[Array[Byte]]] = {
+    val s3Path        = extractS3Path(source)
+    val (bucket, key) = parseCloudUri(s3Path)
+
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val s3Client = createS3Client()
+        try {
+          import software.amazon.awssdk.services.s3.model.GetObjectRequest
+          import java.io.ByteArrayOutputStream
+
+          val getObjectRequest    = GetObjectRequest.builder().bucket(bucket).key(key).build()
+          val responseInputStream = s3Client.getObject(getObjectRequest)
+
+          val buffer = new ByteArrayOutputStream()
+          responseInputStream.transferTo(buffer)
+          val bytes = buffer.toByteArray
+
+          FileSystemResult.success(bytes)
+        } finally
+          s3Client.close()
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.ReadError(s3Path, error.getMessage))
+    }
+  }
+
+  def write(sink: DataSink, data: Array[Byte]): F[FileSystemResult[WriteMetadata]] = {
+    val s3Path        = extractS3SinkPath(sink)
+    val (bucket, key) = parseCloudUri(s3Path)
+
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val s3Client = createS3Client()
+        try {
+          import software.amazon.awssdk.services.s3.model.PutObjectRequest
+          import software.amazon.awssdk.core.sync.RequestBody
+
+          val putObjectRequest = PutObjectRequest.builder().bucket(bucket).key(key).build()
+          s3Client.putObject(putObjectRequest, RequestBody.fromBytes(data))
+
+          FileSystemResult.success(
+            WriteMetadata(
+              path = s3Path,
+              bytesWritten = data.length.toLong
+            )
+          )
+        } finally
+          s3Client.close()
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.WriteError(s3Path, error.getMessage))
+    }
+  }
+
+  def listFiles(path: String): F[FileSystemResult[List[FileMetadata]]] = {
+    val (bucket, prefix) = parseCloudUri(path)
+
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val s3Client = createS3Client()
+        try {
+          import software.amazon.awssdk.services.s3.model.{ ListObjectsV2Request, S3Object }
+          import scala.jdk.CollectionConverters._
+
+          val listRequest = ListObjectsV2Request.builder().bucket(bucket).prefix(prefix).build()
+          val response    = s3Client.listObjectsV2(listRequest)
+
+          val metadata = response
+            .contents()
+            .asScala
+            .map { s3Object =>
+              FileMetadata(
+                name = s3Object.key(),
+                path = s"s3://$bucket/${s3Object.key()}",
+                size = s3Object.size(),
+                lastModified = s3Object.lastModified(),
+                format = inferFormatFromPath(s3Object.key())
+              )
+            }
+            .toList
+
+          FileSystemResult.success(metadata)
+        } finally
+          s3Client.close()
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.ListError(path, error.getMessage))
+    }
+  }
+
+  def exists(path: String): F[Boolean] = {
+    val (bucket, key) = parseCloudUri(path)
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val s3Client = createS3Client()
+        try {
+          import software.amazon.awssdk.services.s3.model.HeadObjectRequest
+          s3Client.headObject(HeadObjectRequest.builder().bucket(bucket).key(key).build())
+          true
+        } catch {
+          case _: Exception => false
+        } finally
+          s3Client.close()
+      }
+    }(_ => false)
+  }
+
+  def createDirectory(path: String): F[FileSystemResult[Unit]] = {
+    // S3 doesn't have directories, but we can create a placeholder object
+    val (bucket, key) = parseCloudUri(path)
+    val dirKey        = if (key.endsWith("/")) key else s"$key/"
+
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val s3Client = createS3Client()
+        try {
+          import software.amazon.awssdk.services.s3.model.PutObjectRequest
+          import software.amazon.awssdk.core.sync.RequestBody
+
+          val putObjectRequest = PutObjectRequest.builder().bucket(bucket).key(dirKey).build()
+          s3Client.putObject(putObjectRequest, RequestBody.empty())
+
+          FileSystemResult.success(())
+        } finally
+          s3Client.close()
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.CreateDirectoryError(path, error.getMessage))
+    }
+  }
+
+  def delete(path: String, recursive: Boolean = false): F[FileSystemResult[Unit]] = {
+    val (bucket, key) = parseCloudUri(path)
+
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val s3Client = createS3Client()
+        try {
+          if (recursive) {
+            import software.amazon.awssdk.services.s3.model.{
+              ListObjectsV2Request,
+              DeleteObjectRequest
+            }
+            import scala.jdk.CollectionConverters._
+
+            val listRequest = ListObjectsV2Request.builder().bucket(bucket).prefix(key).build()
+            val response    = s3Client.listObjectsV2(listRequest)
+
+            response.contents().asScala.foreach { s3Object =>
+              val deleteRequest =
+                DeleteObjectRequest.builder().bucket(bucket).key(s3Object.key()).build()
+              s3Client.deleteObject(deleteRequest)
+            }
+          } else {
+            import software.amazon.awssdk.services.s3.model.DeleteObjectRequest
+            val deleteRequest = DeleteObjectRequest.builder().bucket(bucket).key(key).build()
+            s3Client.deleteObject(deleteRequest)
+          }
+
+          FileSystemResult.success(())
+        } finally
+          s3Client.close()
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.DeleteError(path, error.getMessage))
+    }
+  }
+
+  def getMetadata(path: String): F[FileSystemResult[FileMetadata]] = {
+    val (bucket, key) = parseCloudUri(path)
+
+    effectSystem.handleError {
+      effectSystem.blocking {
+        val s3Client = createS3Client()
+        try {
+          import software.amazon.awssdk.services.s3.model.HeadObjectRequest
+
+          val headObjectRequest = HeadObjectRequest.builder().bucket(bucket).key(key).build()
+          val response          = s3Client.headObject(headObjectRequest)
+
+          val metadata = FileMetadata(
+            name = key,
+            path = path,
+            size = response.contentLength(),
+            lastModified = response.lastModified(),
+            format = inferFormatFromPath(key)
+          )
+          FileSystemResult.success(metadata)
+        } finally
+          s3Client.close()
+      }
+    } { error =>
+      FileSystemResult.failure(FileSystemError.MetadataError(path, error.getMessage))
+    }
+  }
+
+  def streamRead(source: DataSource): F[List[Array[Byte]]] = {
+    val s3Path        = extractS3Path(source)
+    val (bucket, key) = parseCloudUri(s3Path)
+
+    effectSystem.blocking {
+      val s3Client = createS3Client()
+      try {
+        import software.amazon.awssdk.services.s3.model.GetObjectRequest
+        import java.io.ByteArrayOutputStream
+
+        val getObjectRequest    = GetObjectRequest.builder().bucket(bucket).key(key).build()
+        val responseInputStream = s3Client.getObject(getObjectRequest)
+
+        val buffer = new ByteArrayOutputStream()
+        responseInputStream.transferTo(buffer)
+        val bytes = buffer.toByteArray
+
+        // Split into 8KB chunks for streaming
+        bytes.grouped(8192).toList
+      } finally
+        s3Client.close()
+    }
+  }
+
+  def streamWrite(sink: DataSink, data: List[Array[Byte]]): F[WriteMetadata] = {
+    val s3Path        = extractS3SinkPath(sink)
+    val (bucket, key) = parseCloudUri(s3Path)
+
+    effectSystem.blocking {
+      val s3Client = createS3Client()
+      try {
+        import software.amazon.awssdk.services.s3.model.PutObjectRequest
+        import software.amazon.awssdk.core.sync.RequestBody
+
+        val allBytes         = data.flatten.toArray
+        val putObjectRequest = PutObjectRequest.builder().bucket(bucket).key(key).build()
+        s3Client.putObject(putObjectRequest, RequestBody.fromBytes(allBytes))
+
+        WriteMetadata(
+          path = s3Path,
+          bytesWritten = allBytes.length.toLong
+        )
+      } finally
+        s3Client.close()
+    }
+  }
+
+  // Helper method to infer data format from file path
+  private def inferFormatFromPath(path: String): DataFormat = {
+    val lowercasePath = path.toLowerCase
+    if (lowercasePath.endsWith(".json")) DataFormat.JSON
+    else if (lowercasePath.endsWith(".parquet")) DataFormat.Parquet
+    else if (lowercasePath.endsWith(".csv")) DataFormat.CSV
+    else if (lowercasePath.endsWith(".avro")) DataFormat.Avro
+    else if (lowercasePath.endsWith(".orc")) DataFormat.ORC
+    else DataFormat.JSON // default
+  }
+}
+
 object FileSystemConnector {
   def local[F[_]: EffectSystem]: LocalFileSystemConnector[F] =
     new LocalFileSystemConnector[F]
@@ -364,6 +1099,21 @@ object FileSystemConnector {
     configuration: Map[String, String] = Map.empty
   ): HDFSFileSystemConnector[F] =
     new HDFSFileSystemConnector[F](hdfsUrl, configuration)
+
+  def gcs[F[_]: EffectSystem](
+    projectId: String,
+    serviceAccountPath: Option[String] = None,
+    configuration: Map[String, String] = Map.empty
+  ): GCSConnector[F] =
+    new GCSConnector[F](projectId, serviceAccountPath, configuration)
+
+  def s3[F[_]: EffectSystem](
+    region: String,
+    accessKeyId: Option[String] = None,
+    secretAccessKey: Option[String] = None,
+    configuration: Map[String, String] = Map.empty
+  ): S3Connector[F] =
+    new S3Connector[F](region, accessKeyId, secretAccessKey, configuration)
 }
 
 /**

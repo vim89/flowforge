@@ -2,6 +2,7 @@ package com.flowforge.infrastructure
 
 import cats.effect.{ Resource, Sync }
 import cats.syntax.all._
+import cats.syntax.all._
 import com.flowforge.safety.{ CloudResourceSafety, ResourceSafety }
 import com.flowforge.config.{ ConfigurationManagement, FlowForgeConfig }
 import com.flowforge.logging.{ DistributedTracing, MetricsCollector, StructuredLogger }
@@ -186,10 +187,66 @@ object InfrastructureLayer {
    * Default implementation combining all infrastructure components.
    */
   private class DefaultInfrastructureLayer[F[_]: Sync] extends InfrastructureLayer[F] {
+    private class DefaultResourceSafetyImpl extends ResourceSafety[F] {
+      override def bracket[A, B](acquire: F[A])(use: A => F[B])(release: A => F[Unit]): F[B] =
+        Sync[F].bracket(acquire)(use)(release)
 
-    override val resourceSafety: ResourceSafety[F] = ???
+      override def resource[A](acquire: F[A])(release: A => F[Unit]): Resource[F, A] =
+        Resource.make(acquire)(release)
 
-    override val cloudResourceSafety: CloudResourceSafety[F] = ???
+      override def combineResources[A, B](
+        resourceA: Resource[F, A],
+        resourceB: Resource[F, B]
+      ): Resource[F, (A, B)] =
+        (resourceA, resourceB).tupled
+
+      override def ensuring[A](operation: F[A])(cleanup: F[Unit]): F[A] =
+        Sync[F].guarantee(operation, cleanup)
+    }
+
+    private class DefaultCloudResourceSafetyImpl extends CloudResourceSafety[F] {
+      private val base = new DefaultResourceSafetyImpl
+
+      override def bracket[A, B](acquire: F[A])(use: A => F[B])(release: A => F[Unit]): F[B] =
+        base.bracket(acquire)(use)(release)
+
+      override def resource[A](acquire: F[A])(release: A => F[Unit]): Resource[F, A] =
+        base.resource(acquire)(release)
+
+      override def combineResources[A, B](
+        resourceA: Resource[F, A],
+        resourceB: Resource[F, B]
+      ): Resource[F, (A, B)] =
+        base.combineResources(resourceA, resourceB)
+
+      override def ensuring[A](operation: F[A])(cleanup: F[Unit]): F[A] =
+        base.ensuring(operation)(cleanup)
+
+      override def safeConnection[Provider, A](
+        provider: Provider
+      )(use: com.flowforge.safety.Connection[Provider] => F[A]): F[A] =
+        bracket(
+          acquire = Sync[F].delay(com.flowforge.safety.Connection(provider, new Object))
+        )(use)(release = _ => Sync[F].unit)
+
+      override def safeFileHandle[A](
+        path: com.flowforge.safety.CloudPath
+      )(use: com.flowforge.safety.FileHandle => F[A]): F[A] =
+        bracket(
+          acquire = Sync[F].delay(com.flowforge.safety.FileHandle(path, new Object))
+        )(use)(release = _ => Sync[F].unit)
+
+      override def safeStreamProcessing[A, B](
+        inputStream: F[com.flowforge.safety.Stream[A]]
+      )(process: com.flowforge.safety.Stream[A] => F[com.flowforge.safety.Stream[B]]): F[
+        com.flowforge.safety.Stream[B]
+      ] =
+        bracket(acquire = inputStream)(use = process)(release = _ => Sync[F].unit)
+    }
+
+    override val resourceSafety: ResourceSafety[F] = new DefaultResourceSafetyImpl
+
+    override val cloudResourceSafety: CloudResourceSafety[F] = new DefaultCloudResourceSafetyImpl
 
     override val configurationManagement: ConfigurationManagement[F] =
       ConfigurationManagement.forTypesafeConfig[F]
@@ -331,6 +388,22 @@ object syntax {
     /**
      * Load configuration with error handling and logging.
      */
-    def loadConfigWithLogging[T: com.flowforge.config.ConfigDecoder](key: String): F[T] = ???
+    def loadConfigWithLogging[T: com.flowforge.config.ConfigDecoder](
+      key: String
+    )(implicit S: Sync[F]): F[T] = {
+      import cats.data.Validated
+      infrastructure.structuredLogger
+        .info(s"Loading config key '$key'") *>
+        infrastructure.configurationManagement.loadTypeSafeConfig[T](key).flatMap {
+          case Validated.Valid(cfg) =>
+            infrastructure.structuredLogger.info(s"Loaded config '$key' successfully").as(cfg)
+          case Validated.Invalid(errs) =>
+            val details = errs.toList.map(_.message).mkString("; ")
+            val msg     = s"Config load failed for '$key': $details"
+            infrastructure.structuredLogger
+              .error(msg, Map.empty[String, String])
+              .*>(S.raiseError[T](new RuntimeException(msg)))
+        }
+    }
   }
 }

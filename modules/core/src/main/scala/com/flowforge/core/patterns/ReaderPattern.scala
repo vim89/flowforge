@@ -665,12 +665,14 @@ object ReaderPattern {
         val F = implicitly[EffectSystem[F]]
         val conn = new Connection[F] {
           def query[A](sql: String, params: List[Any]): F[List[A]] = F.pure(Nil)
-          def execute(sql: String, params: List[Any]): F[Int]       = F.pure(0)
-          def batch(operations: List[SqlOperation]): F[List[Int]]   = F.pure(List.fill(operations.size)(0))
+          def execute(sql: String, params: List[Any]): F[Int]      = F.pure(0)
+          def batch(operations: List[SqlOperation]): F[List[Int]] =
+            F.pure(List.fill(operations.size)(0))
         }
         operation(conn)
       }
-      def stats: F[PoolStats] = implicitly[EffectSystem[F]].pure(PoolStats(active = 0, idle = 0, max = 0))
+      def stats: F[PoolStats] =
+        implicitly[EffectSystem[F]].pure(PoolStats(active = 0, idle = 0, max = 0))
       def health: F[PoolHealth] = implicitly[EffectSystem[F]].pure(
         PoolHealth(healthy = true, message = "mock healthy", stats = PoolStats(0, 0, 0))
       )
@@ -685,9 +687,13 @@ object ReaderPattern {
 
     def mockMigrationService[F[_]: EffectSystem]: MigrationService[F] = new MigrationService[F] {
       def runMigrations: F[MigrationResult] =
-        implicitly[EffectSystem[F]].pure(MigrationResult(success = true, version = "mock", message = "no-op"))
+        implicitly[EffectSystem[F]].pure(
+          MigrationResult(success = true, version = "mock", message = "no-op")
+        )
       def rollbackMigration(version: String): F[MigrationResult] =
-        implicitly[EffectSystem[F]].pure(MigrationResult(success = true, version = version, message = "no-op"))
+        implicitly[EffectSystem[F]].pure(
+          MigrationResult(success = true, version = version, message = "no-op")
+        )
       def migrationStatus: F[List[MigrationInfo]] = implicitly[EffectSystem[F]].delay(List.empty)
     }
 

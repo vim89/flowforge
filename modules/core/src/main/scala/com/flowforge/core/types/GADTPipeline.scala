@@ -83,15 +83,18 @@ object GADTStage {
     outputType: GADTOutputType[Output] = GADTOutputType[Output](),
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "source"
-  )(implicit da: com.flowforge.core.algebra.DataAlgebra[F],
+  )(implicit
+    da: com.flowforge.core.algebra.DataAlgebra[F],
     F: com.flowforge.core.algebra.EffectSystem[F],
-    dec: com.flowforge.core.algebra.DataDecoder[Output]) extends GADTStage[F, Unit, Output] {
+    dec: com.flowforge.core.algebra.DataDecoder[Output]
+  ) extends GADTStage[F, Unit, Output] {
     def execute: Kleisli[F, Unit, Output] = Kleisli { _ =>
       import com.flowforge.core.algebra.DataAlgebra.Dataset
       da.read[Output](source).flatMap { ds: Dataset[Output] =>
         ds.data.headOption match {
           case Some(value) => F.pure(value)
-          case None => F.raiseError(
+          case None =>
+            F.raiseError(
               com.flowforge.core.types.PipelineError
                 .StageExecutionError(stageName, "empty dataset from source")
             )
@@ -141,9 +144,11 @@ object GADTStage {
     inputType: GADTInputType[Input] = GADTInputType[Input](),
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "sink"
-  )(implicit da: com.flowforge.core.algebra.DataAlgebra[F],
+  )(implicit
+    da: com.flowforge.core.algebra.DataAlgebra[F],
     F: com.flowforge.core.algebra.EffectSystem[F],
-    enc: com.flowforge.core.algebra.DataEncoder[Input]) extends GADTStage[F, Input, Unit] {
+    enc: com.flowforge.core.algebra.DataEncoder[Input]
+  ) extends GADTStage[F, Input, Unit] {
     def execute: Kleisli[F, Input, Unit] = Kleisli { input =>
       import com.flowforge.core.algebra.DataAlgebra.{ DatasetMetadata, WriteOptions }
       import com.flowforge.core.impl.SimpleDataset
