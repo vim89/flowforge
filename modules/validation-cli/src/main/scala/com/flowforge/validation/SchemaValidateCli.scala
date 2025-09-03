@@ -7,8 +7,8 @@ import org.apache.spark.sql.SparkSession
 import scopt.OParser
 
 /**
- * Minimal CLI to validate physical schemas (Delta/Parquet/Hive) against an expected JSON schema
- * file. Intended for CI use. Spark is used for schema discovery; no data scan performed.
+ * Minimal CLI to validate physical schemas (Delta/Parquet/Hive) against an expected JSON schema file.
+ * Intended for CI use. Spark is used for schema discovery; no data scan performed.
  */
 import cats.effect.ExitCode
 object SchemaValidateCli extends IOApp {
@@ -30,8 +30,7 @@ object SchemaValidateCli extends IOApp {
     pathOrTable: String = "",
     expectedSchemaJson: java.io.File = new java.io.File(""),
     expectedFormat: ExpectedFormat = ExpectedFormat.Spark,
-    master: Option[String] = None
-  )
+    master: Option[String] = None)
 
   private val builder = OParser.builder[Args]
   private val parser = {
@@ -47,7 +46,7 @@ object SchemaValidateCli extends IOApp {
             case "delta"   => Mode.Delta
             case "hive"    => Mode.Hive
             case other     => throw new IllegalArgumentException(s"Unknown mode: $other")
-          })
+          }),
         )
         .text("parquet | delta | hive"),
       opt[String]("input")
@@ -65,15 +64,15 @@ object SchemaValidateCli extends IOApp {
             case "spark" | "" => ExpectedFormat.Spark
             case other =>
               throw new IllegalArgumentException(
-                s"Unsupported expected-format: $other (only 'spark' supported in this build)"
+                s"Unsupported expected-format: $other (only 'spark' supported in this build)",
               )
-          })
+          }),
         )
         .text("spark (default)"),
       opt[String]("master")
         .optional()
         .action((m, a) => a.copy(master = Some(m)))
-        .text("Spark master, e.g., local[*]")
+        .text("Spark master, e.g., local[*]"),
     )
   }
 
@@ -111,15 +110,26 @@ object SchemaValidateCli extends IOApp {
 
   // Canonical model for schema diffs
   object Canonical {
-    final case class Field(name: String, tpe: String, nullable: Boolean)
+    final case class Field(
+      name: String,
+      tpe: String,
+      nullable: Boolean)
     final case class Model(fields: List[Field])
 
     sealed trait Diff
     object Diff {
-      case class MissingField(name: String)                                            extends Diff
-      case class ExtraField(name: String)                                              extends Diff
-      case class TypeMismatch(name: String, expected: String, actual: String)          extends Diff
-      case class NullabilityMismatch(name: String, expected: Boolean, actual: Boolean) extends Diff
+      case class MissingField(name: String) extends Diff
+      case class ExtraField(name: String)   extends Diff
+      case class TypeMismatch(
+        name: String,
+        expected: String,
+        actual: String)
+          extends Diff
+      case class NullabilityMismatch(
+        name: String,
+        expected: Boolean,
+        actual: Boolean)
+          extends Diff
     }
 
     import io.circe._

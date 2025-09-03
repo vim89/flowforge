@@ -5,8 +5,8 @@ import cats.syntax.all._
 import com.flowforge.core.algebra.{ CDCOperations, DataAlgebra, DataContract, EffectSystem }
 
 /**
- * Lightweight helper to apply CDC over a sequence of micro-batches, emulating a streaming pipeline
- * by repeatedly invoking performDelta and aggregating results.
+ * Lightweight helper to apply CDC over a sequence of micro-batches, emulating a streaming pipeline by
+ * repeatedly invoking performDelta and aggregating results.
  */
 object StreamingCDC {
 
@@ -17,7 +17,7 @@ object StreamingCDC {
     algebra: DataAlgebra[F],
     batches: List[DataAlgebra.Dataset[A]],
     target: DataAlgebra.Dataset[A],
-    config: CDCOperations.CDCConfig
+    config: CDCOperations.CDCConfig,
   ): F[CDCOperations.CDCResult[A]] = {
     val F = EffectSystem[F]
     batches
@@ -32,20 +32,21 @@ object StreamingCDC {
             updated + res.updated,
             deleted + res.deleted,
             unchanged + res.unchanged,
-            errors + res.errors
+            errors + res.errors,
           )
         }
       }
-      .map { case (i: Long, u: Long, d: Long, n: Long, e: Long) =>
-        CDCOperations.CDCResult(
-          inserted = i,
-          updated = u,
-          deleted = d,
-          unchanged = n,
-          errors = e,
-          processingTime = scala.concurrent.duration.Duration.Zero,
-          success = true
-        )
+      .map {
+        case (i: Long, u: Long, d: Long, n: Long, e: Long) =>
+          CDCOperations.CDCResult(
+            inserted = i,
+            updated = u,
+            deleted = d,
+            unchanged = n,
+            errors = e,
+            processingTime = scala.concurrent.duration.Duration.Zero,
+            success = true,
+          )
       }
   }
 }

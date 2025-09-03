@@ -8,12 +8,13 @@ import com.flowforge.contracts.{ ContractViolation, DataContract }
 import shapeless.{ HList, LabelledGeneric }
 
 /**
- * Typed contract wrapper encodes a runtime DataContract together with a type-level schema R for A.
- * If A does not match R (via LabelledGeneric), this value cannot be constructed by the compiler.
+ * Typed contract wrapper encodes a runtime DataContract together with a type-level schema R for A. If A does
+ * not match R (via LabelledGeneric), this value cannot be constructed by the compiler.
  */
-final case class TypedContract[A, R <: HList](dc: DataContract[A])(implicit
-  val ev: LabelledGeneric.Aux[A, R]
-)
+final case class TypedContract[A, R <: HList](
+  dc: DataContract[A],
+)(implicit
+  val ev: LabelledGeneric.Aux[A, R])
 
 object TypedContractsSyntax {
 
@@ -22,12 +23,13 @@ object TypedContractsSyntax {
    * labelled-generic representation matches the contract’s type-level schema R.
    */
   implicit final class PipelineBuilder2ContractsOps[F[_], In, Out](
-    private val b: PipelineBuilder2[F, In, Out]
-  ) extends AnyVal {
+    private val b: PipelineBuilder2[F, In, Out])
+      extends AnyVal {
 
     def contractTyped[R <: HList](
-      tc: TypedContract[Out, R]
-    )(implicit F: EffectSystem[F]): PipelineBuilder2[F, In, Out] = {
+      tc: TypedContract[Out, R],
+    )(implicit F: EffectSystem[F],
+    ): PipelineBuilder2[F, In, Out] = {
       val stage = PipelineStage.Transform[F, Out, Out](
         name = s"typed-contract-${b.stages.size}",
         description = "Compile-time aligned contract validation",
@@ -41,11 +43,11 @@ object TypedContractsSyntax {
                 contractName = tc.dc.schema.name.value,
                 violatedRule = err0.getClass.getSimpleName,
                 datasetId = tc.dc.schema.name.value,
-                message = s"Data contract failed: $msg"
+                message = s"Data contract failed: $msg",
               )
               F.raiseError(err)
           }
-        }
+        },
       )
       b.copy(stages = b.stages :+ stage)
     }

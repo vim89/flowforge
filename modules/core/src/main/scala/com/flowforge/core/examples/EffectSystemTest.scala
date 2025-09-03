@@ -1,8 +1,8 @@
 /**
  * FlowForge Core Module - Effect System Test
  *
- * Simple test to verify both Cats-Effect IO and ZIO Task work correctly with the FlowForge
- * EffectSystem abstraction.
+ * Simple test to verify both Cats-Effect IO and ZIO Task work correctly with the FlowForge EffectSystem
+ * abstraction.
  */
 package com.flowforge.core.examples
 

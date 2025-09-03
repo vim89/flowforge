@@ -1,12 +1,11 @@
 /**
  * FlowForge Core Module - Effect System Syntax Extensions
  *
- * File: modules/core/src/main/scala/com/flowforge/core/syntax/effect.scala Package:
- * com.flowforge.core.syntax
+ * File: modules/core/src/main/scala/com/flowforge/core/syntax/effect.scala Package: com.flowforge.core.syntax
  *
- * This file provides convenient syntax extensions for effect operations in FlowForge. It enables
- * fluent, readable APIs for common effect patterns like error handling, resource management,
- * timing, and parallel processing.
+ * This file provides convenient syntax extensions for effect operations in FlowForge. It enables fluent,
+ * readable APIs for common effect patterns like error handling, resource management, timing, and parallel
+ * processing.
  *
  * Design Patterns Applied:
  *   - Extension Methods Pattern: Adding methods to existing types via implicits
@@ -74,8 +73,8 @@ import scala.util.Try
 /**
  * Syntax extensions for effect operations.
  *
- * This object provides implicit classes that add convenient methods to effect types. Import this to
- * get fluent syntax for common operations.
+ * This object provides implicit classes that add convenient methods to effect types. Import this to get
+ * fluent syntax for common operations.
  *
  * Usage:
  * ```scala
@@ -89,8 +88,7 @@ object effect {
   // ===============================
 
   /**
-   * Core effect syntax extensions. Provides fundamental operations like timeout, retry, and
-   * recovery.
+   * Core effect syntax extensions. Provides fundamental operations like timeout, retry, and recovery.
    */
   implicit class EffectOps[F[_], A](private val fa: F[A]) extends AnyVal {
 
@@ -121,8 +119,11 @@ object effect {
      * @return
      *   Effect that retries on failure
      */
-    def retryOnFailure(maxRetries: Int, initialDelay: FiniteDuration, backoffFactor: Double = 2.0)(
-      implicit F: EffectSystem[F]
+    def retryOnFailure(
+      maxRetries: Int,
+      initialDelay: FiniteDuration,
+      backoffFactor: Double = 2.0,
+    )(implicit F: EffectSystem[F],
     ): F[A] =
       F.retryWithBackoff(fa, maxRetries, initialDelay, backoffFactor)
 
@@ -287,8 +288,7 @@ object effect {
   /**
    * Parallel operations syntax for effect collections.
    */
-  implicit class ParallelEffectCollectionOps[F[_], A](private val effects: List[F[A]])
-      extends AnyVal {
+  implicit class ParallelEffectCollectionOps[F[_], A](private val effects: List[F[A]]) extends AnyVal {
 
     /**
      * Run all effects in parallel.
@@ -362,8 +362,11 @@ object effect {
      *   Result with automatic cleanup (if resource has close method)
      */
     def using[A](
-      use: R => F[A]
-    )(implicit F: EffectSystem[F], closeable: R <:< AutoCloseable): F[A] =
+      use: R => F[A],
+    )(implicit
+      F: EffectSystem[F],
+      closeable: R <:< AutoCloseable,
+    ): F[A] =
       F.bracket(acquire)(use)(resource => F.delay(closeable(resource).close()))
   }
 
@@ -427,9 +430,13 @@ object effect {
      * @return
      *   Combined result
      */
-    def parMapN[B, C, D](fb: F[B], fc: F[C])(
-      f: (A, B, C) => D
-    )(implicit F: EffectSystem[F]): F[D] = {
+    def parMapN[B, C, D](
+      fb: F[B],
+      fc: F[C],
+    )(
+      f: (A, B, C) => D,
+    )(implicit F: EffectSystem[F],
+    ): F[D] = {
       val combined = for {
         ab <- F.parProduct(fa, fb)
         c  <- fc
@@ -458,7 +465,7 @@ object effect {
     def liftToEffect[F[_]](implicit F: EffectSystem[F], ev: E <:< Throwable): F[A] =
       validated.fold(
         errors => F.raiseError(errors.head), // Use first error for effect
-        success => F.pure(success)
+        success => F.pure(success),
       )
 
     /**
@@ -471,12 +478,14 @@ object effect {
      * @return
      *   Effect with converted errors
      */
-    def liftToEffectWith[F[_]](handleErrors: NonEmptyList[E] => Throwable)(implicit
-      F: EffectSystem[F]
+    def liftToEffectWith[F[_]](
+      handleErrors: NonEmptyList[E] => Throwable,
+    )(implicit
+      F: EffectSystem[F],
     ): F[A] =
       validated.fold(
         errors => F.raiseError(handleErrors(errors)),
-        success => F.pure(success)
+        success => F.pure(success),
       )
   }
 
@@ -493,10 +502,8 @@ object effect {
      */
     def toFlowForgeError: FlowForgeError =
       FlowForgeError.CompositeError(
-        errors = errors.map(err =>
-          FlowForgeError.fromThrowable(new IllegalArgumentException(err.message))
-        ),
-        message = s"Configuration validation failed with ${errors.size} errors"
+        errors = errors.map(err => FlowForgeError.fromThrowable(new IllegalArgumentException(err.message))),
+        message = s"Configuration validation failed with ${errors.size} errors",
       )
   }
 

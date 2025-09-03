@@ -8,7 +8,11 @@ import org.apache.spark.sql.SparkSession
 /** Writes a tiny Parquet dataset with a fixed schema for CI demos. */
 object MockParquetWriter extends IOApp.Simple {
   private val F = EffectSystem[IO]
-  final case class rec(invoiceNumber: String, customerId: String, amount: Double, eventTs: Long)
+  final case class rec(
+    invoiceNumber: String,
+    customerId: String,
+    amount: Double,
+    eventTs: Long)
 
   def run: IO[Unit] = F.blocking {
     val spark = SparkSession

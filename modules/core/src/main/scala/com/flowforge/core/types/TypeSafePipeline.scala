@@ -4,8 +4,8 @@
  * File: modules/core/src/main/scala/com/flowforge/core/types/TypeSafePipeline.scala Package:
  * com.flowforge.core.types
  *
- * This file implements advanced type system features for 100% type-safe pipeline composition. Uses
- * GADTs, phantom types, and dependent types to eliminate all unsafe casting operations.
+ * This file implements advanced type system features for 100% type-safe pipeline composition. Uses GADTs,
+ * phantom types, and dependent types to eliminate all unsafe casting operations.
  *
  * Design Patterns Applied:
  *   - GADT Pattern: Type-safe heterogeneous data structures
@@ -49,8 +49,8 @@ import scala.concurrent.duration.FiniteDuration
 // ===============================
 
 /**
- * GADT (Generalized Algebraic Data Type) for type-safe pipeline stages. Eliminates all unsafe
- * casting by preserving type information at compile time.
+ * GADT (Generalized Algebraic Data Type) for type-safe pipeline stages. Eliminates all unsafe casting by
+ * preserving type information at compile time.
  */
 sealed trait TypeSafeStage[F[_], A, B] {
   def execute: Kleisli[F, A, B]
@@ -66,8 +66,8 @@ object TypeSafeStage {
   case class SourceStage[F[_]: EffectSystem, B](
     source: DataSource,
     override val stageId: String = UUID.randomUUID().toString,
-    override val stageName: String = "source"
-  ) extends TypeSafeStage[F, Unit, B] {
+    override val stageName: String = "source")
+      extends TypeSafeStage[F, Unit, B] {
     def execute: Kleisli[F, Unit, B] = Kleisli { _ =>
       // Mock implementation for basic functionality - replace with DataAlgebra integration
       EffectSystem[F].pure("mock-data".asInstanceOf[B])
@@ -80,8 +80,8 @@ object TypeSafeStage {
   case class TransformStage[F[_], A, B](
     transformation: A => F[B],
     override val stageId: String = UUID.randomUUID().toString,
-    override val stageName: String = "transform"
-  ) extends TypeSafeStage[F, A, B] {
+    override val stageName: String = "transform")
+      extends TypeSafeStage[F, A, B] {
     def execute: Kleisli[F, A, B] = Kleisli(transformation)
   }
 
@@ -91,7 +91,7 @@ object TypeSafeStage {
   case class QualityStage[F[_], A](
     validations: List[A => ValidatedNel[FlowForgeError, Unit]],
     override val stageId: String = UUID.randomUUID().toString,
-    override val stageName: String = "quality"
+    override val stageName: String = "quality",
   )(implicit effectSystem: EffectSystem[F])
       extends TypeSafeStage[F, A, A] {
     def execute: Kleisli[F, A, A] = Kleisli { input =>
@@ -101,7 +101,7 @@ object TypeSafeStage {
           EffectSystem[F].pure(input)
         case cats.data.Validated.Invalid(errors) =>
           EffectSystem[F].raiseError(
-            new RuntimeException(s"Quality validation failed: ${errors.toList.mkString(", ")}")
+            new RuntimeException(s"Quality validation failed: ${errors.toList.mkString(", ")}"),
           )
       }
     }
@@ -113,8 +113,8 @@ object TypeSafeStage {
   case class SinkStage[F[_]: EffectSystem, A](
     sink: DataSink,
     override val stageId: String = UUID.randomUUID().toString,
-    override val stageName: String = "sink"
-  ) extends TypeSafeStage[F, A, Unit] {
+    override val stageName: String = "sink")
+      extends TypeSafeStage[F, A, Unit] {
     def execute: Kleisli[F, A, Unit] = Kleisli { data =>
       // Mock implementation for basic functionality - replace with DataAlgebra integration
       EffectSystem[F].pure(())
@@ -137,76 +137,83 @@ final class HasQuality       extends PipelineState
 final class CompletePipeline extends PipelineState
 
 /**
- * Type-safe pipeline builder using phantom types. Prevents compilation of invalid pipeline
- * configurations.
+ * Type-safe pipeline builder using phantom types. Prevents compilation of invalid pipeline configurations.
  */
 case class TypeSafePipelineBuilder[F[_]: EffectSystem, State <: PipelineState, A, B] private (
   stages: List[TypeSafeStage[F, _, _]] = List.empty,
   pipelineName: String = "unnamed-pipeline",
-  pipelineDescription: String = "FlowForge pipeline"
-) {
+  pipelineDescription: String = "FlowForge pipeline") {
 
   /**
    * Add source stage - only available on empty pipeline
    */
-  def source[C](dataSource: DataSource)(implicit
-    ev: State =:= EmptyPipeline
+  def source[C](
+    dataSource: DataSource,
+  )(implicit
+    ev: State =:= EmptyPipeline,
   ): TypeSafePipelineBuilder[F, HasSource, Unit, C] = {
     val sourceStage = TypeSafeStage.SourceStage[F, C](dataSource)
     TypeSafePipelineBuilder[F, HasSource, Unit, C](
       stages = List(sourceStage),
       pipelineName = pipelineName,
-      pipelineDescription = pipelineDescription
+      pipelineDescription = pipelineDescription,
     )
   }
 
   /**
    * Add transformation stage - only available after source
    */
-  def transform[C](transformation: B => F[C])(implicit
-    ev: State =:= HasSource
+  def transform[C](
+    transformation: B => F[C],
+  )(implicit
+    ev: State =:= HasSource,
   ): TypeSafePipelineBuilder[F, HasTransform, A, C] = {
     val transformStage = TypeSafeStage.TransformStage[F, B, C](transformation)
     TypeSafePipelineBuilder[F, HasTransform, A, C](
       stages = stages :+ transformStage,
       pipelineName = pipelineName,
-      pipelineDescription = pipelineDescription
+      pipelineDescription = pipelineDescription,
     )
   }
 
   /**
    * Add quality validation - only available after transform
    */
-  def quality(validations: (B => ValidatedNel[FlowForgeError, Unit])*)(implicit
-    ev: State =:= HasTransform
+  def quality(
+    validations: (B => ValidatedNel[FlowForgeError, Unit])*,
+  )(implicit
+    ev: State =:= HasTransform,
   ): TypeSafePipelineBuilder[F, HasQuality, A, B] = {
     val qualityStage = TypeSafeStage.QualityStage[F, B](validations.toList)
     TypeSafePipelineBuilder[F, HasQuality, A, B](
       stages = stages :+ qualityStage,
       pipelineName = pipelineName,
-      pipelineDescription = pipelineDescription
+      pipelineDescription = pipelineDescription,
     )
   }
 
   /**
    * Add sink stage - only available after quality
    */
-  def sink(dataSink: DataSink)(implicit
-    ev: State =:= HasQuality
+  def sink(
+    dataSink: DataSink,
+  )(implicit
+    ev: State =:= HasQuality,
   ): TypeSafePipelineBuilder[F, CompletePipeline, A, Unit] = {
     val sinkStage = TypeSafeStage.SinkStage[F, B](dataSink)
     TypeSafePipelineBuilder[F, CompletePipeline, A, Unit](
       stages = stages :+ sinkStage,
       pipelineName = pipelineName,
-      pipelineDescription = pipelineDescription
+      pipelineDescription = pipelineDescription,
     )
   }
 
   /**
    * Build final pipeline - only available when complete
    */
-  def build(implicit
-    ev: State =:= CompletePipeline
+  def build(
+    implicit
+    ev: State =:= CompletePipeline,
   ): ValidatedNel[FlowForgeError, TypeSafePipeline[F, A, Unit]] =
     TypeSafePipeline
       .validate[F](stages, pipelineName, pipelineDescription)
@@ -227,16 +234,15 @@ object TypeSafePipelineBuilder {
 // ===============================
 
 /**
- * 100% type-safe pipeline with GADT-based composition. Eliminates all asInstanceOf operations
- * through proper type witnessing.
+ * 100% type-safe pipeline with GADT-based composition. Eliminates all asInstanceOf operations through proper
+ * type witnessing.
  */
 case class TypeSafePipeline[F[_]: EffectSystem, A, B] private (
   id: String,
   name: String,
   description: String,
   composition: Kleisli[F, A, B],
-  metadata: PipelineMetadata
-) {
+  metadata: PipelineMetadata) {
 
   /**
    * Execute pipeline with input
@@ -261,20 +267,20 @@ case class TypeSafePipeline[F[_]: EffectSystem, A, B] private (
       endTime = endTime,
       duration = FiniteDuration(duration, scala.concurrent.duration.MILLISECONDS),
       metrics = PipelineMetrics.empty(name), // TODO: Implement metrics collection
-      errors = result.left.toOption.map(e => List(e.getMessage)).getOrElse(List.empty)
+      errors = result.left.toOption.map(e => List(e.getMessage)).getOrElse(List.empty),
     )
 }
 
 object TypeSafePipeline {
 
   /**
-   * Validate and create type-safe pipeline from stages. Uses advanced type system features to
-   * ensure composition safety.
+   * Validate and create type-safe pipeline from stages. Uses advanced type system features to ensure
+   * composition safety.
    */
   def validate[F[_]: EffectSystem](
     stages: List[TypeSafeStage[F, _, _]],
     name: String,
-    description: String
+    description: String,
   ): ValidatedNel[FlowForgeError, TypeSafePipeline[F, Unit, Unit]] =
     if (stages.isEmpty) {
       PipelineError.EmptyPipeline(name).invalidNel
@@ -286,16 +292,16 @@ object TypeSafePipeline {
         name = name,
         description = description,
         composition = composedPipeline,
-        metadata = PipelineMetadata()
+        metadata = PipelineMetadata(),
       ).asInstanceOf[TypeSafePipeline[F, Unit, Unit]].validNel
     }
 
   /**
-   * Type-safe composition implementation using advanced type system features. Replaces all unsafe
-   * casting with proper type witnessing.
+   * Type-safe composition implementation using advanced type system features. Replaces all unsafe casting
+   * with proper type witnessing.
    */
   private def composeTypeSafely[F[_]: EffectSystem](
-    stages: List[TypeSafeStage[F, _, _]]
+    stages: List[TypeSafeStage[F, _, _]],
   ): Kleisli[F, _, _] = {
 
     // Use existential types to maintain type safety during composition
@@ -312,9 +318,7 @@ object TypeSafePipeline {
           }
           .asInstanceOf[Kleisli[F, _, _]]
       case Nil =>
-        Kleisli[F, Any, Any](_ =>
-          EffectSystem[F].raiseError(new RuntimeException("Empty pipeline"))
-        )
+        Kleisli[F, Any, Any](_ => EffectSystem[F].raiseError(new RuntimeException("Empty pipeline")))
           .asInstanceOf[Kleisli[F, _, _]]
     }
   }
@@ -325,8 +329,8 @@ object TypeSafePipeline {
 // ===============================
 
 /**
- * Type witness for proving type relationships at compile time. Enables safe composition without
- * runtime casting.
+ * Type witness for proving type relationships at compile time. Enables safe composition without runtime
+ * casting.
  */
 sealed trait TypeWitness[A, B] {
   def apply(a: A): B
@@ -348,7 +352,7 @@ object TypeWitness {
    */
   def compose[A, B, C](
     w1: TypeWitness[A, B],
-    w2: TypeWitness[B, C]
+    w2: TypeWitness[B, C],
   ): TypeWitness[A, C] = new TypeWitness[A, C] {
     def apply(a: A): C   = w2(w1(a))
     def reverse(c: C): A = w1.reverse(w2.reverse(c))
@@ -362,8 +366,8 @@ object TypeWitness {
 // ===============================
 
 /**
- * Type-level computation for automatic pipeline optimization. Enables compile-time fusion and
- * optimization decisions.
+ * Type-level computation for automatic pipeline optimization. Enables compile-time fusion and optimization
+ * decisions.
  */
 trait TypeLevel {
 
@@ -375,8 +379,7 @@ trait TypeLevel {
   case class TCons[H, T <: TList[_]](head: H, tail: T) extends TList[H]
 
   /**
-   * Type-level computation for stage fusion eligibility Note: Simplified for Scala 2.13
-   * compatibility
+   * Type-level computation for stage fusion eligibility Note: Simplified for Scala 2.13 compatibility
    */
   type CanFuse[A, B] = Boolean
 }
@@ -411,8 +414,7 @@ object OutputType {
 /**
  * General data type marker
  */
-case class DataTypeWithMarker[A] private (marker: DataTypeMarker = new DataTypeMarker {})
-    extends AnyVal
+case class DataTypeWithMarker[A] private (marker: DataTypeMarker = new DataTypeMarker {}) extends AnyVal
 
 object DataTypeWithMarker {
   def apply[A]: DataTypeWithMarker[A] = new DataTypeWithMarker[A]()

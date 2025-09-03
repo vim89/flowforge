@@ -63,8 +63,7 @@ package object connectors {
   case class ConnectorError(
     message: String,
     cause: Option[Throwable] = None,
-    code: String = "CONNECTOR_ERROR"
-  )
+    code: String = "CONNECTOR_ERROR")
 
   // File system specific error types
   object FileSystemError {
@@ -106,14 +105,12 @@ package object connectors {
   case class WriteMetadata(
     path: String,
     bytesWritten: Long,
-    recordsWritten: Option[Long] = None
-  )
+    recordsWritten: Option[Long] = None)
 
   case class FileMetadata(
     name: String,
     path: String,
     size: Long,
     lastModified: java.time.Instant,
-    format: DataFormat = DataFormat.JSON
-  )
+    format: DataFormat = DataFormat.JSON)
 }

@@ -18,12 +18,11 @@ case class Pipeline[F[_], A, B](
   stages: List[PipelineStage[F, _, _]],
   config: PipelineConfig,
   metadata: PipelineMetadata = PipelineMetadata(),
-  executionPlan: Option[ExecutionPlan] = None
+  executionPlan: Option[ExecutionPlan] = None,
 )(implicit F: EffectSystem[F]) {
 
   /**
-   * Compose all stages into a single Kleisli arrow FIXED: Type-safe composition using proper stage
-   * chaining
+   * Compose all stages into a single Kleisli arrow FIXED: Type-safe composition using proper stage chaining
    */
   def compiled: Kleisli[F, A, B] =
     if (stages.isEmpty) {
@@ -33,8 +32,8 @@ case class Pipeline[F[_], A, B](
     }
 
   /**
-   * Type-safe stage composition using existential type handling NOTE: This is a transitional
-   * implementation - full GADT approach recommended for Phase 2
+   * Type-safe stage composition using existential type handling NOTE: This is a transitional implementation -
+   * full GADT approach recommended for Phase 2
    */
   private def composeStagesTypeSafe(stageList: List[PipelineStage[F, _, _]]): Kleisli[F, A, B] =
     stageList match {
@@ -74,7 +73,7 @@ case class Pipeline[F[_], A, B](
         endTime = Instant.ofEpochMilli(endTime),
         duration = FiniteDuration(duration, scala.concurrent.duration.MILLISECONDS),
         metrics = collectMetrics(),
-        errors = result.left.toOption.map(e => List(e.getMessage)).getOrElse(List.empty)
+        errors = result.left.toOption.map(e => List(e.getMessage)).getOrElse(List.empty),
       )
     }
   }
@@ -90,14 +89,12 @@ case class Pipeline[F[_], A, B](
       pipelineName = name,
       recordsProcessed = totalMetrics.recordsOut,
       recordsFailed = totalMetrics.errors,
-      processingTime =
-        FiniteDuration(totalMetrics.processingTimeMs, scala.concurrent.duration.MILLISECONDS)
+      processingTime = FiniteDuration(totalMetrics.processingTimeMs, scala.concurrent.duration.MILLISECONDS),
     )
   }
 
   /**
-   * Runtime validation of stage chain type compatibility FIXED: Safer validation without unsafe
-   * casting
+   * Runtime validation of stage chain type compatibility FIXED: Safer validation without unsafe casting
    */
   def runtimeValidateStageChain(): Either[String, Unit] =
     if (stages.isEmpty) {
@@ -127,7 +124,7 @@ case class Pipeline[F[_], A, B](
       stages = stages :+ stage.asInstanceOf[PipelineStage[F, _, _]],
       config = config,
       metadata = metadata,
-      executionPlan = executionPlan
+      executionPlan = executionPlan,
     )
 
   /**
@@ -140,7 +137,7 @@ case class Pipeline[F[_], A, B](
   }
 
   private def fuseSimilarStages(
-    stages: List[PipelineStage[F, _, _]]
+    stages: List[PipelineStage[F, _, _]],
   ): List[PipelineStage[F, _, _]] =
     // Placeholder for stage fusion logic
     stages
@@ -164,6 +161,6 @@ case class Pipeline[F[_], A, B](
 
   private def validateConfig(): ValidatedNel[PipelineError, Unit] =
     config.validate.leftMap(errors =>
-      NonEmptyList.one(PipelineError.InvalidConfiguration(errors.toList.mkString(", ")))
+      NonEmptyList.one(PipelineError.InvalidConfiguration(errors.toList.mkString(", "))),
     )
 }

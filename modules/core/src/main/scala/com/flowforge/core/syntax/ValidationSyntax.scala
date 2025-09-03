@@ -9,8 +9,8 @@ import java.net.URI
 /**
  * 🚀 **FlowForge Validation Syntax - Enhanced Validation Operations**
  *
- * This module provides rich syntax extensions for validation operations in FlowForge, integrating
- * seamlessly with the existing validation patterns and providing enhanced composability.
+ * This module provides rich syntax extensions for validation operations in FlowForge, integrating seamlessly
+ * with the existing validation patterns and providing enhanced composability.
  *
  * **Key Features:**
  *   - **Composable Validations**: Chain and combine validation rules
@@ -54,9 +54,10 @@ object ValidationSyntax {
      * Validate with multiple predicates
      */
     def validateAll(validations: (A => Boolean, FlowForgeError)*): ValidationResult[A] = {
-      val results = validations.toList.map { case (predicate, error) =>
-        if (predicate(value)) ().validNel[FlowForgeError]
-        else error.invalidNel[Unit]
+      val results = validations.toList.map {
+        case (predicate, error) =>
+          if (predicate(value)) ().validNel[FlowForgeError]
+          else error.invalidNel[Unit]
       }
       results.sequence.map(_ => value)
     }
@@ -127,7 +128,7 @@ object ValidationSyntax {
         .matches(emailPattern.regex)
         .validIf(
           true,
-          FlowForgeError.ValidationError(s"Invalid email format: $str", None)
+          FlowForgeError.ValidationError(s"Invalid email format: $str", None),
         )
         .map(_ => str)
     }

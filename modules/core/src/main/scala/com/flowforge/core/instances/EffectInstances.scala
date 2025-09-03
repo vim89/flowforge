@@ -4,13 +4,13 @@
  * File: modules/core/src/main/scala/com/flowforge/core/instances/EffectInstances.scala Package:
  * com.flowforge.core.instances
  *
- * This file provides concrete implementations of the EffectSystem type class for popular effect
- * libraries in the Scala ecosystem. Currently supports:
+ * This file provides concrete implementations of the EffectSystem type class for popular effect libraries in
+ * the Scala ecosystem. Currently supports:
  *   - Cats-Effect IO
  *   - ZIO Task
  *
- * These instances enable FlowForge to work seamlessly with either effect system, providing the user
- * with choice while maintaining a unified API.
+ * These instances enable FlowForge to work seamlessly with either effect system, providing the user with
+ * choice while maintaining a unified API.
  *
  * Design Patterns Applied:
  *   - Type Class Instance Pattern: Concrete implementations of abstract capabilities
@@ -69,8 +69,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 /**
  * Effect system instances for popular Scala effect libraries.
  *
- * This object contains implicit instances that enable the EffectSystem type class to work with
- * concrete effect types like IO and Task.
+ * This object contains implicit instances that enable the EffectSystem type class to work with concrete
+ * effect types like IO and Task.
  *
  * Import this object to automatically get instances in scope:
  * ```scala
@@ -86,8 +86,8 @@ object EffectInstances {
   /**
    * EffectSystem instance for Cats-Effect IO.
    *
-   * This implementation leverages Cats-Effect's comprehensive effect system to provide all
-   * EffectSystem capabilities with optimal performance.
+   * This implementation leverages Cats-Effect's comprehensive effect system to provide all EffectSystem
+   * capabilities with optimal performance.
    *
    * Features:
    *   - Full integration with Cats ecosystem (Parallel, Resource, etc.)
@@ -115,8 +115,8 @@ object EffectInstances {
     def flatMap[A, B](fa: IO[A])(f: A => IO[B]): IO[B] = fa.flatMap(f)
 
     /**
-     * Stack-safe tail recursion implementation. This is essential for processing large datasets
-     * without stack overflow.
+     * Stack-safe tail recursion implementation. This is essential for processing large datasets without stack
+     * overflow.
      */
     // def tailRecM[A, B](a: A)(f: A => IO[Either[A, B]]): IO[B] = IO.tailRecM(a)(f)
     // Cats provides a default implementation, but we can optimize if needed
@@ -177,13 +177,13 @@ object EffectInstances {
           oa match {
             case Outcome.Succeeded(ioa) => ioa.map(a => Left((a, CatsEffectFiber(fiberB))))
             case Outcome.Errored(e)     => IO.raiseError(e)
-            case Outcome.Canceled() => IO.raiseError(new RuntimeException("Left fiber canceled"))
+            case Outcome.Canceled()     => IO.raiseError(new RuntimeException("Left fiber canceled"))
           }
         case Right((fiberA, ob)) =>
           ob match {
             case Outcome.Succeeded(iob) => iob.map(b => Right((CatsEffectFiber(fiberA), b)))
             case Outcome.Errored(e)     => IO.raiseError(e)
-            case Outcome.Canceled() => IO.raiseError(new RuntimeException("Right fiber canceled"))
+            case Outcome.Canceled()     => IO.raiseError(new RuntimeException("Right fiber canceled"))
           }
       }
 
@@ -205,8 +205,12 @@ object EffectInstances {
       acquire.bracket(use)(release)
 
     def bracketCase[A, B](
-      acquire: IO[A]
-    )(use: A => IO[B])(release: (A, ExitCase[Throwable]) => IO[Unit]): IO[B] =
+      acquire: IO[A],
+    )(
+      use: A => IO[B],
+    )(
+      release: (A, ExitCase[Throwable]) => IO[Unit],
+    ): IO[B] =
       acquire.bracketCase(use) { (a, outcome) =>
         val exitCase = outcome match {
           case Outcome.Succeeded(_) => ExitCase.Completed
@@ -254,8 +258,8 @@ object EffectInstances {
   /**
    * EffectSystem instance for ZIO Task.
    *
-   * This implementation leverages ZIO's powerful effect system to provide all EffectSystem
-   * capabilities with ZIO's unique features like structured concurrency and typed errors.
+   * This implementation leverages ZIO's powerful effect system to provide all EffectSystem capabilities with
+   * ZIO's unique features like structured concurrency and typed errors.
    *
    * Features:
    *   - Integration with ZIO's structured concurrency model
@@ -283,8 +287,8 @@ object EffectInstances {
     def flatMap[A, B](fa: Task[A])(f: A => Task[B]): Task[B] = fa.flatMap(f)
 
     /**
-     * Stack-safe tail recursion for ZIO. ZIO provides built-in stack safety, so we can implement
-     * this efficiently.
+     * Stack-safe tail recursion for ZIO. ZIO provides built-in stack safety, so we can implement this
+     * efficiently.
      */
     def tailRecM[A, B](a: A)(f: A => Task[Either[A, B]]): Task[B] = {
       def loop(a: A): Task[B] =
@@ -346,21 +350,23 @@ object EffectInstances {
 
     def racePair[A, B](
       fa: Task[A],
-      fb: Task[B]
+      fb: Task[B],
     ): Task[Either[(A, Fiber[Task, B]), (Fiber[Task, A], B)]] =
       fa.raceWith(fb)(
-        { case (exit, fiber) =>
-          exit.foldZIO(
-            ZIO.fail(_),
-            a => ZIO.succeed(Left((a, ZIOFiber(fiber))))
-          )
+        {
+          case (exit, fiber) =>
+            exit.foldZIO(
+              ZIO.fail(_),
+              a => ZIO.succeed(Left((a, ZIOFiber(fiber)))),
+            )
         },
-        { case (exit, fiber) =>
-          exit.foldZIO(
-            ZIO.fail(_),
-            b => ZIO.succeed(Right((ZIOFiber(fiber), b)))
-          )
-        }
+        {
+          case (exit, fiber) =>
+            exit.foldZIO(
+              ZIO.fail(_),
+              b => ZIO.succeed(Right((ZIOFiber(fiber), b))),
+            )
+        },
       )
 
     // ===============================
@@ -384,8 +390,12 @@ object EffectInstances {
       }(use)
 
     def bracketCase[A, B](
-      acquire: Task[A]
-    )(use: A => Task[B])(release: (A, ExitCase[Throwable]) => Task[Unit]): Task[B] =
+      acquire: Task[A],
+    )(
+      use: A => Task[B],
+    )(
+      release: (A, ExitCase[Throwable]) => Task[Unit],
+    ): Task[B] =
       ZIO.acquireReleaseExitWith(acquire) { (a: A, exit: zio.Exit[Throwable, B]) =>
         val exitCase = exit match {
           case zio.Exit.Success(_) => ExitCase.Completed
@@ -398,7 +408,7 @@ object EffectInstances {
         // Log errors during release but don't fail the operation
         release(a, exitCase).foldCauseZIO(
           cause => ZIO.logWarning(s"Error during resource release: $cause").as(()),
-          _ => ZIO.unit
+          _ => ZIO.unit,
         )
       }(use)
 
@@ -412,8 +422,8 @@ object EffectInstances {
     def timeout[A](fa: Task[A], duration: FiniteDuration): Task[A] =
       fa.timeoutFail(
         new java.util.concurrent.TimeoutException(
-          s"Operation timed out after $duration"
-        )
+          s"Operation timed out after $duration",
+        ),
       )(zio.Duration.fromScala(duration))
 
     // ===============================
@@ -437,7 +447,7 @@ object EffectInstances {
       fa: Task[A],
       maxRetries: Int,
       initialDelay: FiniteDuration,
-      backoffFactor: Double = 2.0
+      backoffFactor: Double = 2.0,
     ): Task[A] = {
       import zio.{ Duration, Schedule }
 
@@ -454,8 +464,7 @@ object EffectInstances {
   // ===============================
 
   /**
-   * You can add more effect system instances here as needed. For example: Monix Task,
-   * cats.effect.IOApp, etc.
+   * You can add more effect system instances here as needed. For example: Monix Task, cats.effect.IOApp, etc.
    */
 
   /**
@@ -464,16 +473,16 @@ object EffectInstances {
   implicit class EffectSystemSyntax[F[_], A](private val fa: F[A]) extends AnyVal {
 
     /**
-     * Convert any effect to a different effect type (when both have EffectSystem instances). Note:
-     * This is a conceptual method. Real effect transformation requires runtime bridging.
+     * Convert any effect to a different effect type (when both have EffectSystem instances). Note: This is a
+     * conceptual method. Real effect transformation requires runtime bridging.
      */
     def liftTo[G[_]](implicit F: EffectSystem[F], G: EffectSystem[G]): G[A] =
       // Placeholder for effect transformation - would need runtime interop
       // For production use, consider using cats-interop-zio or similar
       G.raiseError(
         new UnsupportedOperationException(
-          "Effect transformation not implemented. Use specific interop libraries (e.g., zio-interop-cats)"
-        )
+          "Effect transformation not implemented. Use specific interop libraries (e.g., zio-interop-cats)",
+        ),
       )
   }
 
@@ -487,7 +496,7 @@ object EffectInstances {
      */
     def raceEffectSystems[A](
       ioComputation: IO[A],
-      zioComputation: Task[A]
+      zioComputation: Task[A],
     ): IO[Either[A, A]] =
       // This is a conceptual example - in practice you'd need more sophisticated
       // machinery to actually race different effect systems
@@ -495,7 +504,7 @@ object EffectInstances {
         ioComputation,
         IO.fromFuture(IO.delay(zio.Unsafe.unsafe { implicit unsafe =>
           zio.Runtime.default.unsafe.runToFuture(zioComputation)
-        }))
+        })),
       )
   }
 }

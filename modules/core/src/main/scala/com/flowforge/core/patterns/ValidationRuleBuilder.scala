@@ -5,13 +5,12 @@ import com.flowforge.core.patterns.ValidationTypes.{ invalid, valid, ValidationR
 import com.flowforge.core.types.ValidationError
 
 /**
- * Fluent builder for creating complex validation rules. Enables readable, composable validation
- * rule construction.
+ * Fluent builder for creating complex validation rules. Enables readable, composable validation rule
+ * construction.
  */
 case class ValidationRuleBuilder[A] private (
   private val rules: List[A => ValidationResult[A]] = List.empty,
-  private val name: String = "unnamed-validation"
-) {
+  private val name: String = "unnamed-validation") {
 
   /**
    * Add a custom validation rule.
@@ -24,7 +23,7 @@ case class ValidationRuleBuilder[A] private (
    */
   def ruleWithMessage(
     validator: A => Boolean,
-    error: ValidationError
+    error: ValidationError,
   ): ValidationRuleBuilder[A] = {
     val validationRule: A => ValidationResult[A] = { value =>
       if (validator(value)) valid(value) else invalid(error)
@@ -35,8 +34,10 @@ case class ValidationRuleBuilder[A] private (
   /**
    * Add a conditional validation rule.
    */
-  def when(condition: A => Boolean)(
-    validator: A => ValidationResult[A]
+  def when(
+    condition: A => Boolean,
+  )(
+    validator: A => ValidationResult[A],
   ): ValidationRuleBuilder[A] = {
     val conditionalRule: A => ValidationResult[A] = { value =>
       if (condition(value)) validator(value) else valid(value)

@@ -1,8 +1,8 @@
 /**
  * Contract tests for EffectSystem implementations.
  *
- * These tests verify that different EffectSystem instances behave consistently and satisfy the
- * expected contracts for data pipeline operations.
+ * These tests verify that different EffectSystem instances behave consistently and satisfy the expected
+ * contracts for data pipeline operations.
  */
 package com.flowforge.core.algebra
 
@@ -36,10 +36,11 @@ class EffectSystemContractSpec
         blocked <- es.blocking(Thread.currentThread().getName)
       } yield (delayed, suspended, blocked)
 
-      test.map { case (d, s, b) =>
-        d should equal(42)
-        s should equal(100)
-        b should not be empty
+      test.map {
+        case (d, s, b) =>
+          d should equal(42)
+          s should equal(100)
+          b should not be empty
       }
     }
 
@@ -58,11 +59,12 @@ class EffectSystemContractSpec
         fromFailureEither <- es.fromEither(failureEither).attempt
       } yield (fromSuccessTry, fromFailureTry, fromSuccessEither, fromFailureEither)
 
-      test.map { case (st, ft, se, fe) =>
-        st should equal(42)
-        ft shouldBe a[Left[_, _]]
-        se should equal(100)
-        fe shouldBe a[Left[_, _]]
+      test.map {
+        case (st, ft, se, fe) =>
+          st should equal(42)
+          ft shouldBe a[Left[_, _]]
+          se should equal(100)
+          fe shouldBe a[Left[_, _]]
       }
     }
 
@@ -76,20 +78,20 @@ class EffectSystemContractSpec
       val testError = new RuntimeException("Test error during use")
 
       val successfulBracket = es.bracket(
-        acquire = es.delay { acquisitions += 1; resource }
+        acquire = es.delay { acquisitions += 1; resource },
       )(
-        use = r => es.delay { usages += 1; r.toUpperCase }
+        use = r => es.delay { usages += 1; r.toUpperCase },
       )(
-        release = _ => es.delay(releases += 1)
+        release = _ => es.delay(releases += 1),
       )
 
       val failingBracket = es
         .bracket(
-          acquire = es.delay { acquisitions += 1; resource }
+          acquire = es.delay { acquisitions += 1; resource },
         )(
-          use = _ => es.raiseError[String](testError)
+          use = _ => es.raiseError[String](testError),
         )(
-          release = _ => es.delay(releases += 1)
+          release = _ => es.delay(releases += 1),
         )
         .attempt
 
@@ -98,12 +100,13 @@ class EffectSystemContractSpec
         failure <- failingBracket
       } yield (success, failure)
 
-      test.map { case (s, f) =>
-        s should equal("TEST-RESOURCE")
-        f shouldBe Left(testError)
-        acquisitions should equal(2)
-        releases should equal(2) // Resources should be released even on failure
-        usages should equal(1)   // Only successful usage
+      test.map {
+        case (s, f) =>
+          s should equal("TEST-RESOURCE")
+          f shouldBe Left(testError)
+          acquisitions should equal(2)
+          releases should equal(2) // Resources should be released even on failure
+          usages should equal(1)   // Only successful usage
       }
     }
 
@@ -118,10 +121,11 @@ class EffectSystemContractSpec
         timeoutResult <- es.timeout(es.sleep(1.second), 100.millis).attempt
       } yield (elapsed, timeoutResult)
 
-      test.map { case (elapsed, timeout) =>
-        elapsed should be >= 45L       // Should sleep for at least ~50ms
-        elapsed should be < 200L       // But not too long
-        timeout shouldBe a[Left[_, _]] // Should timeout
+      test.map {
+        case (elapsed, timeout) =>
+          elapsed should be >= 45L       // Should sleep for at least ~50ms
+          elapsed should be < 200L       // But not too long
+          timeout shouldBe a[Left[_, _]] // Should timeout
       }
     }
 
@@ -139,7 +143,7 @@ class EffectSystemContractSpec
         failingOperation,
         maxRetries = 5,
         initialDelay = 10.millis,
-        backoffFactor = 2.0
+        backoffFactor = 2.0,
       )
 
       test.map { result =>
@@ -154,10 +158,11 @@ class EffectSystemContractSpec
       val operation      = es.sleep(100.millis) >> es.pure("completed")
       val timedOperation = es.timed(operation)
 
-      timedOperation.map { case (result, duration) =>
-        result should equal("completed")
-        duration should be >= 95.millis // Should be at least ~100ms
-        duration should be < 200.millis // But not too long
+      timedOperation.map {
+        case (result, duration) =>
+          result should equal("completed")
+          duration should be >= 95.millis // Should be at least ~100ms
+          duration should be < 200.millis // But not too long
       }
     }
 
@@ -173,9 +178,10 @@ class EffectSystemContractSpec
         parResult <- parallelTraverse
       } yield (seqResult, parResult)
 
-      test.map { case (seq, par) =>
-        seq should equal(List(2, 4, 6, 8, 10))
-        par should equal(List(2, 4, 6, 8, 10))
+      test.map {
+        case (seq, par) =>
+          seq should equal(List(2, 4, 6, 8, 10))
+          par should equal(List(2, 4, 6, 8, 10))
       }
     }
   }

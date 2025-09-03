@@ -11,5 +11,4 @@ case class PipelineMetadata(
   createdAt: Instant = Instant.now(),
   updatedAt: Instant = Instant.now(),
   tags: Set[String] = Set.empty,
-  properties: Map[String, String] = Map.empty
-)
+  properties: Map[String, String] = Map.empty)

@@ -10,8 +10,8 @@ import java.time.Instant
 final case class SimpleDataset[A](
   data: List[A],
   schema: DataSchema,
-  metadata: DataAlgebra.DatasetMetadata
-) extends DataAlgebra.Dataset[A]
+  metadata: DataAlgebra.DatasetMetadata)
+    extends DataAlgebra.Dataset[A]
 
 object SimpleDataset {
   def empty[A](schema: DataSchema): SimpleDataset[A] =

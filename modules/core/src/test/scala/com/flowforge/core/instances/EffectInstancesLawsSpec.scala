@@ -1,8 +1,8 @@
 /**
  * Property-based tests for EffectSystem instances to verify Monad laws.
  *
- * These tests ensure that our EffectSystem instances satisfy the mathematical laws required for
- * proper monadic behavior, preventing subtle bugs in pipeline composition.
+ * These tests ensure that our EffectSystem instances satisfy the mathematical laws required for proper
+ * monadic behavior, preventing subtle bugs in pipeline composition.
  */
 package com.flowforge.core.instances
 
@@ -65,11 +65,11 @@ class EffectInstancesLawsSpec extends AsyncFunSpec with AsyncIOSpec with Matcher
 
       val result = effectSystem
         .bracket(
-          acquire = IO.pure("resource")
+          acquire = IO.pure("resource"),
         )(
-          use = _ => IO.raiseError[String](testError)
+          use = _ => IO.raiseError[String](testError),
         )(
-          release = _ => IO.delay { resourceReleased = true }
+          release = _ => IO.delay { resourceReleased = true },
         )
         .attempt
 

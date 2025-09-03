@@ -6,8 +6,7 @@ import com.flowforge.core.types.ValidationError.QualityViolation
 import com.flowforge.core.types.{ BusinessError, ConfigError, ValidationError }
 
 /**
- * Type aliases for validation results. These provide consistent, readable types across the
- * validation system.
+ * Type aliases for validation results. These provide consistent, readable types across the validation system.
  */
 object ValidationTypes {
 

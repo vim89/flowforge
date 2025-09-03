@@ -1,8 +1,7 @@
 /**
  * FlowForge Core Module - Pipeline Implementation
  *
- * File: modules/core/src/main/scala/com/flowforge/core/FlowForgePipeline.scala Package:
- * com.flowforge.core
+ * File: modules/core/src/main/scala/com/flowforge/core/FlowForgePipeline.scala Package: com.flowforge.core
  *
  * Complete FlowForge pipeline with execution capabilities.
  */
@@ -22,8 +21,7 @@ case class FlowForgePipeline[F[_]: EffectSystem](
   sink: DataSink,
   transformations: List[PipelineComponent[F, Any, Any]],
   validations: List[QualityCheck[Any]],
-  config: Option[PipelineConfig]
-) {
+  config: Option[PipelineConfig]) {
 
   /**
    * Execute the pipeline with the given input data.
@@ -33,9 +31,8 @@ case class FlowForgePipeline[F[_]: EffectSystem](
     val F = EffectSystem[F]
 
     // Apply transformations sequentially
-    val transformed = transformations.foldLeft(F.pure(inputData.asInstanceOf[Any])) {
-      (acc, transform) =>
-        acc.flatMap(data => transform.run(data))
+    val transformed = transformations.foldLeft(F.pure(inputData.asInstanceOf[Any])) { (acc, transform) =>
+      acc.flatMap(data => transform.run(data))
     }
 
     // Apply validations

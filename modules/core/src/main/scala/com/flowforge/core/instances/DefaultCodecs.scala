@@ -31,8 +31,8 @@ object DefaultCodecs {
       Right(EncodedData(data.getBytes("UTF-8"), format))
     def schema(format: DataFormat): DataSchema =
       DataSchema.builder.addField("value", DataType.String).build
-    def estimateSize(data: String, format: DataFormat): Long = data.getBytes("UTF-8").length
-    def supportsFormat(format: DataFormat): Boolean          = true
+    def estimateSize(data: String, format: DataFormat): Long               = data.getBytes("UTF-8").length
+    def supportsFormat(format: DataFormat): Boolean                        = true
     def optimizationHints(data: String, format: DataFormat): EncodingHints = EncodingHints.default
   }
 
@@ -43,7 +43,7 @@ object DefaultCodecs {
     def decodeWithEvolution(
       encodedData: EncodedData,
       format: DataFormat,
-      targetSchema: DataSchema
+      targetSchema: DataSchema,
     ) =
       Right(new String(encodedData.data, "UTF-8"))
 
@@ -64,7 +64,7 @@ object DefaultCodecs {
 
   implicit val jsonEncoder: DataEncoder[Json] = new DataEncoder[Json] {
     def encode(data: Json, format: DataFormat) = Right(
-      EncodedData(data.noSpaces.getBytes("UTF-8"), format)
+      EncodedData(data.noSpaces.getBytes("UTF-8"), format),
     )
     def schema(format: DataFormat): DataSchema =
       DataSchema.builder.addField("json", DataType.String).build
@@ -83,7 +83,7 @@ object DefaultCodecs {
     def decodeWithEvolution(
       encodedData: EncodedData,
       format: DataFormat,
-      targetSchema: DataSchema
+      targetSchema: DataSchema,
     ) =
       decode(encodedData, format)
 
@@ -126,7 +126,7 @@ object DefaultCodecs {
         def decodeWithEvolution(
           encodedData: EncodedData,
           format: DataFormat,
-          targetSchema: DataSchema
+          targetSchema: DataSchema,
         ) = decode(encodedData, format)
         def supportsFormat(format: DataFormat): Boolean =
           format == DataFormat.JSON || format == DataFormat.JSONL
@@ -139,8 +139,8 @@ object DefaultCodecs {
           Right(
             EncodedData(
               Json.fromValues(data.map(Json.fromString)).noSpaces.getBytes("UTF-8"),
-              format
-            )
+              format,
+            ),
           )
         case DataFormat.CSV => Right(EncodedData(data.mkString(",").getBytes("UTF-8"), format))
         case other          => Left(UnsupportedFormat(other, "List[String]"))
@@ -173,7 +173,7 @@ object DefaultCodecs {
       def decodeWithEvolution(
         encodedData: EncodedData,
         format: DataFormat,
-        targetSchema: DataSchema
+        targetSchema: DataSchema,
       ) = decode(encodedData, format)
       def supportsFormat(format: DataFormat): Boolean =
         format == DataFormat.JSON || format == DataFormat.JSONL || format == DataFormat.CSV
@@ -190,8 +190,8 @@ object DefaultCodecs {
                 .obj(data.toSeq.map { case (k, v) => (k, Json.fromString(v)) }: _*)
                 .noSpaces
                 .getBytes("UTF-8"),
-              format
-            )
+              format,
+            ),
           )
         case DataFormat.CSV =>
           Right(EncodedData(data.values.mkString(",").getBytes("UTF-8"), format))
@@ -228,7 +228,7 @@ object DefaultCodecs {
       def decodeWithEvolution(
         encodedData: EncodedData,
         format: DataFormat,
-        targetSchema: DataSchema
+        targetSchema: DataSchema,
       ) =
         decode(encodedData, format)
 

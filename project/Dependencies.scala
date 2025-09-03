@@ -73,7 +73,7 @@ object Dependencies {
 
   val validation = Seq(
     "io.github.jmcardon" %% "tsec-common" % "0.4.0",
-    "org.scalactic"      %% "scalactic"   % Versions.scalaTest
+    "org.scalactic"      %% "scalactic"   % Versions.scalaTest,
   )
 
   // ===== CORE DEPENDENCIES =====
@@ -84,18 +84,18 @@ object Dependencies {
       "org.typelevel" %% "cats-free"   % Versions.cats,
       "co.fs2"        %% "fs2-core"    % Versions.fs2,
       "co.fs2"        %% "fs2-io"      % Versions.fs2,
-      "org.typelevel" %% "kittens"     % Versions.kittens
+      "org.typelevel" %% "kittens"     % Versions.kittens,
     )
 
     val typeSafety = Seq(
       "eu.timepit"  %% "refined"   % Versions.refined,
-      "com.chuusai" %% "shapeless" % Versions.shapeless
+      "com.chuusai" %% "shapeless" % Versions.shapeless,
     )
 
     val json = Seq(
       "io.circe" %% "circe-core"    % Versions.circe,
       "io.circe" %% "circe-generic" % Versions.circe,
-      "io.circe" %% "circe-parser"  % Versions.circe
+      "io.circe" %% "circe-parser"  % Versions.circe,
     )
 
     val config = Seq.empty[ModuleID]
@@ -103,7 +103,7 @@ object Dependencies {
     val logging = Seq(
       "com.typesafe.scala-logging" %% "scala-logging"   % Versions.scalaLogging,
       "ch.qos.logback"              % "logback-classic" % Versions.logback % Runtime,
-      "org.typelevel"              %% "log4cats-slf4j"  % Versions.log4cats
+      "org.typelevel"              %% "log4cats-slf4j"  % Versions.log4cats,
     )
 
     val all: Seq[ModuleID] = functional ++ typeSafety ++ json ++ logging ++ validation
@@ -111,7 +111,7 @@ object Dependencies {
 
   object TypedSpark {
     val frameless = Seq(
-      "org.typelevel" %% "frameless-dataset" % Versions.frameless
+      "org.typelevel" %% "frameless-dataset" % Versions.frameless,
     )
   }
 
@@ -119,7 +119,7 @@ object Dependencies {
   val effectSystems = Seq(
     "org.typelevel" %% "cats-effect"      % Versions.catsEffect,
     "dev.zio"       %% "zio"              % Versions.zio,
-    "dev.zio"       %% "zio-interop-cats" % Versions.zioInteropCats
+    "dev.zio"       %% "zio-interop-cats" % Versions.zioInteropCats,
   )
 
   // Engines
@@ -128,13 +128,13 @@ object Dependencies {
       "org.apache.spark" %% "spark-core"     % Versions.spark % "provided",
       "org.apache.spark" %% "spark-sql"      % Versions.spark % "provided",
       "org.apache.spark" %% "spark-catalyst" % Versions.spark % "provided",
-      "io.delta"         %% "delta-spark"    % Versions.delta
+      "io.delta"         %% "delta-spark"    % Versions.delta,
     )
 
     val flink = Seq(
       "org.apache.flink" % "flink-scala_2.12"           % Versions.flink % "provided",
       "org.apache.flink" % "flink-streaming-scala_2.12" % Versions.flink % "provided",
-      "org.apache.flink" % "flink-table-runtime"        % Versions.flink % "provided"
+      "org.apache.flink" % "flink-table-runtime"        % Versions.flink % "provided",
     )
 
     val all: Seq[ModuleID] = spark ++ flink
@@ -147,12 +147,12 @@ object Dependencies {
       "org.apache.hadoop" % "hadoop-client-runtime" % "3.3.6",
       "org.apache.hadoop" % "hadoop-hdfs-client"    % "3.3.6"
         exclude ("org.slf4j", "slf4j-log4j12")
-        exclude ("log4j", "log4j")
+        exclude ("log4j", "log4j"),
     )
 
     val gcs = Seq(
       "com.google.cloud" % "google-cloud-storage"       % Versions.gcpStorage,
-      "com.google.cloud" % "google-cloud-secretmanager" % Versions.gcpStorage
+      "com.google.cloud" % "google-cloud-secretmanager" % Versions.gcpStorage,
     )
 
     val all: Seq[ModuleID] = hadoop ++ gcs
@@ -164,7 +164,7 @@ object Dependencies {
       "com.amazon.deequ" % "deequ" % Versions.deequ
         exclude ("org.typelevel", "cats-core_2.12")
         exclude ("org.typelevel", "cats-kernel_2.12")
-        exclude ("org.scala-lang.modules", "scala-xml_2.12")
+        exclude ("org.scala-lang.modules", "scala-xml_2.12"),
     )
 
     val all: Seq[ModuleID] = deequ ++ validation
@@ -174,16 +174,16 @@ object Dependencies {
   object Monitoring {
     val prometheus = Seq(
       "io.prometheus" % "simpleclient"         % Versions.prometheus,
-      "io.prometheus" % "simpleclient_hotspot" % Versions.prometheus
+      "io.prometheus" % "simpleclient_hotspot" % Versions.prometheus,
     )
 
     val openTelemetry = Seq(
       "io.opentelemetry" % "opentelemetry-api" % Versions.otel,
-      "io.opentelemetry" % "opentelemetry-sdk" % Versions.otel
+      "io.opentelemetry" % "opentelemetry-sdk" % Versions.otel,
     )
 
     val micrometer = Seq(
-      "io.micrometer" % "micrometer-core" % Versions.micrometer
+      "io.micrometer" % "micrometer-core" % Versions.micrometer,
     )
 
     val all: Seq[ModuleID] = prometheus ++ openTelemetry ++ micrometer
@@ -198,7 +198,7 @@ object Dependencies {
       "org.typelevel"     %% "cats-effect-testing-scalatest" % "1.5.0"             % Test,
       "dev.zio"           %% "zio-test"                      % Versions.zio        % Test,
       "dev.zio"           %% "zio-test-sbt"                  % Versions.zio        % Test,
-      "org.mockito"        % "mockito-core"                  % Versions.mockito    % Test
+      "org.mockito"        % "mockito-core"                  % Versions.mockito    % Test,
     )
 
     val integration = Seq(
@@ -206,7 +206,7 @@ object Dependencies {
       "com.dimafeng"          %% "testcontainers-scala-postgresql" % Versions.testContainers % Test,
       "com.dimafeng"          %% "testcontainers-scala-kafka"      % Versions.testContainers % Test,
       "org.testcontainers"     % "gcloud"                          % "1.19.3"                % Test,
-      "com.github.tomakehurst" % "wiremock-jre8"                   % Versions.wiremock       % Test
+      "com.github.tomakehurst" % "wiremock-jre8"                   % Versions.wiremock       % Test,
     )
 
     val all: Seq[ModuleID] = unit ++ integration
@@ -223,11 +223,11 @@ object Dependencies {
     // Infrastructure Layer modules
     case "infrastructure" =>
       Core.all ++ effectSystems ++ Testing.integration ++ Monitoring.all ++ Seq(
-        "com.typesafe" % "config" % "1.4.3"
+        "com.typesafe" % "config" % "1.4.3",
       )
     case "contracts" =>
       Core.all ++ Testing.unit ++ Seq(
-        "org.apache.spark" %% "spark-sql" % Versions.spark % "provided"
+        "org.apache.spark" %% "spark-sql" % Versions.spark % "provided",
       )
     case "connectors"     => Core.functional ++ Testing.unit ++ Connectors.all
     case "connectors-s3"  => common ++ Connectors.hadoop
@@ -238,7 +238,7 @@ object Dependencies {
     case "quality-deequ"  => common ++ Quality.deequ
     case "templates" =>
       common ++ Seq(
-        "org.foundweekends.giter8" %% "giter8-lib" % Versions.sbtGiter8
+        "org.foundweekends.giter8" %% "giter8-lib" % Versions.sbtGiter8,
       )
     case "examples" => common
     case _          => common
@@ -262,6 +262,6 @@ object Dependencies {
     "com.google.guava"  % "guava"              % "33.4.0-jre",
     "com.google.j2objc" % "j2objc-annotations" % "3.0.0",
     // Align SLF4J
-    "org.slf4j" % "slf4j-api" % "2.0.13"
+    "org.slf4j" % "slf4j-api" % "2.0.13",
   )
 }

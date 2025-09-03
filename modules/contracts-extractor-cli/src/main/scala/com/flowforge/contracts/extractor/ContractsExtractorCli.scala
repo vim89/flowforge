@@ -27,8 +27,7 @@ object ContractsExtractorCli extends IOApp {
     outputDir: String = "contracts",
     jdbcUrl: Option[String] = None,
     jdbcTable: Option[String] = None,
-    master: Option[String] = Some("local[*]")
-  )
+    master: Option[String] = Some("local[*]"))
 
   private val builder = OParser.builder[Args]
   private val parser = {
@@ -47,7 +46,7 @@ object ContractsExtractorCli extends IOApp {
             case "jdbc"         => Mode.JDBC
             case "generate-sdk" => Mode.GenerateSDK
             case other          => throw new IllegalArgumentException(s"Unknown mode: $other")
-          })
+          }),
         )
         .text("parquet | delta | hive | csv | jdbc | generate-sdk"),
       opt[String]("input")
@@ -78,7 +77,7 @@ object ContractsExtractorCli extends IOApp {
       opt[String]("master")
         .optional()
         .action((m, a) => a.copy(master = Some(m)))
-        .text("Spark master (default: local[*])")
+        .text("Spark master (default: local[*])"),
     )
   }
 
@@ -114,7 +113,7 @@ object ContractsExtractorCli extends IOApp {
             spark.read.option("header", "true").option("inferSchema", "true").csv(args.input)
           case Mode.JDBC =>
             val url = args.jdbcUrl.getOrElse(
-              throw new IllegalArgumentException("--jdbc-url required for mode=jdbc")
+              throw new IllegalArgumentException("--jdbc-url required for mode=jdbc"),
             )
             val table = args.jdbcTable.getOrElse(args.input)
             spark.read.format("jdbc").option("url", url).option("dbtable", table).load()
@@ -138,13 +137,16 @@ object ContractsExtractorCli extends IOApp {
       `type`: String = "record",
       name: String,
       namespace: String,
-      fields: List[Field]
-    )
+      fields: List[Field])
 
     implicit val fieldEncoder: Encoder[Field]   = deriveEncoder[Field]
     implicit val recordEncoder: Encoder[Record] = deriveEncoder[Record]
 
-    def fromSpark(df: DataFrame, namespace: String, recordName: String): String = {
+    def fromSpark(
+      df: DataFrame,
+      namespace: String,
+      recordName: String,
+    ): String = {
       val fields = df.schema.fields.toList.map { f =>
         Field(f.name, sparkTypeToAvro(f.dataType, f.nullable))
       }
@@ -154,7 +156,7 @@ object ContractsExtractorCli extends IOApp {
 
     private def sparkTypeToAvro(
       dt: org.apache.spark.sql.types.DataType,
-      nullable: Boolean
+      nullable: Boolean,
     ): io.circe.Json = {
       import org.apache.spark.sql.types._
       val base: Json = dt match {
@@ -172,19 +174,19 @@ object ContractsExtractorCli extends IOApp {
         case ArrayType(elem, _) =>
           io.circe.Json.obj(
             "type"  -> Json.fromString("array"),
-            "items" -> sparkTypeToAvro(elem, nullable = true)
+            "items" -> sparkTypeToAvro(elem, nullable = true),
           )
         case StructType(fields) =>
           val subFields = fields.toList.map(f =>
             io.circe.Json.obj(
               "name" -> Json.fromString(f.name),
-              "type" -> sparkTypeToAvro(f.dataType, f.nullable)
-            )
+              "type" -> sparkTypeToAvro(f.dataType, f.nullable),
+            ),
           )
           io.circe.Json.obj(
             "type"   -> Json.fromString("record"),
             "name"   -> Json.fromString("Sub"),
-            "fields" -> io.circe.Json.fromValues(subFields)
+            "fields" -> io.circe.Json.fromValues(subFields),
           )
         case _ => Json.fromString("string")
       }
@@ -195,15 +197,18 @@ object ContractsExtractorCli extends IOApp {
   object Files {
     import java.nio.file.{ Files => JFiles, Paths }
 
-    def writeContracts(root: String, domain: String, entity: String, avroJson: String): IO[Unit] =
+    def writeContracts(
+      root: String,
+      domain: String,
+      entity: String,
+      avroJson: String,
+    ): IO[Unit] =
       IO {
         val base    = Paths.get(root)
         val avroDir = base.resolve("avro").resolve(domain)
         val dqDir   = base.resolve("dq").resolve(domain)
         val metaDir = base.resolve("metadata").resolve(domain)
-        List(avroDir, dqDir, metaDir).foreach(p =>
-          if (!JFiles.exists(p)) JFiles.createDirectories(p)
-        )
+        List(avroDir, dqDir, metaDir).foreach(p => if (!JFiles.exists(p)) JFiles.createDirectories(p))
         val avroPath = avroDir.resolve(s"${entity}.v1.0.0.avsc")
         val dqPath   = dqDir.resolve(s"${entity}.yaml")
         val metaPath = metaDir.resolve(s"${entity}.yaml")
@@ -229,7 +234,7 @@ object ContractsExtractorCli extends IOApp {
     private def firstField(avroJson: String): Option[String] = {
       import io.circe.parser._
       parse(avroJson).toOption.flatMap(
-        _.hcursor.downField("fields").downArray.downField("name").as[String].toOption
+        _.hcursor.downField("fields").downArray.downField("name").as[String].toOption,
       )
     }
   }

@@ -3,9 +3,9 @@
  *
  * File: modules/core/src/main/scala/com/flowforge/core/package.scala Package: com.flowforge.core
  *
- * This package object provides convenient imports, type aliases, and utility functions for the
- * FlowForge core module. It serves as the main entry point for users of the core functionality,
- * offering a clean and intuitive API surface.
+ * This package object provides convenient imports, type aliases, and utility functions for the FlowForge core
+ * module. It serves as the main entry point for users of the core functionality, offering a clean and
+ * intuitive API surface.
  *
  * Design Patterns Applied:
  *   - Facade Pattern: Simplified interface to complex subsystems
@@ -105,8 +105,7 @@ package object core {
   // ===============================
 
   /**
-   * Common type aliases for frequently used complex types. These provide more readable
-   * domain-specific names.
+   * Common type aliases for frequently used complex types. These provide more readable domain-specific names.
    */
 
   // Effect types
@@ -146,8 +145,8 @@ package object core {
   // ===============================
 
   /**
-   * Smart constructors for common FlowForge types. These provide convenient, validated construction
-   * of core types.
+   * Smart constructors for common FlowForge types. These provide convenient, validated construction of core
+   * types.
    */
 
   object Pipeline {
@@ -193,12 +192,12 @@ package object core {
      *   Validation pipeline component
      */
     def validate[F[_]: EffectSystem, A](
-      validator: A => ValidationResult[A]
+      validator: A => ValidationResult[A],
     ): PipelineComponent[F, A, A] =
       Kleisli { a =>
         validator(a).fold(
           errors => EffectSystem[F].raiseError(errors.head.asInstanceOf[Throwable]),
-          success => EffectSystem[F].pure(success)
+          success => EffectSystem[F].pure(success),
         )
       }
   }
@@ -236,19 +235,20 @@ package object core {
      * Create an effect from a Future.
      */
     def fromFuture[F[_]: EffectSystem, A](
-      future: => Future[A]
-    )(implicit ec: ExecutionContext): F[A] =
+      future: => Future[A],
+    )(implicit ec: ExecutionContext,
+    ): F[A] =
       EffectSystem[F].fromFuture(future)
 
     /**
      * Convert a validation to an effect.
      */
     def fromValidation[F[_]: EffectSystem, E <: Throwable, A](
-      validation: ValidatedNel[E, A]
+      validation: ValidatedNel[E, A],
     ): F[A] =
       validation.fold(
         errors => EffectSystem[F].raiseError(errors.head),
-        success => EffectSystem[F].pure(success)
+        success => EffectSystem[F].pure(success),
       )
 
     /**
@@ -267,8 +267,10 @@ package object core {
      * Repeat an effect until a condition is met.
      */
     def repeatUntil[F[_]: EffectSystem, A](
-      fa: F[A]
-    )(condition: A => Boolean): F[A] =
+      fa: F[A],
+    )(
+      condition: A => Boolean,
+    ): F[A] =
       EffectSystem[F].repeatUntil(fa)(condition)
 
     /**
@@ -313,7 +315,7 @@ package object core {
     def matchesPattern(
       fieldName: String,
       value: String,
-      pattern: String
+      pattern: String,
     ): ConfigValidation[String] =
       if (value.matches(pattern)) {
         value.validNel
@@ -328,7 +330,7 @@ package object core {
       fieldName: String,
       value: Double,
       min: Double,
-      max: Double
+      max: Double,
     ): ConfigValidation[Double] =
       if (value >= min && value <= max) {
         value.validNel
@@ -341,16 +343,20 @@ package object core {
      */
     def combine[A, B, C](
       va: ValidatedNel[ConfigError, A],
-      vb: ValidatedNel[ConfigError, B]
-    )(f: (A, B) => C): ValidatedNel[ConfigError, C] =
+      vb: ValidatedNel[ConfigError, B],
+    )(
+      f: (A, B) => C,
+    ): ValidatedNel[ConfigError, C] =
       (va, vb).mapN(f)
 
     /**
      * Validate all elements in a list.
      */
     def validateAll[A, B](
-      list: List[A]
-    )(validator: A => ValidatedNel[ConfigError, B]): ValidatedNel[ConfigError, List[B]] =
+      list: List[A],
+    )(
+      validator: A => ValidatedNel[ConfigError, B],
+    ): ValidatedNel[ConfigError, List[B]] =
       list.traverse(validator)
   }
 
@@ -440,7 +446,7 @@ package object core {
       getRequired(key).andThen { value =>
         Try(value.toInt).fold(
           _ => ConfigError.InvalidFormat(key, value, "integer").invalidNel,
-          int => int.validNel
+          int => int.validNel,
         )
       }
 
@@ -463,7 +469,7 @@ package object core {
       getRequired(key).andThen { value =>
         Try(Duration.parse(value)).fold(
           _ => ConfigError.InvalidFormat(key, value, "ISO-8601 duration").invalidNel,
-          d => FiniteDuration(d.toMillis, "millis").validNel
+          d => FiniteDuration(d.toMillis, "millis").validNel,
         )
       }
   }
@@ -479,31 +485,51 @@ package object core {
   /**
    * Create a GCS data source.
    */
-  def gcsSource(bucket: String, prefix: String, format: DataFormat): DataSource.GcsSource =
+  def gcsSource(
+    bucket: String,
+    prefix: String,
+    format: DataFormat,
+  ): DataSource.GcsSource =
     DataSource.gcs(bucket, prefix, format)
 
   /**
    * Create an S3 data source.
    */
-  def s3Source(bucket: String, prefix: String, format: DataFormat): DataSource.S3Source =
+  def s3Source(
+    bucket: String,
+    prefix: String,
+    format: DataFormat,
+  ): DataSource.S3Source =
     DataSource.s3(bucket, prefix, format)
 
   /**
    * Create a BigQuery data source.
    */
-  def bigquerySource(project: String, dataset: String, table: String): DataSource.BigQuerySource =
+  def bigquerySource(
+    project: String,
+    dataset: String,
+    table: String,
+  ): DataSource.BigQuerySource =
     DataSource.bigQuery(project, dataset, table)
 
   /**
    * Create a GCS data sink.
    */
-  def gcsSink(bucket: String, prefix: String, format: DataFormat): DataSink.GcsSink =
+  def gcsSink(
+    bucket: String,
+    prefix: String,
+    format: DataFormat,
+  ): DataSink.GcsSink =
     DataSink.gcs(bucket, prefix, format)
 
   /**
    * Create an S3 data sink.
    */
-  def s3Sink(bucket: String, prefix: String, format: DataFormat): DataSink.S3Sink =
+  def s3Sink(
+    bucket: String,
+    prefix: String,
+    format: DataFormat,
+  ): DataSink.S3Sink =
     DataSink.s3(bucket, prefix, format)
 
   /**

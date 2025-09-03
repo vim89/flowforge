@@ -8,8 +8,8 @@ import com.flowforge.logging.StructuredLogger
 import com.flowforge.safety.{ CloudResourceSafety, ResourceSafety }
 
 /**
- * Complete Infrastructure Layer providing all cross-cutting concerns. This is the foundation layer
- * that all other FlowForge layers depend on.
+ * Complete Infrastructure Layer providing all cross-cutting concerns. This is the foundation layer that all
+ * other FlowForge layers depend on.
  */
 trait InfrastructureLayer[F[_]] {
 
@@ -89,7 +89,7 @@ trait TestingFramework[F[_]] {
    */
   def testPipelineWithMockData[A, B](
     pipeline: Pipeline[F, A, B],
-    testData: List[A]
+    testData: List[A],
   ): F[PipelineTestResult[B]]
 
   /**
@@ -123,8 +123,7 @@ case class TestResults(
   totalTests: Int,
   passed: Int,
   failed: Int,
-  errors: List[TestError]
-)
+  errors: List[TestError])
 
 case class TestError(testName: String, error: String)
 
@@ -135,8 +134,7 @@ case class PipelineTestResult[B](
   output: List[B],
   processingTimeMs: Long,
   success: Boolean,
-  errors: List[String]
-)
+  errors: List[String])
 
 /**
  * Test environment with temporary resources.
@@ -177,9 +175,9 @@ object InfrastructureLayer {
     Resource.make(
       acquire = Sync[F].delay {
         new DefaultInfrastructureLayer[F]()
-      }
+      },
     )(
-      release = infrastructure => infrastructure.shutdown
+      release = infrastructure => infrastructure.shutdown,
     )
 
   /**
@@ -195,7 +193,7 @@ object InfrastructureLayer {
 
       override def combineResources[A, B](
         resourceA: Resource[F, A],
-        resourceB: Resource[F, B]
+        resourceB: Resource[F, B],
       ): Resource[F, (A, B)] =
         (resourceA, resourceB).tupled
 
@@ -214,7 +212,7 @@ object InfrastructureLayer {
 
       override def combineResources[A, B](
         resourceA: Resource[F, A],
-        resourceB: Resource[F, B]
+        resourceB: Resource[F, B],
       ): Resource[F, (A, B)] =
         base.combineResources(resourceA, resourceB)
 
@@ -222,23 +220,29 @@ object InfrastructureLayer {
         base.ensuring(operation)(cleanup)
 
       override def safeConnection[Provider, A](
-        provider: Provider
-      )(use: com.flowforge.safety.Connection[Provider] => F[A]): F[A] =
+        provider: Provider,
+      )(
+        use: com.flowforge.safety.Connection[Provider] => F[A],
+      ): F[A] =
         bracket(
-          acquire = Sync[F].delay(com.flowforge.safety.Connection(provider, new Object))
+          acquire = Sync[F].delay(com.flowforge.safety.Connection(provider, new Object)),
         )(use)(release = _ => Sync[F].unit)
 
       override def safeFileHandle[A](
-        path: com.flowforge.safety.CloudPath
-      )(use: com.flowforge.safety.FileHandle => F[A]): F[A] =
+        path: com.flowforge.safety.CloudPath,
+      )(
+        use: com.flowforge.safety.FileHandle => F[A],
+      ): F[A] =
         bracket(
-          acquire = Sync[F].delay(com.flowforge.safety.FileHandle(path, new Object))
+          acquire = Sync[F].delay(com.flowforge.safety.FileHandle(path, new Object)),
         )(use)(release = _ => Sync[F].unit)
 
       override def safeStreamProcessing[A, B](
-        inputStream: F[com.flowforge.safety.Stream[A]]
-      )(process: com.flowforge.safety.Stream[A] => F[com.flowforge.safety.Stream[B]]): F[
-        com.flowforge.safety.Stream[B]
+        inputStream: F[com.flowforge.safety.Stream[A]],
+      )(
+        process: com.flowforge.safety.Stream[A] => F[com.flowforge.safety.Stream[B]],
+      ): F[
+        com.flowforge.safety.Stream[B],
       ] =
         bracket(acquire = inputStream)(use = process)(release = _ => Sync[F].unit)
     }
@@ -301,13 +305,13 @@ object InfrastructureLayer {
           totalTests = generators.length,
           passed = generators.length,
           failed = 0,
-          errors = List.empty
+          errors = List.empty,
         )
       }
 
     override def testPipelineWithMockData[A, B](
       pipeline: Pipeline[F, A, B],
-      testData: List[A]
+      testData: List[A],
     ): F[PipelineTestResult[B]] = {
       val startTime = System.currentTimeMillis()
 
@@ -319,7 +323,7 @@ object InfrastructureLayer {
         output = results,
         processingTimeMs = processingTime,
         success = true,
-        errors = List.empty
+        errors = List.empty,
       )
     }
 
@@ -376,7 +380,7 @@ object syntax {
      */
     def withLoggingAndMetrics[A](operationName: String)(operation: F[A]): F[A] =
       infrastructure.structuredLogger.logOperation(operationName)(
-        infrastructure.metricsCollector.recordTimer(s"$operationName.duration")(operation)
+        infrastructure.metricsCollector.recordTimer(s"$operationName.duration")(operation),
       )
 
     /**
@@ -389,8 +393,9 @@ object syntax {
      * Load configuration with error handling and logging.
      */
     def loadConfigWithLogging[T: ConfigDecoder](
-      key: String
-    )(implicit S: Sync[F]): F[T] = {
+      key: String,
+    )(implicit S: Sync[F],
+    ): F[T] = {
       import cats.data.Validated
       infrastructure.structuredLogger
         .info(s"Loading config key '$key'") *>

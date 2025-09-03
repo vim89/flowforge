@@ -42,16 +42,14 @@ case class ContractSchema(
   name: NonEmptyString,
   fields: List[FieldContract],
   version: SchemaVersion,
-  metadata: Map[String, String] = Map.empty
-)
+  metadata: Map[String, String] = Map.empty)
 
 case class FieldContract(
   name: NonEmptyString,
   dataType: FieldType,
   nullable: Boolean = false,
   constraints: List[FieldConstraint] = List.empty,
-  description: Option[String] = None
-)
+  description: Option[String] = None)
 
 sealed trait FieldType
 object FieldType {
@@ -118,8 +116,13 @@ object ValidationRules {
     }
 
   def range[A, T: Numeric](
-    fieldName: String
-  )(min: T, max: T)(extract: A => T): ValidationRule[A] = {
+    fieldName: String,
+  )(
+    min: T,
+    max: T,
+  )(
+    extract: A => T,
+  ): ValidationRule[A] = {
     val numeric = implicitly[Numeric[T]]
     new ValidationRule[A] {
       val name = s"range($fieldName, $min, $max)"
@@ -150,8 +153,10 @@ object ValidationRules {
     }
 
   def custom[A](
-    ruleName: String
-  )(validator: A => ValidatedNel[ContractViolation, Unit]): ValidationRule[A] =
+    ruleName: String,
+  )(
+    validator: A => ValidatedNel[ContractViolation, Unit],
+  ): ValidationRule[A] =
     new ValidationRule[A] {
       val name: String                                             = ruleName
       def validate(data: A): ValidatedNel[ContractViolation, Unit] = validator(data)
@@ -174,17 +179,27 @@ object ContractViolation {
     val message = s"Field '$fieldName' cannot be null"
   }
 
-  case class InvalidType(fieldName: String, expected: String, actual: String)
+  case class InvalidType(
+    fieldName: String,
+    expected: String,
+    actual: String)
       extends ContractViolation {
     val message = s"Field '$fieldName' expected type '$expected' but got '$actual'"
   }
 
-  case class OutOfRange(fieldName: String, value: String, min: String, max: String)
+  case class OutOfRange(
+    fieldName: String,
+    value: String,
+    min: String,
+    max: String)
       extends ContractViolation {
     val message = s"Field '$fieldName' value '$value' is outside range [$min, $max]"
   }
 
-  case class PatternMismatch(fieldName: String, value: String, pattern: Pattern)
+  case class PatternMismatch(
+    fieldName: String,
+    value: String,
+    pattern: Pattern)
       extends ContractViolation {
     val message = s"Field '$fieldName' value '$value' does not match pattern '$pattern'"
   }
@@ -197,7 +212,10 @@ object ContractViolation {
     val message = s"Schema violation in field '$fieldName': $details"
   }
 
-  case class CustomViolation(fieldName: String, ruleName: String, details: String)
+  case class CustomViolation(
+    fieldName: String,
+    ruleName: String,
+    details: String)
       extends ContractViolation {
     val message = s"Custom rule '$ruleName' failed for field '$fieldName': $details"
   }
@@ -210,8 +228,7 @@ case class ContractVersion(
   major: Int,
   minor: Int,
   patch: Int,
-  metadata: Map[String, String] = Map.empty
-) {
+  metadata: Map[String, String] = Map.empty) {
   override def toString: String = s"$major.$minor.$patch"
 
   def isCompatibleWith(other: ContractVersion): Boolean =
@@ -263,7 +280,7 @@ class DataContractBuilder[A] {
     val ruleList = NonEmptyList
       .fromList(rules.reverse)
       .getOrElse(
-        NonEmptyList.one(ValidationRules.custom[A]("always_valid")(_ => ().validNel))
+        NonEmptyList.one(ValidationRules.custom[A]("always_valid")(_ => ().validNel)),
       )
 
     new DataContract[A] {
@@ -288,8 +305,7 @@ object StandardContracts {
     invoiceNumber: String,
     customerId: String,
     amount: Double,
-    timestamp: Instant
-  )
+    timestamp: Instant)
 
   implicit val salesDataContract: DataContract[SalesData] =
     DataContract
@@ -302,34 +318,34 @@ object StandardContracts {
               name = NonEmptyString.unsafeFrom("invoiceNumber"),
               dataType = FieldType.StringType,
               nullable = false,
-              constraints = List(FieldConstraint.MinLength(1))
+              constraints = List(FieldConstraint.MinLength(1)),
             ),
             FieldContract(
               name = NonEmptyString.unsafeFrom("customerId"),
               dataType = FieldType.StringType,
               nullable = false,
-              constraints = List(FieldConstraint.MinLength(1))
+              constraints = List(FieldConstraint.MinLength(1)),
             ),
             FieldContract(
               name = NonEmptyString.unsafeFrom("amount"),
               dataType = FieldType.DoubleType,
               nullable = false,
-              constraints = List(FieldConstraint.Range(0.0, Double.MaxValue))
+              constraints = List(FieldConstraint.Range(0.0, Double.MaxValue)),
             ),
             FieldContract(
               name = NonEmptyString.unsafeFrom("timestamp"),
               dataType = FieldType.TimestampType,
-              nullable = false
-            )
+              nullable = false,
+            ),
           ),
-          version = SchemaVersion.unsafeFrom(1)
-        )
+          version = SchemaVersion.unsafeFrom(1),
+        ),
       )
       .withVersion(ContractVersion(1, 0, 0))
       .withRules(
         ValidationRules.nonNull("invoiceNumber")(_.invoiceNumber),
         ValidationRules.nonNull("customerId")(_.customerId),
-        ValidationRules.range("amount")(0.0, Double.MaxValue)(_.amount)
+        ValidationRules.range("amount")(0.0, Double.MaxValue)(_.amount),
         // Note: `unique` needs state; enforce at dataset-level instead
       )
       .build
@@ -342,24 +358,25 @@ object StandardContracts {
 object ContractEnforcement {
 
   def validateDataset[A: DataContract](
-    data: List[A]
+    data: List[A],
   ): ValidatedNel[ContractViolation, List[A]] = {
     val contract = DataContract[A]
     data.traverse(contract.validate)
   }
 
   def enforceContract[A: DataContract](
-    data: List[A]
+    data: List[A],
   ): Either[NonEmptyList[ContractViolation], List[A]] =
     validateDataset(data).toEither
 
   def softValidation[A: DataContract](
-    data: List[A]
+    data: List[A],
   ): (List[A], List[ContractViolation]) = {
     val results = data.map(DataContract[A].validate)
     val valid   = results.collect { case cats.data.Validated.Valid(a) => a }
-    val violations = results.collect { case cats.data.Validated.Invalid(errs) =>
-      errs.toList
+    val violations = results.collect {
+      case cats.data.Validated.Invalid(errs) =>
+        errs.toList
     }.flatten
     (valid, violations)
   }

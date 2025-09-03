@@ -8,7 +8,7 @@ ThisBuild / version      := "0.1.0"
 ThisBuild / scalaVersion := Dependencies.Versions.scala213
 ThisBuild / crossScalaVersions := Seq(
   Dependencies.Versions.scala212,
-  Dependencies.Versions.scala213
+  Dependencies.Versions.scala213,
   // Dependencies.Versions.scala3
 )
 
@@ -19,7 +19,7 @@ resolvers ++= Resolver.sonatypeOssRepos("public") ++ Seq(
   "Apache Releases" at "https://repository.apache.org/content/repositories/releases/",
   "Google Cloud" at "https://maven-central.storage-download.googleapis.com/maven2/",
   "AWS SDK" at "https://repo1.maven.org/maven2/software/amazon/awssdk/",
-  "Spark Packages" at "https://repos.spark-packages.org/"
+  "Spark Packages" at "https://repos.spark-packages.org/",
 )
 
 // Compiler settings for all projects
@@ -38,7 +38,7 @@ val scala3CompilerOptions = Seq(
   "-language:implicitConversions",
   "-Xlint:_,-missing-interpolator",
   "-Ywarn-dead-code",
-  "-Ywarn-value-discard"
+  "-Ywarn-value-discard",
 )
 val scala2CompilerOptions = Seq(
   // "-Xfatal-warnings", Commented to allow deprecation warnings
@@ -50,7 +50,7 @@ val scala2CompilerOptions = Seq(
   "-language:implicitConversions",
   "-Xlint:_,-missing-interpolator",
   "-Ywarn-dead-code",
-  "-Ywarn-value-discard"
+  "-Ywarn-value-discard",
 )
 
 def scalacOptionsForVersion(scalaVersion: String): Seq[String] =
@@ -71,7 +71,7 @@ fork := true
 javaOptions ++= Seq(
   "-Xms2g",
   "-Xmx6g",
-  "-Duser.timezone=UTC"
+  "-Duser.timezone=UTC",
 )
 
 // Test settings
@@ -83,7 +83,7 @@ def moduleProject(name: String): Project =
   Project(name, file(s"modules/$name"))
     .settings(
       moduleName := s"flowforge-$name",
-      libraryDependencies ++= Dependencies.common
+      libraryDependencies ++= Dependencies.common,
     )
 
 // ===== ROOT PROJECT =====
@@ -105,12 +105,12 @@ lazy val root = (project in file("."))
     qualityDeequ,
     templates,
     examples,
-    it
+    it,
   )
   .settings(
     name               := "flowforge",
     publish / skip     := true,
-    crossScalaVersions := Nil
+    crossScalaVersions := Nil,
   )
 
 // ===== INFRASTRUCTURE LAYER (NEW) =====
@@ -119,21 +119,21 @@ lazy val infrastructure = moduleProject("infrastructure")
   .dependsOn(core)
   .settings(
     description := "Complete infrastructure layer with testing framework",
-    libraryDependencies ++= Dependencies.forModule("infrastructure")
+    libraryDependencies ++= Dependencies.forModule("infrastructure"),
   )
 
 // ===== CORE MODULES =====
 lazy val core = moduleProject("core")
   .settings(
     description := "Core abstractions and custom type system",
-    libraryDependencies ++= Dependencies.forModule("core")
+    libraryDependencies ++= Dependencies.forModule("core"),
   )
 
 lazy val contracts = moduleProject("contracts")
   .dependsOn(core)
   .settings(
     description := "Compile-time and runtime data contracts",
-    libraryDependencies ++= Dependencies.forModule("contracts")
+    libraryDependencies ++= Dependencies.forModule("contracts"),
   )
 
 // Sample "contract SDK" to demonstrate typed endpoints without local codegen
@@ -143,14 +143,14 @@ lazy val connectors = moduleProject("connectors")
   .dependsOn(core, contracts)
   .settings(
     description := "Base connector abstractions",
-    libraryDependencies ++= Dependencies.forModule("connectors")
+    libraryDependencies ++= Dependencies.forModule("connectors"),
   )
 
 lazy val connectorsGcs = moduleProject("connectors-gcs")
   .dependsOn(connectors)
   .settings(
     description := "Google Cloud Storage connector",
-    libraryDependencies ++= Dependencies.forModule("connectors-gcs")
+    libraryDependencies ++= Dependencies.forModule("connectors-gcs"),
   )
 
 // ===== ENGINE MODULES =====
@@ -159,7 +159,7 @@ lazy val enginesSpark = moduleProject("engines-spark")
   .dependsOn(core, connectors)
   .settings(
     description := "Apache Spark execution engine",
-    libraryDependencies ++= Dependencies.forModule("engines-spark")
+    libraryDependencies ++= Dependencies.forModule("engines-spark"),
   )
 
 // typed-spark merged into engines-spark under com.flowforge.engines.spark.typed
@@ -168,7 +168,7 @@ lazy val enginesFlink = moduleProject("engines-flink")
   .dependsOn(core, connectors)
   .settings(
     description := "Apache Flink execution engine",
-    libraryDependencies ++= Dependencies.forModule("engines-flink")
+    libraryDependencies ++= Dependencies.forModule("engines-flink"),
   )
 
 // ===== QUALITY MODULES =====
@@ -176,14 +176,14 @@ lazy val quality = moduleProject("quality")
   .dependsOn(core, contracts)
   .settings(
     description := "Data quality framework",
-    libraryDependencies ++= Dependencies.forModule("quality")
+    libraryDependencies ++= Dependencies.forModule("quality"),
   )
 
 lazy val qualityDeequ = moduleProject("quality-deequ")
   .dependsOn(quality, enginesSpark)
   .settings(
     description := "Amazon Deequ integration for data quality",
-    libraryDependencies ++= Dependencies.forModule("quality-deequ")
+    libraryDependencies ++= Dependencies.forModule("quality-deequ"),
   )
 
 // ===== SUPPORT MODULES =====
@@ -191,7 +191,7 @@ lazy val templates = moduleProject("templates")
   .dependsOn(core, contracts, quality)
   .settings(
     description := "Pipeline Giter8 templates and code generation",
-    libraryDependencies ++= Dependencies.forModule("templates")
+    libraryDependencies ++= Dependencies.forModule("templates"),
   )
 
 // ===== EXAMPLE & EXPERIMENTAL MODULES =====
@@ -200,7 +200,7 @@ lazy val examples = moduleProject("examples")
   .settings(
     description := "Example implementations",
     libraryDependencies ++= Dependencies.forModule("examples"),
-    publish / skip := true
+    publish / skip := true,
   )
 
 // CLI for physical schema validation (Delta/Hive/Parquet) for CI usage
@@ -213,10 +213,10 @@ lazy val validationCli = moduleProject("validation-cli")
       "io.circe"         %% "circe-core"   % Dependencies.Versions.circe,
       "io.circe"         %% "circe-parser" % Dependencies.Versions.circe,
       // Bring Spark runtime for standalone CLI jar; keep only spark-sql for Parquet mode
-      "org.apache.spark" %% "spark-sql" % Dependencies.Versions.spark
+      "org.apache.spark" %% "spark-sql" % Dependencies.Versions.spark,
     ),
     Compile / mainClass := Some("com.flowforge.validation.SchemaValidateCli"),
-    publish / skip      := true
+    publish / skip      := true,
   )
 
 // CLI to infer contracts from physical sources and emit .avsc + dq/metadata YAML
@@ -229,10 +229,10 @@ lazy val contractsExtractorCli = moduleProject("contracts-extractor-cli")
       "io.circe"         %% "circe-core"    % Dependencies.Versions.circe,
       "io.circe"         %% "circe-generic" % Dependencies.Versions.circe,
       "io.circe"         %% "circe-parser"  % Dependencies.Versions.circe,
-      "org.apache.spark" %% "spark-sql"     % Dependencies.Versions.spark
+      "org.apache.spark" %% "spark-sql"     % Dependencies.Versions.spark,
     ),
     Compile / mainClass := Some("com.flowforge.contracts.extractor.ContractsExtractorCli"),
-    publish / skip      := true
+    publish / skip      := true,
   )
 
 // ===== ADDITIONAL MODULES =====
@@ -242,7 +242,7 @@ lazy val it = (project in file("integration-tests"))
     name           := "integration-tests",
     description    := "Flowforge Integration tests",
     publish / skip := true,
-    Test / fork    := true
+    Test / fork    := true,
   )
 
 // ===== SBT ALIASES =====

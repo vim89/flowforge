@@ -4,9 +4,9 @@
  * File: modules/core/src/main/scala/com/flowforge/core/patterns/CommonValidations.scala Package:
  * com.flowforge.core.patterns
  *
- * This file provides comprehensive validation patterns and combinators for the FlowForge ecosystem.
- * It enables composable, functional validation with rich error accumulation and recovery strategies
- * using cats ValidatedNel.
+ * This file provides comprehensive validation patterns and combinators for the FlowForge ecosystem. It
+ * enables composable, functional validation with rich error accumulation and recovery strategies using cats
+ * ValidatedNel.
  *
  * Design Patterns Applied:
  *   - Combinator Pattern: Small, composable validation functions
@@ -35,14 +35,23 @@
  * Usage Examples:
  * ```scala
  * // Compositional validation with error accumulation
- * case class User(name: String, email: String, age: Int)
+ * case class User(
+ *   name: String,
+ *   email: String,
+ *   age: Int)
  *
  * val validateUser: User => ValidationResult[User] = { user =>
  *   (
  *     validateNonEmpty("name", user.name),
  *     validateEmail("email", user.email),
- *     validateRange("age", user.age, 0, 150)
- *   ).mapN((_, _, _) => user)
+ *     validateRange("age", user.age, 0, 150),
+ *   ).mapN(
+ *     (
+ *       _,
+ *       _,
+ *       _,
+ *     ) => user,
+ *   )
  * }
  *
  * // Data quality validation with business rules
@@ -90,15 +99,20 @@ object CommonValidations {
   case class UserValidation(
     name: String,
     email: String,
-    age: Int
-  )
+    age: Int)
 
   val validateUser: UserValidation => ConfigValidationResult[UserValidation] = { user =>
     (
       nonEmpty("name", user.name),
       email("email", user.email),
-      intInRange("age", user.age, 0, 150)
-    ).mapN((_, _, _) => user)
+      intInRange("age", user.age, 0, 150),
+    ).mapN(
+      (
+        _,
+        _,
+        _,
+      ) => user,
+    )
   }
 
   /**
@@ -111,7 +125,14 @@ object CommonValidations {
     val sinkValidation        = config.sink.validNel        // Assume valid for now
 
     (nameValidation, environmentValidation, sourceValidation, sinkValidation)
-      .mapN((_, _, _, _) => config)
+      .mapN(
+        (
+          _,
+          _,
+          _,
+          _,
+        ) => config,
+      )
   }
 
   /**
@@ -119,14 +140,14 @@ object CommonValidations {
    */
   def validateDataQuality[A](
     data: List[A],
-    rules: QualityRules
+    rules: QualityRules,
   ): QualityValidationResult[List[A]] =
     // Simplified quality validation - in practice would be much more sophisticated
     if (data.nonEmpty) {
       valid(data)
     } else {
       val violation = QualityConstraint.NotNull(
-        FieldName.unsafeFrom("data")
+        FieldName.unsafeFrom("data"),
       )
       invalid(violation).asInstanceOf[QualityValidationResult[List[A]]]
     }
@@ -136,7 +157,7 @@ object CommonValidations {
    */
   def validateSchemaCompatibility(
     source: DataSchema,
-    target: DataSchema
+    target: DataSchema,
   ): SchemaValidationResult =
     SchemaValidation.compatible(source, target)
 }

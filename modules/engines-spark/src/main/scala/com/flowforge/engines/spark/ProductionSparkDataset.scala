@@ -1,24 +1,24 @@
 package com.flowforge.engines.spark
 
-import com.flowforge.core.algebra.{DataAlgebra, DataDecoder, DataEncoder, EncodedData}
+import com.flowforge.core.algebra.{ DataAlgebra, DataDecoder, DataEncoder, EncodedData }
 import com.flowforge.core.types._
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+import org.apache.spark.sql.{ DataFrame, Dataset, SparkSession }
 
 import java.time.Instant
 
 /**
- * Production-ready Spark dataset wrapper that maintains both Spark DataFrame
- * and in-memory data for hybrid operations.
- * 
- * This bridges the gap between FlowForge's functional interface and Spark's
- * distributed computation model while maintaining type safety.
+ * Production-ready Spark dataset wrapper that maintains both Spark DataFrame and in-memory data for hybrid
+ * operations.
+ *
+ * This bridges the gap between FlowForge's functional interface and Spark's distributed computation model
+ * while maintaining type safety.
  */
 final case class ProductionSparkDataset[A](
   data: List[A],
   sparkDataFrame: DataFrame,
   schema: DataSchema,
-  metadata: DataAlgebra.DatasetMetadata
-) extends DataAlgebra.Dataset[A] {
+  metadata: DataAlgebra.DatasetMetadata)
+    extends DataAlgebra.Dataset[A] {
 
   /**
    * Get record count from Spark DataFrame for accuracy
@@ -33,10 +33,11 @@ final case class ProductionSparkDataset[A](
   /**
    * Convert to Spark Dataset with encoder for type-safe operations
    */
-  def asSparkDataset[T](implicit encoder: org.apache.spark.sql.Encoder[T]): Dataset[T] = {
+  def asSparkDataset[T](implicit encoder: org.apache.spark.sql.Encoder[T]): Dataset[T] =
     // This would require proper encoding implementation in production
-    throw new UnsupportedOperationException("Type-safe Spark Dataset conversion requires encoder implementation")
-  }
+    throw new UnsupportedOperationException(
+      "Type-safe Spark Dataset conversion requires encoder implementation",
+    )
 
   /**
    * Cache the underlying DataFrame for performance
@@ -61,30 +62,27 @@ final case class ProductionSparkDataset[A](
     val repartitionedDf = sparkDataFrame.repartition(numPartitions)
     copy(
       sparkDataFrame = repartitionedDf,
-      metadata = metadata.copy(partitions = numPartitions)
+      metadata = metadata.copy(partitions = numPartitions),
     )
   }
 
   /**
    * Show DataFrame for debugging (delegates to Spark)
    */
-  def show(numRows: Int = 20, truncate: Boolean = true): Unit = {
+  def show(numRows: Int = 20, truncate: Boolean = true): Unit =
     sparkDataFrame.show(numRows, truncate)
-  }
 
   /**
    * Write DataFrame using Spark's native writer
    */
-  def writeParquet(path: String): Unit = {
+  def writeParquet(path: String): Unit =
     sparkDataFrame.write.mode("overwrite").parquet(path)
-  }
 
   /**
    * Write DataFrame as Delta table
    */
-  def writeDelta(path: String): Unit = {
+  def writeDelta(path: String): Unit =
     sparkDataFrame.write.format("delta").mode("overwrite").save(path)
-  }
 }
 
 object ProductionSparkDataset {
@@ -94,7 +92,7 @@ object ProductionSparkDataset {
    */
   def fromDataFrame[A: DataDecoder](
     df: DataFrame,
-    spark: SparkSession
+    spark: SparkSession,
   ): ProductionSparkDataset[A] = {
     // Convert DataFrame to List[A] for compatibility
     val jsonStrings = df.toJSON.collect().toList
@@ -104,16 +102,18 @@ object ProductionSparkDataset {
     }
 
     val schema = DataSchema(
-      fields = df.schema.fields.map(f => 
-        StructField(
-          name = com.flowforge.core.types.RefinedTypes.FieldName.unsafeFrom(f.name),
-          dataType = mapSparkTypeToFlowForgeType(f.dataType),
-          nullable = f.nullable
+      fields = df.schema.fields
+        .map(f =>
+          StructField(
+            name = com.flowforge.core.types.RefinedTypes.FieldName.unsafeFrom(f.name),
+            dataType = mapSparkTypeToFlowForgeType(f.dataType),
+            nullable = f.nullable,
+          ),
         )
-      ).toList,
+        .toList,
       version = com.flowforge.core.types.RefinedTypes.SchemaVersion.unsafeFrom(1),
       metadata = Map("spark_schema" -> df.schema.toString),
-      createdAt = Instant.now()
+      createdAt = Instant.now(),
     )
 
     val metadata = DataAlgebra.DatasetMetadata(
@@ -121,7 +121,7 @@ object ProductionSparkDataset {
       schema = schema,
       partitions = df.rdd.getNumPartitions,
       createdAt = Instant.now(),
-      source = None
+      source = None,
     )
 
     ProductionSparkDataset(decoded, df, schema, metadata)
@@ -130,36 +130,45 @@ object ProductionSparkDataset {
   /**
    * Map Spark DataType to FlowForge DataType
    */
-  private def mapSparkTypeToFlowForgeType(sparkType: org.apache.spark.sql.types.DataType): DataType = {
-    import org.apache.spark.sql.types.{DataType => SparkDataType, _}
+  private def mapSparkTypeToFlowForgeType(
+    sparkType: org.apache.spark.sql.types.DataType,
+  ): DataType = {
+    import org.apache.spark.sql.types.{ DataType => SparkDataType, _ }
     sparkType match {
-      case StringType     => DataType.String
-      case IntegerType    => DataType.Integer
-      case LongType       => DataType.Long
-      case DoubleType     => DataType.Double
-      case BooleanType    => DataType.Boolean
-      case TimestampType  => DataType.Timestamp
-      case DateType       => DataType.Date
-      case FloatType      => DataType.Float
-      case ByteType       => DataType.Byte
-      case ShortType      => DataType.Short
-      case BinaryType     => DataType.Binary
-      case dt: DecimalType => DataType.Decimal(
-        eu.timepit.refined.types.numeric.PosInt.unsafeFrom(dt.precision),
-        eu.timepit.refined.types.numeric.NonNegInt.unsafeFrom(dt.scale)
-      )
+      case StringType    => DataType.String
+      case IntegerType   => DataType.Integer
+      case LongType      => DataType.Long
+      case DoubleType    => DataType.Double
+      case BooleanType   => DataType.Boolean
+      case TimestampType => DataType.Timestamp
+      case DateType      => DataType.Date
+      case FloatType     => DataType.Float
+      case ByteType      => DataType.Byte
+      case ShortType     => DataType.Short
+      case BinaryType    => DataType.Binary
+      case dt: DecimalType =>
+        DataType.Decimal(
+          eu.timepit.refined.types.numeric.PosInt.unsafeFrom(dt.precision),
+          eu.timepit.refined.types.numeric.NonNegInt.unsafeFrom(dt.scale),
+        )
       case ArrayType(elementType, _) => DataType.Array(mapSparkTypeToFlowForgeType(elementType))
-      case MapType(keyType, valueType, _) => DataType.Map(
-        mapSparkTypeToFlowForgeType(keyType),
-        mapSparkTypeToFlowForgeType(valueType)
-      )
-      case StructType(fields) => DataType.Struct(
-        fields.map(f => com.flowforge.core.types.StructField(
-          name = com.flowforge.core.types.RefinedTypes.FieldName.unsafeFrom(f.name),
-          dataType = mapSparkTypeToFlowForgeType(f.dataType),
-          nullable = f.nullable
-        )).toList
-      )
+      case MapType(keyType, valueType, _) =>
+        DataType.Map(
+          mapSparkTypeToFlowForgeType(keyType),
+          mapSparkTypeToFlowForgeType(valueType),
+        )
+      case StructType(fields) =>
+        DataType.Struct(
+          fields
+            .map(f =>
+              com.flowforge.core.types.StructField(
+                name = com.flowforge.core.types.RefinedTypes.FieldName.unsafeFrom(f.name),
+                dataType = mapSparkTypeToFlowForgeType(f.dataType),
+                nullable = f.nullable,
+              ),
+            )
+            .toList,
+        )
       case _ => DataType.String // Default fallback
     }
   }
@@ -169,31 +178,33 @@ object ProductionSparkDataset {
    */
   def fromData[A: DataEncoder](
     data: List[A],
-    spark: SparkSession
+    spark: SparkSession,
   ): ProductionSparkDataset[A] = {
     import spark.implicits._
-    
+
     // Convert data to JSON strings and create DataFrame
     val jsonStrings = data.map { a =>
       DataEncoder[A].encode(a, DataFormat.JSON) match {
         case Right(encoded) => new String(encoded.data, "UTF-8")
-        case Left(_) => "{}" // Handle encoding failures gracefully
+        case Left(_)        => "{}" // Handle encoding failures gracefully
       }
     }
-    
+
     val df = spark.read.json(spark.createDataset(jsonStrings).rdd)
-    
+
     val schema = DataSchema(
-      fields = df.schema.fields.map(f => 
-        StructField(
-          name = com.flowforge.core.types.RefinedTypes.FieldName.unsafeFrom(f.name),
-          dataType = mapSparkTypeToFlowForgeType(f.dataType),
-          nullable = f.nullable
+      fields = df.schema.fields
+        .map(f =>
+          StructField(
+            name = com.flowforge.core.types.RefinedTypes.FieldName.unsafeFrom(f.name),
+            dataType = mapSparkTypeToFlowForgeType(f.dataType),
+            nullable = f.nullable,
+          ),
         )
-      ).toList,
+        .toList,
       version = com.flowforge.core.types.RefinedTypes.SchemaVersion.unsafeFrom(1),
       metadata = Map("created_from" -> "in_memory_data"),
-      createdAt = Instant.now()
+      createdAt = Instant.now(),
     )
 
     val metadata = DataAlgebra.DatasetMetadata(
@@ -201,7 +212,7 @@ object ProductionSparkDataset {
       schema = schema,
       partitions = df.rdd.getNumPartitions,
       createdAt = Instant.now(),
-      source = None
+      source = None,
     )
 
     ProductionSparkDataset(data, df, schema, metadata)

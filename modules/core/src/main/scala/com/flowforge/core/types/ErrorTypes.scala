@@ -4,9 +4,9 @@
  * File: modules/core/src/main/scala/com/flowforge/core/types/ErrorTypes.scala Package:
  * com.flowforge.core.types
  *
- * This file defines the complete error hierarchy for the FlowForge ecosystem. Using Scala's sealed
- * trait ADT pattern, we create a comprehensive, type-safe error model that enables precise error
- * handling and recovery strategies.
+ * This file defines the complete error hierarchy for the FlowForge ecosystem. Using Scala's sealed trait ADT
+ * pattern, we create a comprehensive, type-safe error model that enables precise error handling and recovery
+ * strategies.
  *
  * Design Patterns Applied:
  *   - ADT Pattern: Sealed hierarchy for exhaustive pattern matching
@@ -66,8 +66,8 @@ import scala.concurrent.duration.FiniteDuration
 /**
  * Root error type for all FlowForge errors.
  *
- * This sealed trait ensures that all errors in the FlowForge ecosystem are part of a controlled
- * hierarchy, enabling exhaustive pattern matching and type-safe error handling strategies.
+ * This sealed trait ensures that all errors in the FlowForge ecosystem are part of a controlled hierarchy,
+ * enabling exhaustive pattern matching and type-safe error handling strategies.
  *
  * The hierarchy is organized by error category:
  *   - ValidationError: Data validation and schema violations
@@ -214,8 +214,8 @@ object ErrorSeverity {
 // ===============================
 
 /**
- * Errors related to data validation, schema compliance, and data quality. These errors typically
- * indicate problems with input data or contract violations.
+ * Errors related to data validation, schema compliance, and data quality. These errors typically indicate
+ * problems with input data or contract violations.
  */
 sealed trait ValidationError extends FlowForgeError {
   val category: ErrorCategory = ErrorCategory.Validation
@@ -237,13 +237,13 @@ object ValidationError {
     context: Map[String, Any] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
-    errorId: String = UUID.randomUUID().toString
-  ) extends ValidationError {
+    errorId: String = UUID.randomUUID().toString)
+      extends ValidationError {
 
     val recoveryHints: List[String] = List(
       "Check data source schema compatibility",
       "Update data transformation logic",
-      "Review schema evolution settings"
+      "Review schema evolution settings",
     )
 
     def withContext(additionalContext: Map[String, Any]): SchemaViolation =
@@ -265,13 +265,13 @@ object ValidationError {
     context: Map[String, Any] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
-    errorId: String = UUID.randomUUID().toString
-  ) extends ValidationError {
+    errorId: String = UUID.randomUUID().toString)
+      extends ValidationError {
 
     val recoveryHints: List[String] = List(
       "Review data quality rules",
       "Check upstream data sources",
-      "Consider data cleansing steps"
+      "Consider data cleansing steps",
     )
 
     def withContext(additionalContext: Map[String, Any]): QualityViolation =
@@ -292,13 +292,13 @@ object ValidationError {
     context: Map[String, Any] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
-    errorId: String = UUID.randomUUID().toString
-  ) extends ValidationError {
+    errorId: String = UUID.randomUUID().toString)
+      extends ValidationError {
 
     val recoveryHints: List[String] = List(
       "Check data extraction logic",
       "Verify source data completeness",
-      "Review field mapping configuration"
+      "Review field mapping configuration",
     )
 
     def withContext(additionalContext: Map[String, Any]): MissingRequiredField =
@@ -321,13 +321,13 @@ object ValidationError {
     context: Map[String, Any] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
-    errorId: String = UUID.randomUUID().toString
-  ) extends ValidationError {
+    errorId: String = UUID.randomUUID().toString)
+      extends ValidationError {
 
     val recoveryHints: List[String] = List(
       "Review data transformation logic",
       "Check source data types",
-      "Update type conversion rules"
+      "Update type conversion rules",
     )
 
     def withContext(additionalContext: Map[String, Any]): TypeMismatch =
@@ -343,8 +343,8 @@ object ValidationError {
 // ===============================
 
 /**
- * Errors related to system resources, infrastructure, and runtime issues. These errors typically
- * indicate problems with the underlying platform.
+ * Errors related to system resources, infrastructure, and runtime issues. These errors typically indicate
+ * problems with the underlying platform.
  */
 sealed trait SystemError extends FlowForgeError {
   val category: ErrorCategory = ErrorCategory.System
@@ -353,8 +353,7 @@ sealed trait SystemError extends FlowForgeError {
 object SystemError {
 
   /**
-   * Resource exhaustion error. Occurs when system runs out of memory, disk space, or other
-   * resources.
+   * Resource exhaustion error. Occurs when system runs out of memory, disk space, or other resources.
    */
   case class ResourceExhausted(
     resource: String,
@@ -366,14 +365,14 @@ object SystemError {
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString,
-    isRetryable: Boolean = true
-  ) extends SystemError {
+    isRetryable: Boolean = true)
+      extends SystemError {
 
     val recoveryHints: List[String] = List(
       "Scale up resources",
       "Optimize memory usage",
       "Implement backpressure",
-      "Retry after delay"
+      "Retry after delay",
     )
 
     def withContext(additionalContext: Map[String, Any]): ResourceExhausted =
@@ -395,14 +394,14 @@ object SystemError {
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString,
-    isRetryable: Boolean = true
-  ) extends SystemError {
+    isRetryable: Boolean = true)
+      extends SystemError {
 
     val recoveryHints: List[String] = List(
       "Check service health",
       "Retry with exponential backoff",
       "Use circuit breaker pattern",
-      "Fall back to alternative service"
+      "Fall back to alternative service",
     )
 
     def withContext(additionalContext: Map[String, Any]): ServiceUnavailable =
@@ -425,14 +424,14 @@ object SystemError {
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString,
-    isRetryable: Boolean = true
-  ) extends SystemError {
+    isRetryable: Boolean = true)
+      extends SystemError {
 
     val recoveryHints: List[String] = List(
       "Increase timeout configuration",
       "Optimize operation performance",
       "Implement operation cancellation",
-      "Retry with circuit breaker"
+      "Retry with circuit breaker",
     )
 
     def withContext(additionalContext: Map[String, Any]): OperationTimeout =
@@ -448,8 +447,8 @@ object SystemError {
 // ===============================
 
 /**
- * Errors related to business logic and domain rules. These errors indicate violations of business
- * constraints or policies.
+ * Errors related to business logic and domain rules. These errors indicate violations of business constraints
+ * or policies.
  */
 sealed trait BusinessError extends FlowForgeError {
   val category: ErrorCategory = ErrorCategory.Business
@@ -459,8 +458,8 @@ sealed trait BusinessError extends FlowForgeError {
 object BusinessError {
 
   /**
-   * Data contract violation. Occurs when data doesn't meet agreed-upon contracts between producers
-   * and consumers.
+   * Data contract violation. Occurs when data doesn't meet agreed-upon contracts between producers and
+   * consumers.
    */
   case class DataContractViolation(
     contractName: String,
@@ -471,14 +470,14 @@ object BusinessError {
     context: Map[String, Any] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
-    errorId: String = UUID.randomUUID().toString
-  ) extends BusinessError {
+    errorId: String = UUID.randomUUID().toString)
+      extends BusinessError {
 
     val recoveryHints: List[String] = List(
       "Review data contract specifications",
       "Contact data producer team",
       "Update contract requirements",
-      "Implement data transformation"
+      "Implement data transformation",
     )
 
     def withContext(additionalContext: Map[String, Any]): DataContractViolation =
@@ -501,14 +500,14 @@ object BusinessError {
     context: Map[String, Any] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
-    errorId: String = UUID.randomUUID().toString
-  ) extends BusinessError {
+    errorId: String = UUID.randomUUID().toString)
+      extends BusinessError {
 
     val recoveryHints: List[String] = List(
       "Review SLA requirements",
       "Optimize pipeline performance",
       "Scale system resources",
-      "Update SLA agreements"
+      "Update SLA agreements",
     )
 
     def withContext(additionalContext: Map[String, Any]): SlaViolation =
@@ -537,14 +536,14 @@ object DataProcessingError {
     context: Map[String, Any] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
-    errorId: String = UUID.randomUUID().toString
-  ) extends DataProcessingError {
+    errorId: String = UUID.randomUUID().toString)
+      extends DataProcessingError {
 
     val recoveryHints: List[String] = List(
       "Check data transformation logic",
       "Review computation algorithms",
       "Retry processing step",
-      "Implement error handling in pipeline"
+      "Implement error handling in pipeline",
     )
 
     def withContext(additionalContext: Map[String, Any]): ProcessingFailure =
@@ -574,8 +573,8 @@ object FlowForgeError {
     context: Map[String, Any] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
-    errorId: String = UUID.randomUUID().toString
-  ) extends FlowForgeError {
+    errorId: String = UUID.randomUUID().toString)
+      extends FlowForgeError {
 
     val category: ErrorCategory = ErrorCategory.Validation
     val isRetryable: Boolean    = false
@@ -583,7 +582,7 @@ object FlowForgeError {
     val recoveryHints: List[String] = List(
       "Check input validation logic",
       "Verify data constraints",
-      "Review validation rules"
+      "Review validation rules",
     )
 
     def withContext(additionalContext: Map[String, Any]): ValidationError =
@@ -603,8 +602,8 @@ object FlowForgeError {
     context: Map[String, Any] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
-    errorId: String = UUID.randomUUID().toString
-  ) extends FlowForgeError {
+    errorId: String = UUID.randomUUID().toString)
+      extends FlowForgeError {
 
     val category: ErrorCategory = ErrorCategory.Configuration
     val isRetryable: Boolean    = false
@@ -612,7 +611,7 @@ object FlowForgeError {
     val recoveryHints: List[String] = List(
       "Check configuration file syntax",
       "Verify required configuration keys",
-      "Review configuration documentation"
+      "Review configuration documentation",
     )
 
     def withContext(additionalContext: Map[String, Any]): ConfigurationError =
@@ -623,8 +622,8 @@ object FlowForgeError {
   }
 
   /**
-   * Create a composite error from multiple errors. Useful for aggregating validation errors or
-   * batch processing errors.
+   * Create a composite error from multiple errors. Useful for aggregating validation errors or batch
+   * processing errors.
    */
   case class CompositeError(
     errors: NonEmptyList[FlowForgeError],
@@ -633,8 +632,8 @@ object FlowForgeError {
     context: Map[String, Any] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
-    errorId: String = UUID.randomUUID().toString
-  ) extends FlowForgeError {
+    errorId: String = UUID.randomUUID().toString)
+      extends FlowForgeError {
 
     val category: ErrorCategory = ErrorCategory.Validation
     val isRetryable: Boolean    = errors.exists(_.isRetryable)
@@ -642,7 +641,7 @@ object FlowForgeError {
     val recoveryHints: List[String] = List(
       "Resolve individual errors",
       "Check error aggregation logic",
-      "Review batch processing configuration"
+      "Review batch processing configuration",
     )
 
     def withContext(additionalContext: Map[String, Any]): CompositeError =
@@ -657,13 +656,13 @@ object FlowForgeError {
    */
   def fromThrowable(
     throwable: Throwable,
-    context: Map[String, Any] = Map.empty
+    context: Map[String, Any] = Map.empty,
   ): SystemError.ServiceUnavailable =
     SystemError.ServiceUnavailable(
       serviceName = "unknown-service",
       message = throwable.getMessage,
       context = context,
-      cause = Some(throwable)
+      cause = Some(throwable),
     )
 
   /**
@@ -671,7 +670,7 @@ object FlowForgeError {
    */
   def missingField(
     fieldName: String,
-    recordId: Option[String] = None
+    recordId: Option[String] = None,
   ): MissingRequiredField =
     MissingRequiredField(fieldName, recordId)
 
@@ -681,7 +680,7 @@ object FlowForgeError {
   def schemaViolation(
     field: String,
     expected: String,
-    actual: String
+    actual: String,
   ): SchemaViolation = SchemaViolation(field, expected, actual)
 
   /**

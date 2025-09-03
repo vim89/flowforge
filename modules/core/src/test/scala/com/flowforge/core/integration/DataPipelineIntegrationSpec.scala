@@ -1,8 +1,8 @@
 /**
  * Integration tests for complete data pipeline scenarios.
  *
- * These tests verify that different FlowForge components work together correctly in realistic data
- * processing scenarios.
+ * These tests verify that different FlowForge components work together correctly in realistic data processing
+ * scenarios.
  */
 
 package com.flowforge.core.integration
@@ -22,9 +22,18 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
   implicit val es = catsEffectSystemInstance
 
   // Mock data types for testing
-  case class RawData(id: String, value: Double, timestamp: Long)
-  case class ProcessedData(id: String, normalizedValue: Double, category: String)
-  case class AggregatedData(category: String, totalValue: Double, count: Int)
+  case class RawData(
+    id: String,
+    value: Double,
+    timestamp: Long)
+  case class ProcessedData(
+    id: String,
+    normalizedValue: Double,
+    category: String)
+  case class AggregatedData(
+    category: String,
+    totalValue: Double,
+    count: Int)
 
   describe("Complete Data Pipeline Integration") {
 
@@ -36,7 +45,7 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
           RawData("2", 250.0, System.currentTimeMillis() - 1800000),
           RawData("3", 75.0, System.currentTimeMillis() - 900000),
           RawData("4", 400.0, System.currentTimeMillis()),
-          RawData("5", 180.0, System.currentTimeMillis() - 2700000)
+          RawData("5", 180.0, System.currentTimeMillis() - 2700000),
         )
       }
 
@@ -44,7 +53,7 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
       def transformData(raw: RawData): IO[Option[ProcessedData]] = es.delay {
         if (raw.value > 0) {
           val normalizedValue = math.min(raw.value / 500.0, 1.0) // Normalize to [0, 1]
-          val category = if (raw.value > 200) "high" else if (raw.value > 100) "medium" else "low"
+          val category        = if (raw.value > 200) "high" else if (raw.value > 100) "medium" else "low"
           Some(ProcessedData(raw.id, normalizedValue, category))
         } else None // Filter out invalid data
       }
@@ -53,12 +62,13 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
       def aggregateData(processed: List[ProcessedData]): IO[List[AggregatedData]] = es.delay {
         processed
           .groupBy(_.category)
-          .map { case (category, items) =>
-            AggregatedData(
-              category = category,
-              totalValue = items.map(_.normalizedValue).sum,
-              count = items.length
-            )
+          .map {
+            case (category, items) =>
+              AggregatedData(
+                category = category,
+                totalValue = items.map(_.normalizedValue).sum,
+                count = items.length,
+              )
           }
           .toList
           .sortBy(_.category)
@@ -95,23 +105,24 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
 
       } yield (raw, processed, aggregated, result)
 
-      pipeline.map { case (raw, processed, aggregated, result) =>
-        raw should have length 5
-        processed should have length 5 // All data should be valid
-        aggregated should not be empty
-        result should include("Successfully loaded")
+      pipeline.map {
+        case (raw, processed, aggregated, result) =>
+          raw should have length 5
+          processed should have length 5 // All data should be valid
+          aggregated should not be empty
+          result should include("Successfully loaded")
 
-        // Verify data transformations
-        processed.foreach { p =>
-          p.normalizedValue should be >= 0.0
-          p.normalizedValue should be <= 1.0
-          // p.category should be oneOf ("low", "medium", "high")
-        }
+          // Verify data transformations
+          processed.foreach { p =>
+            p.normalizedValue should be >= 0.0
+            p.normalizedValue should be <= 1.0
+            // p.category should be oneOf ("low", "medium", "high")
+          }
 
-        // Verify aggregations
-        val totalOriginalCount   = processed.length
-        val totalAggregatedCount = aggregated.map(_.count).sum
-        totalAggregatedCount should equal(totalOriginalCount)
+          // Verify aggregations
+          val totalOriginalCount   = processed.length
+          val totalAggregatedCount = aggregated.map(_.count).sum
+          totalAggregatedCount should equal(totalOriginalCount)
       }
     }
 
@@ -120,11 +131,11 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
 
       val failingPipeline = es
         .bracket(
-          acquire = es.delay("database-connection")
+          acquire = es.delay("database-connection"),
         )(
-          use = _ => es.raiseError(new RuntimeException("Pipeline processing failed"))
+          use = _ => es.raiseError(new RuntimeException("Pipeline processing failed")),
         )(
-          release = _ => es.delay { cleanupCalled = true }
+          release = _ => es.delay { cleanupCalled = true },
         )
         .attempt
 
@@ -161,21 +172,20 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
         operation: String,
         inputIds: List[String],
         outputIds: List[String],
-        timestamp: Long
-      )
+        timestamp: Long)
 
       var lineageRecords = List.empty[LineageRecord]
 
       def recordLineage(
         operation: String,
         inputIds: List[String],
-        outputIds: List[String]
+        outputIds: List[String],
       ): IO[Unit] = es.delay {
         lineageRecords = LineageRecord(
           operation,
           inputIds,
           outputIds,
-          System.currentTimeMillis()
+          System.currentTimeMillis(),
         ) :: lineageRecords
       }
 
@@ -196,18 +206,19 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
 
       } yield (finalResult, lineageRecords.reverse)
 
-      pipelineWithLineage.map { case (result, lineage) =>
-        result should equal("final-output-aggregated-3-records")
-        lineage should have length 3
+      pipelineWithLineage.map {
+        case (result, lineage) =>
+          result should equal("final-output-aggregated-3-records")
+          lineage should have length 3
 
-        lineage(0).operation should equal("transform")
-        lineage(0).inputIds should equal(input)
+          lineage(0).operation should equal("transform")
+          lineage(0).inputIds should equal(input)
 
-        lineage(1).operation should equal("aggregate")
-        lineage(1).inputIds.length should equal(3)
+          lineage(1).operation should equal("aggregate")
+          lineage(1).inputIds.length should equal(3)
 
-        lineage(2).operation should equal("output")
-        lineage(2).outputIds should have length 1
+          lineage(2).operation should equal("output")
+          lineage(2).outputIds should have length 1
       }
     }
 
@@ -239,13 +250,13 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
       val validData = List(
         ProcessedData("1", 0.5, "medium"),
         ProcessedData("2", 0.8, "high"),
-        ProcessedData("3", 0.2, "low")
+        ProcessedData("3", 0.2, "low"),
       )
 
       val invalidData = List(
         ProcessedData("", 0.5, "medium"),  // Invalid: empty ID
         ProcessedData("2", 1.5, "high"),   // Invalid: out of range
-        ProcessedData("3", 0.2, "invalid") // Invalid: bad category
+        ProcessedData("3", 0.2, "invalid"), // Invalid: bad category
       )
 
       val validationTest = for {
@@ -253,15 +264,16 @@ class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Mat
         invalidResult <- validateDataQuality(invalidData)
       } yield (validResult, invalidResult)
 
-      validationTest.map { case (valid, invalid) =>
-        valid.passed should be(true)
-        valid.errors should be(empty)
+      validationTest.map {
+        case (valid, invalid) =>
+          valid.passed should be(true)
+          valid.errors should be(empty)
 
-        invalid.passed should be(false)
-        invalid.errors should have length 3
-        invalid.errors should contain("Found records with empty IDs")
-        invalid.errors should contain("Found 1 records with invalid normalized values")
-        invalid.errors should contain("Found records with invalid categories")
+          invalid.passed should be(false)
+          invalid.errors should have length 3
+          invalid.errors should contain("Found records with empty IDs")
+          invalid.errors should contain("Found 1 records with invalid normalized values")
+          invalid.errors should contain("Found records with invalid categories")
       }
     }
   }

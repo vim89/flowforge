@@ -66,8 +66,8 @@ object StructuredLogger {
 
   private class ContextualStructuredLogger[F[_]: Sync](
     underlying: StructuredLogger[F],
-    contextMap: Map[String, String]
-  ) extends StructuredLogger[F] {
+    contextMap: Map[String, String])
+      extends StructuredLogger[F] {
 
     def info(msg: String): F[Unit] = underlying.info(msg, contextMap)
     def info(msg: String, context: Map[String, String]): F[Unit] =

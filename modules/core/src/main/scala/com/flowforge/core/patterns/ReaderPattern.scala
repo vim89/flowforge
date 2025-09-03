@@ -15,9 +15,9 @@ import scala.concurrent.duration.FiniteDuration
 /**
  * 🚀 **FlowForge Reader Pattern - Functional Dependency Injection**
  *
- * This module implements the Reader monad pattern for dependency injection in FlowForge pipelines.
- * It integrates seamlessly with the existing Kleisli-based pipeline architecture to provide clean,
- * composable DI.
+ * This module implements the Reader monad pattern for dependency injection in FlowForge pipelines. It
+ * integrates seamlessly with the existing Kleisli-based pipeline architecture to provide clean, composable
+ * DI.
  *
  * **Key Benefits:**
  *   - **Type-Safe DI**: All dependencies resolved at compile time
@@ -54,8 +54,7 @@ object ReaderPattern {
     metrics: MetricsCollector[F],
     auditService: AuditService[F],
     secretManager: SecretManager[F],
-    resourceManager: ResourceManager[F]
-  )
+    resourceManager: ResourceManager[F])
 
   /**
    * Database-specific dependencies
@@ -63,8 +62,7 @@ object ReaderPattern {
   final case class DatabaseDependencies[F[_]](
     connectionPool: ConnectionPool[F],
     transactionManager: TransactionManager[F],
-    migrationService: MigrationService[F]
-  )
+    migrationService: MigrationService[F])
 
   /**
    * Cloud services dependencies
@@ -73,8 +71,7 @@ object ReaderPattern {
     storageService: StorageService[F],
     queueService: QueueService[F],
     notificationService: NotificationService[F],
-    monitoringService: MonitoringService[F]
-  )
+    monitoringService: MonitoringService[F])
 
   /**
    * Complete application context integrating with FlowForge types
@@ -85,8 +82,7 @@ object ReaderPattern {
     cloud: Option[CloudDependencies[F]] = None,
     environment: Environment,
     requestId: RequestId,
-    timestamp: Instant
-  ) {
+    timestamp: Instant) {
 
     /**
      * Create a child context with new request ID
@@ -152,9 +148,21 @@ object ReaderPattern {
    * Metrics collection service
    */
   trait MetricsCollector[F[_]] {
-    def counter(name: String, value: Long, tags: Map[String, String] = Map.empty): F[Unit]
-    def gauge(name: String, value: Double, tags: Map[String, String] = Map.empty): F[Unit]
-    def histogram(name: String, value: Double, tags: Map[String, String] = Map.empty): F[Unit]
+    def counter(
+      name: String,
+      value: Long,
+      tags: Map[String, String] = Map.empty,
+    ): F[Unit]
+    def gauge(
+      name: String,
+      value: Double,
+      tags: Map[String, String] = Map.empty,
+    ): F[Unit]
+    def histogram(
+      name: String,
+      value: Double,
+      tags: Map[String, String] = Map.empty,
+    ): F[Unit]
     def timer[A](name: String, tags: Map[String, String] = Map.empty)(operation: F[A]): F[A]
   }
 
@@ -162,8 +170,16 @@ object ReaderPattern {
    * Audit service for compliance and tracing
    */
   trait AuditService[F[_]] {
-    def recordAccess(resource: String, action: String, user: String): F[Unit]
-    def recordDataChange(table: String, operation: String, recordCount: Long): F[Unit]
+    def recordAccess(
+      resource: String,
+      action: String,
+      user: String,
+    ): F[Unit]
+    def recordDataChange(
+      table: String,
+      operation: String,
+      recordCount: Long,
+    ): F[Unit]
     def recordPipelineExecution(pipelineId: String, status: String): F[Unit]
     def queryAuditLog(query: AuditQuery): F[List[AuditRecord]]
   }
@@ -208,13 +224,21 @@ object ReaderPattern {
   }
 
   trait NotificationService[F[_]] {
-    def sendEmail(to: List[String], subject: String, body: String): F[Unit]
+    def sendEmail(
+      to: List[String],
+      subject: String,
+      body: String,
+    ): F[Unit]
     def sendSlack(channel: String, message: String): F[Unit]
     def sendWebhook(url: String, payload: Map[String, Any]): F[Unit]
   }
 
   trait MonitoringService[F[_]] {
-    def createAlert(name: String, condition: String, actions: List[AlertAction]): F[Unit]
+    def createAlert(
+      name: String,
+      condition: String,
+      actions: List[AlertAction],
+    ): F[Unit]
     def updateAlert(name: String, enabled: Boolean): F[Unit]
     def deleteAlert(name: String): F[Unit]
     def listAlerts: F[List[AlertInfo]]
@@ -277,13 +301,13 @@ object ReaderPattern {
     def recordMetric[F[_]: Applicative](
       name: String,
       value: Double,
-      metricType: MetricType = MetricType.Gauge
+      metricType: MetricType = MetricType.Gauge,
     ): FlowForgeReaderT[F, Unit] =
       ReaderT { context =>
         val metrics = context.core.metrics
         val tags = Map(
           "environment" -> context.environment.toString,
-          "request_id"  -> context.requestId.value
+          "request_id"  -> context.requestId.value,
         )
         metricType match {
           case MetricType.Counter   => metrics.counter(name, value.toLong, tags)
@@ -297,7 +321,7 @@ object ReaderPattern {
      */
     def getConfig[F[_]: Applicative, A](
       key: String,
-      default: A
+      default: A,
     ): FlowForgeReaderT[F, A] =
       ReaderT { context =>
         val config = context.envConfig[A](key).getOrElse(default)
@@ -310,14 +334,14 @@ object ReaderPattern {
     def withAudit[F[_]: Monad, A](
       resource: String,
       action: String,
-      operation: FlowForgeReaderT[F, A]
+      operation: FlowForgeReaderT[F, A],
     ): FlowForgeReaderT[F, A] =
       for {
         context <- ReaderT.ask[F, AppContext[F]]
         _       <- ReaderT.liftF(context.core.auditService.recordAccess(resource, action, "system"))
         result  <- operation
         _ <- ReaderT.liftF(
-          context.core.auditService.recordAccess(resource, s"${action}_completed", "system")
+          context.core.auditService.recordAccess(resource, s"${action}_completed", "system"),
         )
       } yield result
 
@@ -326,8 +350,9 @@ object ReaderPattern {
      */
     def withRetry[F[_]: Monad, A](
       maxRetries: Int,
-      operation: FlowForgeReaderT[F, A]
-    )(implicit F: EffectSystem[F]): FlowForgeReaderT[F, A] =
+      operation: FlowForgeReaderT[F, A],
+    )(implicit F: EffectSystem[F],
+    ): FlowForgeReaderT[F, A] =
       ReaderT { context =>
         def retry(attempt: Int): F[A] =
           operation.run(context).handleErrorWith { error =>
@@ -348,13 +373,14 @@ object ReaderPattern {
      */
     def withTimeout[F[_]: Monad, A](
       duration: FiniteDuration,
-      operation: FlowForgeReaderT[F, A]
-    )(implicit F: EffectSystem[F]): FlowForgeReaderT[F, A] =
+      operation: FlowForgeReaderT[F, A],
+    )(implicit F: EffectSystem[F],
+    ): FlowForgeReaderT[F, A] =
       ReaderT { context =>
         F.timeout(operation.run(context), duration).handleErrorWith { _ =>
           context.core.logger.error(s"Operation timed out after $duration") *>
             F.raiseError(
-              new java.util.concurrent.TimeoutException(s"Operation timed out after $duration")
+              new java.util.concurrent.TimeoutException(s"Operation timed out after $duration"),
             )
         }
       }
@@ -371,12 +397,13 @@ object ReaderPattern {
      * Create a data reader with dependency injection
      */
     def createDataReader[F[_]: Monad, A](
-      source: DataSource
-    )(implicit decoder: DataDecoder[A]): FlowForgeReaderT[F, DataAlgebra.Dataset[A]] =
+      source: DataSource,
+    )(implicit decoder: DataDecoder[A],
+    ): FlowForgeReaderT[F, DataAlgebra.Dataset[A]] =
       for {
         context <- ReaderT.ask[F, AppContext[F]]
         dataset <- ReaderT.liftF(
-          context.core.dataAlgebra.read[A](source)(decoder)
+          context.core.dataAlgebra.read[A](source)(decoder),
         )
       } yield dataset
   }
@@ -391,7 +418,7 @@ object ReaderPattern {
    */
   def component[F[_]: Monad, A, B](
     name: String,
-    logic: (AppContext[F], A) => F[B]
+    logic: (AppContext[F], A) => F[B],
   ): DIComponent[F, A, B] =
     ReaderT { context =>
       Applicative[F].pure {
@@ -406,7 +433,7 @@ object ReaderPattern {
    */
   def validationComponent[F[_]: Monad, A](
     name: String,
-    validator: (AppContext[F], A) => F[cats.data.ValidatedNel[FlowForgeError, A]]
+    validator: (AppContext[F], A) => F[cats.data.ValidatedNel[FlowForgeError, A]],
   ): ReaderT[F, AppContext[F], Kleisli[F, A, cats.data.ValidatedNel[FlowForgeError, A]]] =
     ReaderT { context =>
       Applicative[F].pure {
@@ -421,7 +448,7 @@ object ReaderPattern {
    */
   def composeComponents[F[_]: Monad, A, B, C](
     first: DIComponent[F, A, B],
-    second: DIComponent[F, B, C]
+    second: DIComponent[F, B, C],
   ): DIComponent[F, A, C] =
     for {
       comp1 <- first
@@ -435,8 +462,7 @@ object ReaderPattern {
   /**
    * Create a test context with mock dependencies
    */
-  def testContext[F[_]: EffectSystem: Sync]: AppContext[F] = {
-
+  def testContext[F[_]: EffectSystem: Sync]: AppContext[F] =
     AppContext[F](
       core = FlowForgeDependencies[F](
         config = PipelineConfig(
@@ -446,35 +472,34 @@ object ReaderPattern {
           sink = DataSink.gcs("test-output-bucket", "test-output-prefix", DataFormat.Parquet),
           settings = Map("test" -> "true"),
           retryPolicy = RetryPolicy.default,
-          qualityRules = QualityRules.empty
+          qualityRules = QualityRules.empty,
         ),
         dataAlgebra = TestImplementations.mockDataAlgebra[F],
         logger = TestImplementations.mockLogger[F],
         metrics = TestImplementations.mockMetrics[F],
         auditService = TestImplementations.mockAuditService[F],
         secretManager = TestImplementations.mockSecretManager[F],
-        resourceManager = TestImplementations.mockResourceManager[F]
+        resourceManager = TestImplementations.mockResourceManager[F],
       ),
       database = Some(
         DatabaseDependencies[F](
           connectionPool = TestImplementations.mockConnectionPool[F],
           transactionManager = TestImplementations.mockTransactionManager[F],
-          migrationService = TestImplementations.mockMigrationService[F]
-        )
+          migrationService = TestImplementations.mockMigrationService[F],
+        ),
       ),
       cloud = Some(
         CloudDependencies[F](
           storageService = TestImplementations.mockStorageService[F],
           queueService = TestImplementations.mockQueueService[F],
           notificationService = TestImplementations.mockNotificationService[F],
-          monitoringService = TestImplementations.mockMonitoringService[F]
-        )
+          monitoringService = TestImplementations.mockMonitoringService[F],
+        ),
       ),
       environment = Environment.Testing,
       requestId = RequestId.generate,
-      timestamp = Instant.now()
+      timestamp = Instant.now(),
     )
-  }
 
   // ===============================
   // SUPPORTING TYPES
@@ -505,23 +530,20 @@ object ReaderPattern {
     resource: String,
     action: String,
     user: String,
-    details: Map[String, String]
-  )
+    details: Map[String, String])
 
   final case class AuditQuery(
     startTime: Option[Instant],
     endTime: Option[Instant],
     resource: Option[String],
     action: Option[String],
-    user: Option[String]
-  )
+    user: Option[String])
 
   final case class ResourceInfo(
     name: String,
     status: ResourceStatus,
     config: Map[String, Any],
-    lastHealthCheck: Instant
-  )
+    lastHealthCheck: Instant)
 
   sealed trait ResourceStatus extends Product with Serializable
   object ResourceStatus {
@@ -533,68 +555,57 @@ object ReaderPattern {
   final case class ResourceHealth(
     status: ResourceStatus,
     message: String,
-    lastCheck: Instant
-  )
+    lastCheck: Instant)
 
   case class ResourceConfig(
     timeout: scala.concurrent.duration.Duration,
     retryPolicy: RetryPolicy,
-    properties: Map[String, String] = Map.empty
-  )
+    properties: Map[String, String] = Map.empty)
 
   case class QueueSubscription[F[_], A](
     queue: String,
     receive: F[Option[A]],
     ack: A => F[Unit],
-    nack: A => F[Unit]
-  )
+    nack: A => F[Unit])
 
   case class QueueConfig(
     maxSize: Int,
     ttl: scala.concurrent.duration.Duration,
-    dlq: Option[String] = None
-  )
+    dlq: Option[String] = None)
 
   case class AlertAction(
     name: String,
-    config: Map[String, String]
-  )
+    config: Map[String, String])
 
   case class AlertInfo(
     name: String,
     condition: String,
     enabled: Boolean,
-    actions: List[AlertAction]
-  )
+    actions: List[AlertAction])
 
   case class PoolStats(
     active: Int,
     idle: Int,
-    max: Int
-  )
+    max: Int)
 
   case class PoolHealth(
     healthy: Boolean,
     message: String,
-    stats: PoolStats
-  )
+    stats: PoolStats)
 
   case class MigrationResult(
     success: Boolean,
     version: String,
-    message: String
-  )
+    message: String)
 
   case class MigrationInfo(
     version: String,
     applied: Boolean,
-    appliedAt: Option[Instant]
-  )
+    appliedAt: Option[Instant])
 
   case class SqlOperation(
     sql: String,
-    params: List[Any]
-  )
+    params: List[Any])
 
   // ===============================
   // TEST IMPLEMENTATIONS
@@ -602,7 +613,8 @@ object ReaderPattern {
 
   private object TestImplementations {
 
-    def mockDataAlgebra[F[_]: EffectSystem: Sync]: DataAlgebra[F] = DataInstances.createMockDataAlgebra[F]
+    def mockDataAlgebra[F[_]: EffectSystem: Sync]: DataAlgebra[F] =
+      DataInstances.createMockDataAlgebra[F]
 
     def mockLogger[F[_]: EffectSystem]: Logger[F] = new Logger[F] {
       def debug(message: String): F[Unit] =
@@ -613,26 +625,46 @@ object ReaderPattern {
         implicitly[EffectSystem[F]].delay(println(s"WARN: $message"))
       def error(message: String, throwable: Option[Throwable]): F[Unit] =
         implicitly[EffectSystem[F]].delay(
-          println(s"ERROR: $message ${throwable.map(_.getMessage).getOrElse("")}")
+          println(s"ERROR: $message ${throwable.map(_.getMessage).getOrElse("")}"),
         )
       def withContext(context: Map[String, String]): Logger[F] = this
     }
 
     def mockMetrics[F[_]: EffectSystem]: MetricsCollector[F] = new MetricsCollector[F] {
-      def counter(name: String, value: Long, tags: Map[String, String]): F[Unit] =
+      def counter(
+        name: String,
+        value: Long,
+        tags: Map[String, String],
+      ): F[Unit] =
         implicitly[EffectSystem[F]].delay(println(s"COUNTER: $name = $value $tags"))
-      def gauge(name: String, value: Double, tags: Map[String, String]): F[Unit] =
+      def gauge(
+        name: String,
+        value: Double,
+        tags: Map[String, String],
+      ): F[Unit] =
         implicitly[EffectSystem[F]].delay(println(s"GAUGE: $name = $value $tags"))
-      def histogram(name: String, value: Double, tags: Map[String, String]): F[Unit] =
+      def histogram(
+        name: String,
+        value: Double,
+        tags: Map[String, String],
+      ): F[Unit] =
         implicitly[EffectSystem[F]].delay(println(s"HISTOGRAM: $name = $value $tags"))
       def timer[A](name: String, tags: Map[String, String])(operation: F[A]): F[A] = operation
     }
 
     // Simplified mock implementations for other services
     def mockAuditService[F[_]: EffectSystem]: AuditService[F] = new AuditService[F] {
-      def recordAccess(resource: String, action: String, user: String): F[Unit] =
+      def recordAccess(
+        resource: String,
+        action: String,
+        user: String,
+      ): F[Unit] =
         implicitly[EffectSystem[F]].delay(())
-      def recordDataChange(table: String, operation: String, recordCount: Long): F[Unit] =
+      def recordDataChange(
+        table: String,
+        operation: String,
+        recordCount: Long,
+      ): F[Unit] =
         implicitly[EffectSystem[F]].delay(())
       def recordPipelineExecution(pipelineId: String, status: String): F[Unit] =
         implicitly[EffectSystem[F]].delay(())
@@ -644,7 +676,7 @@ object ReaderPattern {
       def getSecret(key: String): F[Option[String]]        = implicitly[EffectSystem[F]].delay(None)
       def storeSecret(key: String, value: String): F[Unit] = implicitly[EffectSystem[F]].delay(())
       def deleteSecret(key: String): F[Unit]               = implicitly[EffectSystem[F]].delay(())
-      def rotateSecret(key: String): F[String] = implicitly[EffectSystem[F]].delay("new-secret")
+      def rotateSecret(key: String): F[String]             = implicitly[EffectSystem[F]].delay("new-secret")
     }
 
     def mockResourceManager[F[_]: EffectSystem]: ResourceManager[F] = new ResourceManager[F] {
@@ -653,8 +685,8 @@ object ReaderPattern {
         val F = implicitly[EffectSystem[F]]
         Resource.make[F, R](F.pure(null.asInstanceOf[R]))(_ => F.unit)
       }
-      def releaseResource(name: String): F[Unit] = implicitly[EffectSystem[F]].delay(())
-      def listResources: F[List[ResourceInfo]]   = implicitly[EffectSystem[F]].delay(List.empty)
+      def releaseResource(name: String): F[Unit]      = implicitly[EffectSystem[F]].delay(())
+      def listResources: F[List[ResourceInfo]]        = implicitly[EffectSystem[F]].delay(List.empty)
       def healthCheck: F[Map[String, ResourceHealth]] = implicitly[EffectSystem[F]].delay(Map.empty)
     }
 
@@ -673,7 +705,7 @@ object ReaderPattern {
       def stats: F[PoolStats] =
         implicitly[EffectSystem[F]].pure(PoolStats(active = 0, idle = 0, max = 0))
       def health: F[PoolHealth] = implicitly[EffectSystem[F]].pure(
-        PoolHealth(healthy = true, message = "mock healthy", stats = PoolStats(0, 0, 0))
+        PoolHealth(healthy = true, message = "mock healthy", stats = PoolStats(0, 0, 0)),
       )
     }
 
@@ -687,11 +719,11 @@ object ReaderPattern {
     def mockMigrationService[F[_]: EffectSystem]: MigrationService[F] = new MigrationService[F] {
       def runMigrations: F[MigrationResult] =
         implicitly[EffectSystem[F]].pure(
-          MigrationResult(success = true, version = "mock", message = "no-op")
+          MigrationResult(success = true, version = "mock", message = "no-op"),
         )
       def rollbackMigration(version: String): F[MigrationResult] =
         implicitly[EffectSystem[F]].pure(
-          MigrationResult(success = true, version = version, message = "no-op")
+          MigrationResult(success = true, version = version, message = "no-op"),
         )
       def migrationStatus: F[List[MigrationInfo]] = implicitly[EffectSystem[F]].delay(List.empty)
     }
@@ -702,8 +734,8 @@ object ReaderPattern {
         implicitly[EffectSystem[F]].delay(Array.emptyByteArray)
       def write(path: String, data: Array[Byte]): F[Unit] = implicitly[EffectSystem[F]].delay(())
       def exists(path: String): F[Boolean]                = implicitly[EffectSystem[F]].delay(false)
-      def list(prefix: String): F[List[String]] = implicitly[EffectSystem[F]].delay(List.empty)
-      def delete(path: String): F[Unit]         = implicitly[EffectSystem[F]].delay(())
+      def list(prefix: String): F[List[String]]           = implicitly[EffectSystem[F]].delay(List.empty)
+      def delete(path: String): F[Unit]                   = implicitly[EffectSystem[F]].delay(())
     }
 
     def mockQueueService[F[_]: EffectSystem]: QueueService[F] = new QueueService[F] {
@@ -715,8 +747,8 @@ object ReaderPattern {
             queue = queue,
             receive = F.pure(None),
             ack = (_: A) => F.unit,
-            nack = (_: A) => F.unit
-          )
+            nack = (_: A) => F.unit,
+          ),
         )
       }
       def createQueue(name: String, config: QueueConfig): F[Unit] =
@@ -726,7 +758,11 @@ object ReaderPattern {
 
     def mockNotificationService[F[_]: EffectSystem]: NotificationService[F] =
       new NotificationService[F] {
-        def sendEmail(to: List[String], subject: String, body: String): F[Unit] =
+        def sendEmail(
+          to: List[String],
+          subject: String,
+          body: String,
+        ): F[Unit] =
           implicitly[EffectSystem[F]].delay(())
         def sendSlack(channel: String, message: String): F[Unit] =
           implicitly[EffectSystem[F]].delay(())
@@ -735,7 +771,11 @@ object ReaderPattern {
       }
 
     def mockMonitoringService[F[_]: EffectSystem]: MonitoringService[F] = new MonitoringService[F] {
-      def createAlert(name: String, condition: String, actions: List[AlertAction]): F[Unit] =
+      def createAlert(
+        name: String,
+        condition: String,
+        actions: List[AlertAction],
+      ): F[Unit] =
         implicitly[EffectSystem[F]].delay(())
       def updateAlert(name: String, enabled: Boolean): F[Unit] =
         implicitly[EffectSystem[F]].delay(())

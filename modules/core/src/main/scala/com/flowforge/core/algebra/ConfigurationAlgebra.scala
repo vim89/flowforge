@@ -4,8 +4,8 @@
  * File: modules/core/src/main/scala/com/flowforge/core/algebra/ConfigurationAlgebra.scala Package:
  * com.flowforge.core.algebra
  *
- * Revolutionary type-safe configuration management system replacing traditional CCM approaches.
- * Integrates reference-utilities CCM patterns with FlowForge's functional programming principles.
+ * Revolutionary type-safe configuration management system replacing traditional CCM approaches. Integrates
+ * reference-utilities CCM patterns with FlowForge's functional programming principles.
  *
  * Design Patterns Applied:
  *   - Tagless Final Pattern: Effect abstraction for configuration operations
@@ -136,7 +136,7 @@ trait ConfigurationAlgebra[F[_]] {
    */
   def loadWithFallback[T: ConfigDecoder: ConfigValidator](
     key: NonEmptyString,
-    envPrefix: String
+    envPrefix: String,
   ): F[ValidatedNel[ConfigError, T]]
 
   /**
@@ -150,7 +150,7 @@ trait ConfigurationAlgebra[F[_]] {
    *   All configurations or validation errors
    */
   def loadBatch[T: ConfigDecoder: ConfigValidator](
-    keys: NonEmptyList[NonEmptyString]
+    keys: NonEmptyList[NonEmptyString],
   ): F[ValidatedNel[ConfigError, List[T]]]
 
   /**
@@ -164,13 +164,13 @@ trait ConfigurationAlgebra[F[_]] {
    *   Merged configuration
    */
   def merge[T: ConfigDecoder: ConfigMerger](
-    sources: NonEmptyList[ConfigSource]
+    sources: NonEmptyList[ConfigSource],
   ): F[ValidatedNel[ConfigError, T]]
 }
 
 /**
- * CCM compatibility layer for seamless migration from reference-utilities patterns. Implements the
- * exact interface from CcmUtils.scala while adding type safety.
+ * CCM compatibility layer for seamless migration from reference-utilities patterns. Implements the exact
+ * interface from CcmUtils.scala while adding type safety.
  */
 trait CCMCompatibilityLayer[F[_]] extends ConfigurationAlgebra[F] {
 
@@ -181,24 +181,23 @@ trait CCMCompatibilityLayer[F[_]] extends ConfigurationAlgebra[F] {
   /**
    * Get CCM configuration as Map (preserving original interface).
    *
-   * Original method from CcmUtils.scala: def getCcmConfig(configName: String): Option[Map[String,
-   * String]]
+   * Original method from CcmUtils.scala: def getCcmConfig(configName: String): Option[Map[String, String]]
    */
   def getCcmConfig(configName: String): F[Option[Map[String, String]]]
 
   /**
    * Get CCM provider configuration (preserving original interface).
    *
-   * Original method from CcmUtils.scala: def getCcmProviderConfig(providerName: String, configName:
-   * String): Option[Map[String, String]]
+   * Original method from CcmUtils.scala: def getCcmProviderConfig(providerName: String, configName: String):
+   * Option[Map[String, String]]
    */
   def getCcmProviderConfig(providerName: String, configName: String): F[Option[Map[String, String]]]
 
   /**
    * Get configuration as Properties (preserving original interface).
    *
-   * Original method from CcmUtils.scala: def getCcmConfigAsProperties(configMap: Map[String,
-   * String]): Properties
+   * Original method from CcmUtils.scala: def getCcmConfigAsProperties(configMap: Map[String, String]):
+   * Properties
    */
   def getConfigurationAsProperties(configName: String): F[Option[Properties]]
 
@@ -217,7 +216,7 @@ trait CCMCompatibilityLayer[F[_]] extends ConfigurationAlgebra[F] {
    *   Type-safe configuration with validation
    */
   def adaptCcmToTyped[T: ConfigDecoder](
-    ccmConfig: Map[String, String]
+    ccmConfig: Map[String, String],
   ): F[ValidatedNel[ConfigError, T]]
 
   /**
@@ -231,7 +230,7 @@ trait CCMCompatibilityLayer[F[_]] extends ConfigurationAlgebra[F] {
    *   Migrated configuration
    */
   def migrateCcmConfig[T: ConfigDecoder: ConfigValidator](
-    ccmConfigName: String
+    ccmConfigName: String,
   ): F[ValidatedNel[ConfigError, T]]
 }
 
@@ -254,7 +253,7 @@ object ConfigDecoder {
   def instance[A](
     decodeF: Map[String, String] => ValidatedNel[ConfigError, A],
     keys: List[String],
-    desc: String = "Configuration decoder"
+    desc: String = "Configuration decoder",
   ): ConfigDecoder[A] = new ConfigDecoder[A] {
     def decode(source: Map[String, String]): ValidatedNel[ConfigError, A] = decodeF(source)
     val expectedKeys: List[String]                                        = keys
@@ -275,7 +274,7 @@ object ConfigValidator {
 
   def instance[A](
     validateF: A => ValidatedNel[ConfigError, A],
-    configConstraints: List[ConfigConstraint[A]] = List.empty
+    configConstraints: List[ConfigConstraint[A]] = List.empty,
   ): ConfigValidator[A] = new ConfigValidator[A] {
     def validate(config: A): ValidatedNel[ConfigError, A] = validateF(config)
     val constraints: List[ConfigConstraint[A]]            = configConstraints
@@ -307,11 +306,15 @@ trait ConfigMerger[A] {
  */
 sealed trait ConfigSource
 object ConfigSource {
-  case class CCM(serverUrl: String, configName: String)               extends ConfigSource
-  case class EnvironmentVariables(prefix: String)                     extends ConfigSource
-  case class PropertyFile(filePath: String)                           extends ConfigSource
-  case class Database(connection: String, table: String, key: String) extends ConfigSource
-  case class Consul(endpoint: String, path: String)                   extends ConfigSource
+  case class CCM(serverUrl: String, configName: String) extends ConfigSource
+  case class EnvironmentVariables(prefix: String)       extends ConfigSource
+  case class PropertyFile(filePath: String)             extends ConfigSource
+  case class Database(
+    connection: String,
+    table: String,
+    key: String)
+      extends ConfigSource
+  case class Consul(endpoint: String, path: String) extends ConfigSource
 }
 
 /**
@@ -331,8 +334,12 @@ object ConfigFormat {
  */
 sealed trait ConfigConstraint[A]
 object ConfigConstraint {
-  case class Required[A](fieldName: String)                          extends ConfigConstraint[A]
-  case class Range[A](fieldName: String, min: Double, max: Double)   extends ConfigConstraint[A]
+  case class Required[A](fieldName: String) extends ConfigConstraint[A]
+  case class Range[A](
+    fieldName: String,
+    min: Double,
+    max: Double)
+      extends ConfigConstraint[A]
   case class Pattern[A](fieldName: String, regex: String)            extends ConfigConstraint[A]
   case class OneOf[A](fieldName: String, allowedValues: Set[String]) extends ConfigConstraint[A]
 }
@@ -374,53 +381,45 @@ case class FlowForgeConfig(
   connectors: ConnectorConfig,
   quality: QualityConfig,
   monitoring: MonitoringConfig,
-  security: SecurityConfig
-)
+  security: SecurityConfig)
 
 case class ApplicationConfig(
   name: NonEmptyString,
   version: String,
   environment: Environment,
-  logLevel: LogLevel = LogLevel.Info
-)
+  logLevel: LogLevel = LogLevel.Info)
 
 case class PipelineConfig(
   defaultBatchSize: Int = 10000,
   maxConcurrency: Int = 10,
   timeout: FiniteDuration,
-  retryPolicy: RetryPolicy
-)
+  retryPolicy: RetryPolicy)
 
 case class EngineConfig(
   spark: Option[SparkConfig] = None,
-  flink: Option[FlinkConfig] = None
-)
+  flink: Option[FlinkConfig] = None)
 
 case class ConnectorConfig(
   gcs: Option[GCSConfig] = None,
   s3: Option[S3Config] = None,
   bigquery: Option[BigQueryConfig] = None,
   kafka: Option[KafkaConfig] = None,
-  azure: Option[AzureConfig] = None
-)
+  azure: Option[AzureConfig] = None)
 
 case class QualityConfig(
   enableChecks: Boolean = true,
   failOnQualityErrors: Boolean = false,
-  qualityThreshold: Double = 0.95
-)
+  qualityThreshold: Double = 0.95)
 
 case class MonitoringConfig(
   enableMetrics: Boolean = true,
   metricsEndpoint: Option[String] = None,
-  enableTracing: Boolean = false
-)
+  enableTracing: Boolean = false)
 
 case class SecurityConfig(
   enableAudit: Boolean = true,
   auditLevel: AuditLevel = AuditLevel.Standard,
-  secretProvider: SecretProvider = SecretProvider.Environment
-)
+  secretProvider: SecretProvider = SecretProvider.Environment)
 
 // Supporting types
 sealed trait Environment
@@ -459,8 +458,7 @@ case class RetryPolicy(
   maxAttempts: Int = 3,
   initialDelay: FiniteDuration,
   maxDelay: FiniteDuration,
-  backoffMultiplier: Double = 2.0
-)
+  backoffMultiplier: Double = 2.0)
 
 // Cloud-specific configurations
 case class SparkConfig(
@@ -469,52 +467,44 @@ case class SparkConfig(
   deployMode: String = "client",
   driverMemory: String = "2g",
   executorMemory: String = "2g",
-  executorCores: Int = 2
-)
+  executorCores: Int = 2)
 
 case class FlinkConfig(
   jobManagerMemory: String = "1g",
   taskManagerMemory: String = "2g",
-  parallelism: Int = 1
-)
+  parallelism: Int = 1)
 
 case class GCSConfig(
   projectId: String,
   keyFile: Option[String] = None,
-  buckets: List[String] = List.empty
-)
+  buckets: List[String] = List.empty)
 
 case class S3Config(
   region: String,
   accessKeyId: Option[String] = None,
   secretAccessKey: Option[String] = None,
-  buckets: List[String] = List.empty
-)
+  buckets: List[String] = List.empty)
 
 case class BigQueryConfig(
   projectId: String,
   dataset: String,
   location: String = "US",
-  keyFile: Option[String] = None
-)
+  keyFile: Option[String] = None)
 
 case class KafkaConfig(
   brokers: List[String],
   schemaRegistry: Option[String] = None,
-  security: Option[KafkaSecurityConfig] = None
-)
+  security: Option[KafkaSecurityConfig] = None)
 
 case class KafkaSecurityConfig(
   protocol: String,
   jaasConfig: String,
-  truststoreLocation: Option[String] = None
-)
+  truststoreLocation: Option[String] = None)
 
 case class AzureConfig(
   storageAccount: String,
   containerName: String,
-  sasToken: Option[String] = None
-)
+  sasToken: Option[String] = None)
 
 // ===============================
 // CONFIGURATION INSTANCES AND UTILITIES
@@ -554,9 +544,9 @@ object ConfigurationAlgebra {
         "connectors.bigquery",
         "quality.enableChecks",
         "monitoring.enableMetrics",
-        "security.enableAudit"
+        "security.enableAudit",
       ),
-      desc = "FlowForge main configuration decoder"
+      desc = "FlowForge main configuration decoder",
     )
 
   /**
@@ -568,7 +558,7 @@ object ConfigurationAlgebra {
         validateApplication(config.application),
         validatePipeline(config.pipeline),
         validateEngines(config.engines),
-        validateConnectors(config.connectors)
+        validateConnectors(config.connectors),
       )
 
       validations.sequence.map(_ => config)
@@ -576,7 +566,7 @@ object ConfigurationAlgebra {
 
   // Private helper methods for decoding
   private def decodeApplication(
-    source: Map[String, String]
+    source: Map[String, String],
   ): ValidatedNel[ConfigError, ApplicationConfig] = {
     def req(key: String): ValidatedNel[ConfigError, String] =
       source.get(key).toValidNel(ConfigError.MissingRequired(key))
@@ -617,7 +607,7 @@ object ConfigurationAlgebra {
     (nameV, versionV, envV, logV).mapN(ApplicationConfig.apply)
   }
   private def decodePipeline(
-    source: Map[String, String]
+    source: Map[String, String],
   ): ValidatedNel[ConfigError, PipelineConfig] = {
     def int(key: String, default: Int): Int =
       source.get(key).flatMap(_.toIntOption).getOrElse(default)
@@ -635,18 +625,17 @@ object ConfigurationAlgebra {
       maxAttempts = int("pipeline.retry.maxAttempts", 3),
       initialDelay = dur("pipeline.retry.initialDelay", 1.second),
       maxDelay = dur("pipeline.retry.maxDelay", 30.seconds),
-      backoffMultiplier =
-        source.get("pipeline.retry.backoff").flatMap(_.toDoubleOption).getOrElse(2.0)
+      backoffMultiplier = source.get("pipeline.retry.backoff").flatMap(_.toDoubleOption).getOrElse(2.0),
     )
     PipelineConfig(
       defaultBatchSize = int("pipeline.batchSize", 10000),
       maxConcurrency = int("pipeline.maxConcurrency", 10),
       timeout = dur("pipeline.timeout", 30.minutes),
-      retryPolicy = retry
+      retryPolicy = retry,
     ).validNel
   }
   private def decodeEngines(
-    source: Map[String, String]
+    source: Map[String, String],
   ): ValidatedNel[ConfigError, EngineConfig] = {
     def nonEmpty(k: String) = source.get(k).filter(_.nonEmpty)
     val sparkOpt =
@@ -658,8 +647,7 @@ object ConfigurationAlgebra {
             deployMode = source.getOrElse("engines.spark.deployMode", "client"),
             driverMemory = source.getOrElse("engines.spark.driverMemory", "2g"),
             executorMemory = source.getOrElse("engines.spark.executorMemory", "2g"),
-            executorCores =
-              source.get("engines.spark.executorCores").flatMap(_.toIntOption).getOrElse(2)
+            executorCores = source.get("engines.spark.executorCores").flatMap(_.toIntOption).getOrElse(2),
           )
       }
     val flinkOpt =
@@ -667,13 +655,13 @@ object ConfigurationAlgebra {
         FlinkConfig(
           jobManagerMemory = source.getOrElse("engines.flink.jobManagerMemory", "1g"),
           taskManagerMemory = source.getOrElse("engines.flink.taskManagerMemory", "2g"),
-          parallelism = p
+          parallelism = p,
         )
       }
     EngineConfig(spark = sparkOpt, flink = flinkOpt).validNel
   }
   private def decodeConnectors(
-    source: Map[String, String]
+    source: Map[String, String],
   ): ValidatedNel[ConfigError, ConnectorConfig] = {
     val gcs = source.get("connectors.gcs.projectId").map { pid =>
       GCSConfig(
@@ -682,7 +670,7 @@ object ConfigurationAlgebra {
         buckets = source
           .get("connectors.gcs.buckets")
           .map(_.split(',').toList.filter(_.nonEmpty))
-          .getOrElse(Nil)
+          .getOrElse(Nil),
       )
     }
     val s3 = source.get("connectors.s3.region").map { region =>
@@ -693,19 +681,20 @@ object ConfigurationAlgebra {
         buckets = source
           .get("connectors.s3.buckets")
           .map(_.split(',').toList.filter(_.nonEmpty))
-          .getOrElse(Nil)
+          .getOrElse(Nil),
       )
     }
     val bq = (
       source.get("connectors.bigquery.projectId"),
-      source.get("connectors.bigquery.dataset")
-    ).mapN { case (pid, ds) =>
-      BigQueryConfig(
-        projectId = pid,
-        dataset = ds,
-        location = source.getOrElse("connectors.bigquery.location", "US"),
-        keyFile = source.get("connectors.bigquery.keyFile")
-      )
+      source.get("connectors.bigquery.dataset"),
+    ).mapN {
+      case (pid, ds) =>
+        BigQueryConfig(
+          projectId = pid,
+          dataset = ds,
+          location = source.getOrElse("connectors.bigquery.location", "US"),
+          keyFile = source.get("connectors.bigquery.keyFile"),
+        )
     }
     val kafka = source.get("connectors.kafka.brokers").map { bs =>
       val brokers = bs.split(',').toList.filter(_.nonEmpty)
@@ -713,49 +702,48 @@ object ConfigurationAlgebra {
         KafkaSecurityConfig(
           protocol = protocol,
           jaasConfig = source.getOrElse("connectors.kafka.security.jaasConfig", ""),
-          truststoreLocation = source.get("connectors.kafka.security.truststore")
+          truststoreLocation = source.get("connectors.kafka.security.truststore"),
         )
       }
       KafkaConfig(
         brokers = brokers,
         schemaRegistry = source.get("connectors.kafka.schemaRegistry"),
-        security = sec
+        security = sec,
       )
     }
     val azure = source.get("connectors.azure.storageAccount").map { sa =>
       AzureConfig(
         storageAccount = sa,
         containerName = source.getOrElse("connectors.azure.container", "default"),
-        sasToken = source.get("connectors.azure.sasToken")
+        sasToken = source.get("connectors.azure.sasToken"),
       )
     }
     ConnectorConfig(gcs = gcs, s3 = s3, bigquery = bq, kafka = kafka, azure = azure).validNel
   }
   private def decodeQuality(
-    source: Map[String, String]
+    source: Map[String, String],
   ): ValidatedNel[ConfigError, QualityConfig] = {
     val thr = source.get("quality.qualityThreshold").flatMap(_.toDoubleOption).getOrElse(0.95)
     if (thr >= 0.0 && thr <= 1.0)
       QualityConfig(
         enableChecks = source.get("quality.enableChecks").forall(_.toLowerCase == "true"),
-        failOnQualityErrors =
-          source.get("quality.failOnQualityErrors").exists(_.toLowerCase == "true"),
-        qualityThreshold = thr
+        failOnQualityErrors = source.get("quality.failOnQualityErrors").exists(_.toLowerCase == "true"),
+        qualityThreshold = thr,
       ).validNel
     else ConfigError.OutOfRange("quality.qualityThreshold", thr.toString, "0.0", "1.0").invalidNel
   }
   private def decodeMonitoring(
-    source: Map[String, String]
+    source: Map[String, String],
   ): ValidatedNel[ConfigError, MonitoringConfig] = {
     val ep = source.get("monitoring.metricsEndpoint").filter(_.nonEmpty)
     MonitoringConfig(
       enableMetrics = source.get("monitoring.enableMetrics").forall(_.toLowerCase == "true"),
       metricsEndpoint = ep,
-      enableTracing = source.get("monitoring.enableTracing").exists(_.toLowerCase == "true")
+      enableTracing = source.get("monitoring.enableTracing").exists(_.toLowerCase == "true"),
     ).validNel
   }
   private def decodeSecurity(
-    source: Map[String, String]
+    source: Map[String, String],
   ): ValidatedNel[ConfigError, SecurityConfig] = {
     val levelV: ValidatedNel[ConfigError, AuditLevel] =
       source
@@ -811,7 +799,7 @@ object ConfigurationAlgebra {
             "pipeline.timeout",
             config.timeout.toSeconds.toString,
             "1",
-            (24.hours.toSeconds.toString)
+            24.hours.toSeconds.toString,
           )
           .invalidNel,
       if (config.retryPolicy.maxAttempts >= 0) ().validNel
@@ -820,7 +808,7 @@ object ConfigurationAlgebra {
           .InvalidValue(
             "pipeline.retry.maxAttempts",
             config.retryPolicy.maxAttempts.toString,
-            ">= 0"
+            ">= 0",
           )
           .invalidNel,
       if (config.retryPolicy.initialDelay <= config.retryPolicy.maxDelay) ().validNel
@@ -829,7 +817,7 @@ object ConfigurationAlgebra {
           .ConflictingValues(
             "pipeline.retry.initialDelay",
             "pipeline.retry.maxDelay",
-            "initialDelay must be <= maxDelay"
+            "initialDelay must be <= maxDelay",
           )
           .invalidNel,
       if (config.retryPolicy.backoffMultiplier >= 1.0) ().validNel
@@ -838,9 +826,9 @@ object ConfigurationAlgebra {
           .InvalidValue(
             "pipeline.retry.backoff",
             config.retryPolicy.backoffMultiplier.toString,
-            ">= 1.0"
+            ">= 1.0",
           )
-          .invalidNel
+          .invalidNel,
     )
     validations.sequence.map(_ => ())
   }
@@ -866,7 +854,7 @@ object ConfigurationAlgebra {
         else
           ConfigError
             .OutOfRange("engines.spark.executorCores", s.executorCores.toString, "1", "")
-            .invalidNel
+            .invalidNel,
       )
       checks.sequence.map(_ => ())
     }.getOrElse(().validNel)
@@ -883,34 +871,42 @@ object ConfigurationAlgebra {
     val gcsV = config.gcs
       .map(c =>
         if (c.projectId.nonEmpty) ().validNel
-        else ConfigError.MissingRequired("connectors.gcs.projectId").invalidNel
+        else ConfigError.MissingRequired("connectors.gcs.projectId").invalidNel,
       )
       .getOrElse(().validNel)
     val s3V = config.s3
       .map(c =>
         if (c.region.nonEmpty) ().validNel
-        else ConfigError.MissingRequired("connectors.s3.region").invalidNel
+        else ConfigError.MissingRequired("connectors.s3.region").invalidNel,
       )
       .getOrElse(().validNel)
     val bqV = config.bigquery
       .map(c =>
         if (c.projectId.nonEmpty && c.dataset.nonEmpty) ().validNel
-        else ConfigError.CustomError("BigQuery requires projectId and dataset").invalidNel
+        else ConfigError.CustomError("BigQuery requires projectId and dataset").invalidNel,
       )
       .getOrElse(().validNel)
     val kafkaV = config.kafka
       .map(c =>
         if (c.brokers.nonEmpty) ().validNel
-        else ConfigError.MissingRequired("connectors.kafka.brokers").invalidNel
+        else ConfigError.MissingRequired("connectors.kafka.brokers").invalidNel,
       )
       .getOrElse(().validNel)
     val azV = config.azure
       .map(c =>
         if (c.storageAccount.nonEmpty && c.containerName.nonEmpty) ().validNel
-        else ConfigError.CustomError("Azure requires storageAccount and container").invalidNel
+        else ConfigError.CustomError("Azure requires storageAccount and container").invalidNel,
       )
       .getOrElse(().validNel)
-    (gcsV, s3V, bqV, kafkaV, azV).mapN((_, _, _, _, _) => ())
+    (gcsV, s3V, bqV, kafkaV, azV).mapN(
+      (
+        _,
+        _,
+        _,
+        _,
+        _,
+      ) => (),
+    )
   }
 }
 
@@ -945,7 +941,7 @@ object ConfigurationMigration {
 
       def getCcmProviderConfig(
         providerName: String,
-        configName: String
+        configName: String,
       ): F[Option[Map[String, String]]] =
         Sync[F].delay {
           // Provider-specific configuration retrieval
@@ -962,12 +958,12 @@ object ConfigurationMigration {
         }
 
       def adaptCcmToTyped[T: ConfigDecoder](
-        ccmConfig: Map[String, String]
+        ccmConfig: Map[String, String],
       ): F[ValidatedNel[ConfigError, T]] =
         Sync[F].delay(ConfigDecoder[T].decode(ccmConfig))
 
       def migrateCcmConfig[T: ConfigDecoder: ConfigValidator](
-        ccmConfigName: String
+        ccmConfigName: String,
       ): F[ValidatedNel[ConfigError, T]] =
         Sync[F].flatMap(getCcmConfig(ccmConfigName)) {
           case Some(cfgMap) =>
@@ -980,7 +976,7 @@ object ConfigurationMigration {
 
       // Implement remaining ConfigurationAlgebra methods
       def load[T: ConfigDecoder: ConfigValidator](
-        key: NonEmptyString
+        key: NonEmptyString,
       ): F[ValidatedNel[ConfigError, T]] =
         migrateCcmConfig[T](key.value)
 
@@ -1000,9 +996,10 @@ object ConfigurationMigration {
           .repeatEval(loadOnce)
           .unNone
           .map(v => (v, v.toString))
-          .mapAccumulate(Option.empty[String]) { case (prev, (v, sig)) =>
-            val emit = prev.forall(_ != sig)
-            (Some(sig), if (emit) Some(v) else None)
+          .mapAccumulate(Option.empty[String]) {
+            case (prev, (v, sig)) =>
+              val emit = prev.forall(_ != sig)
+              (Some(sig), if (emit) Some(v) else None)
           }
           .map(_._2)
           .unNone
@@ -1022,17 +1019,17 @@ object ConfigurationMigration {
 
       def loadWithFallback[T: ConfigDecoder: ConfigValidator](
         key: NonEmptyString,
-        envPrefix: String
+        envPrefix: String,
       ): F[ValidatedNel[ConfigError, T]] =
         load[T](key) // TODO: Implement environment fallback
 
       def loadBatch[T: ConfigDecoder: ConfigValidator](
-        keys: NonEmptyList[NonEmptyString]
+        keys: NonEmptyList[NonEmptyString],
       ): F[ValidatedNel[ConfigError, List[T]]] = {
         val F0 = Sync[F]
         def go(
           ks: List[NonEmptyString],
-          acc: List[ValidatedNel[ConfigError, T]]
+          acc: List[ValidatedNel[ConfigError, T]],
         ): F[List[ValidatedNel[ConfigError, T]]] =
           ks match {
             case Nil    => F0.pure(acc.reverse)
@@ -1045,7 +1042,7 @@ object ConfigurationMigration {
       }
 
       def merge[T: ConfigDecoder: ConfigMerger](
-        sources: NonEmptyList[ConfigSource]
+        sources: NonEmptyList[ConfigSource],
       ): F[ValidatedNel[ConfigError, T]] =
         Sync[F].pure {
           // Simplified implementation - in real system would load from each source
@@ -1067,34 +1064,32 @@ object ConfigurationMigration {
    */
   def createMigrationPlan(
     currentCCMConfigs: List[String],
-    targetFlowForgeConfigs: List[String]
+    targetFlowForgeConfigs: List[String],
   ): ConfigMigrationPlan = ConfigMigrationPlan(
     ccmConfigs = currentCCMConfigs,
     flowForgeConfigs = targetFlowForgeConfigs,
-    migrationSteps = generateMigrationSteps(currentCCMConfigs, targetFlowForgeConfigs)
+    migrationSteps = generateMigrationSteps(currentCCMConfigs, targetFlowForgeConfigs),
   )
 
   private def generateMigrationSteps(
     ccm: List[String],
-    flowforge: List[String]
+    flowforge: List[String],
   ): List[MigrationStep] =
     // Generate step-by-step migration plan
     List(
       MigrationStep("backup-current-config", "Backup existing CCM configurations"),
       MigrationStep("create-flowforge-config", "Create FlowForge configuration templates"),
       MigrationStep("validate-migration", "Validate configuration migration"),
-      MigrationStep("switch-to-flowforge", "Switch to FlowForge configuration system")
+      MigrationStep("switch-to-flowforge", "Switch to FlowForge configuration system"),
     )
 }
 
 case class ConfigMigrationPlan(
   ccmConfigs: List[String],
   flowForgeConfigs: List[String],
-  migrationSteps: List[MigrationStep]
-)
+  migrationSteps: List[MigrationStep])
 
 case class MigrationStep(
   id: String,
   description: String,
-  dependencies: List[String] = List.empty
-)
+  dependencies: List[String] = List.empty)

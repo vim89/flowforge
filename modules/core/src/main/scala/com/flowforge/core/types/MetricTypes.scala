@@ -4,9 +4,9 @@
  * File: modules/core/src/main/scala/com/flowforge/core/types/MetricTypes.scala Package:
  * com.flowforge.core.types
  *
- * This file defines comprehensive metrics and observability types for the FlowForge ecosystem. It
- * provides a foundation for monitoring, alerting, and performance optimization across data
- * pipelines with rich metric aggregation capabilities.
+ * This file defines comprehensive metrics and observability types for the FlowForge ecosystem. It provides a
+ * foundation for monitoring, alerting, and performance optimization across data pipelines with rich metric
+ * aggregation capabilities.
  *
  * Design Patterns Applied:
  *   - Value Object Pattern: Immutable metric data containers
@@ -39,7 +39,7 @@
  * val processingMetric = PipelineMetrics.processing(
  *   recordsProcessed = 1000,
  *   processingTime = 30.seconds,
- *   memoryUsed = 512.MB
+ *   memoryUsed = 512.MB,
  * )
  *
  * // Composable metric aggregation
@@ -77,8 +77,8 @@ import scala.concurrent.duration.FiniteDuration
 // ===============================
 
 /**
- * Core metric value types for different kinds of measurements. These provide type-safe
- * representations of numeric metrics.
+ * Core metric value types for different kinds of measurements. These provide type-safe representations of
+ * numeric metrics.
  */
 sealed trait MetricValue extends Product with Serializable {
   def asDouble: Double
@@ -111,18 +111,19 @@ object MetricValue {
     buckets: Map[Double, Long],
     count: Long,
     sum: Double,
-    unit: MetricUnit = MetricUnit.Count
-  ) extends MetricValue {
+    unit: MetricUnit = MetricUnit.Count)
+      extends MetricValue {
     def asDouble: Double = if (count > 0) sum / count else 0.0
     def mean: Double     = asDouble
     def observe(value: Double): Histogram = {
-      val updatedBuckets = buckets.map { case (boundary, bucketCount) =>
-        boundary -> (if (value <= boundary) bucketCount + 1 else bucketCount)
+      val updatedBuckets = buckets.map {
+        case (boundary, bucketCount) =>
+          boundary -> (if (value <= boundary) bucketCount + 1 else bucketCount)
       }
       copy(
         buckets = updatedBuckets,
         count = count + 1,
-        sum = sum + value
+        sum = sum + value,
       )
     }
   }
@@ -132,8 +133,8 @@ object MetricValue {
    */
   case class Timer(
     durations: List[FiniteDuration],
-    unit: MetricUnit = MetricUnit.Milliseconds
-  ) extends MetricValue {
+    unit: MetricUnit = MetricUnit.Milliseconds)
+      extends MetricValue {
     def asDouble: Double = meanDuration.toMillis.toDouble
     def count: Int       = durations.length
     def totalDuration: FiniteDuration =
@@ -156,8 +157,8 @@ object MetricValue {
   case class Rate(
     events: Long,
     timeWindow: FiniteDuration,
-    unit: MetricUnit = MetricUnit.EventsPerSecond
-  ) extends MetricValue {
+    unit: MetricUnit = MetricUnit.EventsPerSecond)
+      extends MetricValue {
     def asDouble: Double        = events.toDouble / timeWindow.toSeconds
     def eventsPerSecond: Double = asDouble
     def eventsPerMinute: Double = asDouble * 60
@@ -278,8 +279,7 @@ object MetricUnit {
 // ===============================
 
 /**
- * Metric labels for dimensional filtering and grouping. Enables rich metric queries and aggregation
- * patterns.
+ * Metric labels for dimensional filtering and grouping. Enables rich metric queries and aggregation patterns.
  */
 case class MetricLabels(labels: Map[String, String] = Map.empty) {
 
@@ -310,8 +310,9 @@ case class MetricLabels(labels: Map[String, String] = Map.empty) {
    * Match against label patterns.
    */
   def matches(patterns: Map[String, String]): Boolean =
-    patterns.forall { case (key, pattern) =>
-      labels.get(key).exists(_.matches(pattern))
+    patterns.forall {
+      case (key, pattern) =>
+        labels.get(key).exists(_.matches(pattern))
     }
 
   /**
@@ -369,8 +370,7 @@ case class Metric(
   labels: MetricLabels = MetricLabels.empty,
   timestamp: Instant = Instant.now(),
   description: Option[String] = None,
-  metadata: Map[String, String] = Map.empty
-) {
+  metadata: Map[String, String] = Map.empty) {
 
   def withLabel(key: String, value: String): Metric =
     copy(labels = labels.add(key, value))
@@ -409,13 +409,21 @@ object Metric {
   /**
    * Create a counter metric.
    */
-  def counter(name: String, value: Long, labels: MetricLabels = MetricLabels.empty): Metric =
+  def counter(
+    name: String,
+    value: Long,
+    labels: MetricLabels = MetricLabels.empty,
+  ): Metric =
     Metric(name, MetricValue.counter(value), labels)
 
   /**
    * Create a gauge metric.
    */
-  def gauge(name: String, value: Double, labels: MetricLabels = MetricLabels.empty): Metric =
+  def gauge(
+    name: String,
+    value: Double,
+    labels: MetricLabels = MetricLabels.empty,
+  ): Metric =
     Metric(name, MetricValue.gauge(value), labels)
 
   /**
@@ -424,7 +432,7 @@ object Metric {
   def timer(
     name: String,
     durations: List[FiniteDuration],
-    labels: MetricLabels = MetricLabels.empty
+    labels: MetricLabels = MetricLabels.empty,
   ): Metric =
     Metric(name, MetricValue.timer(durations), labels)
 
@@ -435,7 +443,7 @@ object Metric {
     name: String,
     events: Long,
     window: FiniteDuration,
-    labels: MetricLabels = MetricLabels.empty
+    labels: MetricLabels = MetricLabels.empty,
   ): Metric =
     Metric(name, MetricValue.rate(events, window), labels)
 
@@ -451,8 +459,7 @@ case class MetricCollection(
   metrics: List[Metric] = List.empty,
   name: String = "metrics",
   timestamp: Instant = Instant.now(),
-  metadata: Map[String, String] = Map.empty
-) {
+  metadata: Map[String, String] = Map.empty) {
 
   def add(metric: Metric): MetricCollection =
     copy(metrics = metrics :+ metric)
@@ -500,7 +507,7 @@ case class MetricCollection(
     copy(
       metrics = metrics ++ other.metrics,
       name = s"$name+${other.name}",
-      timestamp = if (timestamp.isAfter(other.timestamp)) timestamp else other.timestamp
+      timestamp = if (timestamp.isAfter(other.timestamp)) timestamp else other.timestamp,
     )
 
   /**
@@ -551,8 +558,7 @@ case class PipelineMetrics(
   cpuUsage: Double = 0.0,
   customMetrics: Map[String, Double] = Map.empty,
   timestamp: Instant = Instant.now(),
-  labels: MetricLabels = MetricLabels.empty
-) {
+  labels: MetricLabels = MetricLabels.empty) {
 
   def recordsPerSecond: Double =
     if (processingTime.toSeconds > 0) recordsProcessed.toDouble / processingTime.toSeconds else 0.0
@@ -582,7 +588,7 @@ case class PipelineMetrics(
       memoryUsed = math.max(memoryUsed, other.memoryUsed), // Take max memory
       cpuUsage = (cpuUsage + other.cpuUsage) / 2,          // Average CPU usage
       customMetrics = customMetrics ++ other.customMetrics,
-      timestamp = if (timestamp.isAfter(other.timestamp)) timestamp else other.timestamp
+      timestamp = if (timestamp.isAfter(other.timestamp)) timestamp else other.timestamp,
     )
 
   /**
@@ -601,11 +607,12 @@ case class PipelineMetrics(
       Metric.gauge("records_per_second", recordsPerSecond, baseLabels),
       Metric.gauge("bytes_per_second", bytesPerSecond, baseLabels),
       Metric.gauge("error_rate", errorRate, baseLabels),
-      Metric.gauge("success_rate", successRate, baseLabels)
+      Metric.gauge("success_rate", successRate, baseLabels),
     )
 
-    val customMetricsList = customMetrics.map { case (name, value) =>
-      Metric.gauge(name, value, baseLabels)
+    val customMetricsList = customMetrics.map {
+      case (name, value) =>
+        Metric.gauge(name, value, baseLabels)
     }.toList
 
     MetricCollection
@@ -623,18 +630,18 @@ object PipelineMetrics {
     pipelineName: String,
     recordsProcessed: Long,
     processingTime: FiniteDuration,
-    memoryUsed: Long = 0
+    memoryUsed: Long = 0,
   ): PipelineMetrics =
     PipelineMetrics(
       pipelineName = pipelineName,
       recordsProcessed = recordsProcessed,
       processingTime = processingTime,
-      memoryUsed = memoryUsed
+      memoryUsed = memoryUsed,
     )
 
   // Monoid instance for pipeline metrics combination
   implicit val pipelineMetricsMonoid: Monoid[PipelineMetrics] = new Monoid[PipelineMetrics] {
-    def empty: PipelineMetrics = PipelineMetrics("unknown")
+    def empty: PipelineMetrics                                           = PipelineMetrics("unknown")
     def combine(x: PipelineMetrics, y: PipelineMetrics): PipelineMetrics = x.combine(y)
   }
 
@@ -661,8 +668,7 @@ case class QualityMetrics(
   freshness: Option[FiniteDuration] = None,
   overallScore: Option[Double] = None,
   timestamp: Instant = Instant.now(),
-  labels: MetricLabels = MetricLabels.empty
-) {
+  labels: MetricLabels = MetricLabels.empty) {
 
   def averageCompleteness: Double =
     if (completeness.nonEmpty) completeness.values.sum / completeness.size else 1.0
@@ -685,7 +691,7 @@ case class QualityMetrics(
       averageUniqueness,
       averageValidity,
       averageAccuracy,
-      averageConsistency
+      averageConsistency,
     )
     scores.sum / scores.length
   }
@@ -708,16 +714,19 @@ case class QualityMetrics(
   def toMetrics: MetricCollection = {
     val baseLabels = labels.add("dataset", datasetName)
 
-    val completenessMetrics = completeness.map { case (field, score) =>
-      Metric.gauge("completeness", score, baseLabels.add("field", field))
+    val completenessMetrics = completeness.map {
+      case (field, score) =>
+        Metric.gauge("completeness", score, baseLabels.add("field", field))
     }.toList
 
-    val uniquenessMetrics = uniqueness.map { case (field, score) =>
-      Metric.gauge("uniqueness", score, baseLabels.add("field", field))
+    val uniquenessMetrics = uniqueness.map {
+      case (field, score) =>
+        Metric.gauge("uniqueness", score, baseLabels.add("field", field))
     }.toList
 
-    val validityMetrics = validity.map { case (field, score) =>
-      Metric.gauge("validity", score, baseLabels.add("field", field))
+    val validityMetrics = validity.map {
+      case (field, score) =>
+        Metric.gauge("validity", score, baseLabels.add("field", field))
     }.toList
 
     val aggregateMetrics = List(
@@ -727,8 +736,8 @@ case class QualityMetrics(
       Metric.gauge(
         "overall_quality_score",
         overallScore.getOrElse(calculateOverallScore),
-        baseLabels
-      )
+        baseLabels,
+      ),
     )
 
     val timelinessList = timeliness.map { duration =>
@@ -742,7 +751,7 @@ case class QualityMetrics(
     MetricCollection
       .from(
         (completenessMetrics ++ uniquenessMetrics ++ validityMetrics ++
-          aggregateMetrics ++ timelinessList ++ freshnessList): _*
+          aggregateMetrics ++ timelinessList ++ freshnessList): _*,
       )
       .copy(name = s"quality_metrics_$datasetName")
   }
@@ -765,8 +774,7 @@ object QualityMetrics {
     consistency: Map[String, Double] = Map.empty,
     timeliness: Option[FiniteDuration] = None,
     freshness: Option[FiniteDuration] = None,
-    labels: MetricLabels = MetricLabels.empty
-  ) {
+    labels: MetricLabels = MetricLabels.empty) {
 
     def completeness(field: String, score: Double): QualityMetricsBuilder =
       copy(completeness = completeness + (field -> score))
@@ -802,7 +810,7 @@ object QualityMetrics {
         consistency = consistency,
         timeliness = timeliness,
         freshness = freshness,
-        labels = labels
+        labels = labels,
       ).withOverallScore
   }
 
@@ -832,8 +840,7 @@ case class PerformanceMetrics(
   gcTime: FiniteDuration = FiniteDuration(0, TimeUnit.MILLISECONDS),
   latency: FiniteDuration = FiniteDuration(0, TimeUnit.MILLISECONDS),
   timestamp: Instant = Instant.now(),
-  labels: MetricLabels = MetricLabels.empty
-) {
+  labels: MetricLabels = MetricLabels.empty) {
 
   def memoryUsageMB: Double   = memoryUsage.toDouble / (1024 * 1024)
   def diskUsageGB: Double     = diskUsage.toDouble / (1024 * 1024 * 1024)
@@ -858,7 +865,7 @@ case class PerformanceMetrics(
       Metric.counter("network_bytes_out", networkBytesOut, baseLabels),
       Metric.gauge("thread_count", threadCount.toDouble, baseLabels),
       Metric.gauge("gc_time_ms", gcTime.toMillis.toDouble, baseLabels),
-      Metric.gauge("latency_ms", latency.toMillis.toDouble, baseLabels)
+      Metric.gauge("latency_ms", latency.toMillis.toDouble, baseLabels),
     )
 
     MetricCollection
@@ -884,7 +891,7 @@ object PerformanceMetrics {
     val metrics = PerformanceMetrics(
       componentName = componentName,
       latency = duration,
-      timestamp = end
+      timestamp = end,
     )
 
     (result, metrics)

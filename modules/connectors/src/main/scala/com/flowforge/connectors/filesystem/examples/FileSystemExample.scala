@@ -1,8 +1,8 @@
 /**
  * FlowForge Connectors Module - File System Example
  *
- * This example demonstrates practical usage of FlowForge file system connectors with real-world
- * scenarios including data ingestion, processing, and export.
+ * This example demonstrates practical usage of FlowForge file system connectors with real-world scenarios
+ * including data ingestion, processing, and export.
  *
  * Features demonstrated:
  *   - Local file system operations
@@ -96,7 +96,7 @@ object FileSystemExample extends IOApp.Simple {
       source = LocalDataSource(
         location = "/tmp/flowforge/input/data1.json",
         format = DataFormat.JSON,
-        id = Some("data1")
+        id = Some("data1"),
       )
       readResult <- connector.read(source)
       _ <- readResult match {
@@ -132,7 +132,7 @@ object FileSystemExample extends IOApp.Simple {
       sink = LocalDataSink(
         location = "/tmp/flowforge/output/generated.json",
         format = DataFormat.JSON,
-        id = Some("test_output")
+        id = Some("test_output"),
       )
       writeResult <- connector.write(sink, outputData.getBytes)
       _ <- writeResult match {
@@ -158,24 +158,26 @@ object FileSystemExample extends IOApp.Simple {
       // Batch read multiple files
       sources = List(
         LocalDataSource("/tmp/flowforge/input/data1.json", DataFormat.JSON, id = Some("data1")),
-        LocalDataSource("/tmp/flowforge/input/data2.json", DataFormat.JSON, id = Some("data2"))
+        LocalDataSource("/tmp/flowforge/input/data2.json", DataFormat.JSON, id = Some("data2")),
       )
 
       batchResults <- FileSystemOps.batchRead[IO](sources)
-      totalBytes = batchResults.collect { case FileSystemResult.Success(bytes) =>
-        bytes.length
+      totalBytes = batchResults.collect {
+        case FileSystemResult.Success(bytes) =>
+          bytes.length
       }.sum
       _ <- IO.println(
-        s"   Batch read: ${batchResults.count(_.isSuccess)} files, $totalBytes bytes total"
+        s"   Batch read: ${batchResults.count(_.isSuccess)} files, $totalBytes bytes total",
       )
 
       // Parallel read (faster for multiple files)
       parallelResults <- FileSystemOps.parallelRead[IO](sources)
-      parallelTotalBytes = parallelResults.collect { case FileSystemResult.Success(bytes) =>
-        bytes.length
+      parallelTotalBytes = parallelResults.collect {
+        case FileSystemResult.Success(bytes) =>
+          bytes.length
       }.sum
       _ <- IO.println(
-        s"   Parallel read: ${parallelResults.count(_.isSuccess)} files, $parallelTotalBytes bytes total"
+        s"   Parallel read: ${parallelResults.count(_.isSuccess)} files, $parallelTotalBytes bytes total",
       )
 
       _ <- IO.println("   ✅ Batch operations completed")
@@ -197,19 +199,19 @@ object FileSystemExample extends IOApp.Simple {
         .map(i =>
           s"""{"id":$i,"name":"User$i","amount":${i * 10.5},"category":"${if (i % 3 == 0) "sales"
             else if (i % 2 == 0) "marketing"
-            else "support"}"}"""
+            else "support"}"}""",
         )
         .mkString("\n")
 
       _ <- IO.delay(
-        Files.write(Paths.get("/tmp/flowforge/input/large_data.json"), largeData.getBytes)
+        Files.write(Paths.get("/tmp/flowforge/input/large_data.json"), largeData.getBytes),
       )
 
       // Stream read
       source = LocalDataSource(
         location = "/tmp/flowforge/input/large_data.json",
         format = DataFormat.JSON,
-        id = Some("large_data")
+        id = Some("large_data"),
       )
 
       chunks <- connector.streamRead(source)
@@ -220,7 +222,7 @@ object FileSystemExample extends IOApp.Simple {
       sink = LocalDataSink(
         location = "/tmp/flowforge/output/streamed_data.json",
         format = DataFormat.JSON,
-        id = Some("streamed_output")
+        id = Some("streamed_output"),
       )
 
       writeResult <- connector.streamWrite(sink, chunks)
@@ -268,7 +270,7 @@ object FileSystemExample extends IOApp.Simple {
       processedData <- jsonFiles.traverse { file =>
         for {
           readResult <- connector.read(
-            LocalDataSource(file.path, DataFormat.JSON, id = Some(file.name))
+            LocalDataSource(file.path, DataFormat.JSON, id = Some(file.name)),
           )
           processedContent = readResult match {
             case FileSystemResult.Success(bytes) =>
@@ -287,7 +289,7 @@ object FileSystemExample extends IOApp.Simple {
 
           // Stage 3: Write processed data
           outputPath = s"/tmp/flowforge/processed/processed_${file.name}"
-          sink = LocalDataSink(outputPath, DataFormat.JSON, id = Some(s"processed_${file.name}"))
+          sink       = LocalDataSink(outputPath, DataFormat.JSON, id = Some(s"processed_${file.name}"))
           _ <- connector.write(sink, processedContent.getBytes)
         } yield outputPath
       }
@@ -298,7 +300,7 @@ object FileSystemExample extends IOApp.Simple {
       summarySink = LocalDataSink(
         "/tmp/flowforge/output/pipeline_summary.json",
         DataFormat.JSON,
-        id = Some("pipeline_summary")
+        id = Some("pipeline_summary"),
       )
       _ <- connector.write(summarySink, summaryData.getBytes)
 
@@ -312,7 +314,7 @@ object FileSystemExample extends IOApp.Simple {
       endTime = Instant.now(),
       duration = scala.concurrent.duration.Duration.Zero,
       metrics = List.empty,
-      errors = List.empty
+      errors = List.empty,
     )
   }
 
@@ -348,6 +350,5 @@ object FileSystemExample extends IOApp.Simple {
     endTime: Instant,
     duration: scala.concurrent.duration.Duration,
     metrics: List[String],
-    errors: List[FlowForgeError]
-  )
+    errors: List[FlowForgeError])
 }

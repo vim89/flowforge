@@ -4,9 +4,9 @@
  * File: modules/core/src/main/scala/com/flowforge/core/algebra/EffectSystem.scala Package:
  * com.flowforge.core.algebra
  *
- * This file defines the universal effect system abstraction that enables FlowForge to work with
- * different effect libraries (ZIO, Cats-Effect, etc.) through a unified interface. This is the
- * heart of FlowForge's effect polymorphism.
+ * This file defines the universal effect system abstraction that enables FlowForge to work with different
+ * effect libraries (ZIO, Cats-Effect, etc.) through a unified interface. This is the heart of FlowForge's
+ * effect polymorphism.
  *
  * Design Patterns Applied:
  *   - Tagless Final Pattern: Effect abstraction without concrete effect types
@@ -33,7 +33,7 @@
  *
  * Usage Examples:
  * ```scala
- * def processData[F[_]: EffectSystem](data: List[String]): F[List[ProcessedData] ] =
+ * def processData[F[_]: EffectSystem](data: List[String]): F[List[ProcessedData]] =
  *   for {
  *     // Parallel processing of data chunks
  *     processed <- EffectSystem[F].parTraverse(data)(processItem)
@@ -44,8 +44,8 @@
  *   } yield result
  *
  * // Works with any F[_] that has an EffectSystem instance
- * val zioResult: Task[List[ProcessedData] ] = processData(data)
- * val catsResult: IO[List[ProcessedData] ]  = processData(data)
+ * val zioResult: Task[List[ProcessedData]] = processData(data)
+ * val catsResult: IO[List[ProcessedData]]  = processData(data)
  * ```
  *
  * @author
@@ -64,8 +64,8 @@ import scala.util.{ Failure, Success, Try }
 /**
  * Universal effect system abstraction.
  *
- * This type class provides a unified interface for working with different effect systems in the
- * Scala ecosystem. It combines capabilities from:
+ * This type class provides a unified interface for working with different effect systems in the Scala
+ * ecosystem. It combines capabilities from:
  *   - Cats: Functor, Applicative, Monad, MonadError
  *   - Cats-Effect: Sync, Async, Concurrent, Resource management
  *   - Custom: FlowForge-specific operations like parallel processing
@@ -88,8 +88,8 @@ trait EffectSystem[F[_]] extends MonadError[F, Throwable] {
   /**
    * Stack-safe monadic tail recursion.
    *
-   * This is CRITICAL for Cats compatibility and large data processing. Must be implemented
-   * efficiently to prevent stack overflow.
+   * This is CRITICAL for Cats compatibility and large data processing. Must be implemented efficiently to
+   * prevent stack overflow.
    *
    * @return
    *   The final result when Right is produced
@@ -195,8 +195,7 @@ trait EffectSystem[F[_]] extends MonadError[F, Throwable] {
   /**
    * Fiber abstraction for concurrent operations.
    *
-   * Provides a unified interface for managing concurrent computations across different effect
-   * systems.
+   * Provides a unified interface for managing concurrent computations across different effect systems.
    */
   trait Fiber[FIBER[_], A] {
 
@@ -298,8 +297,7 @@ trait EffectSystem[F[_]] extends MonadError[F, Throwable] {
   /**
    * Bracket pattern for safe resource management.
    *
-   * Ensures resources are properly acquired and released even in the presence of errors or
-   * cancellation.
+   * Ensures resources are properly acquired and released even in the presence of errors or cancellation.
    *
    * @param acquire
    *   Resource acquisition
@@ -324,8 +322,12 @@ trait EffectSystem[F[_]] extends MonadError[F, Throwable] {
    * @return
    *   Result with guaranteed cleanup
    */
-  def bracketCase[A, B](acquire: F[A])(use: A => F[B])(
-    release: (A, ExitCase[Throwable]) => F[Unit]
+  def bracketCase[A, B](
+    acquire: F[A],
+  )(
+    use: A => F[B],
+  )(
+    release: (A, ExitCase[Throwable]) => F[Unit],
   ): F[B]
 
   /**
@@ -452,7 +454,7 @@ trait EffectSystem[F[_]] extends MonadError[F, Throwable] {
     fa: F[A],
     maxRetries: Int,
     initialDelay: FiniteDuration,
-    backoffFactor: Double = 2.0
+    backoffFactor: Double = 2.0,
   ): F[A] = {
     def go(attempt: Int, delay: FiniteDuration): F[A] =
       handleErrorWith(fa) { error =>
@@ -461,7 +463,7 @@ trait EffectSystem[F[_]] extends MonadError[F, Throwable] {
           flatMap(sleep(delay)) { _ =>
             go(
               attempt + 1,
-              FiniteDuration((delay.toNanos * backoffFactor).toLong, delay.unit)
+              FiniteDuration((delay.toNanos * backoffFactor).toLong, delay.unit),
             )
           }
       }
@@ -539,8 +541,9 @@ object EffectSystem {
     def retryWithBackoff(
       maxRetries: Int,
       initialDelay: FiniteDuration,
-      backoffFactor: Double = 2.0
-    )(implicit F: EffectSystem[F]): F[A] =
+      backoffFactor: Double = 2.0,
+    )(implicit F: EffectSystem[F],
+    ): F[A] =
       F.retryWithBackoff(fa, maxRetries, initialDelay, backoffFactor)
 
     def start(implicit F: EffectSystem[F]): F[F.Fiber[F, A]] =

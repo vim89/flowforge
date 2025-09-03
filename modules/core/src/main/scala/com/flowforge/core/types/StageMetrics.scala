@@ -11,8 +11,7 @@ case class StageMetrics(
   recordsFiltered: Long = 0,
   processingTimeMs: Long = 0,
   errors: Long = 0,
-  lastExecuted: Option[Instant] = None
-) {
+  lastExecuted: Option[Instant] = None) {
 
   def throughput: Double =
     if (processingTimeMs > 0) recordsOut.toDouble / (processingTimeMs / 1000.0) else 0.0
@@ -29,7 +28,7 @@ case class StageMetrics(
     recordsFiltered = recordsFiltered + other.recordsFiltered,
     processingTimeMs = processingTimeMs + other.processingTimeMs,
     errors = errors + other.errors,
-    lastExecuted = (lastExecuted ++ other.lastExecuted).maxOption
+    lastExecuted = (lastExecuted ++ other.lastExecuted).maxOption,
   )
 }
 

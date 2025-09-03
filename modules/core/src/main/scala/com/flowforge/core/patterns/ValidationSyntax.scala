@@ -30,8 +30,10 @@ object ValidationSyntax {
     /**
      * Validate this value conditionally.
      */
-    def validateWhen(condition: Boolean)(
-      validator: A => ValidationResult[A]
+    def validateWhen(
+      condition: Boolean,
+    )(
+      validator: A => ValidationResult[A],
     ): ValidationResult[A] =
       if (condition) validator(value) else valid(value)
 
@@ -119,7 +121,7 @@ object ValidationSyntax {
      * Validate with index information.
      */
     def validateWithIndex(
-      validator: (A, Int) => ValidationResult[A]
+      validator: (A, Int) => ValidationResult[A],
     ): ValidationResult[List[A]] =
       list.zipWithIndex.traverse { case (item, index) => validator(item, index) }
 
@@ -127,7 +129,7 @@ object ValidationSyntax {
      * Find first validation failure.
      */
     def findInvalid(
-      validator: A => ValidationResult[A]
+      validator: A => ValidationResult[A],
     ): Option[(A, NonEmptyList[ValidationError])] =
       list.view
         .map(item => item -> validator(item))

@@ -16,7 +16,7 @@ object SchemaValidation {
    */
   def compatible(
     source: DataSchema,
-    target: DataSchema
+    target: DataSchema,
   ): SchemaValidationResult = {
     val errors = scala.collection.mutable.ListBuffer[SchemaError]()
 
@@ -45,7 +45,7 @@ object SchemaValidation {
    */
   def evolutionCompatible(
     oldSchema: DataSchema,
-    newSchema: DataSchema
+    newSchema: DataSchema,
   ): SchemaValidationResult = {
     val errors = scala.collection.mutable.ListBuffer[SchemaError]()
 
@@ -94,7 +94,7 @@ object SchemaValidation {
    */
   def hasRequiredFields(
     schema: DataSchema,
-    requiredFields: List[String]
+    requiredFields: List[String],
   ): SchemaValidationResult = {
     val schemaFieldNames = schema.fieldNames.toSet
     val missingFields    = requiredFields.filterNot(schemaFieldNames.contains)
@@ -104,7 +104,7 @@ object SchemaValidation {
     } else {
       val error = SchemaIncompatible(
         DataSchema.builder.build, // Empty schema as placeholder
-        schema
+        schema,
       )
       invalid(error)
     }

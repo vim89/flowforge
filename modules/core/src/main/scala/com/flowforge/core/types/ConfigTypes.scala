@@ -4,9 +4,9 @@
  * File: modules/core/src/main/scala/com/flowforge/core/types/ConfigTypes.scala Package:
  * com.flowforge.core.types
  *
- * This file defines type-safe configuration types for the FlowForge ecosystem. Instead of relying
- * on external configuration libraries, we use pure Scala ADTs with cats ValidatedNel for
- * comprehensive validation and error accumulation.
+ * This file defines type-safe configuration types for the FlowForge ecosystem. Instead of relying on external
+ * configuration libraries, we use pure Scala ADTs with cats ValidatedNel for comprehensive validation and
+ * error accumulation.
  *
  * Design Patterns Applied:
  *   - ADT Pattern: Sealed trait hierarchies for configuration options
@@ -91,23 +91,39 @@ object ConfigError {
     val field   = Some(fieldName)
   }
 
-  case class InvalidValue(fieldName: String, value: String, expected: String) extends ConfigError {
+  case class InvalidValue(
+    fieldName: String,
+    value: String,
+    expected: String)
+      extends ConfigError {
     val message = s"Invalid value for field '$fieldName': got '$value', expected $expected"
     val field   = Some(fieldName)
   }
 
-  case class InvalidFormat(fieldName: String, value: String, format: String) extends ConfigError {
+  case class InvalidFormat(
+    fieldName: String,
+    value: String,
+    format: String)
+      extends ConfigError {
     val message = s"Invalid format for field '$fieldName': '$value' does not match $format"
     val field   = Some(fieldName)
   }
 
-  case class OutOfRange(fieldName: String, value: String, min: String, max: String)
+  case class OutOfRange(
+    fieldName: String,
+    value: String,
+    min: String,
+    max: String)
       extends ConfigError {
     val message = s"Value '$value' for field '$fieldName' is out of range [$min, $max]"
     val field   = Some(fieldName)
   }
 
-  case class ConflictingValues(field1: String, field2: String, reason: String) extends ConfigError {
+  case class ConflictingValues(
+    field1: String,
+    field2: String,
+    reason: String)
+      extends ConfigError {
     val message = s"Conflicting values between '$field1' and '$field2': $reason"
     val field   = Some(s"$field1,$field2")
   }
@@ -198,8 +214,7 @@ case class RetryPolicy(
   initialDelay: FiniteDuration,
   maxDelay: FiniteDuration,
   backoffFactor: Double,
-  jitter: Boolean = true
-) {
+  jitter: Boolean = true) {
 
   def validate: ValidatedNel[ConfigError, Unit] = {
     val backoffValidation = if (backoffFactor >= 1.0) {
@@ -215,7 +230,7 @@ case class RetryPolicy(
         .ConflictingValues(
           "initialDelay",
           "maxDelay",
-          "initialDelay must be <= maxDelay"
+          "initialDelay must be <= maxDelay",
         )
         .invalidNel
     }
@@ -230,9 +245,8 @@ object RetryPolicy {
     RetryPolicy(
       maxRetries = Refined.unsafeApply(maxRetries),
       initialDelay = initialDelay,
-      maxDelay =
-        FiniteDuration(initialDelay.toMillis * math.pow(2, maxRetries).toLong, initialDelay.unit),
-      backoffFactor = 2.0
+      maxDelay = FiniteDuration(initialDelay.toMillis * math.pow(2, maxRetries).toLong, initialDelay.unit),
+      backoffFactor = 2.0,
     )
 
   def fixed(maxRetries: Int, delay: FiniteDuration): RetryPolicy =
@@ -241,7 +255,7 @@ object RetryPolicy {
       initialDelay = delay,
       maxDelay = delay,
       backoffFactor = 1.0,
-      jitter = false
+      jitter = false,
     )
 
   def linear(maxRetries: Int, initialDelay: FiniteDuration): RetryPolicy =
@@ -249,7 +263,7 @@ object RetryPolicy {
       maxRetries = Refined.unsafeApply(maxRetries),
       initialDelay = initialDelay,
       maxDelay = FiniteDuration(initialDelay.toMillis * maxRetries, initialDelay.unit),
-      backoffFactor = 1.0
+      backoffFactor = 1.0,
     )
 
   val default: RetryPolicy      = exponential(3, FiniteDuration(1, "second"))
@@ -268,8 +282,7 @@ case class CircuitBreakerConfig(
   failureThreshold: PositiveInt,
   resetTimeout: FiniteDuration,
   callTimeout: FiniteDuration,
-  maxConcurrentCalls: PositiveInt
-)
+  maxConcurrentCalls: PositiveInt)
 
 object CircuitBreakerConfig {
 
@@ -277,7 +290,7 @@ object CircuitBreakerConfig {
     failureThreshold = Refined.unsafeApply(5),
     resetTimeout = FiniteDuration(30, "seconds"),
     callTimeout = FiniteDuration(10, "seconds"),
-    maxConcurrentCalls = Refined.unsafeApply(100)
+    maxConcurrentCalls = Refined.unsafeApply(100),
   )
 
   implicit val showCircuitBreakerConfig: Show[CircuitBreakerConfig] = Show.show { config =>
@@ -302,8 +315,7 @@ case class SparkConfig(
   serializer: String = "org.apache.spark.serializer.KryoSerializer",
   dynamicAllocation: Boolean = true,
   adaptiveQueryExecution: Boolean = true,
-  additionalProps: Map[String, String] = Map.empty
-) {
+  additionalProps: Map[String, String] = Map.empty) {
 
   def withMemory(executor: String, driver: String = "1g"): SparkConfig =
     copy(executorMemory = executor, driverMemory = driver)
@@ -349,13 +361,13 @@ object SparkConfig {
     SparkConfig(
       appName = Refined.unsafeApply(appName),
       master = Some(s"local[$cores]"),
-      dynamicAllocation = false
+      dynamicAllocation = false,
     )
 
   def cluster(appName: String, masterUrl: String): SparkConfig =
     SparkConfig(
       appName = Refined.unsafeApply(appName),
-      master = Some(masterUrl)
+      master = Some(masterUrl),
     )
 
   implicit val showSparkConfig: Show[SparkConfig] = Show.show { config =>
@@ -373,8 +385,7 @@ case class FlinkConfig(
   jobManagerMemory: String = "1024m",
   checkpointInterval: Option[FiniteDuration] = None,
   restartStrategy: FlinkRestartStrategy = FlinkRestartStrategy.FixedDelay,
-  additionalProps: Map[String, String] = Map.empty
-) {
+  additionalProps: Map[String, String] = Map.empty) {
 
   def withParallelism(level: Int): FlinkConfig =
     copy(parallelism = Refined.unsafeApply(level))
@@ -422,13 +433,12 @@ case class MonitoringConfig(
   metricsPort: Option[PortNumber] = None,
   healthCheckPort: Option[PortNumber] = None,
   prometheusEnabled: Boolean = false,
-  customMetrics: Map[String, String] = Map.empty
-) {
+  customMetrics: Map[String, String] = Map.empty) {
 
   def withMetrics(enabled: Boolean, port: Option[Int] = None): MonitoringConfig =
     copy(
       metricsEnabled = enabled,
-      metricsPort = port.map(p => Refined.unsafeApply(p))
+      metricsPort = port.map(p => Refined.unsafeApply(p)),
     )
 
   def withLogging(level: LogLevel): MonitoringConfig =
@@ -489,7 +499,7 @@ object MonitoringConfig {
     metricsEnabled = true,
     tracingEnabled = true,
     loggingLevel = LogLevel.Info,
-    prometheusEnabled = true
+    prometheusEnabled = true,
   )
 
   implicit val showMonitoringConfig: Show[MonitoringConfig] = Show.show { config =>
@@ -519,8 +529,7 @@ case class PipelineConfig(
   tags: Map[String, String] = Map.empty,
   settings: Map[String, String] = Map.empty,
   createdAt: Instant = Instant.now(),
-  configId: String = UUID.randomUUID().toString
-) {
+  configId: String = UUID.randomUUID().toString) {
 
   def withTag(key: String, value: String): PipelineConfig =
     copy(tags = tags + (key -> value))
@@ -541,7 +550,7 @@ case class PipelineConfig(
           .ConflictingValues(
             "sparkConfig",
             "flinkConfig",
-            "Cannot specify both Spark and Flink configs"
+            "Cannot specify both Spark and Flink configs",
           )
           .invalidNel
       case (None, None) =>
@@ -552,7 +561,13 @@ case class PipelineConfig(
     val sparkValidation = sparkConfig.traverse(_.validate).map(_ => ())
     val retryValidation = retryPolicy.validate
 
-    (engineValidation, sparkValidation, retryValidation).mapN((_, _, _) => ())
+    (engineValidation, sparkValidation, retryValidation).mapN(
+      (
+        _,
+        _,
+        _,
+      ) => (),
+    )
   }
 }
 
@@ -573,8 +588,7 @@ object PipelineConfig {
     retryPolicy: RetryPolicy = RetryPolicy.default,
     circuitBreaker: CircuitBreakerConfig = CircuitBreakerConfig.default,
     monitoring: MonitoringConfig = MonitoringConfig.default,
-    tags: Map[String, String] = Map.empty
-  ) {
+    tags: Map[String, String] = Map.empty) {
 
     def withName(pipelineName: String): PipelineConfigBuilder =
       copy(name = Some(Refined.unsafeApply(pipelineName)))
@@ -619,7 +633,12 @@ object PipelineConfig {
       val sinkValidation        = sink.toValidNel(ConfigError.MissingRequired("sink"))
 
       (nameValidation, environmentValidation, sourceValidation, sinkValidation).mapN {
-        (n, env, src, snk) =>
+        (
+          n,
+          env,
+          src,
+          snk,
+        ) =>
           PipelineConfig(
             name = n,
             version = version,
@@ -632,7 +651,7 @@ object PipelineConfig {
             retryPolicy = retryPolicy,
             circuitBreaker = circuitBreaker,
             monitoring = monitoring,
-            tags = tags
+            tags = tags,
           )
       }.andThen(config => config.validate.map(_ => config))
     }
@@ -641,8 +660,8 @@ object PipelineConfig {
   def builder: PipelineConfigBuilder = PipelineConfigBuilder()
 
   /**
-   * Parse configuration from a key-value map. This enables loading from environment variables,
-   * properties files, etc.
+   * Parse configuration from a key-value map. This enables loading from environment variables, properties
+   * files, etc.
    */
   def fromMap(configMap: Map[String, String]): ValidatedNel[ConfigError, PipelineConfig] = {
 
@@ -664,7 +683,7 @@ object PipelineConfig {
       getString(key).andThen { value =>
         Try(FiniteDuration(value.toLong, "seconds")) match {
           case Success(dur) => dur.validNel
-          case Failure(_) => ConfigError.InvalidFormat(key, value, "duration in seconds").invalidNel
+          case Failure(_)   => ConfigError.InvalidFormat(key, value, "duration in seconds").invalidNel
         }
       }
 
@@ -682,12 +701,17 @@ object PipelineConfig {
       ConfigError.CustomError("Sink parsing not implemented in fromMap").invalidNel[DataSink]
 
     (nameValidation, environmentValidation, sourceValidation, sinkValidation).mapN {
-      (name, env, source, sink) =>
+      (
+        name,
+        env,
+        source,
+        sink,
+      ) =>
         PipelineConfig(
           name = name,
           environment = env,
           source = source,
-          sink = sink
+          sink = sink,
         )
     }
   }
@@ -719,8 +743,8 @@ object PipelineConfig {
 object ConfigUtils {
 
   /**
-   * Merge two pipeline configurations with precedence. The second configuration takes precedence
-   * over the first.
+   * Merge two pipeline configurations with precedence. The second configuration takes precedence over the
+   * first.
    */
   def merge(base: PipelineConfig, pipelineConfig: PipelineConfig): PipelineConfig =
     base.copy(
@@ -735,7 +759,7 @@ object ConfigUtils {
       retryPolicy = pipelineConfig.retryPolicy,
       circuitBreaker = pipelineConfig.circuitBreaker,
       monitoring = pipelineConfig.monitoring,
-      tags = base.tags ++ pipelineConfig.tags
+      tags = base.tags ++ pipelineConfig.tags,
     )
 
   /**

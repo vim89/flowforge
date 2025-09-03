@@ -4,8 +4,8 @@ import com.flowforge.core.types._
 import io.circe.Json
 
 /**
- * Utilities to infer simple DataSchema from runtime values or JSON. Best-effort, not a full schema
- * registry replacement.
+ * Utilities to infer simple DataSchema from runtime values or JSON. Best-effort, not a full schema registry
+ * replacement.
  */
 object SchemaUtils {
 
@@ -23,11 +23,12 @@ object SchemaUtils {
   def inferFromProduct(
     a: Product,
     fieldNames: Iterable[String],
-    name: String = "inferred"
+    name: String = "inferred",
   ): DataSchema = {
     val builder = DataSchema.builder.withMetadata("name", name)
-    fieldNames.zip(a.productIterator).foreach { case (n, v) =>
-      builder.addField(n, scalaToType(v))
+    fieldNames.zip(a.productIterator).foreach {
+      case (n, v) =>
+        builder.addField(n, scalaToType(v))
     }
     builder.build
   }
@@ -41,8 +42,9 @@ object SchemaUtils {
       val elemT = arr.headOption.map(jsonToType).getOrElse(DataType.String)
       DataType.Array(elemT)
     } else if (j.isObject) {
-      val fields = j.asObject.get.toMap.map { case (k, v) =>
-        StructField.required(k, jsonToType(v))
+      val fields = j.asObject.get.toMap.map {
+        case (k, v) =>
+          StructField.required(k, jsonToType(v))
       }.toList
       DataType.Struct(fields)
     } else DataType.String
@@ -55,15 +57,16 @@ object SchemaUtils {
     case _: Float             => DataType.Double
     case _: Boolean           => DataType.Boolean
     case _: java.time.Instant => DataType.Timestamp
-    case l: List[_]   => DataType.Array(l.headOption.map(scalaToType).getOrElse(DataType.String))
-    case a: Array[_]  => DataType.Array(a.headOption.map(scalaToType).getOrElse(DataType.String))
-    case m: Map[_, _] => DataType.Map(DataType.String, DataType.String)
+    case l: List[_]           => DataType.Array(l.headOption.map(scalaToType).getOrElse(DataType.String))
+    case a: Array[_]          => DataType.Array(a.headOption.map(scalaToType).getOrElse(DataType.String))
+    case m: Map[_, _]         => DataType.Map(DataType.String, DataType.String)
     case p: Product =>
       val names =
         try p.productElementNames.toList
         catch { case _: Throwable => (0 until p.productArity).map(i => s"_${i + 1}").toList }
-      val fields = names.zip(p.productIterator.toList).map { case (n, vv) =>
-        StructField.required(n, scalaToType(vv))
+      val fields = names.zip(p.productIterator.toList).map {
+        case (n, vv) =>
+          StructField.required(n, scalaToType(vv))
       }
       DataType.Struct(fields)
     case _ => DataType.String

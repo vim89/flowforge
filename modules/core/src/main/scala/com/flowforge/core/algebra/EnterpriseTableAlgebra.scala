@@ -1,11 +1,11 @@
 /**
  * FlowForge Core Module - Enterprise Table Operations Algebra
  *
- * File: modules/core/src/main/scala/com/flowforge/core/algebra/EnterpriseTableAlgebra.scala
- * Package: com.flowforge.core.algebra
+ * File: modules/core/src/main/scala/com/flowforge/core/algebra/EnterpriseTableAlgebra.scala Package:
+ * com.flowforge.core.algebra
  *
- * Enterprise-grade table management operations enhanced with FlowForge's functional principles.
- * Integrates reference-utilities Table.scala patterns with effect polymorphism and type safety.
+ * Enterprise-grade table management operations enhanced with FlowForge's functional principles. Integrates
+ * reference-utilities Table.scala patterns with effect polymorphism and type safety.
  *
  * Design Patterns Applied:
  *   - Tagless Final Pattern: Effect abstraction for table operations
@@ -46,8 +46,8 @@ import java.time.Instant
 import scala.concurrent.duration.FiniteDuration
 
 /**
- * Enterprise table operations algebra with effect polymorphism. Enhanced version of
- * reference-utilities Table.scala patterns.
+ * Enterprise table operations algebra with effect polymorphism. Enhanced version of reference-utilities
+ * Table.scala patterns.
  */
 trait EnterpriseTableAlgebra[F[_]] {
 
@@ -56,8 +56,8 @@ trait EnterpriseTableAlgebra[F[_]] {
   // ===============================
 
   /**
-   * Repair and refresh table metadata. Enhanced version of reference Table.repairRefreshTable with
-   * effect safety.
+   * Repair and refresh table metadata. Enhanced version of reference Table.repairRefreshTable with effect
+   * safety.
    *
    * @param tableName
    *   Table to repair and refresh
@@ -78,8 +78,8 @@ trait EnterpriseTableAlgebra[F[_]] {
   def getTableLocation(tableName: TableName): F[ValidatedNel[TableError, TableLocation]]
 
   /**
-   * Delete table data from distributed file system. Enhanced version of reference
-   * Table.deleteDfsLocation with safety checks.
+   * Delete table data from distributed file system. Enhanced version of reference Table.deleteDfsLocation
+   * with safety checks.
    *
    * @param location
    *   DFS location to delete
@@ -89,8 +89,7 @@ trait EnterpriseTableAlgebra[F[_]] {
   def deleteDfsLocation(location: TableLocation): F[DeletionResult]
 
   /**
-   * Optimize table storage and performance. Advanced optimization strategies for different table
-   * types.
+   * Optimize table storage and performance. Advanced optimization strategies for different table types.
    *
    * @param tableName
    *   Table to optimize
@@ -101,7 +100,7 @@ trait EnterpriseTableAlgebra[F[_]] {
    */
   def optimizeTable(
     tableName: TableName,
-    strategy: OptimizationStrategy
+    strategy: OptimizationStrategy,
   ): F[OptimizationResult]
 
   /**
@@ -117,7 +116,7 @@ trait EnterpriseTableAlgebra[F[_]] {
    */
   def vacuumTable(
     tableName: TableName,
-    retentionPolicy: RetentionPolicy
+    retentionPolicy: RetentionPolicy,
   ): F[VacuumResult]
 
   // ===============================
@@ -140,7 +139,7 @@ trait EnterpriseTableAlgebra[F[_]] {
   def getAffectedPartitions(
     tableName: TableName,
     sinceTimestamp: Instant,
-    regionFilter: Option[String] = None
+    regionFilter: Option[String] = None,
   ): F[ValidatedNel[PartitionError, List[PartitionInfo]]]
 
   /**
@@ -155,7 +154,7 @@ trait EnterpriseTableAlgebra[F[_]] {
    */
   def dropPartitions(
     tableName: TableName,
-    partitions: NonEmptyList[PartitionSpec]
+    partitions: NonEmptyList[PartitionSpec],
   ): F[List[PartitionDropResult]]
 
   /**
@@ -170,7 +169,7 @@ trait EnterpriseTableAlgebra[F[_]] {
    */
   def addPartitions(
     tableName: TableName,
-    partitions: NonEmptyList[PartitionSpec]
+    partitions: NonEmptyList[PartitionSpec],
   ): F[List[PartitionAddResult]]
 
   /**
@@ -188,8 +187,8 @@ trait EnterpriseTableAlgebra[F[_]] {
   // ===============================
 
   /**
-   * Get affected blobs from cloud storage. Enhanced version of reference Table.getAffectedBlobs
-   * with resource safety.
+   * Get affected blobs from cloud storage. Enhanced version of reference Table.getAffectedBlobs with resource
+   * safety.
    *
    * @param bucketName
    *   Cloud storage bucket
@@ -203,12 +202,12 @@ trait EnterpriseTableAlgebra[F[_]] {
   def getAffectedBlobs(
     bucketName: String,
     beforeTimestamp: Option[Instant] = None,
-    afterTimestamp: Option[Instant] = None
+    afterTimestamp: Option[Instant] = None,
   ): F[ValidatedNel[BlobError, List[BlobInfo]]]
 
   /**
-   * Process blobs concurrently with resource management. Enhanced version with effect-safe
-   * concurrent processing.
+   * Process blobs concurrently with resource management. Enhanced version with effect-safe concurrent
+   * processing.
    *
    * @param blobs
    *   Blobs to process
@@ -224,12 +223,11 @@ trait EnterpriseTableAlgebra[F[_]] {
   def processBlobsConcurrently[A](
     blobs: List[BlobInfo],
     processor: BlobInfo => F[A],
-    concurrency: Int = 10
+    concurrency: Int = 10,
   ): F[List[A]]
 
   /**
-   * Sync table metadata with cloud storage state. Ensures table metadata accurately reflects
-   * storage reality.
+   * Sync table metadata with cloud storage state. Ensures table metadata accurately reflects storage reality.
    *
    * @param tableName
    *   Table to sync
@@ -257,7 +255,7 @@ trait EnterpriseTableAlgebra[F[_]] {
   def evolveSchema(
     tableName: TableName,
     newSchema: TableSchema,
-    evolutionStrategy: SchemaEvolutionStrategy
+    evolutionStrategy: SchemaEvolutionStrategy,
   ): F[SchemaEvolutionResult]
 
   /**
@@ -272,7 +270,7 @@ trait EnterpriseTableAlgebra[F[_]] {
    */
   def validateSchemaCompatibility(
     currentSchema: TableSchema,
-    proposedSchema: TableSchema
+    proposedSchema: TableSchema,
   ): F[SchemaCompatibilityResult]
 
   /**
@@ -287,7 +285,7 @@ trait EnterpriseTableAlgebra[F[_]] {
    */
   def generateSchemaMigration(
     fromSchema: TableSchema,
-    toSchema: TableSchema
+    toSchema: TableSchema,
   ): F[SchemaMigrationScript]
 }
 
@@ -308,8 +306,7 @@ case class TableOperationResult(
   storageUsed: Long,
   errors: List[TableError] = List.empty,
   warnings: List[String] = List.empty,
-  metadata: Map[String, String] = Map.empty
-)
+  metadata: Map[String, String] = Map.empty)
 
 /**
  * Table location information.
@@ -318,8 +315,7 @@ case class TableLocation(
   path: String,
   fileSystem: FileSystemType,
   partitioned: Boolean,
-  partitionColumns: List[FieldName] = List.empty
-)
+  partitionColumns: List[FieldName] = List.empty)
 
 /**
  * Partition information with metadata.
@@ -329,15 +325,13 @@ case class PartitionInfo(
   location: String,
   lastModified: Instant,
   sizeBytes: Long,
-  recordCount: Option[Long] = None
-)
+  recordCount: Option[Long] = None)
 
 /**
  * Partition specification.
  */
 case class PartitionSpec(
-  columns: Map[FieldName, String]
-) {
+  columns: Map[FieldName, String]) {
   def toPartitionPath: String =
     columns.map { case (name, value) => s"${name.value}=$value" }.mkString("/")
 }
@@ -351,8 +345,7 @@ case class BlobInfo(
   lastModified: Instant,
   sizeBytes: Long,
   contentType: String,
-  metadata: Map[String, String] = Map.empty
-)
+  metadata: Map[String, String] = Map.empty)
 
 /**
  * Optimization strategies for table operations.
@@ -412,32 +405,28 @@ case class OptimizationResult(
   afterMetrics: TableMetrics,
   duration: FiniteDuration,
   spaceReclaimed: Long,
-  performanceImprovement: Double
-)
+  performanceImprovement: Double)
 
 case class VacuumResult(
   tableName: TableName,
   retentionPolicy: RetentionPolicy,
   filesDeleted: Long,
   spaceReclaimed: Long,
-  duration: FiniteDuration
-)
+  duration: FiniteDuration)
 
 case class DeletionResult(
   location: TableLocation,
   filesDeleted: Long,
   spaceReclaimed: Long,
   duration: FiniteDuration,
-  confirmed: Boolean
-)
+  confirmed: Boolean)
 
 case class SyncResult(
   tableName: TableName,
   metadataUpdated: Boolean,
   partitionsAdded: Int,
   partitionsRemoved: Int,
-  inconsistenciesFixed: Int
-)
+  inconsistenciesFixed: Int)
 
 case class SchemaEvolutionResult(
   tableName: TableName,
@@ -445,22 +434,19 @@ case class SchemaEvolutionResult(
   toVersion: SchemaVersion,
   strategy: SchemaEvolutionStrategy,
   migrationApplied: Boolean,
-  backupCreated: Boolean
-)
+  backupCreated: Boolean)
 
 case class SchemaCompatibilityResult(
   compatible: Boolean,
   breakingChanges: List[SchemaChange],
   warnings: List[String],
-  recommendations: List[String]
-)
+  recommendations: List[String])
 
 case class SchemaMigrationScript(
   statements: List[String],
   rollbackStatements: List[String],
   estimatedDuration: FiniteDuration,
-  riskLevel: RiskLevel
-)
+  riskLevel: RiskLevel)
 
 case class PartitionAnalysis(
   tableName: TableName,
@@ -468,8 +454,7 @@ case class PartitionAnalysis(
   activePartitions: Int,
   emptyPartitions: Int,
   averagePartitionSize: Long,
-  recommendations: List[PartitionRecommendation]
-)
+  recommendations: List[PartitionRecommendation])
 
 case class TableMetrics(
   recordCount: Long,
@@ -477,21 +462,18 @@ case class TableMetrics(
   fileCount: Int,
   averageFileSize: Long,
   compressionRatio: Double,
-  lastModified: Instant
-)
+  lastModified: Instant)
 
 case class TableSchema(
   fields: List[SchemaField],
   partitionColumns: List[FieldName],
-  version: SchemaVersion
-)
+  version: SchemaVersion)
 
 case class SchemaField(
   name: FieldName,
   dataType: String,
   nullable: Boolean,
-  description: Option[String] = None
-)
+  description: Option[String] = None)
 
 case class SchemaVersion(value: Int) extends AnyVal
 
@@ -532,7 +514,11 @@ case class PartitionNotFound(partitionSpec: PartitionSpec) extends PartitionErro
 }
 
 sealed trait BlobError extends FlowForgeError
-case class BlobAccessError(bucketName: String, blobName: String, reason: String) extends BlobError {
+case class BlobAccessError(
+  bucketName: String,
+  blobName: String,
+  reason: String)
+    extends BlobError {
   val message       = s"Cannot access blob '$blobName' in bucket '$bucketName': $reason"
   val category      = ErrorCategory.System
   val severity      = ErrorSeverity.Error
@@ -568,7 +554,7 @@ trait AdvancedTableOperations[F[_]] extends EnterpriseTableAlgebra[F] {
    */
   def createSnapshot(
     tableName: TableName,
-    snapshotName: String
+    snapshotName: String,
   ): F[SnapshotResult]
 
   /**
@@ -583,7 +569,7 @@ trait AdvancedTableOperations[F[_]] extends EnterpriseTableAlgebra[F] {
    */
   def restoreFromSnapshot(
     tableName: TableName,
-    snapshotName: String
+    snapshotName: String,
   ): F[RestoreResult]
 
   /**
@@ -601,7 +587,7 @@ trait AdvancedTableOperations[F[_]] extends EnterpriseTableAlgebra[F] {
   def cloneTable(
     sourceTable: TableName,
     targetTable: TableName,
-    includeData: Boolean = true
+    includeData: Boolean = true,
   ): F[CloneResult]
 
   /**
@@ -629,7 +615,7 @@ trait AdvancedTableOperations[F[_]] extends EnterpriseTableAlgebra[F] {
   def compareTables(
     table1: TableName,
     table2: TableName,
-    comparisonType: TableComparisonType
+    comparisonType: TableComparisonType,
   ): F[TableComparisonResult]
 }
 
@@ -638,8 +624,8 @@ trait AdvancedTableOperations[F[_]] extends EnterpriseTableAlgebra[F] {
 // ===============================
 
 /**
- * Resource-safe table operations using Resource[F, _] pattern. Ensures proper cleanup of table
- * connections and locks.
+ * Resource-safe table operations using Resource[F, _] pattern. Ensures proper cleanup of table connections
+ * and locks.
  */
 trait ResourceSafeTableOps[F[_]] {
   implicit def monadCancel: MonadCancel[F, Throwable]
@@ -656,7 +642,7 @@ trait ResourceSafeTableOps[F[_]] {
    */
   def acquireTableLock(
     tableName: TableName,
-    lockType: TableLockType
+    lockType: TableLockType,
   ): Resource[F, TableLock]
 
   /**
@@ -682,8 +668,10 @@ trait ResourceSafeTableOps[F[_]] {
    *   Operation result with guaranteed cleanup
    */
   def withTableResource[A](
-    tableName: TableName
-  )(operation: TableConnection => F[A]): F[A] =
+    tableName: TableName,
+  )(
+    operation: TableConnection => F[A],
+  ): F[A] =
     openTableConnection(tableName).use(operation)
 }
 
@@ -718,8 +706,7 @@ case class SchemaChange(
   changeType: SchemaChangeType,
   fieldName: FieldName,
   description: String,
-  impact: SchemaImpact
-)
+  impact: SchemaImpact)
 
 sealed trait SchemaChangeType
 object SchemaChangeType {
@@ -742,8 +729,7 @@ case class PartitionRecommendation(
   recommendationType: RecommendationType,
   description: String,
   estimatedBenefit: String,
-  effort: EffortLevel
-)
+  effort: EffortLevel)
 
 sealed trait RecommendationType
 object RecommendationType {
@@ -769,30 +755,26 @@ case class PartitionDropResult(
   success: Boolean,
   filesDeleted: Long,
   spaceReclaimed: Long,
-  errors: List[PartitionError] = List.empty
-)
+  errors: List[PartitionError] = List.empty)
 
 case class PartitionAddResult(
   partitionSpec: PartitionSpec,
   success: Boolean,
   location: String,
-  errors: List[PartitionError] = List.empty
-)
+  errors: List[PartitionError] = List.empty)
 
 case class SnapshotResult(
   tableName: TableName,
   snapshotName: String,
   snapshotLocation: String,
   snapshotSize: Long,
-  duration: FiniteDuration
-)
+  duration: FiniteDuration)
 
 case class RestoreResult(
   tableName: TableName,
   snapshotName: String,
   recordsRestored: Long,
-  duration: FiniteDuration
-)
+  duration: FiniteDuration)
 
 case class CloneResult(
   sourceTable: TableName,
@@ -800,44 +782,38 @@ case class CloneResult(
   schemaCloned: Boolean,
   dataCloned: Boolean,
   recordsCloned: Long,
-  duration: FiniteDuration
-)
+  duration: FiniteDuration)
 
 case class TableAnalysis(
   tableName: TableName,
   metrics: TableMetrics,
   recommendations: List[TableRecommendation],
   healthScore: Double,
-  optimizationOpportunities: List[OptimizationOpportunity]
-)
+  optimizationOpportunities: List[OptimizationOpportunity])
 
 case class TableComparisonResult(
   table1: TableName,
   table2: TableName,
   comparisonType: TableComparisonType,
   differences: List[TableDifference],
-  summary: String
-)
+  summary: String)
 
 case class TableRecommendation(
   category: RecommendationCategory,
   description: String,
   priority: Priority,
-  estimatedImpact: String
-)
+  estimatedImpact: String)
 
 case class OptimizationOpportunity(
   strategy: OptimizationStrategy,
   description: String,
   estimatedBenefit: String,
-  complexity: ComplexityLevel
-)
+  complexity: ComplexityLevel)
 
 case class TableDifference(
   category: DifferenceCategory,
   description: String,
-  severity: DifferenceSeverity
-)
+  severity: DifferenceSeverity)
 
 // Supporting enums
 sealed trait RecommendationCategory
@@ -931,8 +907,7 @@ object EnterpriseTableAlgebra {
  */
 case class TableOperationBuilder[F[_]: EffectSystem](
   tableName: TableName,
-  operations: List[TableOperation[F]] = List.empty
-) {
+  operations: List[TableOperation[F]] = List.empty) {
 
   def repair: TableOperationBuilder[F] =
     copy(operations = operations :+ TableOperation.Repair)
@@ -958,8 +933,8 @@ case class TableOperationBuilder[F[_]: EffectSystem](
               duration = opt.duration,
               recordsAffected = 0,
               partitionsAffected = 0,
-              storageUsed = opt.beforeMetrics.sizeBytes - opt.afterMetrics.sizeBytes
-            )
+              storageUsed = opt.beforeMetrics.sizeBytes - opt.afterMetrics.sizeBytes,
+            ),
           )
       case TableOperation.Vacuum(policy) =>
         algebra
@@ -972,8 +947,8 @@ case class TableOperationBuilder[F[_]: EffectSystem](
               duration = vac.duration,
               recordsAffected = 0,
               partitionsAffected = 0,
-              storageUsed = vac.spaceReclaimed
-            )
+              storageUsed = vac.spaceReclaimed,
+            ),
           )
     }
 }

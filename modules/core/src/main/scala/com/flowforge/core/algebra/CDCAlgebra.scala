@@ -4,8 +4,8 @@
  * File: modules/core/src/main/scala/com/flowforge/core/algebra/CDCAlgebra.scala Package:
  * com.flowforge.core.algebra
  *
- * Type-safe, effect-polymorphic Change Data Capture operations. Inspired by reference-utilities
- * ETL.scala but enhanced with:
+ * Type-safe, effect-polymorphic Change Data Capture operations. Inspired by reference-utilities ETL.scala but
+ * enhanced with:
  *   - Compile-time type safety via phantom types and refined types
  *   - Effect system abstraction for resource safety
  *   - Functional composition patterns with Kleisli arrows
@@ -48,9 +48,9 @@ import scala.concurrent.duration.FiniteDuration
 /**
  * Change Data Capture operations abstraction.
  *
- * Provides type-safe, effect-polymorphic operations for detecting and processing data changes
- * between source and target datasets. Enhanced version of reference-utilities ETL patterns with
- * functional programming principles.
+ * Provides type-safe, effect-polymorphic operations for detecting and processing data changes between source
+ * and target datasets. Enhanced version of reference-utilities ETL patterns with functional programming
+ * principles.
  */
 // ===============================
 // CORE CDC TYPES (moved outside trait for companion object access)
@@ -79,8 +79,7 @@ case class CDCResult[A](
   processingTime: FiniteDuration,
   qualityMetrics: CDCQualityMetrics,
   lineage: DataLineage,
-  errors: List[FlowForgeError] = List.empty
-)
+  errors: List[FlowForgeError] = List.empty)
 
 /**
  * Quality metrics for CDC operations
@@ -89,7 +88,7 @@ case class CDCQualityMetrics(
   duplicateKeyCount: Long,
   nullPrimaryKeyCount: Long,
   schemaViolationCount: Long,
-  dataQualityScore: Double // 0.0 to 1.0
+  dataQualityScore: Double, // 0.0 to 1.0
 )
 
 /**
@@ -100,8 +99,7 @@ case class DataLineage(
   targetInfo: DataSink,
   transformationHash: String,
   processingTimestamp: Instant,
-  pipelineId: NonEmptyString
-)
+  pipelineId: NonEmptyString)
 
 /**
  * CDC configuration with validation
@@ -112,8 +110,7 @@ case class CDCConfig(
   softDeleteColumn: Option[FieldName] = None,
   timestampColumn: Option[FieldName] = None,
   batchSize: Int = 10000,
-  enableQualityChecks: Boolean = true
-)
+  enableQualityChecks: Boolean = true)
 
 trait CDCAlgebra[F[_]] {
 
@@ -144,8 +141,9 @@ trait CDCAlgebra[F[_]] {
   def performDelta[A](
     source: Dataset[A],
     target: Dataset[A],
-    config: CDCConfig
-  )(implicit contract: PDataContract[A]): F[CDCResult[A]]
+    config: CDCConfig,
+  )(implicit contract: PDataContract[A],
+  ): F[CDCResult[A]]
 
   /**
    * Compute hash for change detection.
@@ -159,7 +157,7 @@ trait CDCAlgebra[F[_]] {
    */
   def computeRecordHash[A](
     record: A,
-    columns: NonEmptyList[FieldName]
+    columns: NonEmptyList[FieldName],
   ): F[String]
 
   /**
@@ -177,8 +175,9 @@ trait CDCAlgebra[F[_]] {
   def identifyChanges[A](
     sourceRecords: List[A],
     targetRecords: List[A],
-    config: CDCConfig
-  )(implicit contract: PDataContract[A]): F[List[(A, ChangeOperation)]]
+    config: CDCConfig,
+  )(implicit contract: PDataContract[A],
+  ): F[List[(A, ChangeOperation)]]
 
   /**
    * Apply CDC changes to target dataset.
@@ -192,8 +191,9 @@ trait CDCAlgebra[F[_]] {
    */
   def applyChanges[A](
     changes: List[(A, ChangeOperation)],
-    target: Dataset[A]
-  )(implicit contract: PDataContract[A]): F[Dataset[A]]
+    target: Dataset[A],
+  )(implicit contract: PDataContract[A],
+  ): F[Dataset[A]]
 
   /**
    * Validate CDC configuration against dataset schema.
@@ -207,7 +207,7 @@ trait CDCAlgebra[F[_]] {
    */
   def validateCDCConfig[A](
     config: CDCConfig,
-    schema: PDataContract[A]
+    schema: PDataContract[A],
   ): ValidatedNel[FlowForgeError, CDCConfig]
 
   // ===============================
@@ -232,8 +232,9 @@ trait CDCAlgebra[F[_]] {
     source: Dataset[A],
     target: Dataset[A],
     watermark: Option[Instant],
-    config: CDCConfig
-  )(implicit contract: PDataContract[A]): F[(CDCResult[A], Instant)]
+    config: CDCConfig,
+  )(implicit contract: PDataContract[A],
+  ): F[(CDCResult[A], Instant)]
 
   /**
    * Merge CDC results from multiple sources.
@@ -244,7 +245,7 @@ trait CDCAlgebra[F[_]] {
    *   Merged CDC result
    */
   def mergeCDCResults[A](
-    results: NonEmptyList[CDCResult[A]]
+    results: NonEmptyList[CDCResult[A]],
   ): F[CDCResult[A]]
 
   /**
@@ -256,7 +257,7 @@ trait CDCAlgebra[F[_]] {
    *   Human-readable summary report
    */
   def generateCDCReport[A](
-    result: CDCResult[A]
+    result: CDCResult[A],
   ): F[String]
 }
 
@@ -280,7 +281,7 @@ object CDCAlgebra {
       softDeleteColumn = None,
       timestampColumn = None,
       batchSize = 10000,
-      enableQualityChecks = true
+      enableQualityChecks = true,
     )
 
   /**
@@ -288,17 +289,23 @@ object CDCAlgebra {
    */
   implicit class CDCOps[F[_], A](private val source: Dataset[A]) {
 
-    def deltaWith(target: Dataset[A], config: CDCConfig)(implicit
+    def deltaWith(
+      target: Dataset[A],
+      config: CDCConfig,
+    )(implicit
       cdc: CDCAlgebra[F],
-      contract: PDataContract[A]
+      contract: PDataContract[A],
     ): F[CDCResult[A]] =
       cdc.performDelta(source, target, config)
 
     def incrementalDeltaWith(
       target: Dataset[A],
       watermark: Option[Instant],
-      config: CDCConfig
-    )(implicit cdc: CDCAlgebra[F], contract: PDataContract[A]): F[(CDCResult[A], Instant)] =
+      config: CDCConfig,
+    )(implicit
+      cdc: CDCAlgebra[F],
+      contract: PDataContract[A],
+    ): F[(CDCResult[A], Instant)] =
       cdc.performIncrementalDelta(source, target, watermark, config)
   }
 
@@ -308,8 +315,9 @@ object CDCAlgebra {
   implicit class DatasetOps[A](private val dataset: Dataset[A]) {
 
     def validateWith[F[_]](
-      contract: PDataContract[A]
-    )(implicit F: EffectSystem[F]): F[ValidatedNel[FlowForgeError, Dataset[A]]] = {
+      contract: PDataContract[A],
+    )(implicit F: EffectSystem[F],
+    ): F[ValidatedNel[FlowForgeError, Dataset[A]]] = {
       import cats.syntax.traverse._
       val validations = dataset.data.traverse(contract)
       F.pure(validations.map(_ => dataset))

@@ -8,8 +8,8 @@ import com.flowforge.core.types.ConfigError
 import scala.util.matching.Regex
 
 /**
- * Core validation combinators for building complex validations from simple parts. These combinators
- * enable functional composition of validation logic.
+ * Core validation combinators for building complex validations from simple parts. These combinators enable
+ * functional composition of validation logic.
  */
 object ValidationCombinators {
 
@@ -21,7 +21,7 @@ object ValidationCombinators {
       valid(value)
     } else {
       invalid(
-        ConfigError.InvalidValue(fieldName, Option(value).getOrElse("null"), "non-empty string")
+        ConfigError.InvalidValue(fieldName, Option(value).getOrElse("null"), "non-empty string"),
       )
     }
 
@@ -30,7 +30,7 @@ object ValidationCombinators {
    */
   def nonEmptyOption(
     fieldName: String,
-    value: Option[String]
+    value: Option[String],
   ): ConfigValidationResult[Option[String]] =
     value match {
       case Some(str) => nonEmpty(fieldName, str).map(Some(_))
@@ -53,7 +53,7 @@ object ValidationCombinators {
     fieldName: String,
     value: Double,
     min: Double,
-    max: Double
+    max: Double,
   ): ConfigValidationResult[Double] =
     if (value >= min && value <= max) {
       valid(value)
@@ -68,7 +68,7 @@ object ValidationCombinators {
     fieldName: String,
     value: Int,
     min: Int,
-    max: Int
+    max: Int,
   ): ConfigValidationResult[Int] =
     if (value >= min && value <= max) {
       valid(value)
@@ -103,7 +103,7 @@ object ValidationCombinators {
     fieldName: String,
     value: String,
     pattern: Regex,
-    description: String
+    description: String,
   ): ConfigValidationResult[String] =
     if (pattern.matches(value)) {
       valid(value)
@@ -132,7 +132,7 @@ object ValidationCombinators {
    */
   def nonEmptyCollection[A](
     fieldName: String,
-    collection: List[A]
+    collection: List[A],
   ): ConfigValidationResult[List[A]] =
     if (collection.nonEmpty) {
       valid(collection)
@@ -147,7 +147,7 @@ object ValidationCombinators {
     fieldName: String,
     collection: List[A],
     min: Int,
-    max: Int
+    max: Int,
   ): ConfigValidationResult[List[A]] = {
     val size = collection.size
     if (size >= min && size <= max) {
@@ -161,8 +161,10 @@ object ValidationCombinators {
    * Validate all elements in a collection.
    */
   def validateAll[A, B](
-    collection: List[A]
-  )(validator: A => ValidatedNel[ConfigError, B]): ConfigValidationResult[List[B]] =
+    collection: List[A],
+  )(
+    validator: A => ValidatedNel[ConfigError, B],
+  ): ConfigValidationResult[List[B]] =
     collection.traverse(validator)
 
   /**
@@ -170,7 +172,7 @@ object ValidationCombinators {
    */
   def noDuplicates[A](
     fieldName: String,
-    collection: List[A]
+    collection: List[A],
   ): ConfigValidationResult[List[A]] = {
     val duplicates = collection.groupBy(identity).filter(_._2.size > 1).keys.toList
     if (duplicates.isEmpty) {
@@ -184,8 +186,10 @@ object ValidationCombinators {
    * Conditional validation - apply validator only if condition is true.
    */
   def when[A](
-    condition: Boolean
-  )(validator: A => ConfigValidationResult[A]): A => ConfigValidationResult[A] = { value =>
+    condition: Boolean,
+  )(
+    validator: A => ConfigValidationResult[A],
+  ): A => ConfigValidationResult[A] = { value =>
     if (condition) validator(value) else valid(value)
   }
 
@@ -193,8 +197,10 @@ object ValidationCombinators {
    * Conditional validation based on the value itself.
    */
   def whenValue[A](
-    predicate: A => Boolean
-  )(validator: A => ConfigValidationResult[A]): A => ConfigValidationResult[A] = { value =>
+    predicate: A => Boolean,
+  )(
+    validator: A => ConfigValidationResult[A],
+  ): A => ConfigValidationResult[A] = { value =>
     if (predicate(value)) validator(value) else valid(value)
   }
 
@@ -203,7 +209,7 @@ object ValidationCombinators {
    */
   def eitherOr[A](
     validator1: A => ConfigValidationResult[A],
-    validator2: A => ConfigValidationResult[A]
+    validator2: A => ConfigValidationResult[A],
   ): A => ConfigValidationResult[A] = { value =>
     validator1(value).orElse(validator2(value))
   }
@@ -212,7 +218,7 @@ object ValidationCombinators {
    * All-of validation - value must satisfy all validators.
    */
   def allOf[A](
-    validators: List[A => ConfigValidationResult[A]]
+    validators: List[A => ConfigValidationResult[A]],
   ): A => ConfigValidationResult[A] = { value =>
     validators.traverse(_(value)).map(_ => value)
   }

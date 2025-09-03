@@ -4,9 +4,9 @@
  * File: modules/core/src/main/scala/com/flowforge/core/algebra/TypeClasses.scala Package:
  * com.flowforge.core.algebra
  *
- * This file defines custom type classes specific to the FlowForge ecosystem. These type classes
- * enable polymorphic operations across different data types, formats, and engines while maintaining
- * type safety and composability.
+ * This file defines custom type classes specific to the FlowForge ecosystem. These type classes enable
+ * polymorphic operations across different data types, formats, and engines while maintaining type safety and
+ * composability.
  *
  * Design Patterns Applied:
  *   - Type Class Pattern: Ad-hoc polymorphism through implicit resolution
@@ -73,9 +73,8 @@ import scala.concurrent.duration.FiniteDuration
 /**
  * Type class for encoding data to different formats.
  *
- * Enables polymorphic data serialization across formats like Parquet, Avro, JSON, etc.
- * Implementations can optimize for specific data types and formats while providing a uniform
- * interface.
+ * Enables polymorphic data serialization across formats like Parquet, Avro, JSON, etc. Implementations can
+ * optimize for specific data types and formats while providing a uniform interface.
  *
  * @tparam A
  *   The data type to encode
@@ -151,7 +150,7 @@ object DataEncoder {
    */
   def instance[A](
     encodeF: (A, DataFormat) => Either[EncodingError, EncodedData],
-    schemaF: DataFormat => DataSchema
+    schemaF: DataFormat => DataSchema,
   ): DataEncoder[A] = new DataEncoder[A] {
     def encode(data: A, format: DataFormat): Either[EncodingError, EncodedData] =
       encodeF(data, format)
@@ -173,8 +172,8 @@ object DataEncoder {
 /**
  * Type class for decoding data from different formats.
  *
- * Companion to DataEncoder, enables polymorphic deserialization with format-specific optimizations
- * and error handling.
+ * Companion to DataEncoder, enables polymorphic deserialization with format-specific optimizations and error
+ * handling.
  *
  * @tparam A
  *   The data type to decode to
@@ -205,7 +204,7 @@ trait DataDecoder[A] {
    */
   def validateSchema(
     encodedData: EncodedData,
-    expectedSchema: DataSchema
+    expectedSchema: DataSchema,
   ): Either[SchemaError, Unit]
 
   /**
@@ -223,7 +222,7 @@ trait DataDecoder[A] {
   def decodeWithEvolution(
     encodedData: EncodedData,
     format: DataFormat,
-    targetSchema: DataSchema
+    targetSchema: DataSchema,
   ): Either[DecodingError, A]
 
   /**
@@ -248,21 +247,21 @@ object DataDecoder {
    * Create a DataDecoder instance from decoding function.
    */
   def instance[A](
-    decodeF: (EncodedData, DataFormat) => Either[DecodingError, A]
+    decodeF: (EncodedData, DataFormat) => Either[DecodingError, A],
   ): DataDecoder[A] = new DataDecoder[A] {
     def decode(encodedData: EncodedData, format: DataFormat): Either[DecodingError, A] =
       decodeF(encodedData, format)
 
     def validateSchema(
       encodedData: EncodedData,
-      expectedSchema: DataSchema
+      expectedSchema: DataSchema,
     ): Either[SchemaError, Unit] =
       Right(()) // Default no-op validation
 
     def decodeWithEvolution(
       encodedData: EncodedData,
       format: DataFormat,
-      targetSchema: DataSchema
+      targetSchema: DataSchema,
     ): Either[DecodingError, A] =
       decode(encodedData, format) // Default to simple decode
 
@@ -278,8 +277,8 @@ object DataDecoder {
 /**
  * Type class for data contract validation.
  *
- * Enables compile-time and runtime validation of data against business rules and quality
- * constraints. Supports composition of multiple validation rules with error accumulation.
+ * Enables compile-time and runtime validation of data against business rules and quality constraints.
+ * Supports composition of multiple validation rules with error accumulation.
  *
  * @tparam A
  *   The data type to validate
@@ -353,7 +352,7 @@ object DataContract {
    */
   def fromRules[A](
     validationRules: List[ValidationRule[A]],
-    schema: DataSchema
+    schema: DataSchema,
   ): DataContract[A] = new DataContract[A] {
 
     val rules: List[ValidationRule[A]] = validationRules
@@ -397,8 +396,8 @@ object DataContract {
 /**
  * Type class for high-performance binary serialization.
  *
- * Optimized for large-scale data processing with minimal overhead. Supports custom serialization
- * strategies per data type.
+ * Optimized for large-scale data processing with minimal overhead. Supports custom serialization strategies
+ * per data type.
  *
  * @tparam A
  *   The data type to serialize
@@ -467,7 +466,7 @@ object DataSerializer {
   def instance[A](
     serializeF: A => Array[Byte],
     deserializeF: Array[Byte] => Either[SerializationError, A],
-    format: String
+    format: String,
   ): DataSerializer[A] = new DataSerializer[A] {
     def serialize(data: A): Array[Byte]                                = serializeF(data)
     def deserialize(bytes: Array[Byte]): Either[SerializationError, A] = deserializeF(bytes)
@@ -484,8 +483,8 @@ object DataSerializer {
 /**
  * Type class for reading configuration from various sources.
  *
- * Enables polymorphic configuration loading with validation and error accumulation. Supports
- * environment variables, property files, command line arguments, etc.
+ * Enables polymorphic configuration loading with validation and error accumulation. Supports environment
+ * variables, property files, command line arguments, etc.
  *
  * @tparam A
  *   The configuration type to read
@@ -540,7 +539,7 @@ trait ConfigReader[A] {
    */
   def readWithEnvFallback(
     source: Map[String, String],
-    envPrefix: String
+    envPrefix: String,
   ): ValidatedNel[ConfigError, A]
 }
 
@@ -556,7 +555,7 @@ object ConfigReader {
    */
   def instance[A](
     readF: Map[String, String] => ValidatedNel[ConfigError, A],
-    keys: List[String]
+    keys: List[String],
   ): ConfigReader[A] = new ConfigReader[A] {
     def read(source: Map[String, String]): ValidatedNel[ConfigError, A] = readF(source)
     val expectedKeys: List[String]                                      = keys
@@ -576,14 +575,15 @@ object ConfigReader {
 
     def readWithEnvFallback(
       source: Map[String, String],
-      envPrefix: String
+      envPrefix: String,
     ): ValidatedNel[ConfigError, A] = {
-      val envVars = sys.env.map { case (k, v) =>
-        if (k.startsWith(envPrefix)) {
-          k.drop(envPrefix.length).toLowerCase -> v
-        } else {
-          k -> v
-        }
+      val envVars = sys.env.map {
+        case (k, v) =>
+          if (k.startsWith(envPrefix)) {
+            k.drop(envPrefix.length).toLowerCase -> v
+          } else {
+            k -> v
+          }
       }
       read(source ++ envVars)
     }
@@ -597,8 +597,8 @@ object ConfigReader {
 /**
  * Type class for collecting metrics from data processing operations.
  *
- * Enables polymorphic metrics collection across different data types and processing stages.
- * Supports composable metric aggregation.
+ * Enables polymorphic metrics collection across different data types and processing stages. Supports
+ * composable metric aggregation.
  *
  * @tparam A
  *   The data type to collect metrics from
@@ -676,7 +676,7 @@ object MetricsCollector {
    */
   def instance[A](
     collectF: A => ProcessingMetrics,
-    names: List[String]
+    names: List[String],
   ): MetricsCollector[A] = new MetricsCollector[A] {
     def collect(data: A): ProcessingMetrics = collectF(data)
 
@@ -710,7 +710,7 @@ object MetricsCollector {
    */
   def basic[A]: MetricsCollector[A] = instance(
     data => ProcessingMetrics.basic(data.toString.length, Instant.now()),
-    List("data_size", "processing_time")
+    List("data_size", "processing_time"),
   )
 }
 
@@ -726,8 +726,7 @@ case class EncodedData(
   format: DataFormat,
   schema: Option[DataSchema] = None,
   compression: CompressionType = CompressionType.None,
-  metadata: Map[String, String] = Map.empty
-)
+  metadata: Map[String, String] = Map.empty)
 
 /**
  * Encoding optimization hints.
@@ -736,8 +735,7 @@ case class EncodingHints(
   preferredBlockSize: Option[Int] = None,
   compressionLevel: Option[Int] = None,
   parallelism: Option[Int] = None,
-  memoryBudget: Option[Long] = None
-)
+  memoryBudget: Option[Long] = None)
 
 object EncodingHints {
   val default: EncodingHints = EncodingHints()
@@ -863,8 +861,10 @@ object ValidationRule {
   def apply[A](
     ruleName: String,
     desc: String,
-    sev: ErrorSeverity
-  )(validateF: A => ValidatedNel[ContractViolation, Unit]): ValidationRule[A] =
+    sev: ErrorSeverity,
+  )(
+    validateF: A => ValidatedNel[ContractViolation, Unit],
+  ): ValidationRule[A] =
     new ValidationRule[A] {
       val name              = ruleName
       val description       = desc
@@ -882,8 +882,7 @@ case class ProcessingMetrics(
   processingTimeMs: Long = 0,
   errorCount: Long = 0,
   customMetrics: Map[String, Double] = Map.empty,
-  timestamp: Instant = Instant.now()
-) {
+  timestamp: Instant = Instant.now()) {
 
   def withTiming(name: String, value: Long): ProcessingMetrics =
     copy(customMetrics = customMetrics + (name -> value.toDouble))
@@ -900,7 +899,7 @@ case class ProcessingMetrics(
       customMetrics = (customMetrics.toSeq ++ other.customMetrics.toSeq)
         .groupBy(_._1)
         .map { case (k, values) => k -> values.map(_._2).sum },
-      timestamp = if (timestamp.isAfter(other.timestamp)) timestamp else other.timestamp
+      timestamp = if (timestamp.isAfter(other.timestamp)) timestamp else other.timestamp,
     )
 }
 

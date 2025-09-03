@@ -2,8 +2,7 @@
  * Property-based tests for FlowForge pipeline operations.
  *
  * These tests use ScalaCheck to generate random inputs and verify that pipeline operations satisfy
- * mathematical properties regardless of input. Critical for catching edge cases in data
- * transformations.
+ * mathematical properties regardless of input. Critical for catching edge cases in data transformations.
  */
 package com.flowforge.core.properties
 

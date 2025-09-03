@@ -2,8 +2,8 @@
  * Simple working pipeline example demonstrating FlowForge core functionality.
  *
  * This example shows how to:
- *   1. Create type-safe pipeline stages 2. Use functional composition with Kleisli arrows 3.
- *      Execute pipelines with proper error handling 4. Demonstrate the architectural patterns
+ *   1. Create type-safe pipeline stages 2. Use functional composition with Kleisli arrows 3. Execute
+ *      pipelines with proper error handling 4. Demonstrate the architectural patterns
  */
 package com.flowforge.core.examples
 
@@ -19,14 +19,19 @@ import com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
 object SimpleWorkingPipeline extends IOApp.Simple {
 
   // Sample data types for demonstration
-  case class RawRecord(id: String, value: Double, category: String)
+  case class RawRecord(
+    id: String,
+    value: Double,
+    category: String)
   case class ProcessedRecord(
     id: String,
     normalizedValue: Double,
     category: String,
-    processed: Boolean = true
-  )
-  case class AggregatedRecord(category: String, totalValue: Double, count: Int)
+    processed: Boolean = true)
+  case class AggregatedRecord(
+    category: String,
+    totalValue: Double,
+    count: Int)
 
   // Use the instance directly instead of creating implicit conflicts
   def es: EffectSystem[IO] = catsEffectSystemInstance
@@ -56,7 +61,7 @@ object SimpleWorkingPipeline extends IOApp.Simple {
         RawRecord("002", 75.0, "marketing"),
         RawRecord("003", 300.0, "sales"),
         RawRecord("004", 120.0, "support"),
-        RawRecord("005", 200.0, "marketing")
+        RawRecord("005", 200.0, "marketing"),
       )
       IO.println(s"📥 Extracted ${mockData.length} records") *> IO.pure(mockData)
     }
@@ -73,35 +78,34 @@ object SimpleWorkingPipeline extends IOApp.Simple {
     }
 
     // Stage 3: Data aggregation
-    val aggregateStage: Kleisli[IO, List[ProcessedRecord], List[AggregatedRecord]] = Kleisli {
-      processedData =>
-        IO.println("📊 Aggregating by category...") *>
-          IO.delay {
-            processedData
-              .groupBy(_.category)
-              .map { case (category, records) =>
+    val aggregateStage: Kleisli[IO, List[ProcessedRecord], List[AggregatedRecord]] = Kleisli { processedData =>
+      IO.println("📊 Aggregating by category...") *>
+        IO.delay {
+          processedData
+            .groupBy(_.category)
+            .map {
+              case (category, records) =>
                 AggregatedRecord(
                   category = category,
                   totalValue = records.map(_.normalizedValue).sum,
-                  count = records.length
+                  count = records.length,
                 )
-              }
-              .toList
-              .sortBy(_.category)
-          }.flatTap(aggregated => IO.println(s"📈 Created ${aggregated.length} aggregated records"))
+            }
+            .toList
+            .sortBy(_.category)
+        }.flatTap(aggregated => IO.println(s"📈 Created ${aggregated.length} aggregated records"))
     }
 
     // Stage 4: Quality validation
-    val qualityStage: Kleisli[IO, List[AggregatedRecord], List[AggregatedRecord]] = Kleisli {
-      aggregated =>
-        IO.println("🛡️  Validating data quality...") *>
-          aggregated.traverse { record =>
-            if (record.count > 0 && record.totalValue >= 0) {
-              IO.pure(record)
-            } else {
-              IO.raiseError(new RuntimeException(s"Quality check failed for record: $record"))
-            }
-          }.flatTap(_ => IO.println("✅ All quality checks passed"))
+    val qualityStage: Kleisli[IO, List[AggregatedRecord], List[AggregatedRecord]] = Kleisli { aggregated =>
+      IO.println("🛡️  Validating data quality...") *>
+        aggregated.traverse { record =>
+          if (record.count > 0 && record.totalValue >= 0) {
+            IO.pure(record)
+          } else {
+            IO.raiseError(new RuntimeException(s"Quality check failed for record: $record"))
+          }
+        }.flatTap(_ => IO.println("✅ All quality checks passed"))
     }
 
     // Compose the complete pipeline using Kleisli's andThen
@@ -140,13 +144,13 @@ object SimpleWorkingPipeline extends IOApp.Simple {
     println("\n🛡️ Resource Safety Demo")
 
     val resourceOperation = es.bracket(
-      acquire = IO.println("🔓 Acquiring resource...") *> IO.pure("mock-resource")
+      acquire = IO.println("🔓 Acquiring resource...") *> IO.pure("mock-resource"),
     )(
       use = resource =>
         IO.println(s"⚙️  Using resource: $resource") *>
-          IO.delay(s"Processed with $resource")
+          IO.delay(s"Processed with $resource"),
     )(
-      release = resource => IO.println(s"🔒 Released resource: $resource")
+      release = resource => IO.println(s"🔒 Released resource: $resource"),
     )
 
     resourceOperation.flatMap(result => IO.println(s"✅ Resource operation result: $result")).void

@@ -3,8 +3,8 @@ package com.flowforge.engines.spark
 import org.apache.spark.sql.SparkSession
 
 /**
- * Optional Delta Lake integration via reflection to avoid hard dependency. If io.delta:delta-core
- * is on the classpath, performs SCD1-style MERGE.
+ * Optional Delta Lake integration via reflection to avoid hard dependency. If io.delta:delta-core is on the
+ * classpath, performs SCD1-style MERGE.
  */
 object DeltaSupport {
 
@@ -17,7 +17,7 @@ object DeltaSupport {
     spark: SparkSession,
     sourcePath: String,
     targetPath: String,
-    keys: List[String]
+    keys: List[String],
   ): Either[String, Unit] = {
     if (!isAvailable) return Left("Delta Lake not available on classpath")
     scala.util.Try {
@@ -35,7 +35,7 @@ object DeltaSupport {
       // NOTE: Full reflection for merge/update/insert chain is verbose; for now, document required Delta ops
       // and return Left with instruction if not implemented.
       Left(
-        "Delta MERGE reflection path stub: wire actual merge/update/insert via reflection or add delta-core dependency"
+        "Delta MERGE reflection path stub: wire actual merge/update/insert via reflection or add delta-core dependency",
       )
     }.fold(t => Left(s"Delta MERGE failed: ${t.getMessage}"), identity)
   }

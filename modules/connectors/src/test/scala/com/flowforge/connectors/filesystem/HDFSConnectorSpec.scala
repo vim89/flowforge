@@ -13,7 +13,7 @@ class HDFSConnectorSpec extends AnyFunSuite {
   private def assumeHdfsConfigured(): Unit =
     assume(
       sys.props.get("HDFS_URL").isDefined || sys.env.get("HDFS_URL").isDefined,
-      "Skipping HDFS tests: set HDFS_URL system property or env var to run."
+      "Skipping HDFS tests: set HDFS_URL system property or env var to run.",
     )
 
   test("read non-existent path returns FileNotFound") {

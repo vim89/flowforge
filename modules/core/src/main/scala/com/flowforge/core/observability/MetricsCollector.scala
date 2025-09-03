@@ -1,20 +1,28 @@
 package com.flowforge.core.observability
 
 /**
- * Tiny wrapper over Prometheus client to keep call sites clean and make metrics optional. If
- * Prometheus is absent or registration fails, no-ops are used.
+ * Tiny wrapper over Prometheus client to keep call sites clean and make metrics optional. If Prometheus is
+ * absent or registration fails, no-ops are used.
  */
 trait MetricsCollector {
   def incRead(engine: String, format: String): Unit
   def incWrite(engine: String, format: String): Unit
-  def observeLatency(op: String, engine: String, millis: Double): Unit
+  def observeLatency(
+    op: String,
+    engine: String,
+    millis: Double,
+  ): Unit
 }
 
 object MetricsCollector {
   lazy val noop: MetricsCollector = new MetricsCollector {
-    def incRead(engine: String, format: String): Unit                    = ()
-    def incWrite(engine: String, format: String): Unit                   = ()
-    def observeLatency(op: String, engine: String, millis: Double): Unit = ()
+    def incRead(engine: String, format: String): Unit  = ()
+    def incWrite(engine: String, format: String): Unit = ()
+    def observeLatency(
+      op: String,
+      engine: String,
+      millis: Double,
+    ): Unit = ()
   }
 
   /**
@@ -31,7 +39,11 @@ object MetricsCollector {
           try PrometheusMetrics.Data.writeTotal.labels(engine, format).inc()
           catch { case _: Throwable => () }
 
-        def observeLatency(op: String, engine: String, millis: Double): Unit =
+        def observeLatency(
+          op: String,
+          engine: String,
+          millis: Double,
+        ): Unit =
           try PrometheusMetrics.Data.opLatencyMs.labels(op, engine).observe(millis)
           catch { case _: Throwable => () }
       }

@@ -15,14 +15,14 @@ import scala.concurrent.duration.{ DurationLong, FiniteDuration, NANOSECONDS }
 
 /**
  * PRODUCTION-READY Spark Data Algebra Implementation
- * 
+ *
  * This implementation uses real Spark Dataset APIs with production-grade:
- * - Proper Delta Lake MERGE INTO statements with hash-based change detection
- * - Real SCD1/SCD2 patterns with temporal versioning
- * - Memory-safe operations using Spark's distributed computing
- * - Production-ready CDC with proper key extraction
- * - Resource-safe session management with bracket patterns
- * 
+ *   - Proper Delta Lake MERGE INTO statements with hash-based change detection
+ *   - Real SCD1/SCD2 patterns with temporal versioning
+ *   - Memory-safe operations using Spark's distributed computing
+ *   - Production-ready CDC with proper key extraction
+ *   - Resource-safe session management with bracket patterns
+ *
  * PRODUCTION READINESS: 95% - All critical operations use real Spark APIs
  */
 object SparkDataAlgebra {
@@ -33,11 +33,11 @@ object SparkDataAlgebra {
    * Features real Spark Dataset operations, Delta Lake integration, and proper CDC.
    */
   def createSparkDataAlgebra[F[_]: EffectSystem](
-    sparkSession: SparkSession
+    sparkSession: SparkSession,
   ): DataAlgebra[F] = new DataAlgebra[F] {
 
     import com.flowforge.core.impl.SimpleDataset
-    import org.apache.spark.sql.{Dataset, DataFrame, Row}
+    import org.apache.spark.sql.{ DataFrame, Dataset, Row }
     import org.apache.spark.sql.functions._
 
     private val F     = EffectSystem[F]
@@ -67,7 +67,7 @@ object SparkDataAlgebra {
               case other =>
                 throw new UnsupportedOperationException(s"Format $other not supported")
             }
-            
+
             // PRODUCTION: Convert to ProductionSparkDataset for hybrid operations
             ProductionSparkDataset.fromDataFrame[A](df, spark)
           }
@@ -75,8 +75,8 @@ object SparkDataAlgebra {
         case _ =>
           F.raiseError(
             new UnsupportedOperationException(
-              s"DataSource type ${source.getClass.getSimpleName} not supported"
-            )
+              s"DataSource type ${source.getClass.getSimpleName} not supported",
+            ),
           )
       }
 
@@ -86,15 +86,15 @@ object SparkDataAlgebra {
             stepName = "spark-read",
             reason = error.getMessage,
             message = s"Failed to read from ${source.getClass.getSimpleName}",
-            cause = Some(error)
-          )
+            cause = Some(error),
+          ),
         )
       }
     }
 
     override def readWithSchema[A: DataDecoder](
       source: DataSource,
-      expectedSchema: DataSchema
+      expectedSchema: DataSchema,
     ): F[ValidatedNel[FlowForgeError, DataAlgebra.Dataset[A]]] =
       read[A](source).map(dataset => dataset.validNel[FlowForgeError])
 
@@ -107,7 +107,7 @@ object SparkDataAlgebra {
     override def write[A: DataEncoder](
       dataset: DataAlgebra.Dataset[A],
       sink: DataSink,
-      options: DataAlgebra.WriteOptions
+      options: DataAlgebra.WriteOptions,
     ): F[DataAlgebra.WriteResult] =
       F.blocking {
         // Encode to JSON and write via Spark
@@ -134,7 +134,7 @@ object SparkDataAlgebra {
           recordsWritten = dataset.data.size.toLong,
           partitionsWritten = 1,
           bytesWritten = jsonStrings.map(_.length.toLong).sum,
-          success = true
+          success = true,
         )
         try
           com.flowforge.core.observability.PrometheusMetrics.Data.writeTotal
@@ -154,7 +154,7 @@ object SparkDataAlgebra {
     private def defaultHashColumns(
       df: org.apache.spark.sql.DataFrame,
       keys: List[String],
-      config: CDCOperations.CDCConfig
+      config: CDCOperations.CDCConfig,
     ): List[String] = {
       val cols    = df.columns.toList
       val nonKeys = cols.filterNot(c => keys.contains(c))
@@ -167,7 +167,7 @@ object SparkDataAlgebra {
             "updated_at",
             "ingestion_ts",
             "ingestion_time",
-            "load_ts"
+            "load_ts",
           )
           val scdNames = config.scd2
             .map(c => List(c.effectiveFrom.value, c.effectiveTo.value, c.isCurrent.value))
@@ -180,15 +180,15 @@ object SparkDataAlgebra {
     private def upsertParquet(
       sourcePath: String,
       targetPath: String,
-      keys: List[String]
+      keys: List[String],
     ): (Long, Long, Long, Long) = {
       import org.apache.spark.sql.functions._
       val src = spark.read.parquet(sourcePath).alias("source")
       val tgt = spark.read.parquet(targetPath).alias("target")
       val cfg = CDCOperations.CDCConfig(
         keyColumns = cats.data.NonEmptyList.fromListUnsafe(
-          keys.map(k => com.flowforge.core.types.RefinedTypes.FieldName.unsafeFrom(k))
-        )
+          keys.map(k => com.flowforge.core.types.RefinedTypes.FieldName.unsafeFrom(k)),
+        ),
       )
       val hashCols = defaultHashColumns(src, keys, cfg)
       // PRODUCTION: Use MD5 hash for better performance
@@ -215,7 +215,7 @@ object SparkDataAlgebra {
       sourcePath: String,
       targetPath: String,
       keys: List[String],
-      config: CDCOperations.CDCConfig
+      config: CDCOperations.CDCConfig,
     ): Either[String, (Long, Long, Long, Long)] =
       try {
         import io.delta.tables.DeltaTable
@@ -253,15 +253,15 @@ object SparkDataAlgebra {
       }
 
     /**
-     * SCD2 merge for Delta tables with standard columns: effective_from, effective_to, is_current.
-     * Updates matched changed rows to close current version, then inserts new current versions for
-     * changed or new keys.
+     * SCD2 merge for Delta tables with standard columns: effective_from, effective_to, is_current. Updates
+     * matched changed rows to close current version, then inserts new current versions for changed or new
+     * keys.
      */
     private def mergeDeltaSCD2(
       sourcePath: String,
       targetPath: String,
       keys: List[String],
-      config: CDCOperations.CDCConfig
+      config: CDCOperations.CDCConfig,
     ): Either[String, (Long, Long, Long, Long)] =
       try {
         import io.delta.tables.DeltaTable
@@ -294,13 +294,13 @@ object SparkDataAlgebra {
             } catch {
               case t: Throwable =>
                 return Left(
-                  s"Failed to add SCD2 columns to empty target at '$targetPath': ${t.getMessage}"
+                  s"Failed to add SCD2 columns to empty target at '$targetPath': ${t.getMessage}",
                 )
             }
           } else {
             return Left(
               s"Target table at '$targetPath' missing SCD2 columns: ${missing.mkString(", ")}. " +
-                "Add columns before SCD2 merge or provide correct names via CDCConfig.scd2."
+                "Add columns before SCD2 merge or provide correct names via CDCConfig.scd2.",
             )
           }
         }
@@ -314,8 +314,8 @@ object SparkDataAlgebra {
         val condExpr = keys.map(k => col(s"target.$k") === col(s"source.$k")).reduce(_ && _)
 
         // Identify changed matches and new keys
-        val matched = srcRaw.join(tgtCurrent, condExpr, "inner")
-        val changed = matched.filter(hashExpr("source") =!= hashExpr("target")).select("source.*")
+        val matched     = srcRaw.join(tgtCurrent, condExpr, "inner")
+        val changed     = matched.filter(hashExpr("source") =!= hashExpr("target")).select("source.*")
         val insertedNew = srcRaw.join(tgtRaw, condExpr, "left_anti")
         val toInsert    = changed.unionByName(insertedNew, allowMissingColumns = true)
 
@@ -332,8 +332,8 @@ object SparkDataAlgebra {
           .updateExpr(
             Map(
               scdTo  -> "current_timestamp()",
-              scdCur -> "false"
-            )
+              scdCur -> "false",
+            ),
           )
           .execute()
 
@@ -375,13 +375,13 @@ object SparkDataAlgebra {
     override def performDelta[A: DataContract](
       source: DataAlgebra.Dataset[A],
       target: DataAlgebra.Dataset[A],
-      config: CDCOperations.CDCConfig
+      config: CDCOperations.CDCConfig,
     ): F[CDCOperations.CDCResult[A]] = {
       val keys = extractKeys(config)
       val op: F[(Long, Long, Long, Long)] = (source.metadata.source, target.metadata.source) match {
         case (
               Some(LocalDataSource(srcPath, DataFormat.Delta, _, _, _)),
-              Some(LocalDataSource(tgtPath, DataFormat.Delta, _, _, _))
+              Some(LocalDataSource(tgtPath, DataFormat.Delta, _, _, _)),
             ) =>
           // Use SCD2 if timestampColumn or explicit SCD2 columns provided
           val useScd2 = config.scd2.isDefined || config.timestampColumn.isDefined
@@ -399,14 +399,14 @@ object SparkDataAlgebra {
           }
         case (
               Some(LocalDataSource(srcPath, DataFormat.Parquet, _, _, _)),
-              Some(LocalDataSource(tgtPath, DataFormat.Parquet, _, _, _))
+              Some(LocalDataSource(tgtPath, DataFormat.Parquet, _, _, _)),
             ) =>
           F.delay(upsertParquet(srcPath, tgtPath, keys))
         case _ =>
           F.raiseError(
             new UnsupportedOperationException(
-              "performDelta requires LocalDataSource with Delta or Parquet formats"
-            )
+              "performDelta requires LocalDataSource with Delta or Parquet formats",
+            ),
           )
       }
 
@@ -431,7 +431,7 @@ object SparkDataAlgebra {
           unchanged = same,
           errors = 0L,
           processingTime = FiniteDuration(end - start, NANOSECONDS),
-          success = true
+          success = true,
         )
       }
     }
@@ -439,14 +439,14 @@ object SparkDataAlgebra {
     override def computeCDCOperations[A](
       source: DataAlgebra.Dataset[A],
       target: DataAlgebra.Dataset[A],
-      keyColumns: cats.data.NonEmptyList[FieldName]
+      keyColumns: cats.data.NonEmptyList[FieldName],
     ): F[CDCOperations.CDCOperationSet[A]] =
       // For Spark engine, we expect performDelta to operate on file paths, so computeCDCOperations is not used directly.
       F.pure(CDCOperations.CDCOperationSet(Nil, Nil, Nil))
 
     override def applyCDCOperations[A](
       operations: CDCOperations.CDCOperationSet[A],
-      target: DataSink
+      target: DataSink,
     ): F[CDCOperations.CDCResult[A]] =
       F.pure(CDCOperations.CDCResult(0, 0, 0, 0, 0, 0.seconds, success = true))
 
@@ -454,7 +454,7 @@ object SparkDataAlgebra {
       dataset: DataAlgebra.Dataset[A],
       sink: DataSink,
       contract: PipelineDataContract[A],
-      options: DataAlgebra.WriteOptions
+      options: DataAlgebra.WriteOptions,
     ): F[ValidatedNel[FlowForgeError, DataAlgebra.WriteResult]] =
       write(dataset, sink, options).map(result => result.validNel)
 
@@ -464,14 +464,14 @@ object SparkDataAlgebra {
 
     override def filter[A](
       dataset: DataAlgebra.Dataset[A],
-      predicate: A => Boolean
+      predicate: A => Boolean,
     ): DataAlgebra.Dataset[A] = dataset match {
       case pds: ProductionSparkDataset[A] =>
         // PRODUCTION: Use Spark DataFrame operations for distributed filtering
         val filteredData = pds.data.filter(predicate)
         pds.copy(
           data = filteredData,
-          metadata = pds.metadata.copy(recordCount = filteredData.size.toLong)
+          metadata = pds.metadata.copy(recordCount = filteredData.size.toLong),
         )
       case _ =>
         // Fallback for other dataset types
@@ -480,28 +480,28 @@ object SparkDataAlgebra {
 
     override def map[A, B: DataEncoder](
       dataset: DataAlgebra.Dataset[A],
-      f: A => B
+      f: A => B,
     ): DataAlgebra.Dataset[B] = {
       val transformed = dataset.data.map(f)
       val newSchema = DataSchema(
         fields = List.empty,
         version = SchemaVersion.unsafeFrom(1),
         metadata = Map("transformation" -> "map"),
-        createdAt = Instant.now()
+        createdAt = Instant.now(),
       )
       SimpleDataset(transformed, newSchema, dataset.metadata)
     }
 
     override def flatMap[A, B: DataEncoder](
       dataset: DataAlgebra.Dataset[A],
-      f: A => DataAlgebra.Dataset[B]
+      f: A => DataAlgebra.Dataset[B],
     ): DataAlgebra.Dataset[B] = {
       val transformed = dataset.data.flatMap(a => f(a).data)
       val newSchema = DataSchema(
         fields = List.empty,
         version = SchemaVersion.unsafeFrom(1),
         metadata = Map("transformation" -> "flatMap"),
-        createdAt = Instant.now()
+        createdAt = Instant.now(),
       )
       SimpleDataset(transformed, newSchema, dataset.metadata)
     }
@@ -509,14 +509,14 @@ object SparkDataAlgebra {
     override def groupBy[A, K, V: DataEncoder](
       dataset: DataAlgebra.Dataset[A],
       keyExtractor: A => K,
-      aggregator: List[A] => V
+      aggregator: List[A] => V,
     ): DataAlgebra.Dataset[(K, V)] = {
       val grouped = dataset.data.groupBy(keyExtractor).view.mapValues(aggregator).toList
       val newSchema = DataSchema(
         fields = List.empty,
         version = SchemaVersion.unsafeFrom(1),
         metadata = Map("transformation" -> "groupBy"),
-        createdAt = Instant.now()
+        createdAt = Instant.now(),
       )
       SimpleDataset(grouped, newSchema, dataset.metadata)
     }
@@ -526,7 +526,7 @@ object SparkDataAlgebra {
       right: DataAlgebra.Dataset[B],
       leftKey: A => K,
       rightKey: B => K,
-      combiner: (A, B) => C
+      combiner: (A, B) => C,
     ): DataAlgebra.Dataset[C] = {
       val rightIndex = right.data.groupBy(rightKey)
       val joined = left.data.flatMap { la =>
@@ -536,20 +536,20 @@ object SparkDataAlgebra {
         fields = List.empty,
         version = SchemaVersion.unsafeFrom(1),
         metadata = Map("transformation" -> "join"),
-        createdAt = Instant.now()
+        createdAt = Instant.now(),
       )
       SimpleDataset(joined, newSchema, left.metadata)
     }
 
     override def union[A](
       left: DataAlgebra.Dataset[A],
-      right: DataAlgebra.Dataset[A]
+      right: DataAlgebra.Dataset[A],
     ): DataAlgebra.Dataset[A] =
       SimpleDataset(left.data ++ right.data, left.schema, left.metadata)
 
     override def sortBy[A, K: Ordering](
       dataset: DataAlgebra.Dataset[A],
-      keyExtractor: A => K
+      keyExtractor: A => K,
     ): DataAlgebra.Dataset[A] =
       SimpleDataset(dataset.data.sortBy(keyExtractor), dataset.schema, dataset.metadata)
 
@@ -565,21 +565,21 @@ object SparkDataAlgebra {
 
     override def transformWithEffect[A, B: DataEncoder](
       dataset: DataAlgebra.Dataset[A],
-      transformation: A => F[B]
+      transformation: A => F[B],
     ): F[DataAlgebra.Dataset[B]] =
       dataset.data.traverse(transformation).map { transformed =>
         val newSchema = DataSchema(
           fields = List.empty,
           version = SchemaVersion.unsafeFrom(1),
           metadata = Map("transformation" -> "effectful"),
-          createdAt = Instant.now()
+          createdAt = Instant.now(),
         )
         SimpleDataset(transformed, newSchema, dataset.metadata)
       }
 
     override def transformPipeline[A, B: DataEncoder](
       dataset: DataAlgebra.Dataset[A],
-      transformations: NonEmptyList[A => F[B]]
+      transformations: NonEmptyList[A => F[B]],
     ): F[DataAlgebra.Dataset[B]] =
       // Apply first transformation - in production would chain all
       transformWithEffect(dataset, transformations.head)
@@ -593,7 +593,7 @@ object SparkDataAlgebra {
 
     override def evolveSchema[A, B: DataEncoder](
       dataset: DataAlgebra.Dataset[A],
-      migration: DataAlgebra.SchemaMigration[A, B]
+      migration: DataAlgebra.SchemaMigration[A, B],
     ): F[DataAlgebra.Dataset[B]] =
       F.pure {
         val transformed = dataset.data.map(migration.migrate)
@@ -602,14 +602,14 @@ object SparkDataAlgebra {
 
     override def compareSchemas(
       schema1: DataSchema,
-      schema2: DataSchema
+      schema2: DataSchema,
     ): F[DataAlgebra.SchemaCompatibilityReport] =
       F.pure(
         DataAlgebra.SchemaCompatibilityReport(
           compatible = schema1.fields.size == schema2.fields.size,
           changes = List.empty,
-          breakingChanges = List.empty
-        )
+          breakingChanges = List.empty,
+        ),
       )
 
     // ========================================
@@ -619,7 +619,7 @@ object SparkDataAlgebra {
     override def recordLineage[A](
       dataset: DataAlgebra.Dataset[A],
       operation: String,
-      context: DataAlgebra.LineageContext
+      context: DataAlgebra.LineageContext,
     ): F[DataAlgebra.LineageRecord] =
       F.pure(
         DataAlgebra.LineageRecord(
@@ -629,8 +629,8 @@ object SparkDataAlgebra {
           operation = operation,
           context = context,
           inputSchemas = List(dataset.schema),
-          outputSchema = Some(dataset.schema)
-        )
+          outputSchema = Some(dataset.schema),
+        ),
       )
 
     override def queryLineage(query: DataAlgebra.LineageQuery): F[List[DataAlgebra.LineageRecord]] =
@@ -642,23 +642,24 @@ object SparkDataAlgebra {
 
     override def validate[A](
       dataset: DataAlgebra.Dataset[A],
-      contract: PipelineDataContract[A]
+      contract: PipelineDataContract[A],
     ): F[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]] =
       F.pure(
         DataAlgebra.QualityResult(
           data = dataset,
           passed = true,
           violations = List.empty,
-          score = 1.0
-        )
+          score = 1.0,
+        ),
       )
 
     override def runQualityChecks[A](
       dataset: DataAlgebra.Dataset[A],
-      checks: NonEmptyList[QualityCheck[A]]
+      checks: NonEmptyList[QualityCheck[A]],
     ): F[List[DataAlgebra.QualityCheckResult]] =
-      F.pure(checks.toList.zipWithIndex.map { case (_, idx) =>
-        DataAlgebra.QualityCheckResult(s"check_$idx", passed = true, message = "ok", score = 1.0)
+      F.pure(checks.toList.zipWithIndex.map {
+        case (_, idx) =>
+          DataAlgebra.QualityCheckResult(s"check_$idx", passed = true, message = "ok", score = 1.0)
       })
 
     override def profile[A](dataset: DataAlgebra.Dataset[A]): F[DataAlgebra.DataProfile[A]] =
@@ -668,8 +669,8 @@ object SparkDataAlgebra {
           nullCount = 0L,
           distinctCount = dataset.data.distinct.size.toLong,
           schema = dataset.schema,
-          statistics = Map.empty
-        )
+          statistics = Map.empty,
+        ),
       )
 
     // ========================================
@@ -681,17 +682,18 @@ object SparkDataAlgebra {
 
     override def cache[A](
       dataset: DataAlgebra.Dataset[A],
-      strategy: DataAlgebra.CacheStrategy
+      strategy: DataAlgebra.CacheStrategy,
     ): F[DataAlgebra.Dataset[A]] =
       F.pure(dataset)
 
     override def partition[A](
       dataset: DataAlgebra.Dataset[A],
-      partitioner: DataAlgebra.Partitioner[A]
+      partitioner: DataAlgebra.Partitioner[A],
     ): List[DataAlgebra.Dataset[A]] = {
       val grouped = dataset.data.groupBy(partitioner.partition)
-      grouped.toList.map { case (_, chunk) =>
-        SimpleDataset(chunk, dataset.schema, dataset.metadata)
+      grouped.toList.map {
+        case (_, chunk) =>
+          SimpleDataset(chunk, dataset.schema, dataset.metadata)
       }
     }
 
@@ -704,7 +706,7 @@ object SparkDataAlgebra {
     // ========================================
 
     override def repairRefreshTable(
-      table: TableOperations.TableName
+      table: TableOperations.TableName,
     ): F[TableOperations.TableOperationResult] =
       F.pure(
         TableOperations.TableOperationResult(
@@ -714,44 +716,44 @@ object SparkDataAlgebra {
           affectedPartitions = List.empty,
           recordsProcessed = 0L,
           processingTime = 0.seconds,
-          errors = List.empty
-        )
+          errors = List.empty,
+        ),
       )
 
     override def getTableLocation(
-      table: TableOperations.TableName
+      table: TableOperations.TableName,
     ): F[ValidatedNel[FlowForgeError, String]] =
       F.pure(s"spark-catalog.${table.qualified}".validNel)
 
     override def getAffectedPartitions(
       table: TableOperations.TableName,
       startTime: Instant,
-      endTime: Instant
+      endTime: Instant,
     ): F[List[TableOperations.PartitionSpec]] =
       F.pure(List.empty)
 
     override def deleteDfsLocation(
       location: String,
-      dryRun: Boolean
+      dryRun: Boolean,
     ): F[TableOperations.TableOperationResult] =
       F.pure(
         TableOperations.TableOperationResult(
           tableName = TableOperations.TableName(
             database = eu.timepit.refined.types.string.NonEmptyString.unsafeFrom("default"),
-            table = eu.timepit.refined.types.string.NonEmptyString.unsafeFrom("unknown")
+            table = eu.timepit.refined.types.string.NonEmptyString.unsafeFrom("unknown"),
           ),
           operation = s"delete($location)",
           success = !dryRun,
           affectedPartitions = List.empty,
           recordsProcessed = 0L,
           processingTime = 0.seconds,
-          errors = List.empty
-        )
+          errors = List.empty,
+        ),
       )
 
     override def analyzeTable(
       table: TableOperations.TableName,
-      partitions: Option[NonEmptyList[TableOperations.PartitionSpec]]
+      partitions: Option[NonEmptyList[TableOperations.PartitionSpec]],
     ): F[TableOperations.TableOperationResult] =
       F.pure(
         TableOperations.TableOperationResult(
@@ -761,14 +763,14 @@ object SparkDataAlgebra {
           affectedPartitions = partitions.map(_.toList).getOrElse(List.empty),
           recordsProcessed = 0L,
           processingTime = 0.seconds,
-          errors = List.empty
-        )
+          errors = List.empty,
+        ),
       )
 
     override def vacuumTable(
       table: TableOperations.TableName,
       retentionHours: Int,
-      dryRun: Boolean
+      dryRun: Boolean,
     ): F[TableOperations.TableOperationResult] =
       F.pure(
         TableOperations.TableOperationResult(
@@ -778,8 +780,8 @@ object SparkDataAlgebra {
           affectedPartitions = List.empty,
           recordsProcessed = 0L,
           processingTime = 0.seconds,
-          errors = List.empty
-        )
+          errors = List.empty,
+        ),
       )
   }
 
@@ -788,7 +790,7 @@ object SparkDataAlgebra {
    */
   def resource[F[_]: EffectSystem](
     appName: String,
-    master: Option[String] = None
+    master: Option[String] = None,
   ): Resource[F, DataAlgebra[F]] = {
     val F = EffectSystem[F]
     Resource.make {

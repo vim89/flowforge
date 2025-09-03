@@ -11,9 +11,9 @@ import scala.concurrent.duration.{ Duration, FiniteDuration }
 /**
  * 🚀 **FlowForge Pipeline Syntax - Enhanced Fluent API**
  *
- * This module provides enhanced syntax for composing data pipelines in FlowForge, building upon the
- * existing Kleisli-based system. It provides intuitive, readable API extensions while maintaining
- * full compatibility with the existing FlowForge architecture.
+ * This module provides enhanced syntax for composing data pipelines in FlowForge, building upon the existing
+ * Kleisli-based system. It provides intuitive, readable API extensions while maintaining full compatibility
+ * with the existing FlowForge architecture.
  *
  * **Key Features:**
  *   - **Fluent Interface**: Chain operations naturally with method calls
@@ -61,7 +61,7 @@ object PipelineSyntax {
     components: List[Kleisli[F, Any, Any]] = List.empty,
     config: Option[PipelineConfig] = None,
     retryPolicy: Option[RetryPolicy] = None,
-    timeout: Option[Duration] = None
+    timeout: Option[Duration] = None,
   )(implicit F: EffectSystem[F]) {
 
     /**
@@ -164,7 +164,7 @@ object PipelineSyntax {
           sink = snk,
           transformations = components.map(_.asInstanceOf[PipelineComponent[F, Any, Any]]),
           validations = List.empty, // Would be populated in real implementation
-          config = config
+          config = config,
         )
       }.toEither
     }
@@ -183,7 +183,7 @@ object PipelineSyntax {
    * Enhanced pipeline syntax extensions for existing types
    */
   implicit class PipelineComponentOps[F[_], A, B](
-    private val component: PipelineComponent[F, A, B]
+    private val component: PipelineComponent[F, A, B],
   )(implicit F: EffectSystem[F]) {
 
     /**
@@ -256,15 +256,18 @@ object PipelineSyntax {
      * Apply transformation with error handling
      */
     def transformSafe[F[_]: EffectSystem, B](
-      f: A => F[B]
-    )(implicit encoder: DataEncoder[B], algebra: DataAlgebra[F]): F[DataAlgebra.Dataset[B]] =
+      f: A => F[B],
+    )(implicit
+      encoder: DataEncoder[B],
+      algebra: DataAlgebra[F],
+    ): F[DataAlgebra.Dataset[B]] =
       algebra.transformWithEffect(dataset, f)
 
     /**
      * Apply validation to all records
      */
     def validateAll[F[_]: EffectSystem](
-      validator: A => ValidatedNel[FlowForgeError, A]
+      validator: A => ValidatedNel[FlowForgeError, A],
     ): F[ValidationResult[DataAlgebra.Dataset[A]]] = {
       // TODO: Implement validation for all records in dataset
       val validationResults = dataset.data.map(validator)
@@ -277,8 +280,9 @@ object PipelineSyntax {
     /**
      * Create a pipeline from this dataset
      */
-    def pipeline[F[_]: EffectSystem](implicit
-      algebra: DataAlgebra[F]
+    def pipeline[F[_]: EffectSystem](
+      implicit
+      algebra: DataAlgebra[F],
     ): DatasetPipelineBuilder[F, A] =
       DatasetPipelineBuilder(dataset, algebra)
   }
@@ -288,15 +292,16 @@ object PipelineSyntax {
    */
   case class DatasetPipelineBuilder[F[_], A](
     dataset: DataAlgebra.Dataset[A],
-    dataAlgebra: DataAlgebra[F]
+    dataAlgebra: DataAlgebra[F],
   )(implicit F: EffectSystem[F]) {
 
     /**
      * Apply transformation
      */
     def transform[B](
-      transformation: A => F[B]
-    )(implicit encoder: DataEncoder[B]): F[DatasetPipelineBuilder[F, B]] =
+      transformation: A => F[B],
+    )(implicit encoder: DataEncoder[B],
+    ): F[DatasetPipelineBuilder[F, B]] =
       dataAlgebra.transformWithEffect(dataset, transformation).map { newDataset =>
         DatasetPipelineBuilder(newDataset, dataAlgebra)
       }
@@ -313,7 +318,7 @@ object PipelineSyntax {
      * Apply quality check
      */
     def quality(
-      contract: DataContract[A]
+      contract: DataContract[A],
     ): F[DatasetPipelineBuilder[F, A]] =
       dataAlgebra.validate(dataset, contract).flatMap { result =>
         if (result.passed) F.pure(this)
@@ -324,8 +329,9 @@ object PipelineSyntax {
      * Write to sink
      */
     def writeTo(
-      sink: DataSink
-    )(implicit encoder: DataEncoder[A]): F[DataAlgebra.WriteResult] =
+      sink: DataSink,
+    )(implicit encoder: DataEncoder[A],
+    ): F[DataAlgebra.WriteResult] =
       dataAlgebra.write(dataset, sink)
 
     /**
@@ -342,7 +348,7 @@ object PipelineSyntax {
    * Extensions for Reader-based operations
    */
   implicit class ReaderPipelineOps[F[_], A](
-    private val readerOp: FlowForgeReaderT[F, A]
+    private val readerOp: FlowForgeReaderT[F, A],
   )(implicit F: EffectSystem[F]) {
 
     /**
@@ -375,14 +381,14 @@ object PipelineSyntax {
         start  <- ReaderT.liftF(F.delay(System.currentTimeMillis()))
         result <- readerOp
         end    <- ReaderT.liftF(F.delay(System.currentTimeMillis()))
-        _ <- ReaderT.liftF(F.delay(println(s"METRIC: $metricName duration = ${end - start}ms")))
+        _      <- ReaderT.liftF(F.delay(println(s"METRIC: $metricName duration = ${end - start}ms")))
       } yield result
 
     /**
      * Add error handling
      */
     def handleErrorWith(
-      handler: Throwable => FlowForgeReaderT[F, A]
+      handler: Throwable => FlowForgeReaderT[F, A],
     ): FlowForgeReaderT[F, A] =
       ReaderT { context =>
         readerOp.run(context).handleErrorWith(e => handler(e).run(context))
@@ -403,7 +409,7 @@ object PipelineSyntax {
    * Create a simple transformation component
    */
   def transform[F[_]: EffectSystem, A, B](
-    f: A => B
+    f: A => B,
   ): PipelineComponent[F, A, B] =
     Kleisli[F, A, B](a => implicitly[EffectSystem[F]].delay(f(a)))
 
@@ -411,20 +417,20 @@ object PipelineSyntax {
    * Create an effectful transformation component
    */
   def transformF[F[_]: EffectSystem, A, B](
-    f: A => F[B]
+    f: A => F[B],
   ): PipelineComponent[F, A, B] = Kleisli[F, A, B](f)
 
   /**
    * Create a filter component
    */
   def filter[F[_]: EffectSystem, A](
-    predicate: A => Boolean
+    predicate: A => Boolean,
   ): PipelineComponent[F, A, A] =
     Kleisli[F, A, A] { a =>
       if (predicate(a)) implicitly[EffectSystem[F]].pure(a)
       else
         implicitly[EffectSystem[F]].raiseError(
-          new IllegalArgumentException("Record filtered out")
+          new IllegalArgumentException("Record filtered out"),
         )
     }
 
@@ -432,7 +438,7 @@ object PipelineSyntax {
    * Create a validation component
    */
   def validate[F[_]: EffectSystem, A](
-    validator: A => ValidatedNel[FlowForgeError, A]
+    validator: A => ValidatedNel[FlowForgeError, A],
   ): PipelineComponent[F, A, A] =
     Kleisli[F, A, A] { a =>
       validator(a) match {
@@ -459,7 +465,7 @@ object PipelineSyntax {
    */
   def metric[F[_]: EffectSystem, A](
     name: String,
-    extractor: A => Double
+    extractor: A => Double,
   ): PipelineComponent[F, A, A] =
     Kleisli[F, A, A] { a =>
       implicitly[EffectSystem[F]].delay {
@@ -477,7 +483,7 @@ object PipelineSyntax {
    * Create error recovery component
    */
   def recover[F[_]: EffectSystem, A](
-    recovery: PartialFunction[Throwable, A]
+    recovery: PartialFunction[Throwable, A],
   ): PipelineComponent[F, A, A] =
     Kleisli[F, A, A] { a =>
       implicitly[EffectSystem[F]].pure(a).recover(recovery)
@@ -487,8 +493,10 @@ object PipelineSyntax {
    * Create retry component
    */
   def withRetry[F[_]: EffectSystem, A](
-    maxRetries: Int
-  )(component: PipelineComponent[F, A, A]): PipelineComponent[F, A, A] =
+    maxRetries: Int,
+  )(
+    component: PipelineComponent[F, A, A],
+  ): PipelineComponent[F, A, A] =
     Kleisli { input =>
       val F = implicitly[EffectSystem[F]]
       def attempt(remaining: Int): F[A] =
@@ -509,8 +517,7 @@ object PipelineSyntax {
    * Support for for-comprehensions with pipeline components
    */
   implicit class ForComprehensionOps[F[_]: EffectSystem, A, B](
-    private val component: PipelineComponent[F, A, B]
-  ) {
+    private val component: PipelineComponent[F, A, B]) {
 
     def map[C](f: B => C): PipelineComponent[F, A, C] =
       component.map(f)
@@ -540,14 +547,14 @@ object PipelineSyntax {
    * Convert function to pipeline component
    */
   implicit def functionToComponent[F[_]: EffectSystem, A, B](
-    f: A => B
+    f: A => B,
   ): PipelineComponent[F, A, B] = transform(f)
 
   /**
    * Convert effectful function to pipeline component
    */
   implicit def effectfulFunctionToComponent[F[_]: EffectSystem, A, B](
-    f: A => F[B]
+    f: A => F[B],
   ): PipelineComponent[F, A, B] = transformF(f)
 
   // ===============================
@@ -564,7 +571,7 @@ object PipelineSyntax {
      */
     def etlPipeline[F[_]: EffectSystem](
       source: DataSource,
-      sink: DataSink
+      sink: DataSink,
     ): EnhancedPipelineBuilder[F] =
       pipeline[F]("etl-pipeline")
         .from(source)
@@ -577,15 +584,16 @@ object PipelineSyntax {
      * Create a data quality pipeline
      */
     def qualityPipeline[F[_]: EffectSystem, A](
-      dataset: DataAlgebra.Dataset[A]
-    )(implicit da: DataAlgebra[F]): DatasetPipelineBuilder[F, A] =
+      dataset: DataAlgebra.Dataset[A],
+    )(implicit da: DataAlgebra[F],
+    ): DatasetPipelineBuilder[F, A] =
       dataset.pipeline
 
     /**
      * Create a Reader-based pipeline with dependency injection
      */
     def diPipeline[F[_]: EffectSystem](
-      name: String
+      name: String,
     ): FlowForgeReaderT[F, String] =
       // TODO: Implement Reader-based pipeline with dependency injection
       // Using ReaderT from cats as FlowForgeReaderT alias
@@ -614,7 +622,7 @@ object PipelineSyntax {
         data = data,
         passed = true,
         violations = Nil,
-        score = 1.0
+        score = 1.0,
       )
   }
 }

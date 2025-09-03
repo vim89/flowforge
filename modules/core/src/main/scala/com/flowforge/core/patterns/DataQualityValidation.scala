@@ -9,8 +9,8 @@ import java.time.Instant
 import scala.concurrent.duration.FiniteDuration
 
 /**
- * Specialized validation patterns for data quality assurance. These validators focus on data
- * integrity, completeness, and business rules.
+ * Specialized validation patterns for data quality assurance. These validators focus on data integrity,
+ * completeness, and business rules.
  */
 object DataQualityValidation {
 
@@ -20,7 +20,7 @@ object DataQualityValidation {
   def freshness[A](
     fieldName: String,
     timestamp: Instant,
-    maxAge: FiniteDuration
+    maxAge: FiniteDuration,
   ): QualityValidationResult[A] = {
     val now            = Instant.now()
     val age            = java.time.Duration.between(timestamp, now)
@@ -36,7 +36,7 @@ object DataQualityValidation {
         violatedValue = fieldName,
         threshold = Some(maxAge.toString),
         message = s"Data is too old: ${age.toMillis}ms > ${maxAgeInMillis}ms",
-        severity = ErrorSeverity.Error
+        severity = ErrorSeverity.Error,
       )
       violation.invalidNel
     }
@@ -48,7 +48,7 @@ object DataQualityValidation {
   def completeness[A](
     fieldName: String,
     values: List[Option[A]],
-    minCompleteness: Double
+    minCompleteness: Double,
   ): QualityValidationResult[List[Option[A]]] = {
     val total              = values.length
     val nonNull            = values.count(_.isDefined)
@@ -62,7 +62,7 @@ object DataQualityValidation {
         violatedValue = fieldName,
         threshold = Some(minCompleteness.toString),
         message = s"Completeness too low: ${actualCompleteness * 100}% < ${minCompleteness * 100}%",
-        severity = ErrorSeverity.Error
+        severity = ErrorSeverity.Error,
       )
       violation.invalidNel
     }
@@ -73,7 +73,7 @@ object DataQualityValidation {
    */
   def uniqueness[A](
     fieldName: String,
-    values: List[A]
+    values: List[A],
   ): QualityValidationResult[List[A]] = {
     val duplicates = values.groupBy(identity).filter(_._2.size > 1)
 
@@ -85,7 +85,7 @@ object DataQualityValidation {
         violatedValue = fieldName,
         threshold = Some(duplicates).map(_.toString),
         message = s"Duplicate values found: ${duplicates.keys.mkString(", ")}",
-        severity = ErrorSeverity.Error
+        severity = ErrorSeverity.Error,
       )
       violation.invalidNel
     }
@@ -97,7 +97,7 @@ object DataQualityValidation {
   def referentialIntegrity[A](
     fieldName: String,
     foreignKeys: List[A],
-    referenceTable: Set[A]
+    referenceTable: Set[A],
   ): QualityValidationResult[List[A]] = {
     val invalidKeys = foreignKeys.filterNot(referenceTable.contains)
 
@@ -109,7 +109,7 @@ object DataQualityValidation {
         violatedValue = fieldName,
         threshold = Some(invalidKeys).map(_.toString),
         message = s"Invalid foreign key references: ${invalidKeys.mkString(", ")}",
-        severity = ErrorSeverity.Error
+        severity = ErrorSeverity.Error,
       )
       violation.invalidNel
     }
@@ -122,7 +122,7 @@ object DataQualityValidation {
     fieldName: String,
     values: List[Double],
     expectedMean: Double,
-    tolerance: Double
+    tolerance: Double,
   ): QualityValidationResult[List[Double]] =
     if (values.isEmpty) {
       val violation = QualityViolation(
@@ -130,7 +130,7 @@ object DataQualityValidation {
         violatedValue = fieldName,
         threshold = None,
         message = s"No values provided for distribution validation",
-        severity = ErrorSeverity.Error
+        severity = ErrorSeverity.Error,
       )
       violation.invalidNel
     } else {
@@ -145,7 +145,7 @@ object DataQualityValidation {
           violatedValue = fieldName,
           threshold = Some(s"$expectedMean + $tolerance"),
           message = s"Mean deviation exceeds tolerance: $deviation > $tolerance",
-          severity = ErrorSeverity.Error
+          severity = ErrorSeverity.Error,
         )
         violation.invalidNel
       }
@@ -156,8 +156,10 @@ object DataQualityValidation {
    */
   def businessRule[A](
     ruleName: String,
-    description: String
-  )(rule: A => Boolean): A => QualityValidationResult[A] = { value =>
+    description: String,
+  )(
+    rule: A => Boolean,
+  ): A => QualityValidationResult[A] = { value =>
     if (rule(value)) {
       value.validNel
     } else {
@@ -166,7 +168,7 @@ object DataQualityValidation {
         violatedValue = ruleName,
         threshold = Some(value).map(_.toString),
         message = s"Business rule violation: $description",
-        severity = ErrorSeverity.Error
+        severity = ErrorSeverity.Error,
       )
       violation.invalidNel
     }

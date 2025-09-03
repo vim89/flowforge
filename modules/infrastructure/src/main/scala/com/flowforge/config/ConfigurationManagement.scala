@@ -18,7 +18,11 @@ object ConfigError {
     def message: String = s"Configuration key '$key' is missing"
   }
 
-  case class InvalidValue(key: String, value: String, expectedType: String) extends ConfigError {
+  case class InvalidValue(
+    key: String,
+    value: String,
+    expectedType: String)
+      extends ConfigError {
     def message: String = s"Invalid value '$value' for key '$key', expected $expectedType"
   }
 
@@ -107,8 +111,8 @@ object ConfigurationManagement {
         cats.data.Validated.invalidNel(
           ConfigError.ParseError(
             path,
-            "FlowForgeConfig decoding not yet implemented - placeholder for compilation"
-          )
+            "FlowForgeConfig decoding not yet implemented - placeholder for compilation",
+          ),
         )
     }
 }

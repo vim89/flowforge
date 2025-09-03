@@ -4,9 +4,9 @@
  * File: modules/core/src/main/scala/com/flowforge/core/types/PipelineTypes.scala Package:
  * com.flowforge.core.types
  *
- * This file defines the core pipeline modeling types for the FlowForge ecosystem. These types
- * represent data processing pipelines as composable, type-safe abstractions that can be combined,
- * transformed, and executed across different engines.
+ * This file defines the core pipeline modeling types for the FlowForge ecosystem. These types represent data
+ * processing pipelines as composable, type-safe abstractions that can be combined, transformed, and executed
+ * across different engines.
  *
  * Design Patterns Applied:
  *   - Pipeline Pattern: Composable data processing stages

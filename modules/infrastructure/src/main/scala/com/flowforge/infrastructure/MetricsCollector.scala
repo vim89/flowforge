@@ -13,7 +13,11 @@ trait MetricsCollector[F[_]] {
   def recordTimer[A](name: String)(operation: F[A]): F[A]
   def recordTimer[A](name: String, tags: Map[String, String])(operation: F[A]): F[A]
   def recordGauge(name: String, value: Double): F[Unit]
-  def recordGauge(name: String, value: Double, tags: Map[String, String]): F[Unit]
+  def recordGauge(
+    name: String,
+    value: Double,
+    tags: Map[String, String],
+  ): F[Unit]
   def recordDuration(name: String, duration: FiniteDuration): F[Unit]
 }
 
@@ -23,13 +27,17 @@ object MetricsCollector {
   def prometheusCollector[F[_]: Sync]: MetricsCollector[F] = new PrometheusMetricsCollector[F]
 
   private class NoOpMetricsCollector[F[_]: Sync] extends MetricsCollector[F] {
-    def incrementCounter(name: String): F[Unit]                            = Sync[F].unit
-    def incrementCounter(name: String, tags: Map[String, String]): F[Unit] = Sync[F].unit
-    def recordTimer[A](name: String)(operation: F[A]): F[A]                = operation
+    def incrementCounter(name: String): F[Unit]                                        = Sync[F].unit
+    def incrementCounter(name: String, tags: Map[String, String]): F[Unit]             = Sync[F].unit
+    def recordTimer[A](name: String)(operation: F[A]): F[A]                            = operation
     def recordTimer[A](name: String, tags: Map[String, String])(operation: F[A]): F[A] = operation
-    def recordGauge(name: String, value: Double): F[Unit]                            = Sync[F].unit
-    def recordGauge(name: String, value: Double, tags: Map[String, String]): F[Unit] = Sync[F].unit
-    def recordDuration(name: String, duration: FiniteDuration): F[Unit]              = Sync[F].unit
+    def recordGauge(name: String, value: Double): F[Unit]                              = Sync[F].unit
+    def recordGauge(
+      name: String,
+      value: Double,
+      tags: Map[String, String],
+    ): F[Unit] = Sync[F].unit
+    def recordDuration(name: String, duration: FiniteDuration): F[Unit] = Sync[F].unit
   }
 
   private class PrometheusMetricsCollector[F[_]: Sync] extends MetricsCollector[F] {
@@ -65,7 +73,11 @@ object MetricsCollector {
         ()
       }
 
-    def recordGauge(name: String, value: Double, tags: Map[String, String]): F[Unit] =
+    def recordGauge(
+      name: String,
+      value: Double,
+      tags: Map[String, String],
+    ): F[Unit] =
       recordGauge(name, value)
 
     def recordDuration(name: String, duration: FiniteDuration): F[Unit] =

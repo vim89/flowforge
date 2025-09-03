@@ -1,9 +1,8 @@
 /**
  * FlowForge Connectors Module - File System Connector
  *
- * This module provides comprehensive file system connectivity for FlowForge pipelines, supporting
- * local file systems, HDFS, and cloud storage (GCS, S3, Azure) through a unified, type-safe
- * interface.
+ * This module provides comprehensive file system connectivity for FlowForge pipelines, supporting local file
+ * systems, HDFS, and cloud storage (GCS, S3, Azure) through a unified, type-safe interface.
  *
  * Key Features:
  *   - Unified interface for multiple file systems
@@ -94,7 +93,7 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
     case jdbc: DataSource.JdbcSource   => jdbc.table.value
     case _ =>
       throw new IllegalArgumentException(
-        s"Unsupported DataSource type: ${source.getClass.getSimpleName}"
+        s"Unsupported DataSource type: ${source.getClass.getSimpleName}",
       )
   }
 
@@ -105,7 +104,7 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
     case s3: DataSink.S3Sink   => s3.path
     case _ =>
       throw new IllegalArgumentException(
-        s"Unsupported DataSink type: ${sink.getClass.getSimpleName}"
+        s"Unsupported DataSink type: ${sink.getClass.getSimpleName}",
       )
   }
 
@@ -143,11 +142,11 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
         path <- effectSystem.delay(Paths.get(location))
         _    <- effectSystem.delay(Files.createDirectories(path.getParent))
         _ <- effectSystem.delay(
-          Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+          Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING),
         )
         metadata = WriteMetadata(
           path = location,
-          bytesWritten = data.length.toLong
+          bytesWritten = data.length.toLong,
         )
       } yield FileSystemResult.success(metadata)
     } { error =>
@@ -173,7 +172,7 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
               path = p.toString,
               size = attrs.size(),
               lastModified = Instant.ofEpochMilli(attrs.lastModifiedTime().toMillis),
-              format = inferFormatFromPath(p.toString)
+              format = inferFormatFromPath(p.toString),
             )
           }
         }
@@ -220,14 +219,14 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
       for {
         pathObj <- effectSystem.delay(Paths.get(path))
         attrs <- effectSystem.delay(
-          Files.readAttributes(pathObj, classOf[java.nio.file.attribute.BasicFileAttributes])
+          Files.readAttributes(pathObj, classOf[java.nio.file.attribute.BasicFileAttributes]),
         )
         metadata = FileMetadata(
           name = pathObj.getFileName.toString,
           path = path,
           size = attrs.size(),
           lastModified = Instant.ofEpochMilli(attrs.lastModifiedTime().toMillis),
-          format = inferFormatFromPath(path)
+          format = inferFormatFromPath(path),
         )
       } yield FileSystemResult.success(metadata)
     } { error =>
@@ -251,11 +250,11 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
         Paths.get(location),
         allBytes,
         StandardOpenOption.CREATE,
-        StandardOpenOption.TRUNCATE_EXISTING
+        StandardOpenOption.TRUNCATE_EXISTING,
       )
       WriteMetadata(
         path = location,
-        bytesWritten = allBytes.length.toLong
+        bytesWritten = allBytes.length.toLong,
       )
     }
   }
@@ -267,8 +266,8 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
  */
 class HDFSFileSystemConnector[F[_]: EffectSystem](
   hdfsUrl: String,
-  configuration: Map[String, String] = Map.empty
-) extends FileSystemConnector[F] {
+  configuration: Map[String, String] = Map.empty)
+    extends FileSystemConnector[F] {
 
   private val effectSystem = EffectSystem[F]
 
@@ -281,7 +280,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
     case jdbc: DataSource.JdbcSource   => jdbc.table.value
     case _ =>
       throw new IllegalArgumentException(
-        s"Unsupported DataSource type: ${source.getClass.getSimpleName}"
+        s"Unsupported DataSource type: ${source.getClass.getSimpleName}",
       )
   }
 
@@ -292,7 +291,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
     case s3: DataSink.S3Sink   => s3.path
     case _ =>
       throw new IllegalArgumentException(
-        s"Unsupported DataSink type: ${sink.getClass.getSimpleName}"
+        s"Unsupported DataSink type: ${sink.getClass.getSimpleName}",
       )
   }
 
@@ -347,7 +346,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
           outputStream.flush()
           outputStream.close()
           FileSystemResult.success(
-            WriteMetadata(path = location, bytesWritten = data.length.toLong)
+            WriteMetadata(path = location, bytesWritten = data.length.toLong),
           )
         }
       }(fs => effectSystem.blocking(fs.close()).void)
@@ -371,7 +370,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
                 path = status.getPath.toString,
                 size = status.getLen,
                 lastModified = java.time.Instant.ofEpochMilli(status.getModificationTime),
-                format = inferFormatFromPath(status.getPath.toString)
+                format = inferFormatFromPath(status.getPath.toString),
               )
             }.toList
             FileSystemResult.success(metadata)
@@ -407,7 +406,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
             FileSystemResult.success(())
           } else {
             FileSystemResult.failure(
-              FileSystemError.CreateDirectoryError(path, "Failed to create directory")
+              FileSystemError.CreateDirectoryError(path, "Failed to create directory"),
             )
           }
         } finally
@@ -453,7 +452,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
               path = path,
               size = status.getLen,
               lastModified = java.time.Instant.ofEpochMilli(status.getModificationTime),
-              format = inferFormatFromPath(path)
+              format = inferFormatFromPath(path),
             )
             FileSystemResult.success(metadata)
           }
@@ -497,7 +496,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
           outputStream.flush()
           WriteMetadata(
             path = location,
-            bytesWritten = totalBytes
+            bytesWritten = totalBytes,
           )
         } finally
           outputStream.close()
@@ -543,15 +542,15 @@ abstract class CloudStorageConnector[F[_]: EffectSystem] extends FileSystemConne
 class GCSConnector[F[_]: EffectSystem](
   projectId: String,
   serviceAccountPath: Option[String] = None,
-  configuration: Map[String, String] = Map.empty
-) extends CloudStorageConnector[F] {
+  configuration: Map[String, String] = Map.empty)
+    extends CloudStorageConnector[F] {
 
   // Helper method to extract GCS path from DataSource
   private def extractGcsPath(source: DataSource): String = source match {
     case gcs: DataSource.GcsSource => gcs.path
     case _ =>
       throw new IllegalArgumentException(
-        s"Expected GCS source, got ${source.getClass.getSimpleName}"
+        s"Expected GCS source, got ${source.getClass.getSimpleName}",
       )
   }
 
@@ -615,8 +614,8 @@ class GCSConnector[F[_]: EffectSystem](
         FileSystemResult.success(
           WriteMetadata(
             path = gcsPath,
-            bytesWritten = data.length.toLong
-          )
+            bytesWritten = data.length.toLong,
+          ),
         )
       }
     } { error =>
@@ -640,7 +639,7 @@ class GCSConnector[F[_]: EffectSystem](
             path = s"gs://$bucket/${blob.getName}",
             size = blob.getSize,
             lastModified = java.time.Instant.ofEpochMilli(blob.getUpdateTime),
-            format = inferFormatFromPath(blob.getName)
+            format = inferFormatFromPath(blob.getName),
           )
         }.toList
 
@@ -702,8 +701,8 @@ class GCSConnector[F[_]: EffectSystem](
           if (!success) {
             return effectSystem.pure(
               FileSystemResult.failure(
-                FileSystemError.DeleteError(path, "File not found or already deleted")
-              )
+                FileSystemError.DeleteError(path, "File not found or already deleted"),
+              ),
             )
           }
         }
@@ -731,7 +730,7 @@ class GCSConnector[F[_]: EffectSystem](
             path = path,
             size = blob.getSize,
             lastModified = java.time.Instant.ofEpochMilli(blob.getUpdateTime),
-            format = inferFormatFromPath(blob.getName)
+            format = inferFormatFromPath(blob.getName),
           )
           FileSystemResult.success(metadata)
         }
@@ -770,7 +769,7 @@ class GCSConnector[F[_]: EffectSystem](
 
       WriteMetadata(
         path = gcsPath,
-        bytesWritten = allBytes.length.toLong
+        bytesWritten = allBytes.length.toLong,
       )
     }
   }
@@ -1100,14 +1099,14 @@ object FileSystemConnector {
 
   def hdfs[F[_]: EffectSystem](
     hdfsUrl: String,
-    configuration: Map[String, String] = Map.empty
+    configuration: Map[String, String] = Map.empty,
   ): HDFSFileSystemConnector[F] =
     new HDFSFileSystemConnector[F](hdfsUrl, configuration)
 
   def gcs[F[_]: EffectSystem](
     projectId: String,
     serviceAccountPath: Option[String] = None,
-    configuration: Map[String, String] = Map.empty
+    configuration: Map[String, String] = Map.empty,
   ): GCSConnector[F] =
     new GCSConnector[F](projectId, serviceAccountPath, configuration)
 
@@ -1123,7 +1122,7 @@ object FileSystemOps {
    * Batch file operations
    */
   def batchRead[F[_]: EffectSystem](
-    sources: List[DataSource]
+    sources: List[DataSource],
   ): F[List[FileSystemResult[Array[Byte]]]] = {
     val effectSystem = EffectSystem[F]
     val connector    = FileSystemConnector.local[F]
@@ -1134,7 +1133,7 @@ object FileSystemOps {
    * Parallel file operations
    */
   def parallelRead[F[_]: EffectSystem](
-    sources: List[DataSource]
+    sources: List[DataSource],
   ): F[List[FileSystemResult[Array[Byte]]]] = {
     val effectSystem = EffectSystem[F]
     val connector    = FileSystemConnector.local[F]

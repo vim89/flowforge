@@ -17,7 +17,11 @@ object TypedIO {
   def s3ParquetSource[R <: HList](bucket: String, prefix: String): TypedSource[R] =
     TypedSource[R](DataSource.s3(bucket, prefix, DataFormat.Parquet))
 
-  def bigQuerySource[R <: HList](project: String, dataset: String, table: String): TypedSource[R] =
+  def bigQuerySource[R <: HList](
+    project: String,
+    dataset: String,
+    table: String,
+  ): TypedSource[R] =
     TypedSource[R](DataSource.bigQuery(project, dataset, table))
 
   // Sinks

@@ -8,14 +8,13 @@ import com.flowforge.core.patterns.ValidationTypes.ValidationResult
  */
 case class NamedValidationRule[A](
   name: String,
-  validator: A => ValidationResult[A]
-) {
+  validator: A => ValidationResult[A]) {
 
   def validate(value: A): ValidationResult[A] = validator(value)
 
   def combine(other: NamedValidationRule[A]): NamedValidationRule[A] =
     NamedValidationRule(
       s"$name+${other.name}",
-      value => (validator(value), other.validator(value)).mapN((_, _) => value)
+      value => (validator(value), other.validator(value)).mapN((_, _) => value),
     )
 }

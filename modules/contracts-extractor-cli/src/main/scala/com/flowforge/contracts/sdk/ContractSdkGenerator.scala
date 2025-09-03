@@ -13,8 +13,7 @@ object ContractSdkGenerator {
     entity: String,
     namespace: String,
     version: String,
-    avroSchema: String
-  )
+    avroSchema: String)
 
   def generateSdk(contractsRoot: String, outputDir: String): IO[Unit] = for {
     contracts <- discoverContracts(contractsRoot)
@@ -96,7 +95,10 @@ object ContractSdkGenerator {
        |""".stripMargin
   }
 
-  final case class AvroField(name: String, avroType: String, nullable: Boolean) {
+  final case class AvroField(
+    name: String,
+    avroType: String,
+    nullable: Boolean) {
     def scalaType: String = {
       val base = avroType match {
         case "string"  => "String"
@@ -152,7 +154,7 @@ object ContractSdkGenerator {
     baseDir: String,
     subDir: String,
     fileName: String,
-    content: String
+    content: String,
   ): IO[Unit] = IO {
     val dir =
       if (subDir.nonEmpty) Paths.get(baseDir, "src", "main", "scala", subDir.replace(".", "/"))

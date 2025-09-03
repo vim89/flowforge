@@ -27,7 +27,7 @@ class StreamingCDCSpec extends AnyFunSuite {
       schema = schema,
       partitions = 1,
       createdAt = Instant.now(),
-      source = None
+      source = None,
     )
     SimpleDataset(data, schema, meta)
   }

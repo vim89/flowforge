@@ -15,5 +15,4 @@ case class PipelineResult[A](
   endTime: Instant,
   duration: FiniteDuration,
   metrics: PipelineMetrics,
-  errors: List[String] = List.empty
-)
+  errors: List[String] = List.empty)

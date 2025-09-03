@@ -22,8 +22,8 @@ object PipelineStage {
     description: String,
     dataSource: DataSource,
     execute: Kleisli[F, Unit, B],
-    metrics: StageMetrics = StageMetrics.empty
-  ) extends PipelineStage[F, Unit, B]
+    metrics: StageMetrics = StageMetrics.empty)
+      extends PipelineStage[F, Unit, B]
 
   /**
    * Transformation stage - processes data
@@ -32,8 +32,8 @@ object PipelineStage {
     name: String,
     description: String,
     execute: Kleisli[F, A, B],
-    metrics: StageMetrics = StageMetrics.empty
-  ) extends PipelineStage[F, A, B]
+    metrics: StageMetrics = StageMetrics.empty)
+      extends PipelineStage[F, A, B]
 
   /**
    * Filter stage - removes unwanted records
@@ -43,8 +43,8 @@ object PipelineStage {
     description: String,
     predicate: A => Boolean,
     execute: Kleisli[F, A, A],
-    metrics: StageMetrics = StageMetrics.empty
-  ) extends PipelineStage[F, A, A]
+    metrics: StageMetrics = StageMetrics.empty)
+      extends PipelineStage[F, A, A]
 
   /**
    * Branch stage - splits pipeline into multiple paths
@@ -55,8 +55,8 @@ object PipelineStage {
     left: PipelineStage[F, A, B],
     right: PipelineStage[F, A, C],
     execute: Kleisli[F, A, (B, C)],
-    metrics: StageMetrics = StageMetrics.empty
-  ) extends PipelineStage[F, A, (B, C)]
+    metrics: StageMetrics = StageMetrics.empty)
+      extends PipelineStage[F, A, (B, C)]
 
   /**
    * Join stage - combines multiple pipeline paths
@@ -66,8 +66,8 @@ object PipelineStage {
     description: String,
     joiner: (A, B) => C,
     execute: Kleisli[F, (A, B), C],
-    metrics: StageMetrics = StageMetrics.empty
-  ) extends PipelineStage[F, (A, B), C]
+    metrics: StageMetrics = StageMetrics.empty)
+      extends PipelineStage[F, (A, B), C]
 
   /**
    * Sink stage - writes data to external systems
@@ -77,8 +77,8 @@ object PipelineStage {
     description: String,
     dataSink: DataSink,
     execute: Kleisli[F, A, Unit],
-    metrics: StageMetrics = StageMetrics.empty
-  ) extends PipelineStage[F, A, Unit]
+    metrics: StageMetrics = StageMetrics.empty)
+      extends PipelineStage[F, A, Unit]
 
   /**
    * Custom stage - user-defined processing
@@ -88,6 +88,6 @@ object PipelineStage {
     description: String,
     logic: A => F[B],
     execute: Kleisli[F, A, B],
-    metrics: StageMetrics = StageMetrics.empty
-  ) extends PipelineStage[F, A, B]
+    metrics: StageMetrics = StageMetrics.empty)
+      extends PipelineStage[F, A, B]
 }

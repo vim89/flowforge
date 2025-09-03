@@ -17,10 +17,10 @@ import fs2.Stream
  * PRODUCTION-READY In-Memory Data Algebra Implementation
  *
  * This implementation uses blocking IO for simplicity and reliability:
- * - Simple file reading with scala.io.Source
- * - Memory-efficient processing for reasonable dataset sizes
- * - Proper error handling with ValidatedNel
- * - Production-ready CDC operations with MD5 hashing
+ *   - Simple file reading with scala.io.Source
+ *   - Memory-efficient processing for reasonable dataset sizes
+ *   - Proper error handling with ValidatedNel
+ *   - Production-ready CDC operations with MD5 hashing
  *
  * PRODUCTION READINESS: 95% - Optimized for development and testing workloads
  */
@@ -39,16 +39,25 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
               DataDecoder[A].decode(EncodedData(line.getBytes("UTF-8"), format), format).toOption
             }
             val schema = schemaOpt.getOrElse(DataSchema.builder.build)
-            SimpleDataset(records, schema, DatasetMetadata(records.size.toLong, schema, 1, Instant.now(), Some(source)))
+            SimpleDataset(
+              records,
+              schema,
+              DatasetMetadata(records.size.toLong, schema, 1, Instant.now(), Some(source)),
+            )
           }
         case DataFormat.CSV =>
           Sync[F].blocking {
-            val lines = scala.io.Source.fromFile(pathObj.toFile).getLines().drop(1).toList // Skip header
+            val lines =
+              scala.io.Source.fromFile(pathObj.toFile).getLines().drop(1).toList // Skip header
             val records = lines.flatMap { line =>
               DataDecoder[A].decode(EncodedData(line.getBytes("UTF-8"), format), format).toOption
             }
             val schema = schemaOpt.getOrElse(DataSchema.builder.build)
-            SimpleDataset(records, schema, DatasetMetadata(records.size.toLong, schema, 1, Instant.now(), Some(source)))
+            SimpleDataset(
+              records,
+              schema,
+              DatasetMetadata(records.size.toLong, schema, 1, Instant.now(), Some(source)),
+            )
           }
         case other =>
           F.raiseError(new UnsupportedOperationException(s"Unsupported format: $other"))
@@ -58,7 +67,7 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
 
   override def readWithSchema[A: DataDecoder](
     source: DataSource,
-    expectedSchema: DataSchema
+    expectedSchema: DataSchema,
   ): F[ValidatedNel[FlowForgeError, Dataset[A]]] =
     F.map(read(source))(dataset => Validated.validNel(dataset))
 
@@ -74,7 +83,7 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
   override def write[A: DataEncoder](
     dataset: Dataset[A],
     sink: DataSink,
-    options: WriteOptions
+    options: WriteOptions,
   ): F[WriteResult] = sink match {
     case LocalDataSink(path, format, _, _, _) =>
       val pathObj = Paths.get(path)
@@ -83,17 +92,19 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
         val content = format match {
           case DataFormat.JSONL =>
             dataset.data.map { a =>
-              DataEncoder[A].encode(a, format)
+              DataEncoder[A]
+                .encode(a, format)
                 .fold(e => throw new RuntimeException(e.message), _.data)
             }.map(bytes => new String(bytes, "UTF-8")).mkString("\n")
 
           case DataFormat.CSV =>
             val header = dataset.schema.fieldNames match {
-              case Nil => ""
+              case Nil    => ""
               case fields => fields.mkString(",") + "\n"
             }
             val data = dataset.data.map { a =>
-              DataEncoder[A].encode(a, format)
+              DataEncoder[A]
+                .encode(a, format)
                 .fold(e => throw new RuntimeException(e.message), _.data)
             }.map(bytes => new String(bytes, "UTF-8")).mkString("\n")
             header + data
@@ -104,14 +115,13 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
 
         // Write to file
         val writer = new java.io.FileWriter(pathObj.toFile)
-        try {
+        try
           writer.write(content)
-        } finally {
+        finally
           writer.close()
-        }
 
         val recordCount = dataset.data.size.toLong
-        val wr = WriteResult(recordCount, 1, recordCount * 100L, success = true) // Estimate bytes
+        val wr          = WriteResult(recordCount, 1, recordCount * 100L, success = true) // Estimate bytes
 
         try
           com.flowforge.core.observability.PrometheusMetrics.Data.writeTotal
@@ -128,7 +138,7 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
     dataset: Dataset[A],
     sink: DataSink,
     contract: PDataContract[A],
-    options: WriteOptions
+    options: WriteOptions,
   ): F[ValidatedNel[FlowForgeError, WriteResult]] =
     F.map(write(dataset, sink, options))(result => Validated.validNel(result))
 
@@ -151,7 +161,7 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
   override def groupBy[A, K, V: DataEncoder](
     dataset: Dataset[A],
     keyExtractor: A => K,
-    aggregator: List[A] => V
+    aggregator: List[A] => V,
   ): Dataset[(K, V)] = {
     val grouped = dataset.data.groupBy(keyExtractor).view.mapValues(aggregator).toList
     val sch =
@@ -164,7 +174,7 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
     right: Dataset[B],
     leftKey: A => K,
     rightKey: B => K,
-    combiner: (A, B) => C
+    combiner: (A, B) => C,
   ): Dataset[C] = {
     val rIndex = right.data.groupBy(rightKey)
     val out = left.data.flatMap { la =>
@@ -178,7 +188,7 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
     SimpleDataset(
       left.data ++ right.data,
       left.schema,
-      left.metadata.copy(recordCount = (left.data.size + right.data.size).toLong)
+      left.metadata.copy(recordCount = (left.data.size + right.data.size).toLong),
     )
 
   override def sortBy[A, K: Ordering](dataset: Dataset[A], keyExtractor: A => K): Dataset[A] =
@@ -188,20 +198,20 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
     SimpleDataset(
       dataset.data.take(n),
       dataset.schema,
-      dataset.metadata.copy(recordCount = math.min(dataset.data.size, n).toLong)
+      dataset.metadata.copy(recordCount = math.min(dataset.data.size, n).toLong),
     )
 
   override def drop[A](dataset: Dataset[A], n: Int): Dataset[A] =
     SimpleDataset(
       dataset.data.drop(n),
       dataset.schema,
-      dataset.metadata.copy(recordCount = math.max(0, dataset.data.size - n).toLong)
+      dataset.metadata.copy(recordCount = math.max(0, dataset.data.size - n).toLong),
     )
 
   // ---------- Effectful transforms ----------
   override def transformWithEffect[A, B: DataEncoder](
     dataset: Dataset[A],
-    transformation: A => F[B]
+    transformation: A => F[B],
   ): F[Dataset[B]] =
     F.flatMap(F.traverse(dataset.data)(transformation)) { out =>
       val sch = DataEncoder[B].schema(DataFormat.JSON)
@@ -210,7 +220,7 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
 
   override def transformPipeline[A, B: DataEncoder](
     dataset: Dataset[A],
-    transformations: NonEmptyList[A => F[B]]
+    transformations: NonEmptyList[A => F[B]],
   ): F[Dataset[B]] = {
     val Fsys = EffectSystem[F]
     val composed: A => F[B] = { a: A =>
@@ -231,29 +241,29 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
 
   override def evolveSchema[A, B: DataEncoder](
     dataset: Dataset[A],
-    migration: SchemaMigration[A, B]
+    migration: SchemaMigration[A, B],
   ): F[Dataset[B]] =
     F.pure {
       val out = dataset.data.map(migration.migrate)
       SimpleDataset(
         out,
         migration.targetSchema,
-        dataset.metadata.copy(recordCount = out.size.toLong, schema = migration.targetSchema)
+        dataset.metadata.copy(recordCount = out.size.toLong, schema = migration.targetSchema),
       )
     }
 
   override def compareSchemas(
     schema1: DataSchema,
-    schema2: DataSchema
+    schema2: DataSchema,
   ): F[SchemaCompatibilityReport] =
     F.pure(
-      SchemaCompatibilityReport(schema1.fieldNames.toSet == schema2.fieldNames.toSet, Nil, Nil)
+      SchemaCompatibilityReport(schema1.fieldNames.toSet == schema2.fieldNames.toSet, Nil, Nil),
     )
 
   override def recordLineage[A](
     dataset: Dataset[A],
     operation: String,
-    context: LineageContext
+    context: LineageContext,
   ): F[LineageRecord] =
     F.pure(
       LineageRecord(
@@ -263,8 +273,8 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
         operation,
         context,
         List(dataset.schema),
-        Some(dataset.schema)
-      )
+        Some(dataset.schema),
+      ),
     )
 
   override def queryLineage(query: LineageQuery): F[List[LineageRecord]] = F.pure(Nil)
@@ -272,17 +282,18 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
   // ---------- Quality ----------
   override def validate[A](
     dataset: Dataset[A],
-    contract: PDataContract[A]
+    contract: PDataContract[A],
   ): F[QualityResult[Dataset[A]]] =
     F.pure(QualityResult(dataset, passed = true, violations = Nil, score = 1.0))
 
   override def runQualityChecks[A](
     dataset: Dataset[A],
-    checks: NonEmptyList[QualityCheck[A]]
+    checks: NonEmptyList[QualityCheck[A]],
   ): F[List[QualityCheckResult]] = F.pure(
-    checks.toList.zipWithIndex.map { case (_, idx) =>
-      QualityCheckResult(s"check_$idx", passed = true, message = "ok", score = 1.0)
-    }
+    checks.toList.zipWithIndex.map {
+      case (_, idx) =>
+        QualityCheckResult(s"check_$idx", passed = true, message = "ok", score = 1.0)
+    },
   )
 
   override def profile[A](dataset: Dataset[A]): F[DataProfile[A]] = F.pure(
@@ -291,17 +302,18 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
       nullCount = 0L,
       distinctCount = dataset.data.distinct.size.toLong,
       schema = dataset.schema,
-      statistics = Map.empty
-    )
+      statistics = Map.empty,
+    ),
   )
 
   // ---------- Utilities ----------
-  def count[A](dataset: Dataset[A]): Long      = dataset.data.size.toLong
-  def isEmpty[A](dataset: Dataset[A]): Boolean = dataset.data.isEmpty
+  def count[A](dataset: Dataset[A]): Long                                   = dataset.data.size.toLong
+  def isEmpty[A](dataset: Dataset[A]): Boolean                              = dataset.data.isEmpty
   def cache[A](dataset: Dataset[A], strategy: CacheStrategy): F[Dataset[A]] = F.pure(dataset)
   def partition[A](dataset: Dataset[A], partitioner: Partitioner[A]): List[Dataset[A]] =
-    dataset.data.groupBy(partitioner.partition).toList.map { case (_, chunk) =>
-      SimpleDataset(chunk, dataset.schema, dataset.metadata.copy(recordCount = chunk.size.toLong))
+    dataset.data.groupBy(partitioner.partition).toList.map {
+      case (_, chunk) =>
+        SimpleDataset(chunk, dataset.schema, dataset.metadata.copy(recordCount = chunk.size.toLong))
     }
 
   // ---------- CDC (SCD1 and Delta-like semantics) ----------
@@ -310,7 +322,7 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
   override def performDelta[A: DataContract](
     source: Dataset[A],
     target: Dataset[A],
-    config: CDCOperations.CDCConfig
+    config: CDCOperations.CDCConfig,
   ): F[CDCOperations.CDCResult[A]] = {
     val start = java.time.Instant.now()
     F.flatMap(computeCDCOperations[A](source, target, config.keyColumns)) { ops =>
@@ -321,28 +333,30 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
         (target.data.size + source.data.size - (inserted + updated + deleted)).max(0).toLong
       val end = java.time.Instant.now()
       val dur = java.time.Duration.between(start, end).toMillis
-      F.pure(CDCOperations.CDCResult(
-        inserted = inserted,
-        updated = updated,
-        deleted = if (config.deleteDetection) deleted else 0L,
-        unchanged = unchanged,
-        errors = 0L,
-        processingTime =
-          scala.concurrent.duration.FiniteDuration(dur, scala.concurrent.duration.MILLISECONDS),
-        success = true
-      ))
+      F.pure(
+        CDCOperations.CDCResult(
+          inserted = inserted,
+          updated = updated,
+          deleted = if (config.deleteDetection) deleted else 0L,
+          unchanged = unchanged,
+          errors = 0L,
+          processingTime =
+            scala.concurrent.duration.FiniteDuration(dur, scala.concurrent.duration.MILLISECONDS),
+          success = true,
+        ),
+      )
     }
   }
 
   override def computeCDCOperations[A](
     source: Dataset[A],
     target: Dataset[A],
-    keyColumns: NonEmptyList[FieldName]
+    keyColumns: NonEmptyList[FieldName],
   ): F[CDCOperations.CDCOperationSet[A]] = {
     // PRODUCTION: Use MD5 hash for better performance
     import java.security.MessageDigest
     def computeMD5(data: String): String = {
-      val md = MessageDigest.getInstance("MD5")
+      val md     = MessageDigest.getInstance("MD5")
       val digest = md.digest(data.getBytes("UTF-8"))
       digest.map(b => f"$b%02x").mkString
     }
@@ -374,7 +388,7 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
 
   override def applyCDCOperations[A](
     operations: CDCOperations.CDCOperationSet[A],
-    target: DataSink
+    target: DataSink,
   ): F[CDCOperations.CDCResult[A]] = {
     val inserted = operations.inserts.size.toLong
     val updated  = operations.updates.size.toLong
@@ -387,14 +401,14 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
         unchanged = 0L,
         errors = 0L,
         processingTime = scala.concurrent.duration.Duration.Zero,
-        success = true
-      )
+        success = true,
+      ),
     )
   }
 
   // ---------- Table operations ----------
   override def repairRefreshTable(
-    table: TableOperations.TableName
+    table: TableOperations.TableName,
   ): F[TableOperations.TableOperationResult] =
     F.pure(
       TableOperations.TableOperationResult(
@@ -404,44 +418,44 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
         affectedPartitions = Nil,
         recordsProcessed = 0L,
         processingTime = scala.concurrent.duration.Duration.Zero,
-        errors = List(PipelineError.StageExecutionError("table-op", "operation not supported"))
-      )
+        errors = List(PipelineError.StageExecutionError("table-op", "operation not supported")),
+      ),
     )
 
   override def getTableLocation(
-    table: TableOperations.TableName
+    table: TableOperations.TableName,
   ): F[ValidatedNel[FlowForgeError, String]] =
     F.pure(PipelineError.InvalidConfiguration("in-memory has no table locations").invalidNel)
 
   override def getAffectedPartitions(
     table: TableOperations.TableName,
     startTime: Instant,
-    endTime: Instant
+    endTime: Instant,
   ): F[List[TableOperations.PartitionSpec]] =
     F.pure(Nil)
 
   override def deleteDfsLocation(
     location: String,
-    dryRun: Boolean
+    dryRun: Boolean,
   ): F[TableOperations.TableOperationResult] =
     F.pure(
       TableOperations.TableOperationResult(
         tableName = TableOperations.TableName(
           eu.timepit.refined.types.string.NonEmptyString.unsafeFrom("inmem"),
-          eu.timepit.refined.types.string.NonEmptyString.unsafeFrom("table")
+          eu.timepit.refined.types.string.NonEmptyString.unsafeFrom("table"),
         ),
         operation = s"delete($location)",
         success = false,
         affectedPartitions = Nil,
         recordsProcessed = 0L,
         processingTime = scala.concurrent.duration.Duration.Zero,
-        errors = List(PipelineError.StageExecutionError("table-op", "operation not supported"))
-      )
+        errors = List(PipelineError.StageExecutionError("table-op", "operation not supported")),
+      ),
     )
 
   override def analyzeTable(
     table: TableOperations.TableName,
-    partitions: Option[NonEmptyList[TableOperations.PartitionSpec]]
+    partitions: Option[NonEmptyList[TableOperations.PartitionSpec]],
   ): F[TableOperations.TableOperationResult] =
     F.pure(
       TableOperations.TableOperationResult(
@@ -451,14 +465,14 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
         affectedPartitions = partitions.map(_.toList).getOrElse(Nil),
         recordsProcessed = 0L,
         processingTime = scala.concurrent.duration.Duration.Zero,
-        errors = List(PipelineError.StageExecutionError("table-op", "operation not supported"))
-      )
+        errors = List(PipelineError.StageExecutionError("table-op", "operation not supported")),
+      ),
     )
 
   override def vacuumTable(
     table: TableOperations.TableName,
     retentionHours: Int,
-    dryRun: Boolean
+    dryRun: Boolean,
   ): F[TableOperations.TableOperationResult] =
     F.pure(
       TableOperations.TableOperationResult(
@@ -468,7 +482,7 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
         affectedPartitions = Nil,
         recordsProcessed = 0L,
         processingTime = scala.concurrent.duration.Duration.Zero,
-        errors = List(PipelineError.StageExecutionError("table-op", "operation not supported"))
-      )
+        errors = List(PipelineError.StageExecutionError("table-op", "operation not supported")),
+      ),
     )
 }

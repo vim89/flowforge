@@ -4,9 +4,9 @@
  * File: modules/core/src/main/scala/com/flowforge/core/types/DataTypes.scala Package:
  * com.flowforge.core.types
  *
- * This file defines the core data modeling types used throughout the FlowForge ecosystem. These
- * types represent the fundamental building blocks for data engineering pipelines, including data
- * formats, sources, sinks, and schemas.
+ * This file defines the core data modeling types used throughout the FlowForge ecosystem. These types
+ * represent the fundamental building blocks for data engineering pipelines, including data formats, sources,
+ * sinks, and schemas.
  *
  * Design Patterns Applied:
  *   - ADT Pattern: Sealed trait hierarchies for type-safe data modeling
@@ -38,7 +38,7 @@
  * val source = DataSource.gcs(
  *   bucket = BucketName("my-data-lake"),
  *   prefix = "events/2024/01/",
- *   format = DataFormat.Parquet
+ *   format = DataFormat.Parquet,
  * )
  *
  * // Schema-validated data processing
@@ -164,8 +164,8 @@ import com.flowforge.core.types.RefinedTypes._
 // ===============================
 
 /**
- * Supported data formats for reading and writing. Each format has specific capabilities and
- * performance characteristics.
+ * Supported data formats for reading and writing. Each format has specific capabilities and performance
+ * characteristics.
  */
 sealed trait DataFormat extends Product with Serializable {
   def fileExtension: String
@@ -182,20 +182,18 @@ sealed trait DataFormat extends Product with Serializable {
 object DataFormat {
 
   /**
-   * Apache Parquet - columnar storage format. Optimal for analytics workloads with excellent
-   * compression.
+   * Apache Parquet - columnar storage format. Optimal for analytics workloads with excellent compression.
    */
   case object Parquet extends DataFormat {
     val fileExtension           = ".parquet"
     val mimeType                = "application/octet-stream"
     val isColumnOriented        = true
     val supportsSchemaEvolution = true
-    val compressionSupport = List(CompressionType.Snappy, CompressionType.Gzip, CompressionType.LZ4)
+    val compressionSupport      = List(CompressionType.Snappy, CompressionType.Gzip, CompressionType.LZ4)
   }
 
   /**
-   * Apache Avro - row-oriented format with rich schema support. Excellent for streaming and schema
-   * evolution.
+   * Apache Avro - row-oriented format with rich schema support. Excellent for streaming and schema evolution.
    */
   case object Avro extends DataFormat {
     val fileExtension           = ".avro"
@@ -207,8 +205,7 @@ object DataFormat {
   }
 
   /**
-   * Comma-separated values - simple text format. Universal compatibility but limited schema
-   * support.
+   * Comma-separated values - simple text format. Universal compatibility but limited schema support.
    */
   case object CSV extends DataFormat {
     val fileExtension           = ".csv"
@@ -248,19 +245,18 @@ object DataFormat {
     val mimeType                = "application/octet-stream"
     val isColumnOriented        = true
     val supportsSchemaEvolution = true
-    val compressionSupport = List(CompressionType.Zlib, CompressionType.Snappy, CompressionType.LZ4)
+    val compressionSupport      = List(CompressionType.Zlib, CompressionType.Snappy, CompressionType.LZ4)
   }
 
   /**
-   * Delta Lake format - ACID transactions on data lakes. Combines benefits of data lakes and data
-   * warehouses.
+   * Delta Lake format - ACID transactions on data lakes. Combines benefits of data lakes and data warehouses.
    */
   case object Delta extends DataFormat {
     val fileExtension           = ".delta"
     val mimeType                = "application/octet-stream"
     val isColumnOriented        = true
     val supportsSchemaEvolution = true
-    val compressionSupport = List(CompressionType.Snappy, CompressionType.Gzip, CompressionType.LZ4)
+    val compressionSupport      = List(CompressionType.Snappy, CompressionType.Gzip, CompressionType.LZ4)
   }
 
   implicit val showDataFormat: Show[DataFormat] = Show.show {
@@ -430,7 +426,7 @@ object DataType {
   def decimal(precision: Int, scale: Int): Decimal = {
     val refinedPrecision = eu.timepit.refined.refineV[Positive](precision) match {
       case Right(value) => value
-      case Left(_) => throw new IllegalArgumentException(s"Precision must be positive: $precision")
+      case Left(_)      => throw new IllegalArgumentException(s"Precision must be positive: $precision")
     }
     val refinedScale = eu.timepit.refined.refineV[NonNegative](scale) match {
       case Right(value) => value
@@ -442,7 +438,7 @@ object DataType {
   def varchar(maxLength: Int): VarChar = {
     val refined = eu.timepit.refined.refineV[Positive](maxLength) match {
       case Right(value) => value
-      case Left(_) => throw new IllegalArgumentException(s"Max length must be positive: $maxLength")
+      case Left(_)      => throw new IllegalArgumentException(s"Max length must be positive: $maxLength")
     }
     VarChar(refined)
   }
@@ -460,8 +456,7 @@ case class StructField(
   name: FieldName,
   dataType: DataType,
   nullable: Boolean = false,
-  metadata: Map[String, String] = Map.empty
-) {
+  metadata: Map[String, String] = Map.empty) {
   def isRequired: Boolean = !nullable
 
   def withMetadata(key: String, value: String): StructField =
@@ -479,7 +474,7 @@ object StructField {
     new StructField(
       FieldName(name),
       DataType.nullable(dataType),
-      nullable = true
+      nullable = true,
     )
 }
 
@@ -490,8 +485,7 @@ case class DataSchema(
   fields: List[StructField],
   version: SchemaVersion,
   metadata: Map[String, String] = Map.empty,
-  createdAt: Instant = Instant.now()
-) {
+  createdAt: Instant = Instant.now()) {
 
   def fieldNames: List[String] = fields.map(_.name.value)
 
@@ -509,7 +503,7 @@ case class DataSchema(
     copy(
       fields = fields ++ newFields,
       version = SchemaVersion(version.value + 1),
-      createdAt = Instant.now()
+      createdAt = Instant.now(),
     )
 }
 
@@ -520,10 +514,13 @@ object DataSchema {
    */
   case class SchemaBuilder private (
     fields: List[StructField] = List.empty,
-    metadata: Map[String, String] = Map.empty
-  ) {
+    metadata: Map[String, String] = Map.empty) {
 
-    def addField(name: String, dataType: DataType, required: Boolean = true): SchemaBuilder = {
+    def addField(
+      name: String,
+      dataType: DataType,
+      required: Boolean = true,
+    ): SchemaBuilder = {
       val field = if (required) {
         StructField.required(name, dataType)
       } else {
@@ -542,7 +539,7 @@ object DataSchema {
       DataSchema(
         fields = fields,
         version = SchemaVersion(1),
-        metadata = metadata
+        metadata = metadata,
       )
   }
 
@@ -603,8 +600,8 @@ case class LocalDataSource(
   format: DataFormat,
   compression: CompressionType = CompressionType.None,
   schema: Option[DataSchema] = None,
-  id: Option[String] = None
-) extends DataSource
+  id: Option[String] = None)
+    extends DataSource
 
 object DataSource {
 
@@ -617,8 +614,8 @@ object DataSource {
     format: DataFormat,
     compression: CompressionType = CompressionType.None,
     schema: Option[DataSchema] = None,
-    recursive: Boolean = false
-  ) extends DataSource {
+    recursive: Boolean = false)
+      extends DataSource {
 
     def path: String = s"gs://${bucket.show}/$prefix"
 
@@ -639,8 +636,8 @@ object DataSource {
     compression: CompressionType = CompressionType.None,
     schema: Option[DataSchema] = None,
     region: String = "us-east-1",
-    recursive: Boolean = false
-  ) extends DataSource {
+    recursive: Boolean = false)
+      extends DataSource {
 
     def path: String = s"s3://${bucket.show}/$prefix"
 
@@ -661,8 +658,8 @@ object DataSource {
     format: DataFormat = DataFormat.Parquet,
     compression: CompressionType = CompressionType.None,
     schema: Option[DataSchema] = None,
-    filter: Option[String] = None
-  ) extends DataSource {
+    filter: Option[String] = None)
+      extends DataSource {
 
     def fullTableName: String = s"${project.show}.${dataset.show}.${table.show}"
 
@@ -685,8 +682,8 @@ object DataSource {
     driver: String,
     user: Option[String] = None,
     password: Option[String] = None,
-    query: Option[String] = None
-  ) extends DataSource {
+    query: Option[String] = None)
+      extends DataSource {
 
     def withSchema(dataSchema: DataSchema): JdbcSource =
       copy(schema = Some(dataSchema))
@@ -696,20 +693,36 @@ object DataSource {
   }
 
   // Convenience factory methods
-  def gcs(bucket: String, prefix: String, format: DataFormat): GcsSource =
+  def gcs(
+    bucket: String,
+    prefix: String,
+    format: DataFormat,
+  ): GcsSource =
     GcsSource(BucketName(bucket), prefix, format)
 
-  def s3(bucket: String, prefix: String, format: DataFormat): S3Source =
+  def s3(
+    bucket: String,
+    prefix: String,
+    format: DataFormat,
+  ): S3Source =
     S3Source(BucketName(bucket), prefix, format)
 
-  def bigQuery(project: String, dataset: String, table: String): BigQuerySource =
+  def bigQuery(
+    project: String,
+    dataset: String,
+    table: String,
+  ): BigQuerySource =
     BigQuerySource(
       ProjectId(project),
       DatasetId(dataset),
-      TableName(table)
+      TableName(table),
     )
 
-  def jdbc(url: String, table: String, driver: String): JdbcSource =
+  def jdbc(
+    url: String,
+    table: String,
+    driver: String,
+  ): JdbcSource =
     JdbcSource(url, TableName(table), driver = driver)
 }
 
@@ -732,8 +745,8 @@ case class LocalDataSink(
   format: DataFormat,
   compression: CompressionType = CompressionType.None,
   writeMode: DataSink.WriteMode = DataSink.WriteMode.Append,
-  id: Option[String] = None
-) extends DataSink
+  id: Option[String] = None)
+    extends DataSink
 
 object DataSink {
 
@@ -768,8 +781,8 @@ object DataSink {
     format: DataFormat,
     compression: CompressionType = CompressionType.None,
     writeMode: WriteMode = WriteMode.Append,
-    partitionBy: List[String] = List.empty
-  ) extends DataSink {
+    partitionBy: List[String] = List.empty)
+      extends DataSink {
 
     def path: String = s"gs://${bucket.show}/$prefix"
 
@@ -793,8 +806,8 @@ object DataSink {
     compression: CompressionType = CompressionType.None,
     writeMode: WriteMode = WriteMode.Append,
     region: String = "us-east-1",
-    partitionBy: List[String] = List.empty
-  ) extends DataSink {
+    partitionBy: List[String] = List.empty)
+      extends DataSink {
 
     def path: String = s"s3://${bucket.show}/$prefix"
 
@@ -809,10 +822,18 @@ object DataSink {
   }
 
   // Convenience factory methods
-  def gcs(bucket: String, prefix: String, format: DataFormat): GcsSink =
+  def gcs(
+    bucket: String,
+    prefix: String,
+    format: DataFormat,
+  ): GcsSink =
     GcsSink(BucketName(bucket), prefix, format)
 
-  def s3(bucket: String, prefix: String, format: DataFormat): S3Sink =
+  def s3(
+    bucket: String,
+    prefix: String,
+    format: DataFormat,
+  ): S3Sink =
     S3Sink(BucketName(bucket), prefix, format)
 }
 
@@ -821,9 +842,9 @@ object DataSink {
 // ===============================
 
 /**
- * A sink that encodes its expected schema at the type level as an HList of labelled fields. Use
- * with PipelineBuilder2.addTypedSink to enforce compile-time schema compatibility between pipeline
- * output type and sink expectation.
+ * A sink that encodes its expected schema at the type level as an HList of labelled fields. Use with
+ * PipelineBuilder2.addTypedSink to enforce compile-time schema compatibility between pipeline output type and
+ * sink expectation.
  */
 final case class TypedSink[R <: HList](underlying: DataSink)
 
@@ -863,8 +884,8 @@ object QualityConstraint {
     field: FieldName,
     min: Option[Double],
     max: Option[Double],
-    severity: QualitySeverity = QualitySeverity.Warning
-  ) extends QualityConstraint {
+    severity: QualitySeverity = QualitySeverity.Warning)
+      extends QualityConstraint {
     val name = s"range_${field.show}"
     val description =
       (min, max) match {
@@ -879,8 +900,8 @@ object QualityConstraint {
   case class Pattern(
     field: FieldName,
     regex: String,
-    severity: QualitySeverity = QualitySeverity.Warning
-  ) extends QualityConstraint {
+    severity: QualitySeverity = QualitySeverity.Warning)
+      extends QualityConstraint {
     val name        = s"pattern_${field.show}"
     val description = s"Field ${field.show} must match pattern: $regex"
   }
@@ -930,8 +951,7 @@ object QualitySeverity {
 case class QualityRules(
   constraints: List[QualityConstraint],
   name: String = "default",
-  version: SchemaVersion = SchemaVersion(1)
-) {
+  version: SchemaVersion = SchemaVersion(1)) {
 
   def errorConstraints: List[QualityConstraint] =
     constraints.filter(_.severity.shouldBlock)
@@ -951,9 +971,9 @@ object QualityRules {
     List(
       QualityConstraint.NotNull(FieldName("id")),
       QualityConstraint.NotNull(FieldName("timestamp")),
-      QualityConstraint.Range(FieldName("amount"), Some(0), None)
+      QualityConstraint.Range(FieldName("amount"), Some(0), None),
     ),
-    name = "standard_rules"
+    name = "standard_rules",
   )
 
   def strict: QualityRules = QualityRules(
@@ -964,10 +984,10 @@ object QualityRules {
       QualityConstraint.Range(FieldName("amount"), Some(0), Some(1000000)),
       QualityConstraint.Pattern(
         FieldName("email"),
-        "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
-      )
+        "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
+      ),
     ),
-    name = "strict_rules"
+    name = "strict_rules",
   )
 
   implicit val showQualityRules: Show[QualityRules] = Show.show { rules =>

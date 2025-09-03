@@ -6,15 +6,13 @@ import com.flowforge.core.algebra.EffectSystem
 import eu.timepit.refined.api.Refined
 
 /**
- * Fluent builder for pipeline construction (legacy). Prefer PipelineBuilder2 for compile-time type
- * safety.
+ * Fluent builder for pipeline construction (legacy). Prefer PipelineBuilder2 for compile-time type safety.
  */
 case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
   name: String,
   description: String = "",
   stages: List[PipelineStage[F, _, _]] = List.empty,
-  config: Option[PipelineConfig] = None
-) {
+  config: Option[PipelineConfig] = None) {
 
   def withDescription(desc: String): PipelineBuilder[F, A, B] =
     copy(description = desc)
@@ -27,14 +25,14 @@ case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
       name = s"source-${stages.size}",
       description = s"Read from ${source.format}",
       dataSource = source,
-      execute = Kleisli(_ => reader(source))
+      execute = Kleisli(_ => reader(source)),
     )
     // FIXED: Create new builder with proper type parameters
     PipelineBuilder[F, Unit, C](
       name = name,
       description = description,
       stages = stages :+ stage.asInstanceOf[PipelineStage[F, _, _]],
-      config = config
+      config = config,
     )
   }
 
@@ -42,14 +40,14 @@ case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
     val stage = PipelineStage.Transform(
       name = s"transform-${stages.size}",
       description = "Data transformation",
-      execute = Kleisli(transform)
+      execute = Kleisli(transform),
     )
     // FIXED: Create new builder with proper type parameters
     PipelineBuilder[F, A, C](
       name = name,
       description = description,
       stages = stages :+ stage.asInstanceOf[PipelineStage[F, _, _]],
-      config = config
+      config = config,
     )
   }
 
@@ -61,9 +59,9 @@ case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
       predicate = predicate,
       execute = Kleisli[F, B, B](b =>
         if (predicate(b)) F.pure(b)
-        else F.raiseError(new RuntimeException("Filtered"))
+        else F.raiseError(new RuntimeException("Filtered")),
       ),
-      metrics = StageMetrics.empty
+      metrics = StageMetrics.empty,
     )
     copy(stages = stages :+ stage)
   }
@@ -73,14 +71,14 @@ case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
       name = s"sink-${stages.size}",
       description = s"Write to ${sink.format}",
       dataSink = sink,
-      execute = Kleisli((b: B) => writer(b, sink))
+      execute = Kleisli((b: B) => writer(b, sink)),
     )
     // FIXED: Create new builder with proper type parameters
     PipelineBuilder[F, A, Unit](
       name = name,
       description = description,
       stages = stages :+ stage.asInstanceOf[PipelineStage[F, _, _]],
-      config = config
+      config = config,
     )
   }
 
@@ -114,22 +112,22 @@ case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
             source = stages.collectFirst { case s: PipelineStage.Source[F, _] => s.dataSource }
               .getOrElse(DataSource.gcs("default", "default", DataFormat.Parquet)),
             sink = stages.collectFirst { case s: PipelineStage.Sink[F, _] => s.dataSink }
-              .getOrElse(DataSink.gcs("default", "default", DataFormat.Parquet))
-          )
+              .getOrElse(DataSink.gcs("default", "default", DataFormat.Parquet)),
+          ),
         )
 
         Pipeline[F, A, B](
           name = name,
           description = description,
           stages = stages,
-          config = defaultConfig
+          config = defaultConfig,
         ).validate.map(_ =>
           Pipeline[F, A, B](
             name = name,
             description = description,
             stages = stages,
-            config = defaultConfig
-          )
+            config = defaultConfig,
+          ),
         )
     }
 }

@@ -12,13 +12,13 @@ final case class Pipeline[F[_], A, B](run: Kleisli[F, A, B], metadata: PipelineM
   def map[C](f: B => C)(implicit F: EffectSystem[F]): Pipeline[F, A, C] =
     Pipeline(
       Kleisli(a => F.map(run(a))(f)),
-      metadata.copy(transformations = metadata.transformations + 1)
+      metadata.copy(transformations = metadata.transformations + 1),
     )
 
   def flatMap[C](f: B => Kleisli[F, A, C])(implicit F: EffectSystem[F]): Pipeline[F, A, C] =
     Pipeline(
       Kleisli(a => F.flatMap(run(a))(b => f(b)(a))),
-      metadata.copy(transformations = metadata.transformations + 1)
+      metadata.copy(transformations = metadata.transformations + 1),
     )
 
   def andThen[C](next: Pipeline[F, B, C])(implicit F: EffectSystem[F]): Pipeline[F, A, C] =
@@ -44,15 +44,14 @@ final case class PipelineMetadata(
   stages: List[String] = Nil,
   transformations: Int = 0,
   qualityChecks: Int = 0,
-  tags: Map[String, String] = Map.empty
-) {
+  tags: Map[String, String] = Map.empty) {
   def combine(other: PipelineMetadata): PipelineMetadata =
     PipelineMetadata(
       name = s"$name >> ${other.name}",
       stages = stages ++ other.stages,
       transformations = transformations + other.transformations,
       qualityChecks = qualityChecks + other.qualityChecks,
-      tags = tags ++ other.tags
+      tags = tags ++ other.tags,
     )
 }
 
@@ -62,14 +61,16 @@ object PipelineMetadata {
 
 object PipelineCombinators {
   def sequence[F[_]: EffectSystem, A](
-    pipelines: NonEmptyList[Pipeline[F, A, A]]
+    pipelines: NonEmptyList[Pipeline[F, A, A]],
   ): Pipeline[F, A, A] =
     pipelines.reduceLeft(_ andThen _)
 
   def parallel[F[_]: EffectSystem, A, B, C](
     left: Pipeline[F, A, B],
-    right: Pipeline[F, A, C]
-  )(combine: (B, C) => Pipeline[F, A, (B, C)]): Pipeline[F, A, (B, C)] = {
+    right: Pipeline[F, A, C],
+  )(
+    combine: (B, C) => Pipeline[F, A, (B, C)],
+  ): Pipeline[F, A, (B, C)] = {
     val F = EffectSystem[F]
     val run = Kleisli { a: A =>
       F.parProduct(left.run(a), right.run(a)).flatMap { case (b, c) => combine(b, c).run(a) }
@@ -83,7 +84,7 @@ object PipelineCombinators {
   def conditional[F[_]: EffectSystem, A](
     predicate: A => Boolean,
     ifTrue: Pipeline[F, A, A],
-    ifFalse: Pipeline[F, A, A]
+    ifFalse: Pipeline[F, A, A],
   ): Pipeline[F, A, A] = {
     val run = Kleisli { a: A => if (predicate(a)) ifTrue.run(a) else ifFalse.run(a) }
     val md = PipelineMetadata(name = s"conditional", stages = List("conditional"))
@@ -95,7 +96,7 @@ object PipelineCombinators {
   def retry[F[_]: EffectSystem, A, B](
     pipeline: Pipeline[F, A, B],
     maxRetries: Int,
-    initialDelay: scala.concurrent.duration.FiniteDuration
+    initialDelay: scala.concurrent.duration.FiniteDuration,
   ): Pipeline[F, A, B] = {
     val F   = EffectSystem[F]
     val run = Kleisli { a: A => F.retryWithBackoff(pipeline.run(a), maxRetries, initialDelay) }
@@ -104,7 +105,7 @@ object PipelineCombinators {
 
   def batch[F[_]: EffectSystem, A, B](
     pipeline: Pipeline[F, List[A], List[B]],
-    batchSize: Int = 1000
+    batchSize: Int = 1000,
   ): Pipeline[F, List[A], List[B]] = {
     val F = EffectSystem[F]
     val run = Kleisli { input: List[A] =>
