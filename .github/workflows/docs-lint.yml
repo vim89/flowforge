@@ -1,0 +1,21 @@
+name: Docs Lint
+
+on:
+  pull_request:
+  push:
+    branches: [ main, "feature/**", "mvp-0.0.1-snapshot" ]
+
+jobs:
+  docs-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up ripgrep
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
+
+      - name: Run docs lint
+        run: bash scripts/lint-docs.sh

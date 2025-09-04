@@ -46,3 +46,4 @@ This index organizes all existing documents into clear sections and points to th
 ## Notes
 - For big decisions, create an ADR from `docs/adr/000-template.md` and link it in EVIDENCE and PLAN.
 - For any claim-heavy doc, add/update a “Reality” banner referencing `docs/plans/templates/EVIDENCE.md`.
+- Agents docs: `docs/agents/HANDBOOK.md`, `docs/agents/COVERAGE.md`

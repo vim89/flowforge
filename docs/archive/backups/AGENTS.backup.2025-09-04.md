@@ -381,6 +381,82 @@ Apply only where they fit perfectly to solve that bit of problem or make other t
       components in a type-safe manner, while leveraging the capabilities of effect systems like ZIO or Cats Effect to
       manage side effects and resource safety. time, ensuring robust and reliable applications.
 
+- **Phantom Types**: Using phantom types to encode additional type information at compile time without affecting runtime
+  representation, enhancing type safety and expressiveness.
+- **Type-Level Programming**: Leveraging Scala's advanced type system to perform computations and enforce
+- **F-Bounded Polymorphism**: Using F-bounded polymorphism to define type hierarchies where a type parameter is
+  constrained to be a subtype of a specific type, enabling more precise typing and code reuse. For Type-Safe Composition
+- **Kleisli Arrows**: Utilizing Kleisli arrows for Composable Transformations and to represent computations that produce
+  monadic values, allowing for elegant composition of effectful functions and enabling a functional approach to building
+  data pipelines.
+- **Kleisli for effectful stages**: Kleisli composes effectful functions nicely. Each stage of the data pipeline (e.g.,
+  extraction, transformation, loading) can be represented as a Kleisli arrow, allowing for seamless composition of
+  effectful operations while maintaining type safety and clarity.
+- **Phantom-Type Builder Patterns**: Using phantom types in builder patterns to enforce correct construction of complex
+  objects at compile time, preventing invalid states and ensuring that all required parameters are provided before
+  building the final object. Phantom types track the current output type of stages. Using a phantom-type builder pattern
+  to enforce correct construction of complex objects at compile time, ensuring that all required parameters are provided
+  and valid before the object can be instantiated. Phantom types are markers used only by the compiler; they don’t exist
+  at runtime, but enforce rules at compile time. In a builder, each added stage updates the phantom Out type. Trying to
+  build before types align fails to compile, not crash. They exist exclusively at compile time and carry extra
+  information that enables the compiler to enforce rules. Phantom Types provide extra information to the compiler… allow
+  extra constraints… program fails to compile if constraints don’t hold ...
+- **Higher-Kinded Type**: Employing higher-kinded types to define abstractions that can operate on type constructors,
+  enabling the creation of generic and reusable components that work with various data structures and effect types.
+- **Tagless Final Encoding**: Adopting the tagless final encoding pattern to define type-safe and extensible algebras
+  for domain-specific languages, allowing for flexible interpretation and composition of operations without relying on
+  concrete data types.
+- **Free Monads**: Using free monads to represent computations as a series of steps, enabling the separation of program
+  description from execution and facilitating the creation of interpreters for different execution strategies.
+- **Type Classes**: Leveraging type classes to define generic interfaces that can be implemented for different types,
+  enabling ad-hoc polymorphism and code reuse across various data structures and effect types. Adapter Pattern with Type
+  Classes.
+- **Type class patterns**: Using type class patterns to define and implement generic behaviors for different types,
+  allowing for flexible and reusable code that can work with various data structures and effect types.
+- **Self Types**: Utilizing self types to express dependencies between traits, enabling more precise typing and ensuring
+  that certain traits can only be mixed into classes that also extend specific other traits.
+- **Structural types**: Employing structural types to define types based on their members rather than their explicit
+  names, allowing for more flexible and dynamic typing in certain scenarios.
+- **Tagless Final for Effect Abstraction**: Using the tagless final pattern to abstract over different effect types,
+  enabling the creation of generic and reusable components that can work with various effect systems (e.g., Cats Effect,
+  ZIO) without being tied to a specific implementation. Strategy Pattern with Tagless Final.
+- **Observer Design Pattern with Reactive Streams**: fs2. Implementing the observer design pattern using reactive
+  streams (e.g., Akka Streams, FS2) to enable asynchronous and event-driven data processing, allowing components to
+  react to changes in data and propagate updates through the system in a non-blocking manner.
+- Cats Monads - Higher Kinded Type class
+- for-comprehensions are not iterations. Step away from the concept of iterations.
+- FlatMap is mental model for chained transformations.
+- Cats Monads Use cases: List Combinations, Option transformations, Asynchronous chained computations, Dependent
+  computations, Cats Monad Transformers: Higher-Kinded-Types for convenience over nested monadic values. OptionT,
+  EitherT, Cats Data Manipulation: Readers, Writers, Evaluations, State, Data Validations.
+
+Be mindful of -
+
+- No Over Engineering - Keep simplicity, scalable, understandable, adaptable yet creative - We need to be creative,
+  innovative & something like Wow such a thing can be achieved who'd have never thought about such things in Data
+  Engineering Data Pipelines.
+- The polymorphic effects of Cats-Effect already describe any effect type, and you can use ZIO Tasks instead of IO as
+  the implementation of F - polymorphism lets me slot ZIO Task in F[_]
+- We can also have typed error channel, the entire type class hierarchy starts all the way from Cats, as MonadError[
+  F[_], E]. Usually the error channel is Throwable and makes things easier, and you can have an entire error model
+  starting from Throwable
+- You know why typed error channels haven’t made a difference yet - unless you model errors explicitly, they’re more
+  effort than payoff - but ZIO’s typed channel is powerful when you start encoding domain-specific failures into your
+  effects. Moreover, it forces clarity about what errors you can and should recover from, and ZIO even supports rich
+  handling like folding, retries, and transforming failures with full type safety.
+- Scala has both Functional Programming and Object Oriented design elements - for the double dispatch pattern - the
+  choice is clear - it is going to be ADTs... (pattern matching)
+- ADTs is the way to go - it is so powerful - that we can easily do triple dispatch (and more if we need) - the SUM and
+  PRODUCT types etc.
+- For single dispatch though - there are some times when modelling via inheritance is suggested - if the hierarchy is
+  volatile (subclasses are getting added/removed frequently)
+  If it is largely static - ADTs are the way to go - ADTs are also non-intrusive - we don't have to touch the actual
+  class definition - instead we can
+  attach the behavior from outside.
+
+Remember all this is going to integrate with Apache Spark, Flink & other clouds so it needs to be absolutely generic.
+
+
 ### 🔬 **Effect System Research Findings & Architecture Decision**
 
 Note: Interfaces reflect the research (pure Spark ops are not wrapped in F; external IO/orchestration use F). Spark
@@ -619,81 +695,6 @@ trait SparkDataAlgebra[F[_] : EffectSystem] {
 This architectural principle is **non-negotiable** and must be applied to all FlowForge implementations to align with
 the Effect System research findings.
 
-- **Phantom Types**: Using phantom types to encode additional type information at compile time without affecting runtime
-  representation, enhancing type safety and expressiveness.
-- **Type-Level Programming**: Leveraging Scala's advanced type system to perform computations and enforce
-- **F-Bounded Polymorphism**: Using F-bounded polymorphism to define type hierarchies where a type parameter is
-  constrained to be a subtype of a specific type, enabling more precise typing and code reuse. For Type-Safe Composition
-- **Kleisli Arrows**: Utilizing Kleisli arrows for Composable Transformations and to represent computations that produce
-  monadic values, allowing for elegant composition of effectful functions and enabling a functional approach to building
-  data pipelines.
-- **Kleisli for effectful stages**: Kleisli composes effectful functions nicely. Each stage of the data pipeline (e.g.,
-  extraction, transformation, loading) can be represented as a Kleisli arrow, allowing for seamless composition of
-  effectful operations while maintaining type safety and clarity.
-- **Phantom-Type Builder Patterns**: Using phantom types in builder patterns to enforce correct construction of complex
-  objects at compile time, preventing invalid states and ensuring that all required parameters are provided before
-  building the final object. Phantom types track the current output type of stages. Using a phantom-type builder pattern
-  to enforce correct construction of complex objects at compile time, ensuring that all required parameters are provided
-  and valid before the object can be instantiated. Phantom types are markers used only by the compiler; they don’t exist
-  at runtime, but enforce rules at compile time. In a builder, each added stage updates the phantom Out type. Trying to
-  build before types align fails to compile, not crash. They exist exclusively at compile time and carry extra
-  information that enables the compiler to enforce rules. Phantom Types provide extra information to the compiler… allow
-  extra constraints… program fails to compile if constraints don’t hold ...
-- **Higher-Kinded Type**: Employing higher-kinded types to define abstractions that can operate on type constructors,
-  enabling the creation of generic and reusable components that work with various data structures and effect types.
-- **Tagless Final Encoding**: Adopting the tagless final encoding pattern to define type-safe and extensible algebras
-  for domain-specific languages, allowing for flexible interpretation and composition of operations without relying on
-  concrete data types.
-- **Free Monads**: Using free monads to represent computations as a series of steps, enabling the separation of program
-  description from execution and facilitating the creation of interpreters for different execution strategies.
-- **Type Classes**: Leveraging type classes to define generic interfaces that can be implemented for different types,
-  enabling ad-hoc polymorphism and code reuse across various data structures and effect types. Adapter Pattern with Type
-  Classes.
-- **Type class patterns**: Using type class patterns to define and implement generic behaviors for different types,
-  allowing for flexible and reusable code that can work with various data structures and effect types.
-- **Self Types**: Utilizing self types to express dependencies between traits, enabling more precise typing and ensuring
-  that certain traits can only be mixed into classes that also extend specific other traits.
-- **Structural types**: Employing structural types to define types based on their members rather than their explicit
-  names, allowing for more flexible and dynamic typing in certain scenarios.
-- **Tagless Final for Effect Abstraction**: Using the tagless final pattern to abstract over different effect types,
-  enabling the creation of generic and reusable components that can work with various effect systems (e.g., Cats Effect,
-  ZIO) without being tied to a specific implementation. Strategy Pattern with Tagless Final.
-- **Observer Design Pattern with Reactive Streams**: fs2. Implementing the observer design pattern using reactive
-  streams (e.g., Akka Streams, FS2) to enable asynchronous and event-driven data processing, allowing components to
-  react to changes in data and propagate updates through the system in a non-blocking manner.
-- Cats Monads - Higher Kinded Type class
-- for-comprehensions are not iterations. Step away from the concept of iterations.
-- FlatMap is mental model for chained transformations.
-- Cats Monads Use cases: List Combinations, Option transformations, Asynchronous chained computations, Dependent
-  computations, Cats Monad Transformers: Higher-Kinded-Types for convenience over nested monadic values. OptionT,
-  EitherT, Cats Data Manipulation: Readers, Writers, Evaluations, State, Data Validations.
-
-Be mindful of -
-
-- No Over Engineering - Keep simplicity, scalable, understandable, adaptable yet creative - We need to be creative,
-  innovative & something like Wow such a thing can be achieved who'd have never thought about such things in Data
-  Engineering Data Pipelines.
-- The polymorphic effects of Cats-Effect already describe any effect type, and you can use ZIO Tasks instead of IO as
-  the implementation of F - polymorphism lets me slot ZIO Task in F[_]
-- We can also have typed error channel, the entire type class hierarchy starts all the way from Cats, as MonadError[
-  F[_], E]. Usually the error channel is Throwable and makes things easier, and you can have an entire error model
-  starting from Throwable
-- You know why typed error channels haven’t made a difference yet - unless you model errors explicitly, they’re more
-  effort than payoff - but ZIO’s typed channel is powerful when you start encoding domain-specific failures into your
-  effects. Moreover, it forces clarity about what errors you can and should recover from, and ZIO even supports rich
-  handling like folding, retries, and transforming failures with full type safety.
-- Scala has both Functional Programming and Object Oriented design elements - for the double dispatch pattern - the
-  choice is clear - it is going to be ADTs... (pattern matching)
-- ADTs is the way to go - it is so powerful - that we can easily do triple dispatch (and more if we need) - the SUM and
-  PRODUCT types etc.
-- For single dispatch though - there are some times when modelling via inheritance is suggested - if the hierarchy is
-  volatile (subclasses are getting added/removed frequently)
-  If it is largely static - ADTs are the way to go - ADTs are also non-intrusive - we don't have to touch the actual
-  class definition - instead we can
-  attach the behavior from outside.
-
-Remember all this is going to integrate with Apache Spark, Flink & other clouds so it needs to be absolutely generic.
-
 #### Prototype Integration Principles
 
 When integrating external patterns or libraries into FlowForge:
@@ -723,7 +724,7 @@ trait LegacyCompatibility[F[_] : Sync] extends ConfigurationAlgebra[F] {
 }
 ```
 
-#### Advanced Type-Level Programming Patterns
+### Advanced Type-Level Programming Patterns
 
 - **Phantom State Machines**: Use phantom types to encode valid state transitions at compile time
 - **Dependent Types with Refinement**: Combine refined types with phantom types for maximum safety
@@ -853,7 +854,7 @@ alternatives - research, plan, architect, decide, design & implement it fully.
 - Do not change version in build.sbt
 - Do not change allSettings in build.sbt
 
-## Session Continuity Protocol – ((ChatGPT Agents specially for you for Keeping ChatGPT Agents Agile and Aligned)
+## – ((ChatGPT Agents specially for you for Keeping ChatGPT Agents Agile and Aligned)
 
 To avoid repetitive rework, confusion, or lost context when ChatGPT Agents hits its session limits, we use this
 structured protocol in every interaction:
@@ -1040,3 +1041,4 @@ When wrapping up, ChatGPT Agents must summarize:
   state ([LlamaIndex blog]([llamaindex.ai](https://www.llamaindex.ai/blog/context-engineering-what-it-is-and-techniques-to-consider?utm_source=chatgpt.com)))
 - Summaries and checkpoints reduce token bloat and maintain conversation coherence
 - Conflict detection and small patches dramatically cut down wasted labor and merge conflicts
+100
