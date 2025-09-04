@@ -30,8 +30,9 @@
 - Specific tests or examples validating this ADR.
 
 ## References
-- Evidence: `docs/plans/templates/EVIDENCE.md`
-- Plan: `docs/plans/templates/PLAN.md`
+- Evidence: choose from `docs/evidence/*`
+- Plan: choose from `docs/plan/*`
 - House Rules: `AGENTS.md`
+- Source: link any relevant `docs/archive/**` design notes
 - Related: <issues/PRs/design docs>
 ```

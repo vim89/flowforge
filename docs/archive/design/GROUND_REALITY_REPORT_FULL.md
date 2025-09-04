@@ -1,5 +1,7 @@
 # FlowForge — Ground Reality Report (Full, Codebase vs Docs)
 
+> Archived: Superseded by ADR-016 Ground Reality & Alignment Governance. See `docs/adr/016-ground-reality-governance.md`.
+
 Updated: 2025-09-03
 Scope: All Scala sources under `modules/**` plus tests; docs under `docs/**/*` and `AGENTS.md`.
 

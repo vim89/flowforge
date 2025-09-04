@@ -19,8 +19,8 @@ Infrastructure abstractions (logging, metrics, tracing, config, resource safety)
 - Metrics increment at key IO operations; infra code compiles; future wiring PRs reference this ADR.
 
 ## References
-- Evidence: `docs/plans/templates/EVIDENCE.md` (§6)
-- Plan: `docs/plans/templates/PLAN.md`
+- Evidence: `docs/evidence/infrastructure-layer.md` (§6)
+- Plan: `docs/plan/infrastructure-layer.md`
 
 ## End Goal (Big Picture)
 - Platform-wide structured logging, metrics, and tracing with minimal overhead and effect-safe hooks.

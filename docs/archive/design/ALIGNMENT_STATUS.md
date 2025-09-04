@@ -1,5 +1,7 @@
 # FlowForge Alignment Status Tracking
 
+> Archived: Superseded by ADR-016 Ground Reality & Alignment Governance. See `docs/adr/016-ground-reality-governance.md`.
+
 *Last Updated: 2025-09-03*
 
 ## 📊 Document vs Codebase Alignment Status

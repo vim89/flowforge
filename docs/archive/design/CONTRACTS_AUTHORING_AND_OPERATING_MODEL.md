@@ -74,4 +74,6 @@ Status: Adopt alongside compile/build gates
 - `PipelineBuilder2` requires TypedSource/TypedSink from SDK.
 - The physical validation tasks can live in a tiny shared sbt/mill plugin or a standalone CLI used in CI; engineers don’t need to author schemas locally.
 > Archived (2025-09-04): Superseded by ADR-010 Contracts Authoring & Operating Model. See `docs/adr/010-contracts-authoring-operating-model.md` and Evidence.
+# Contracts Authoring & Operating Model (Non-Technical Friendly)
 
+> Archived: Superseded by ADR-010 Contracts Authoring & Operating Model. See `docs/adr/010-contracts-authoring-operating-model.md`.

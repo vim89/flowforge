@@ -19,8 +19,8 @@ Only Local/HDFS connectors are implemented. Cloud connectors (GCS/S3/BQ/Kafka/Az
 - Connector APIs remain engine-agnostic; examples build against filesystem first.
 
 ## References
-- Evidence: `docs/plans/templates/EVIDENCE.md` (§2, §3)
-- Plan: `docs/plans/templates/PLAN.md`
+- Source: `docs/archive/connectors/HDFS.md`
+- Plan: `docs/plan/UMBRELLA.md`
 
 ## End Goal (Big Picture)
 - Baseline filesystem connectors; staged cloud connectors using adapters and engine-agnostic interfaces.

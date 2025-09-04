@@ -20,8 +20,9 @@ We enforce that Spark transformations remain pure (return `Dataset[A]`-like valu
 - Add tests that validate signatures remain pure for transforms and effectful for IO.
 
 ## References
-- Evidence: `docs/plans/templates/EVIDENCE.md` (§2, §6)
-- Plan: `docs/plans/templates/PLAN.md`
+- Evidence: `docs/evidence/effect-per-module-and-purity.md` (§2)
+- Evidence: `docs/evidence/engines-spark.md` (§6)
+- Plan: `docs/plan/effect-per-module-and-purity.md`
 - House Rules: `AGENTS.md` (Effect System Implementation Rules)
 
 ## End Goal (Big Picture)

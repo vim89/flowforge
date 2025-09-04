@@ -1,5 +1,7 @@
 # FlowForge QA Plan: Comprehensive Testing Strategy
 
+> Archived: Superseded by ADR-014 QA Strategy and Testing. See `docs/adr/014-qa-strategy.md`.
+
 ## 🎯 Testing Philosophy
 
 FlowForge's testing strategy follows a **pyramid approach** with emphasis on property-based testing and contract verification to ensure mathematical correctness of functional programming abstractions.

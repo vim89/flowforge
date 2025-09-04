@@ -18,8 +18,8 @@ Quality module is declared; Deequ integration is planned but currently missing. 
 - Add a focused unit test that runs a Deequ check on a small local Dataset.
 
 ## References
-- Evidence: `docs/plans/templates/EVIDENCE.md` (§3)
-- Plan: `docs/plans/templates/PLAN.md` (§4.3)
+- Evidence: `docs/evidence/quality-deequ.md` (§3)
+- Plan: `docs/plan/quality-deequ.md` (§4.3)
 
 ## End Goal (Big Picture)
 - Data quality framework with a minimal Deequ adapter to validate end-to-end claims, expandable over time.

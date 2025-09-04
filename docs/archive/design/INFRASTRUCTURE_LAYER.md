@@ -1,5 +1,7 @@
 # FlowForge Infrastructure Layer Design
 
+> Archived: Superseded by ADR-013 Infrastructure Layer Implementation. See `docs/adr/013-infrastructure-layer.md`.
+
 ## Overview
 
 The Infrastructure Layer is the **foundational layer** of FlowForge's layered architecture, providing cross-cutting concerns and system-level services that all other layers depend upon.

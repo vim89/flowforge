@@ -18,9 +18,9 @@ Typed contract pipeline examples illustrate compile-time enforcement using SDK-g
 - Example and test live under examples/core tests; CI builds ensure behavior.
 
 ## References
-- Source: `docs/examples/TYPED_CONTRACT_PIPELINES.md`
-- Evidence: `docs/plans/templates/EVIDENCE.md`
-- Plan: `docs/plans/templates/PLAN.md`
+- Source: `docs/archive/examples/TYPED_CONTRACT_PIPELINES.md`
+- Evidence: `docs/evidence/typed-example.md`
+- Plan: `docs/plan/typed-example.md`
 
 ## End Goal (Big Picture)
 - A canonical typed example that acts as a regression guard and onboarding aid.
@@ -31,4 +31,9 @@ Typed contract pipeline examples illustrate compile-time enforcement using SDK-g
 
 ## Open Questions
 - How to provide negative “compile-time” tests in an automated way for Scala 2.13.
+
+## Appendix: Source Notes (archive/examples/TYPED_CONTRACT_PIPELINES.md)
+
+- Source: `docs/archive/examples/TYPED_CONTRACT_PIPELINES.md` @ 877826bbf05636a3db581e425901fc490cac224d on 2025-09-04T17:18:50+05:30
+- Summary: Demonstrates typed endpoints and SchemaEq evidence in practice, showing compile-time schema gates and where runtime DQ checks complement them; points to example paths in modules.
 ```

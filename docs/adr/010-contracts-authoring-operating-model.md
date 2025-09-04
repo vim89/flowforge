@@ -20,9 +20,9 @@ Non-technical teams need to author data contracts without code; engineers consum
 - Publisher CI validates schemas, compatibility, generates SDKs, and publishes artifacts.
 
 ## References
-- Source: `docs/design/CONTRACTS_AUTHORING_AND_OPERATING_MODEL.md`, `docs/design/CONTRACTS_AUTHORING_GUIDE.md`
-- Evidence: `docs/plans/templates/EVIDENCE.md`
-- Plan: `docs/plans/templates/PLAN.md`
+- Source: `docs/archive/design/CONTRACTS_AUTHORING_AND_OPERATING_MODEL.md`, `docs/archive/design/CONTRACTS_AUTHORING_GUIDE.md`
+- Evidence: `docs/evidence/contracts-operating-model.md`
+- Plan: `docs/plan/contracts-operating-model.md`
 
 ## End Goal (Big Picture)
 - Contracts authored by non-technical users, published as typed SDKs, with compile/build-time enforcement downstream.
@@ -33,4 +33,14 @@ Non-technical teams need to author data contracts without code; engineers consum
 
 ## Open Questions
 - Which schema/registry stack to adopt first (Avro + Schema Registry baseline)?
+
+## Appendix: Source Notes (archive/design/CONTRACTS_AUTHORING_AND_OPERATING_MODEL.md)
+
+- Source: `docs/archive/design/CONTRACTS_AUTHORING_AND_OPERATING_MODEL.md` @ 877826bbf05636a3db581e425901fc490cac224d on 2025-09-04T17:18:50+05:30
+- Summary: Describes non-technical contract authoring via portal/PR workflow, roles (stewards/product/architect/platform/consumers), artifacts (schemas, DQ, metadata), and publishing SDK JARs for compile-time safety; emphasizes governance, versioning, and CI enforcement.
+
+## Appendix: Source Notes (archive/design/CONTRACTS_AUTHORING_GUIDE.md)
+
+- Source: `docs/archive/design/CONTRACTS_AUTHORING_GUIDE.md` @ 877826bbf05636a3db581e425901fc490cac224d on 2025-09-04T17:18:50+05:30
+- Summary: Practitioner-oriented guide for contracts-as-code: repository layout, schema/DQ/metadata conventions, PR flow, validation steps, and outputs; aligns with ADR-010 operating model.
 ```

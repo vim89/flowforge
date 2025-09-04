@@ -3,35 +3,45 @@
 This index maps original documents to their canonical ADRs. Use this as the checklist before archiving.
 
 - Contracts Authoring & Operating Model
-  - Source: docs/design/CONTRACTS_AUTHORING_AND_OPERATING_MODEL.md, docs/design/CONTRACTS_AUTHORING_GUIDE.md
+  - Source: docs/archive/design/CONTRACTS_AUTHORING_AND_OPERATING_MODEL.md, docs/archive/design/CONTRACTS_AUTHORING_GUIDE.md
   - ADR: docs/adr/010-contracts-authoring-operating-model.md
+  - Notes migrated: 2025-09-04 (see ADR-010 Appendix: Source Notes)
 - Contracts Compile & Build Gates
-  - Source: docs/design/CONTRACTS_COMPILE_AND_BUILD_GATES.md
+  - Source: docs/archive/design/CONTRACTS_COMPILE_AND_BUILD_GATES.md
   - ADR: docs/adr/011-contracts-compile-build-gates.md
+  - Notes migrated: 2025-09-04 (see ADR-011 Appendix: Source Notes)
 - Effect System Decision
-  - Source: docs/design/EffectSystemResearch.md, AGENTS.md (effect rules)
+  - Source: docs/archive/design/EffectSystemResearch.md, AGENTS.md (effect rules)
   - ADR: docs/adr/012-effect-system-decision.md
+  - Notes migrated: 2025-09-04 (see ADR-012 Appendix: Source Notes)
 - Infrastructure Layer
-  - Source: docs/design/INFRASTRUCTURE_LAYER.md
+  - Source: docs/archive/design/INFRASTRUCTURE_LAYER.md
   - ADR: docs/adr/013-infrastructure-layer.md
+  - Notes migrated: 2025-09-04 (see ADR-013 Appendix: Source Notes)
 - QA Strategy
-  - Source: docs/design/QA_PLAN.md
+  - Source: docs/archive/design/QA_PLAN.md
   - ADR: docs/adr/014-qa-strategy.md
+  - Notes migrated: 2025-09-04 (see ADR-014 Appendix: Source Notes)
 - Scaffolding vs Production Policy
-  - Source: docs/design/SCAFFOLDING_VS_PRODUCTION_AUDIT.md
+  - Source: docs/archive/design/SCAFFOLDING_VS_PRODUCTION_AUDIT.md
   - ADR: docs/adr/015-scaffolding-vs-production-policy.md
+  - Notes migrated: 2025-09-04 (see ADR-015 Appendix: Source Notes)
 - Ground Reality & Alignment Governance
-  - Source: docs/design/GROUND_REALITY_REPORT.md, docs/design/GROUND_REALITY_REPORT_FULL.md, docs/design/ALIGNMENT_STATUS.md, docs/design/PRODUCTION_REALITY_UPDATE.md
+  - Source: docs/archive/design/GROUND_REALITY_REPORT.md, docs/archive/design/GROUND_REALITY_REPORT_FULL.md, docs/archive/design/ALIGNMENT_STATUS.md, docs/archive/design/PRODUCTION_REALITY_UPDATE.md
   - ADR: docs/adr/016-ground-reality-governance.md
+  - Notes migrated: 2025-09-04 (see ADR-016 Appendix: Source Notes)
 - HDFS Connector Strategy
-  - Source: docs/connectors/HDFS.md
+  - Source: docs/archive/connectors/HDFS.md
   - ADR: docs/adr/017-hdfs-connector-strategy.md
+  - Notes migrated: 2025-09-04 (see ADR-017 Appendix: Source Notes)
 - Roadmap Baseline
-  - Source: docs/design/RoadmapProposal.md
+  - Source: docs/archive/design/RoadmapProposal.md
   - ADR: docs/adr/018-roadmap-baseline.md
+  - Notes migrated: 2025-09-04 (see ADR-018 Appendix: Source Notes)
 - Typed Contract Pipelines Example
-  - Source: docs/examples/TYPED_CONTRACT_PIPELINES.md
+  - Source: docs/archive/examples/TYPED_CONTRACT_PIPELINES.md
   - ADR: docs/adr/019-typed-contract-pipelines-example.md
+  - Notes migrated: 2025-09-04 (see ADR-019 Appendix: Source Notes)
 
 Coverage and Known Gaps
 - Rules_Notes.md: House rules overlap with AGENTS.md; some nuances may not be duplicated in ADRs. Action: keep archived; cross-link from AGENTS.md.

@@ -10,22 +10,17 @@ This index organizes all existing documents into clear sections and points to th
 - Current plan: `docs/plans/templates/PLAN.md`
 - ADR template: `docs/adr/000-template.md`
 
-## Design
-- Alignment/status: `docs/design/ALIGNMENT_STATUS.md`
-- Contracts: `docs/design/CONTRACTS_AUTHORING_AND_OPERATING_MODEL.md`
-- Contracts authoring guide: `docs/design/CONTRACTS_AUTHORING_GUIDE.md`
-- Contracts build gates: `docs/design/CONTRACTS_COMPILE_AND_BUILD_GATES.md`
-- Infrastructure layer: `docs/design/INFRASTRUCTURE_LAYER.md`
-- Effect system research: `docs/design/EffectSystemResearch.md`
-- QA plan: `docs/design/QA_PLAN.md`
-- Roadmap proposal: `docs/design/RoadmapProposal.md`
-- Rules notes: `docs/design/Rules_Notes.md`
-- Scaffolding vs production audit: `docs/design/SCAFFOLDING_VS_PRODUCTION_AUDIT.md`
-- Findings: `docs/design/Findings.md`
-- Overall design: `docs/design/design.md`
-- Implementation TODO: `docs/design/IMPLEMENTATION_TODO.md`
-- Production reality updates: `docs/design/PRODUCTION_REALITY_UPDATE.md`
-- Ground reality reports: `docs/design/GROUND_REALITY_REPORT.md`, `docs/design/GROUND_REALITY_REPORT_FULL.md`
+## Design (Canonical ADRs)
+- Alignment/status: `docs/adr/016-ground-reality-governance.md`
+- Contracts (operating model): `docs/adr/010-contracts-authoring-operating-model.md`
+- Contracts build gates: `docs/adr/011-contracts-compile-build-gates.md`
+- Infrastructure layer: `docs/adr/013-infrastructure-layer.md`
+- Effect system decision (ADR): `docs/adr/012-effect-system-decision.md`
+- QA strategy: `docs/adr/014-qa-strategy.md`
+- Roadmap baseline: `docs/adr/018-roadmap-baseline.md`
+- Scaffolding vs production policy: `docs/adr/015-scaffolding-vs-production-policy.md`
+- Typed example: `docs/adr/019-typed-contract-pipelines-example.md`
+- ADR index: `docs/adr/INDEX.md`
 
 ## Reference (with reality banner)
 - 30-minute setup goal: `docs/reference/30-Minute Production Setup Goal 253e51dc9bf0812f8058d4bb4d07ba3f.md`
@@ -51,4 +46,3 @@ This index organizes all existing documents into clear sections and points to th
 ## Notes
 - For big decisions, create an ADR from `docs/adr/000-template.md` and link it in EVIDENCE and PLAN.
 - For any claim-heavy doc, add/update a “Reality” banner referencing `docs/plans/templates/EVIDENCE.md`.
-

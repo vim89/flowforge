@@ -20,8 +20,8 @@ Build declares modules (connectors-gcs, engines-flink, quality, quality-deequ, t
 - Files appear under `modules/templates/**`; build graph unchanged; `sbt compile` unaffected.
 
 ## References
-- Evidence: `docs/plans/templates/EVIDENCE.md` (§2)
-- Plan: `docs/plans/templates/PLAN.md` (§4.1, §4.3)
+- Evidence: `docs/evidence/templates-alignment.md` (§2)
+- Plan: `docs/plan/templates-alignment.md` (§4.1, §4.3)
 
 ## End Goal (Big Picture)
 - A coherent module layout where declared modules have discoverable, meaningful content; templates are easy to find and use.

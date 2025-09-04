@@ -1,5 +1,7 @@
 # HDFS Connector (Hadoop) – Setup & Usage
 
+> Archived: Superseded by ADR-017 HDFS Connector Strategy. See `docs/adr/017-hdfs-connector-strategy.md`.
+
 Status: Experimental. Requires Hadoop client jars at runtime.
 
 ## Dependencies
@@ -43,4 +45,3 @@ Note: DataSource/DataSink path fields should contain the HDFS path (e.g. `/path/
 - Retries: wrap IO in retry/circuit breaker for robustness.
 - Tests: Integration tests can run against MiniDFSCluster (future work).
 > Archived (2025-09-04): Superseded by ADR-017 HDFS Connector Strategy. See `docs/adr/017-hdfs-connector-strategy.md` and `docs/plans/templates/EVIDENCE.md`.
-

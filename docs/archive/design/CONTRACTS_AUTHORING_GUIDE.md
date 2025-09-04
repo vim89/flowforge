@@ -1,5 +1,7 @@
 # Contracts-as-Code For Non-Technical Teams (No Coding Required)
 
+> Archived: Superseded by ADR-010 Contracts Authoring & Operating Model. See `docs/adr/010-contracts-authoring-operating-model.md`.
+
 Updated: 2025-09-03
 Status: Adopt alongside CONTRACTS_COMPILE_AND_BUILD_GATES.md and CONTRACTS_AUTHORING_AND_OPERATING_MODEL.md
 
@@ -143,4 +145,3 @@ See also:
 - CONTRACTS_COMPILE_AND_BUILD_GATES.md — compile/build gates & APIs
 - CONTRACTS_AUTHORING_AND_OPERATING_MODEL.md — operating model & roles
 > Archived (2025-09-04): Superseded by ADR-010 Contracts Authoring & Operating Model. See `docs/adr/010-contracts-authoring-operating-model.md` and Evidence.
-

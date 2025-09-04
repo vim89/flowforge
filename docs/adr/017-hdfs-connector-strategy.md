@@ -18,9 +18,8 @@ HDFS connector documentation exists; filesystem connector code and HDFS test are
 - Examples and tests use filesystem/HDFS now; roadmap tracks cloud connector additions.
 
 ## References
-- Source: `docs/connectors/HDFS.md`
-- Evidence: `docs/plans/templates/EVIDENCE.md`
-- Plan: `docs/plans/templates/PLAN.md`
+- Source: `docs/archive/connectors/HDFS.md`
+- Plan: `docs/plan/UMBRELLA.md`
 
 ## End Goal (Big Picture)
 - Solid filesystem baseline with examples/tests; blueprint for cloud connectors.
@@ -31,4 +30,9 @@ HDFS connector documentation exists; filesystem connector code and HDFS test are
 
 ## Open Questions
 - Handling security/auth patterns uniformly across providers.
+
+## Appendix: Source Notes (archive/connectors/HDFS.md)
+
+- Source: `docs/archive/connectors/HDFS.md` @ 877826bbf05636a3db581e425901fc490cac224d on 2025-09-04T17:18:50+05:30
+- Summary: Captures HDFS connector setup, dependencies (Hadoop client artifacts), configuration options, and runtime considerations; positions HDFS/filesystem as baseline connectors pending cloud parity.
 ```

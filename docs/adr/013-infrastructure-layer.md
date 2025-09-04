@@ -19,9 +19,9 @@ Infrastructure layer (resource safety, config, logging/metrics/tracing, testing 
 - Unit tests for each service; sample instrumentation present in Spark algebra; compile green.
 
 ## References
-- Source: `docs/design/INFRASTRUCTURE_LAYER.md`
-- Evidence: `docs/plans/templates/EVIDENCE.md`
-- Plan: `docs/plans/templates/PLAN.md`
+- Source: `docs/archive/design/INFRASTRUCTURE_LAYER.md`
+- Evidence: `docs/evidence/infrastructure-layer.md`
+- Plan: `docs/plan/infrastructure-layer.md`
 
 ## End Goal (Big Picture)
 - A consistent infrastructure layer offering logging, metrics, tracing, config, and safety as effectful services.
@@ -32,4 +32,9 @@ Infrastructure layer (resource safety, config, logging/metrics/tracing, testing 
 
 ## Open Questions
 - Which metrics/tracing stacks to standardize on for v1.
+
+## Appendix: Source Notes (archive/design/INFRASTRUCTURE_LAYER.md)
+
+- Source: `docs/archive/design/INFRASTRUCTURE_LAYER.md` @ 877826bbf05636a3db581e425901fc490cac224d on 2025-09-04T17:18:50+05:30
+- Summary: Outlines the infra layer components: ResourceSafety, ConfigurationManagement, StructuredLogger, MetricsCollector, DistributedTracing, and testing harness; highlights prior gap (infra missing in code) and the need to wire hooks at IO boundaries via EffectSystem.
 ```

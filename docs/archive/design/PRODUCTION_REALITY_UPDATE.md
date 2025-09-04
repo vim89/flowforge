@@ -1,5 +1,7 @@
 # 🚨 FlowForge Production Reality - Honest Assessment
 
+> Archived: Superseded by ADR-016 Ground Reality & Alignment Governance. See `docs/adr/016-ground-reality-governance.md`.
+
 **Date**: 2025-09-03  
 **Status**: CRITICAL ARCHITECTURAL INTEGRITY ISSUE IDENTIFIED AND DOCUMENTED
 

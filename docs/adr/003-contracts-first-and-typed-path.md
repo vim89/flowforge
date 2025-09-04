@@ -19,9 +19,9 @@ The project mandates contracts-first pipelines with compile-time gates when poss
 - Provide an example and unit test demonstrating compile failure on schema drift in the typed path.
 
 ## References
-- Evidence: `docs/plans/templates/EVIDENCE.md` (§3)
-- Plan: `docs/plans/templates/PLAN.md` (§4.2)
-- Design: `docs/examples/TYPED_CONTRACT_PIPELINES.md`, contracts/*, core/types/*
+- Evidence: `docs/evidence/typed-example.md` (§3)
+- Plan: `docs/plan/typed-example.md` (§4.2)
+- Design: `docs/archive/examples/TYPED_CONTRACT_PIPELINES.md`, contracts/*, core/types/*
 
 ## End Goal (Big Picture)
 - Contracts-first flow where typed compile-time gates are the default; runtime validations complement where dynamic.

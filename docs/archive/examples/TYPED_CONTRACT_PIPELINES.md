@@ -1,5 +1,7 @@
 # Typed Contract Pipelines — Compile-Time Gates in Action
 
+> Archived: Superseded by ADR-019 Typed Contract Pipelines Example. See `docs/adr/019-typed-contract-pipelines-example.md`.
+
 Updated: 2025-09-03
 
 This doc shows how FlowForge enforces compile-time schema gates using typed endpoints and SchemaEq evidence.
@@ -36,4 +38,3 @@ In real teams, contracts are authored via UI and published as versioned SDK JARs
 - Streaming CDC example with typed records and quality rules.
 - Scala 3 variant using Mirrors and inline errors (no shapeless).
 > Archived (2025-09-04): Superseded by ADR-019 Typed Contract Pipelines Example. See `docs/adr/019-typed-contract-pipelines-example.md`.
-

@@ -1,4 +1,6 @@
 # FlowForge Development Roadmap & Assessment
+
+> Archived: Superseded by ADR-018 Roadmap Baseline. See `docs/adr/018-roadmap-baseline.md`.
 *Updated: 2025-09-01 - CORRECTED Reality-Based Assessment*
 
 ## Executive Summary
