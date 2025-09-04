@@ -43,6 +43,9 @@ This index maps original documents to their canonical ADRs. Use this as the chec
   - ADR: docs/adr/019-typed-contract-pipelines-example.md
   - Notes migrated: 2025-09-04 (see ADR-019 Appendix: Source Notes)
 
+- Pipeline 30-Point Checklist
+  - ADR: docs/adr/020-pipeline-30-point-checklist.md
+
 Coverage and Known Gaps
 - Rules_Notes.md: House rules overlap with AGENTS.md; some nuances may not be duplicated in ADRs. Action: keep archived; cross-link from AGENTS.md.
 - design.md: Diagrams and narrative; ADRs capture decisions, but not all diagrams. Action: keep archived for context.
