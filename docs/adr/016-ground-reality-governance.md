@@ -17,6 +17,10 @@ Ground reality reports and alignment status docs reconcile claims vs implementat
 ## Verification
 - Evidence and alignment docs updated on cadence; PR checklist includes “link to Evidence”.
 
+## Reality Check (2025-09-04)
+- See `docs/evidence/brutal-truth-2025-09-04.md` for the full blunt assessment.
+- Summary: MVR partial; MVP/v1 not achieved. README teaser claims are aspirational; CI‑first contract gates adopted (ADR‑011 updated). Deequ adapter, S3 connector, and E2E ITs are top near‑term priorities.
+
 ## References
 - Source: `docs/archive/design/GROUND_REALITY_REPORT.md`, `docs/archive/design/GROUND_REALITY_REPORT_FULL.md`, `docs/archive/design/ALIGNMENT_STATUS.md`, `docs/archive/design/PRODUCTION_REALITY_UPDATE.md`
 - Evidence: See the evidence set under `docs/evidence/*`

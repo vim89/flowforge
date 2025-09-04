@@ -15,10 +15,8 @@ final case class Rec(id: Int, v: String)
 
 class StreamingCDCSpec extends AnyFunSuite {
 
-  private val algebra: DataAlgebra[IO] = {
-    implicit val effectSystem: EffectSystem[IO] = EffectInstances.catsEffectSystemInstance
-    DataInstances.createMockDataAlgebra[IO]
-  }
+  implicit val effectSystem: EffectSystem[IO] = EffectInstances.catsEffectSystemInstance
+  private val algebra: DataAlgebra[IO]        = DataInstances.createMockDataAlgebra[IO]
 
   private def ds(data: List[Rec]) = {
     val schema = DataSchema(Nil, SchemaVersion.unsafeFrom(1), Map.empty, Instant.now())

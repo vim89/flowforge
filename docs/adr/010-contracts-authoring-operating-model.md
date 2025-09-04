@@ -9,8 +9,8 @@ Non-technical teams need to author data contracts without code; engineers consum
 
 ## Decision
 - Use a contracts repo with Avro schemas, DQ YAML, and metadata YAML per domain/entity.
-- Provide a portal/PR workflow; CI publishes typed SDK JARs and updates registry/catalog.
-- Consumers depend on SDKs and use typed endpoints only.
+- Provide a portal/PR workflow; prefer GitHub Actions Forms as a submission channel for non‑technical authors. CI materializes typed artifacts (and/or publishes typed SDK JARs) and updates registry/catalog.
+- Consumers depend on SDKs or CI‑materialized typed artifacts and use typed endpoints only.
 
 ## Consequences
 - Pros: Clear ownership, governance, audit trail; compile-time safety for consumers.

@@ -31,6 +31,25 @@ val write:    Kleisli[F, Dataset[Out], Unit]        = Kleisli(ds => P.write(ds, 
 val pipeline: Kleisli[F, Unit, Unit] = read andThen validate andThen xform andThen write
 ```
 
+### 3.2 Spark Helpers (Engine-Specific)
+- Use SparkDatasetOps to keep transforms Spark-native while preserving the pure algebra elsewhere.
+```scala
+import com.flowforge.engines.spark.SparkDatasetOps
+import org.apache.spark.sql.functions.col
+
+def enrichAndFilter[F[_]: EffectSystem, A: DataDecoder](
+  ds: DataAlgebra.Dataset[A],
+): DataAlgebra.Dataset[A] = {
+  // Spark-native filter by column (no change for non-Spark datasets)
+  val filtered = SparkDatasetOps.filterByColumn(ds)(col("amount") > 0)
+  // Order by timestamp descending
+  val ordered  = SparkDatasetOps.sortByColumn(filtered)(col("timestamp"), ascending = false)
+  // Keep top 100
+  SparkDatasetOps.limitRows(ordered)(100)
+}
+```
+Notes: `filterByColumn/sortByColumn/limitRows/dropRows` operate only when the dataset is backed by Spark; otherwise they return the input.
+
 ## 4. ETL & Pipeline Patterns
 - Canon: read → validate → profile → transform → CDC → audit → write.
 - CDC: partition‑aware joins, late events, SCD1/2 patterns; transactional/outbox sinks.
@@ -98,7 +117,8 @@ def validate(r: Txn): ValidatedNel[DQError, Txn] = (ruleId(r), ruleAmt(r)).mapN(
 - Giter8 scaffolds typed pipelines; user chooses effect system; defaults to typed APIs; CI wiring for gates.
 
 ## 10.1 Archetype & Compile‑time Contracts
-- Contracts as code; typed endpoints and witnesses generated or referenced by SDKs; sbt plugin provides physical schema checks.
+- Contracts as code; typed endpoints and witnesses generated or referenced by SDKs.
+- CI‑first: Non‑technical stakeholders submit contracts via GitHub Actions Forms; CI materializes typed artifacts and runs physical schema validation (validation‑cli). sbt plugin remains optional for local smoke checks and should delegate to the same CLI.
 
 ## 10.2 Type‑Safe Archetypes (Scala Ecosystem)
 - Use Refined for config; Cats ValidatedNel for DQ; type classes for pluggable ingestion/validation; effect‑safe orchestration (Cats‑Effect/ZIO).

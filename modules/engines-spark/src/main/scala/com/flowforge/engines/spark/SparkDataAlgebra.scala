@@ -7,6 +7,7 @@ import com.flowforge.core.algebra._
 import com.flowforge.core.types.PipelineTypes.{ DataContract => PipelineDataContract, QualityCheck }
 import com.flowforge.core.types.RefinedTypes.{ FieldName, SchemaVersion }
 import com.flowforge.core.types._
+import com.flowforge.core.instances.DefaultCodecs._
 import org.apache.spark.sql.SparkSession
 
 import java.time.Instant
@@ -110,38 +111,58 @@ object SparkDataAlgebra {
       options: DataAlgebra.WriteOptions,
     ): F[DataAlgebra.WriteResult] =
       F.blocking {
-        // Encode to JSON and write via Spark
-        val jsonStrings: List[String] = dataset.data.map { a =>
-          DataEncoder[A]
-            .encode(a, DataFormat.JSON)
-            .fold(_ => "{}", ed => new String(ed.data, "UTF-8"))
-        }
-        val ds = spark.createDataset(jsonStrings)(org.apache.spark.sql.Encoders.STRING)
+        // Prefer direct DataFrame writes when available to avoid JSON round-trip
         sink match {
           case s: LocalDataSink =>
-            dataset.metadata.schema // ensure side-effect free
-            s.format match {
-              case DataFormat.JSON | DataFormat.JSONL =>
-                ds.coalesce(1).write.mode("overwrite").text(s.location)
-              case DataFormat.CSV => ds.coalesce(1).write.mode("overwrite").text(s.location)
-              case DataFormat.Parquet =>
-                spark.read.json(ds).write.mode("overwrite").parquet(s.location)
-              case _ => throw new UnsupportedOperationException("Unsupported sink format")
+            val (bytesWritten, recordsWritten, partitionsWritten) = dataset match {
+              case pds: ProductionSparkDataset[A] =>
+                s.format match {
+                  case DataFormat.Parquet =>
+                    pds.sparkDataFrame.write.mode("overwrite").parquet(s.location)
+                  case DataFormat.Delta =>
+                    pds.sparkDataFrame.write.format("delta").mode("overwrite").save(s.location)
+                  case DataFormat.JSON | DataFormat.JSONL =>
+                    pds.sparkDataFrame.toJSON.coalesce(1).write.mode("overwrite").text(s.location)
+                  case DataFormat.CSV =>
+                    pds.sparkDataFrame.coalesce(1).write.mode("overwrite").csv(s.location)
+                  case _ => throw new UnsupportedOperationException("Unsupported sink format")
+                }
+                (0L, pds.size.toLong, pds.metadata.partitions)
+              case _ =>
+                // Fallback: encode to JSON then write
+                val jsonStrings: List[String] = dataset.data.map { a =>
+                  DataEncoder[A]
+                    .encode(a, DataFormat.JSON)
+                    .fold(_ => "{}", ed => new String(ed.data, "UTF-8"))
+                }
+                val ds = spark.createDataset(jsonStrings)(org.apache.spark.sql.Encoders.STRING)
+                s.format match {
+                  case DataFormat.JSON | DataFormat.JSONL =>
+                    ds.coalesce(1).write.mode("overwrite").text(s.location)
+                  case DataFormat.CSV => ds.coalesce(1).write.mode("overwrite").text(s.location)
+                  case DataFormat.Parquet =>
+                    spark.read.json(ds).write.mode("overwrite").parquet(s.location)
+                  case _ => throw new UnsupportedOperationException("Unsupported sink format")
+                }
+                val bytes = jsonStrings.map(_.length.toLong).sum
+                (bytes, dataset.data.size.toLong, 1)
             }
+
+            val wr = DataAlgebra.WriteResult(
+              recordsWritten = recordsWritten,
+              partitionsWritten = partitionsWritten,
+              bytesWritten = bytesWritten,
+              success = true,
+            )
+            try
+              com.flowforge.core.observability.PrometheusMetrics.Data.writeTotal
+                .labels("spark", sink.format.toString)
+                .inc()
+            catch { case _: Throwable => () }
+            wr
+
           case _ => throw new UnsupportedOperationException("Unsupported sink type for this path")
         }
-        val wr = DataAlgebra.WriteResult(
-          recordsWritten = dataset.data.size.toLong,
-          partitionsWritten = 1,
-          bytesWritten = jsonStrings.map(_.length.toLong).sum,
-          success = true,
-        )
-        try
-          com.flowforge.core.observability.PrometheusMetrics.Data.writeTotal
-            .labels("spark", sink.format.toString)
-            .inc()
-        catch { case _: Throwable => () }
-        wr
       }
 
     // ========================================
@@ -483,13 +504,8 @@ object SparkDataAlgebra {
       f: A => B,
     ): DataAlgebra.Dataset[B] = {
       val transformed = dataset.data.map(f)
-      val newSchema = DataSchema(
-        fields = List.empty,
-        version = SchemaVersion.unsafeFrom(1),
-        metadata = Map("transformation" -> "map"),
-        createdAt = Instant.now(),
-      )
-      SimpleDataset(transformed, newSchema, dataset.metadata)
+      // Prefer Spark-backed dataset to minimize non-Spark fallbacks
+      ProductionSparkDataset.fromData[B](transformed, spark)
     }
 
     override def flatMap[A, B: DataEncoder](
@@ -497,13 +513,8 @@ object SparkDataAlgebra {
       f: A => DataAlgebra.Dataset[B],
     ): DataAlgebra.Dataset[B] = {
       val transformed = dataset.data.flatMap(a => f(a).data)
-      val newSchema = DataSchema(
-        fields = List.empty,
-        version = SchemaVersion.unsafeFrom(1),
-        metadata = Map("transformation" -> "flatMap"),
-        createdAt = Instant.now(),
-      )
-      SimpleDataset(transformed, newSchema, dataset.metadata)
+      // Prefer Spark-backed dataset to minimize non-Spark fallbacks
+      ProductionSparkDataset.fromData[B](transformed, spark)
     }
 
     override def groupBy[A, K, V: DataEncoder](
@@ -511,14 +522,10 @@ object SparkDataAlgebra {
       keyExtractor: A => K,
       aggregator: List[A] => V,
     ): DataAlgebra.Dataset[(K, V)] = {
-      val grouped = dataset.data.groupBy(keyExtractor).view.mapValues(aggregator).toList
-      val newSchema = DataSchema(
-        fields = List.empty,
-        version = SchemaVersion.unsafeFrom(1),
-        metadata = Map("transformation" -> "groupBy"),
-        createdAt = Instant.now(),
-      )
-      SimpleDataset(grouped, newSchema, dataset.metadata)
+      val grouped: List[(K, V)] = dataset.data.groupBy(keyExtractor).view.mapValues(aggregator).toList
+      // Prefer Spark-backed dataset; relies on a DataEncoder[(K, V)] being available
+      // (provided via DefaultCodecs generic tuple encoder backed by Circe)
+      ProductionSparkDataset.fromData[(K, V)](grouped, spark)
     }
 
     override def join[A, B, K, C: DataEncoder](
@@ -532,20 +539,25 @@ object SparkDataAlgebra {
       val joined = left.data.flatMap { la =>
         rightIndex.getOrElse(leftKey(la), Nil).map(rb => combiner(la, rb))
       }
-      val newSchema = DataSchema(
-        fields = List.empty,
-        version = SchemaVersion.unsafeFrom(1),
-        metadata = Map("transformation" -> "join"),
-        createdAt = Instant.now(),
-      )
-      SimpleDataset(joined, newSchema, left.metadata)
+      // Prefer Spark-backed dataset to minimize non-Spark fallbacks
+      ProductionSparkDataset.fromData[C](joined, spark)
     }
 
     override def union[A](
       left: DataAlgebra.Dataset[A],
       right: DataAlgebra.Dataset[A],
-    ): DataAlgebra.Dataset[A] =
-      SimpleDataset(left.data ++ right.data, left.schema, left.metadata)
+    ): DataAlgebra.Dataset[A] = (left, right) match {
+      case (lp: ProductionSparkDataset[A], rp: ProductionSparkDataset[A]) =>
+        val unionDf = lp.sparkDataFrame.unionByName(rp.sparkDataFrame, allowMissingColumns = true)
+        val combined = lp.data ++ rp.data
+        lp.copy(
+          data = combined,
+          sparkDataFrame = unionDf,
+          metadata = lp.metadata.copy(recordCount = combined.size.toLong),
+        )
+      case _ =>
+        SimpleDataset(left.data ++ right.data, left.schema, left.metadata)
+    }
 
     override def sortBy[A, K: Ordering](
       dataset: DataAlgebra.Dataset[A],

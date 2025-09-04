@@ -9,7 +9,7 @@ import scala.annotation.implicitNotFound
  * so compile errors explain schema mismatches clearly.
  */
 @implicitNotFound(
-  "FlowForge: Pipeline type ${A} does not match the required contract schema. Make sure fields and types align exactly with the contract (order and names matter in this phase).",
+  "FlowForge: Pipeline type ${A} does not match the required contract schema. Make sure fields and types align exactly with the contract (order and names may matter in this policy). See docs/contracts/OVERVIEW.md.",
 )
 trait SchemaEq[A, R <: HList]
 
@@ -29,7 +29,7 @@ object SchemaPolicy {
 
 /** Dispatcher for policy-driven conformance at compile time. */
 @implicitNotFound(
-  "FlowForge: Pipeline type does not conform to the required contract under the selected policy.",
+  "FlowForge: Pipeline type does not conform to the required contract under the selected policy. See docs/contracts/OVERVIEW.md.",
 )
 trait SchemaConforms[A, R <: HList, P <: SchemaPolicy]
 object SchemaConforms {

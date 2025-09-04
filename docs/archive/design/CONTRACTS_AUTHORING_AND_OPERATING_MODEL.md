@@ -1,4 +1,7 @@
-# Contracts Authoring & Operating Model (Non-Technical Friendly)
+# [ARCHIVED] Contracts Authoring & Operating Model (Non-Technical Friendly)
+
+> Superseded by ADR-010 (Contracts Authoring & Operating Model) and ADR-011 (CI-first compile/build gates).
+> See `docs/adr/010-contracts-authoring-operating-model.md` and `docs/adr/011-contracts-compile-build-gates.md`.
 
 Updated: 2025-09-03
 Status: Adopt alongside compile/build gates

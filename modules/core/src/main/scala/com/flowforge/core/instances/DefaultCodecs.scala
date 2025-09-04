@@ -244,6 +244,33 @@ object DefaultCodecs {
         format match {
           case DataFormat.JSON | DataFormat.JSONL | DataFormat.CSV => true
           case _                                                   => false
-        }
+      }
+    }
+
+  // Tuple (K, V) encoder using a DataEncoder[V] and String rendering for K.
+  // Produces a simple {"key": K.toString, "value": <V as JSON>} object for JSON-based formats.
+  implicit def tuple2Encoder[K, V](implicit ev: DataEncoder[V]): DataEncoder[(K, V)] =
+    new DataEncoder[(K, V)] {
+      def encode(data: (K, V), format: DataFormat) = format match {
+        case DataFormat.JSON | DataFormat.JSONL =>
+          ev.encode(data._2, DataFormat.JSON).map { encV =>
+            val valueJson = io.circe.parser.parse(new String(encV.data, "UTF-8")).getOrElse(io.circe.Json.Null)
+            val obj = io.circe.Json.obj(
+              "key" -> io.circe.Json.fromString(Option(data._1).map(_.toString).getOrElse("null")),
+              "value" -> valueJson,
+            )
+            EncodedData(obj.noSpaces.getBytes("UTF-8"), format)
+          }
+        case other => Left(UnsupportedFormat(other, "(K,V)"))
+      }
+      def schema(format: DataFormat): DataSchema =
+        DataSchema.builder
+          .addField("key", DataType.String, required = true)
+          .addField("value", DataType.String, required = true)
+          .build
+      def estimateSize(data: (K, V), format: DataFormat): Long = 64L
+      def supportsFormat(format: DataFormat): Boolean =
+        format == DataFormat.JSON || format == DataFormat.JSONL
+      def optimizationHints(data: (K, V), format: DataFormat): EncodingHints = EncodingHints.default
     }
 }

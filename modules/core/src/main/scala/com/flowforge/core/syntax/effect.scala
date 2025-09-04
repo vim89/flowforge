@@ -64,6 +64,7 @@ package com.flowforge.core.syntax
 import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
+import com.flowforge.core.logging.CoreLogger
 import com.flowforge.core.types.{ ConfigError, FlowForgeError }
 
 import scala.concurrent.duration.FiniteDuration
@@ -211,10 +212,9 @@ object effect {
      * @return
      *   Original effect with logging side effect
      */
-    def logResult(message: String = "Result")(implicit F: EffectSystem[F]): F[A] =
-      fa.map { result =>
-        println(s"$message: $result") // In practice, use proper logging
-        result
+    def logResult(message: String = "Result")(implicit F: EffectSystem[F], L: CoreLogger[F]): F[A] =
+      fa.flatMap { result =>
+        L.info(s"$message: $result").map(_ => result)
       }
 
     /**
@@ -227,10 +227,9 @@ object effect {
      * @return
      *   Original effect with error logging
      */
-    def logErrors(message: String = "Error")(implicit F: EffectSystem[F]): F[A] =
+    def logErrors(message: String = "Error")(implicit F: EffectSystem[F], L: CoreLogger[F]): F[A] =
       F.handleErrorWith(fa) { error =>
-        println(s"$message: ${error.getMessage}") // In practice, use proper logging
-        F.raiseError(error)
+        L.error(s"$message: ${error.getMessage}") *> F.raiseError(error)
       }
   }
 

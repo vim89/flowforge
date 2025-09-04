@@ -1,6 +1,5 @@
 package com.flowforge.engines.spark
 
-import cats.effect.IO
 import cats.syntax.all._
 import com.flowforge.core.algebra.{ CDCOperations, DataAlgebra, DataContract, EffectSystem }
 
@@ -9,9 +8,6 @@ import com.flowforge.core.algebra.{ CDCOperations, DataAlgebra, DataContract, Ef
  * repeatedly invoking performDelta and aggregating results.
  */
 object StreamingCDC {
-
-  implicit val ev = com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
-  val F           = EffectSystem[IO]
 
   def performDeltaStreamed[F[_]: EffectSystem, A: DataContract](
     algebra: DataAlgebra[F],

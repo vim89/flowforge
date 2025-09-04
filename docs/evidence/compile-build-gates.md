@@ -18,10 +18,11 @@
 ## 4) Options & Trade-offs
 | Option | Pros | Cons | Why |
 |---|---|---|---|
-| Add sbt AutoPlugin (pre-compile checks) | Enforces gates | Build plumbing | Accepted (follow-up)
-| Defer build-time checks | Simpler now | Claims remain unmet | Rejected
+| CI-first (GitHub Actions Forms + CLI) | Non-engineer friendly; auditable; decoupled from local sbt | CI complexity; artifact lifecycle | Accepted
+| sbt AutoPlugin only | Local developer loop | Diverges from non-engineer workflow; less auditable | Optional
+| Defer checks | Simpler now | Claims unmet | Rejected
 
-**Decision sketch**: Implement minimal sbt tasks for Parquet/Delta schema diff; wire into example.
+**Decision sketch**: CI-first approach is authoritative; sbt plugin optional and should delegate to CLI to avoid drift.
 
 ## 2.1) Detailed Findings
 - Core typed path supports compile-time schema alignment (SchemaEq, TypedSource/Sink, PipelineBuilder2), but there is no canonical example exercising it.
@@ -32,12 +33,11 @@
 - Offline mode; fast schema read (no data scans).
 
 ## 6) Success Criteria
-- sbt tasks exist and can fail builds on mismatches.
+- CI workflow exists and fails PRs on mismatches (clear diffs).
+- Optional sbt tasks can call the same CLI for local smoke tests.
 
 ## 7) Recommendations (Production-grade)
-- Implement `ContractValidationPlugin` with tasks:
-  - `ffVerifySourcePhysical`: fetch and normalize source schema; diff against contract.
-  - `ffVerifyTargetPhysical`: normalize target schema; diff against contract.
+- Keep canonical schema normalization in one place (validation-cli / shared lib) used by both CI and any sbt plugin wrappers.
 - Canonical schema normalization:
   - Uniform model across Spark StructType, Delta describe detail, Parquet footer, JDBC metadata.
   - Compare field names/types/nullability; support nested structs via path notation.
@@ -48,6 +48,6 @@
   - Clear diffs with remediation hints; support exact/superset policies.
 
 ## 8) Next Steps (Concrete)
-- Add `project/ContractValidationPlugin.scala` with both tasks.
-- Provide small fixtures (local parquet with known schema) and a smoke test under examples/tests.
-- Wire tasks into an example project’s `compile := (compile).dependsOn(...)` and document how to enable in CI.
+- Add `.github/workflows/contracts-submit.yml` (Forms + schema diff run via validation-cli).
+- Materialize typed artifacts (avsc + metadata) into `contracts/**` in PR or as artifacts.
+- Optionally, keep `project/ContractValidationPlugin.scala` delegating to validation-cli for local usage.

@@ -1,4 +1,7 @@
-# FlowForge Contracts-as-Code: Compile-Time Gates + Build-Time Physical Validation
+# [ARCHIVED] FlowForge Contracts-as-Code: Compile-Time Gates + Build-Time Physical Validation
+
+> Superseded by ADR-011 (Contracts Compile-Time & Build-Time Gates, CI-first). See `docs/adr/011-contracts-compile-build-gates.md`.
+> Note: The sbt AutoPlugin concept remains optional for local smoke checks; the authoritative gate is CI (GitHub Actions Forms + validation-cli).
 
 Updated: 2025-09-03
 Status: Critical design — required for MVR→MVP

@@ -48,15 +48,15 @@ Legend
 - Dependencies: none
 - Acceptance: CI doc clear + consumer demo compiles.
 
-4) Compile-Time & Build-Time Gates (sbt tasks)
+4) Compile-Time & Build-Time Gates (CI-first)
 - ADR: docs/adr/011-contracts-compile-build-gates.md
 - Evidence: docs/evidence/compile-build-gates.md
 - Plan: docs/plan/compile-build-gates.md
 - Owner: TBD
 - Status: planned
-- Next Step: Add sbt AutoPlugin with `ffVerifySourcePhysical`/`ffVerifyTargetPhysical` tasks; smoke tests.
+- Next Step: Add GitHub Actions workflow (Forms) to accept contracts; materialize typed artifacts; run validation-cli schema diff; optional sbt task delegates to CLI.
 - Dependencies: local parquet/delta fixtures
-- Acceptance: Tasks exist and fail on mismatches; no build graph change.
+- Acceptance: CI workflow fails PRs on mismatches with clear diffs; optional local task delegates to CLI.
 
 5) Effect System & Purity (Leaf Module Hygiene)
 - ADR: docs/adr/012-effect-system-decision.md
@@ -110,10 +110,10 @@ Legend
 - Evidence: docs/evidence/engines-spark.md
 - Plan: docs/plan/engines-spark.md
 - Owner: TBD
-- Status: planned
-- Next Step: Replace in-memory fallbacks with distributed ops; optimize write path; remove Delta reflection stub; add logging/metrics around IO.
+- Status: in_progress
+- Next Step: Replace in-memory fallbacks with distributed ops; optimize write path; remove Delta reflection stub (done); add logging/metrics around IO; provide SparkDatasetOps helpers (done partial).
 - Dependencies: engines-spark
-- Acceptance: No SimpleDataset fallbacks in Spark paths; canonical Delta path; observability at IO boundaries.
+- Acceptance: Minimized SimpleDataset fallbacks in Spark paths; canonical Delta path (done); observability at IO boundaries (partial).
 
 ---
 
