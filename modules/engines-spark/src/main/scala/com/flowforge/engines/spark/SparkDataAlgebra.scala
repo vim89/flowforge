@@ -668,11 +668,57 @@ object SparkDataAlgebra {
     override def runQualityChecks[A](
       dataset: DataAlgebra.Dataset[A],
       checks: NonEmptyList[QualityCheck[A]],
-    ): F[List[DataAlgebra.QualityCheckResult]] =
-      F.pure(checks.toList.zipWithIndex.map {
-        case (_, idx) =>
-          DataAlgebra.QualityCheckResult(s"check_$idx", passed = true, message = "ok", score = 1.0)
-      })
+    ): F[List[DataAlgebra.QualityCheckResult]] = {
+      // Helper: evaluate function-based checks over in-memory data
+      def evaluateFunctional: List[DataAlgebra.QualityCheckResult] = {
+        val dataList = dataset.data
+        checks.toList.zipWithIndex.map { case (chk, idx) =>
+          val invalids = dataList.flatMap(a => chk(a).toEither.left.toOption.map(_.toList).getOrElse(Nil))
+          if (invalids.isEmpty)
+            DataAlgebra.QualityCheckResult(s"check_$idx", passed = true, message = "ok", score = 1.0)
+          else {
+            val msg = invalids.map(_.message).distinct.take(3).mkString("; ")
+            DataAlgebra.QualityCheckResult(s"check_$idx", passed = false, message = msg, score = 0.0)
+          }
+        }
+      }
+
+      dataset match {
+        case pds: ProductionSparkDataset[A] =>
+          // Build a basic set of constraints from non-nullable schema fields
+          val required = pds.schema.requiredFields.map(_.name)
+          val constraints = required.map { fn =>
+            com.flowforge.core.types.QualityConstraint.NotNull(fn)
+          }
+
+          // Try to invoke DeequAdapter via reflection if present on classpath
+          val deequResultsF: F[Option[List[DataAlgebra.QualityCheckResult]]] = F.delay {
+            try {
+              val cls     = Class.forName("com.flowforge.quality.deequ.DeequAdapter$")
+              val module  = cls.getField("MODULE$").get(null)
+              val m       = cls.getMethod("runChecks", classOf[org.apache.spark.sql.SparkSession], classOf[DataAlgebra.Dataset[_]], classOf[List[_]])
+              val quality = m
+                .invoke(module, spark, pds.asInstanceOf[DataAlgebra.Dataset[A]], constraints)
+                .asInstanceOf[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]]
+              val qcr: List[DataAlgebra.QualityCheckResult] =
+                if (quality.violations.isEmpty)
+                  List(DataAlgebra.QualityCheckResult("deequ_auto", passed = true, message = "ok", score = quality.score))
+                else
+                  quality.violations.map { v =>
+                    DataAlgebra.QualityCheckResult(v.rule, passed = false, message = v.message, score = 0.0)
+                  }
+              Some(qcr)
+            } catch { case _: Throwable => None }
+          }
+
+          F.flatMap(deequResultsF) {
+            case Some(res) => F.pure(res)
+            case None      => F.pure(evaluateFunctional)
+          }
+
+        case _ => F.pure(evaluateFunctional)
+      }
+    }
 
     override def profile[A](dataset: DataAlgebra.Dataset[A]): F[DataAlgebra.DataProfile[A]] =
       F.pure(

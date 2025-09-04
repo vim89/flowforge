@@ -3,6 +3,7 @@ package com.flowforge.config
 import cats.data.ValidatedNel
 import cats.effect.Sync
 import com.flowforge.core.algebra.FlowForgeConfig
+import com.flowforge.core.algebra.ConfigurationAlgebra
 import com.typesafe.config.{ Config, ConfigFactory }
 import scala.util.{ Failure, Success, Try }
 
@@ -105,14 +106,19 @@ object ConfigurationManagement {
   // Temporary simple FlowForgeConfig decoder - TODO: implement proper decoding
   implicit val flowForgeConfigDecoder: ConfigDecoder[FlowForgeConfig] =
     new ConfigDecoder[FlowForgeConfig] {
-      def decode(config: Config, path: String): ValidatedNel[ConfigError, FlowForgeConfig] =
-        // For now, just return a simple error to avoid complex constructor issues
-        // This gets compilation working - proper implementation can be added later
-        cats.data.Validated.invalidNel(
-          ConfigError.ParseError(
-            path,
-            "FlowForgeConfig decoding not yet implemented - placeholder for compilation",
-          ),
-        )
+      def decode(cfg: Config, path: String): ValidatedNel[ConfigError, FlowForgeConfig] = {
+        // Flatten Typesafe config to a flat Map[String,String] (dot paths) and delegate to core decoder
+        import scala.jdk.CollectionConverters._
+        val entries = cfg.entrySet().asScala.toList
+        val flat: Map[String, String] = entries.flatMap { e =>
+          val k = e.getKey
+          // Try to read everything as string; downstream decoders parse as needed
+          scala.util.Try(cfg.getString(k)).toOption.map(v => k -> v)
+        }.toMap
+        val coreDecoder = ConfigurationAlgebra.flowForgeConfigDecoder
+        coreDecoder
+          .decode(flat)
+          .leftMap(_.map(err => ConfigError.ParseError(path, err.toString)))
+      }
     }
 }
