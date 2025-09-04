@@ -1,0 +1,154 @@
+name: contracts-submit (CI-first gates scaffold)
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: "Domain name (e.g., sales)"
+        required: true
+      entity:
+        description: "Entity name (e.g., Transactions)"
+        required: true
+      version:
+        description: "SemVer (e.g., 1.0.0)"
+        required: true
+      mode:
+        description: "Physical source mode"
+        required: true
+        default: parquet
+        type: choice
+        options:
+          - parquet
+          - delta
+          - hive
+          - jdbc
+      input:
+        description: "Physical source (path or table)"
+        required: true
+      expectedFormat:
+        description: "Expected schema format"
+        required: false
+        default: spark
+      expectedJsonUrl:
+        description: "Optional: URL to expected schema JSON (Avro) to download"
+        required: false
+        default: ''
+      sourcePath:
+        description: "Optional: existing expected schema path within repo"
+        required: false
+        default: ''
+      dryRun:
+        description: "Skip validation step (scaffold only)"
+        required: false
+        default: 'false'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'contracts/**'
+      - 'contracts/**/*.avsc'
+      - 'contracts/**/*.yaml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      FF_MODE: ${{ vars.FF_MODE }}
+      FF_INPUT: ${{ vars.FF_INPUT }}
+      FF_PROVIDER: ${{ vars.FF_PROVIDER }} # gcp|aws|none
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Optional cloud provider setup (conditional)
+      - name: Configure GCP Auth (Workload Identity)
+        if: ${{ env.FF_PROVIDER == 'gcp' && secrets.GCP_WORKLOAD_IDENTITY_PROVIDER && secrets.GCP_SERVICE_ACCOUNT }}
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Setup gcloud
+        if: ${{ env.FF_PROVIDER == 'gcp' }}
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: '>= 453.0.0'
+
+      - name: Configure AWS credentials
+        if: ${{ env.FF_PROVIDER == 'aws' && secrets.AWS_ACCESS_KEY_ID && secrets.AWS_SECRET_ACCESS_KEY && vars.AWS_REGION }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Materialize typed artifacts (stub)
+        id: mat
+        uses: ./.github/actions/contract-materialize
+        with:
+          domain: ${{ inputs.domain }}
+          entity: ${{ inputs.entity }}
+          version: ${{ inputs.version }}
+          expectedJsonUrl: ${{ inputs.expectedJsonUrl }}
+          sourcePath: ${{ inputs.sourcePath }}
+
+      - name: Show expected schema path
+        run: echo "Expected: ${{ steps.mat.outputs.expected-json-path }}"
+
+      - name: Validate physical schema vs contract (validation-cli)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dryRun != 'true' }}
+        run: |
+          sbt -v -no-colors "validation-cli/run --mode ${{ inputs.mode }} --input '${{ inputs.input }}' --expected-json ${{ steps.mat.outputs.expected-json-path }} --expected-format ${{ inputs.expectedFormat }}"
+
+      - name: Auto-validate changed contracts on PR (scaffold)
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+          echo "Changed files between $BASE_SHA and $HEAD_SHA:" 
+          CHANGED=$(git fetch origin "$BASE_SHA" --depth=1 >/dev/null 2>&1 || true; git diff --name-only "$BASE_SHA" "$HEAD_SHA" | tr '\n' ' ')
+          echo "$CHANGED"
+          # Filter for avro contracts under contracts/avro
+          AVS=$(echo "$CHANGED" | tr ' ' '\n' | grep -E '^contracts/avro/.+\.avsc$' || true)
+          if [ -z "$AVS" ]; then
+            echo "No .avsc changes detected under contracts/avro; skipping."
+            exit 0
+          fi
+          for av in $AVS; do
+            echo "Found changed contract: $av"
+            # Extract domain and entity from path: contracts/avro/<domain>/<entity>.v*.avsc
+            domain=$(echo "$av" | awk -F'/' '{print $3}')
+            filename=$(basename "$av")
+            entity_with_ver=${filename%.avsc}
+            # Strip trailing .vX.Y.Z from entity
+            entity=$(echo "$entity_with_ver" | sed -E 's/\.v[0-9]+\.[0-9]+\.[0-9]+$//')
+            meta="contracts/metadata/${domain}/${entity}.yaml"
+            MODE="${FF_MODE:-}"
+            INPUT="${FF_INPUT:-}"
+            EXPECTED_FORMAT="spark"
+            if [ -f "$meta" ]; then
+              echo "Using metadata: $meta"
+              m_mode=$(awk -F': *' '/^mode:/{print $2}' "$meta" | tr -d '"') || true
+              m_input=$(awk -F': *' '/^input:/{print $2}' "$meta" | sed 's/^"\(.*\)"$/\1/' ) || true
+              m_format=$(awk -F': *' '/^expectedFormat:/{print $2}' "$meta" | tr -d '"') || true
+              MODE=${m_mode:-$MODE}
+              INPUT=${m_input:-$INPUT}
+              EXPECTED_FORMAT=${m_format:-$EXPECTED_FORMAT}
+            else
+              echo "No metadata file found for $domain/$entity; falling back to repo variables FF_MODE/FF_INPUT."
+            fi
+            if [ -z "${MODE}" ] || [ -z "${INPUT}" ]; then
+              echo "Missing MODE or INPUT (MODE='$MODE', INPUT='$INPUT'). Skipping $av."
+              continue
+            fi
+            echo "Validating $av with mode=$MODE input=$INPUT expectedFormat=$EXPECTED_FORMAT"
+            sbt -no-colors "validation-cli/run --mode $MODE --input '$INPUT' --expected-json '$av' --expected-format $EXPECTED_FORMAT"
+          done

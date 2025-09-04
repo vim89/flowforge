@@ -1,0 +1,56 @@
+name: "Contract Materialize"
+description: "Validate inputs and materialize typed contract artifacts into the workspace (avro stub)"
+inputs:
+  domain:
+    description: "Domain name (e.g., sales)"
+    required: true
+  entity:
+    description: "Entity name (e.g., Transactions)"
+    required: true
+  version:
+    description: "SemVer (e.g., 1.0.0)"
+    required: true
+  expectedJsonUrl:
+    description: "Optional: URL to expected schema JSON (Avro). If set, download instead of stub."
+    required: false
+  sourcePath:
+    description: "Optional: Existing expected schema path within the repo to copy from."
+    required: false
+outputs:
+  expected-json-path:
+    description: "Path to expected schema JSON (Avro) materialized by this action"
+    value: ${{ steps.materialize.outputs.expected_json_path }}
+runs:
+  using: "composite"
+  steps:
+    - id: materialize
+      shell: bash
+      run: |
+        set -euo pipefail
+        DOMAIN="${{ inputs.domain }}"
+        ENTITY="${{ inputs.entity }}"
+        VERSION="${{ inputs.version }}"
+        URL="${{ inputs.expectedJsonUrl }}"
+        SRC="${{ inputs.sourcePath }}"
+        BASE="contracts/avro/${DOMAIN}"
+        mkdir -p "${BASE}"
+        OUT="${BASE}/${ENTITY}.v${VERSION}.avsc"
+        if [ -n "${URL}" ]; then
+          echo "Downloading expected JSON from ${URL}"
+          curl -fsSL "${URL}" -o "${OUT}"
+        elif [ -n "${SRC}" ] && [ -f "${SRC}" ]; then
+          echo "Copying expected JSON from ${SRC}"
+          cp "${SRC}" "${OUT}"
+        else
+          echo "Materializing stub Avro (no URL/sourcePath provided)."
+          # Minimal Avro record stub; replace with real contract materialization in publisher CI
+          cat >"${OUT}" <<'AVRO'
+{
+  "type": "record",
+  "name": "Record",
+  "namespace": "com.flowforge.contracts",
+  "fields": []
+}
+AVRO
+        fi
+        echo "expected_json_path=${OUT}" >> "$GITHUB_OUTPUT"

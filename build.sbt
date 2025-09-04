@@ -283,3 +283,14 @@ ThisBuild / assemblyMergeStrategy := {
 
 // MVR convenience alias: compile + unit tests only (no opt-in ITs)
 addCommandAlias("mvr", "clean; compileAll; testAll")
+
+// ===== LOCAL CONTRACT VALIDATION (delegates to validation-cli) =====
+// Usage:
+//   sbt ffValidate --mode parquet --input "/path/to/table" --expected-json contracts/avro/sales/Entity.v1.0.0.avsc --expected-format spark
+lazy val ffValidate = inputKey[Unit]("Validate physical schema vs contract using validation-cli (CI-first parity)")
+
+ThisBuild / ffValidate := Def.inputTaskDyn {
+  import sbt.complete.DefaultParsers._
+  val args = spaceDelimited("").parsed
+  (validationCli / Compile / run).toTask(" " + args.mkString(" "))
+}.evaluated

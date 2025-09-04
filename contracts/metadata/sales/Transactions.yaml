@@ -1,0 +1,9 @@
+mode: parquet
+input: "/data/sales/transactions/"
+expectedFormat: spark
+provider: none  # gcp|aws|none
+
+# Notes:
+# - This metadata file is used by the PR auto-validation scaffold to resolve
+#   mode/input per changed contract under contracts/avro/<domain>/<entity>.v*.avsc.
+# - Adjust values to point to a real testable physical source in your environment.
