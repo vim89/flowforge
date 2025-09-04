@@ -220,22 +220,29 @@ trait LegacyCompatibility[F[_] : Sync] extends ConfigurationAlgebra[F] {
   any CLI logs.
 - Scope: keep PRs focused; avoid mixing refactors with feature changes.
 
-## Agent‑Specific Guardrails (Read First)
+
+## ChatGPT Agents specially for you for Keeping ChatGPT Agents Agile and Aligned
+
+At the start of every session, ChatGPT Agents *must* refresh context:
+
+### Session Workflow (Fast Loop)
+
+- Initialize: All project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*`, `AGENTS.md`, `build.sbt` & perform comprehensive code review of entire flowforge
+- Understand Situation & Get up to the speed: 
+  - Provide ground reality - Code review results/outcome vs documentation alignment, gaps, major risks.
+  - Learn from previous Git commits (as many historical commits as required) to understand what was implemented.
+  - Update the documents ADRs, Evidences & Plan accordingly. 
+- Plan for session: Advice which Plan, ADR to address 100% in this session by breaking into tasks. 
+- Implement: Follow all rules given in ADRs, `AGENTS.md` and implement the best possible solution which should be production-ready, value-add and real-world. Strictly no scaffolding and toy implementations or placeholders
+- Validate: `sbt fullCheck` locally (fmt, compile, tests); run targeted module tests.
+- PR: link ADRs; include test plan and any CLI logs; keep scope tight.
+- References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`.
+
+### Agent‑Specific Guardrails (Read First)
 - All project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*`, `AGENTS.md`, `build.sbt`
 - References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`.
 - Use the 30‑point checklist (ADR‑020) during design/review; minimize shuffles, compute affected partitions first,
 - Ensure idempotency and DLQ where relevant.
-
-## Session Workflow (Fast Loop)
-
-- Initialize: All project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*`, `AGENTS.md`, `build.sbt` & perform comprehensive code review of entire flowforge
-- Situation: Provide ground reality - Code review results/outcome vs documentation alignment, gaps, major risks. Update the documents ADRs, Evidences & Plan accordingly.
-- Plan for session: Advice which Plan, ADR to address 100% in this session by breaking into tasks. 
-- Implement: Follow all rules given in ADRs, `AGENTS.md` and implement the best possible solution which should be production-ready, value-add and real-world. Strictly no scaffolding and toy implementations or placeholders
-- Validate: `sbt fullCheck` locally (fmt, scalafix, compile, tests); run targeted module tests.
-- PR: link ADRs; include test plan and any CLI logs; keep scope tight.
-- References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`.
-
 
 ## References:
 - ADR Index `docs/adr/INDEX.md`
