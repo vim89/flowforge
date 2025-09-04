@@ -213,6 +213,14 @@ trait LegacyCompatibility[F[_] : Sync] extends ConfigurationAlgebra[F] {
 - Conventions: name specs `*Spec.scala`; place fixtures under the same package path in `src/test/scala`.
 - Strategy: test algebras/instances first; integration/engine tests opt‑in and minimal.
 
+
+### File structure guidance:
+- A class and its companion should live together in the same file. 
+- sealed traits and their subtypes must also be in the same file for compiler safety.
+- File names usually match the main type they hold.
+- Multi-type grouping: When types are closely related, grouping is permitted—but only when justified. The file should then use meaningful lowerCamelCase names. 
+- Developer ergonomics: Having one type per file helps with navigation, findability, and code review. It avoids confusion and reduces search friction.
+
 ## Commit & Pull Request Guidelines
 
 - Commits: imperative subject (≤72 chars) + concise body (what/why); reference ADRs (e.g., ADR‑012 for effect rules).
@@ -223,28 +231,32 @@ trait LegacyCompatibility[F[_] : Sync] extends ConfigurationAlgebra[F] {
 
 ## ChatGPT Agents specially for you for Keeping ChatGPT Agents Agile and Aligned
 
-At the start of every session, ChatGPT Agents *must* refresh context:
+When prompted with `CHECK CONTEXT` or At the start of every session, ChatGPT Agents *must* refresh context:
 
 ### Session Workflow (Fast Loop)
 
-- Initialize: All project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*`, `AGENTS.md`, `build.sbt` & perform comprehensive code review of entire flowforge
+- Initialize: All project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*` `AGENTS.md`, `docs/agents`, `build.sbt` & perform comprehensive code review of entire flowforge
 - Understand Situation & Get up to the speed: 
   - Provide ground reality - Code review results/outcome vs documentation alignment, gaps, major risks.
   - Learn from previous Git commits (as many historical commits as required) to understand what was implemented.
-  - Update the documents ADRs, Evidences & Plan accordingly. 
-- Plan for session: Advice which Plan, ADR to address 100% in this session by breaking into tasks. 
-- Implement: Follow all rules given in ADRs, `AGENTS.md` and implement the best possible solution which should be production-ready, value-add and real-world. Strictly no scaffolding and toy implementations or placeholders
+  - Update the documents ADRs, Evidences & Plan accordingly.
 - Validate: `sbt fullCheck` locally (fmt, compile, tests); run targeted module tests.
 - PR: link ADRs; include test plan and any CLI logs; keep scope tight.
 - References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`.
 
 ### Agent‑Specific Guardrails (Read First)
-- All project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*`, `AGENTS.md`, `build.sbt`
-- References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`.
+- All project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*`, `AGENTS.md`, `docs/agents`, `build.sbt`
+- References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`; Agents Coverage: `docs/agents/COVERAGE.md`
 - Use the 30‑point checklist (ADR‑020) during design/review; minimize shuffles, compute affected partitions first,
 - Ensure idempotency and DLQ where relevant.
+
+### Session Goal:
+After context check, I provide: `SESSION GOAL: <Your concise task objective>`
+ChatGPT Agents you must respond with a clear, bullet-point plan for that session, like example below:
+- Plan for session: Advice which Plan, ADR to address 100% in this session by breaking into tasks.
+- Implement: Follow/ all rules given in ADRs, `AGENTS.md` and implement the best possible solution which should be production-ready, value-add and real-world. Strictly no scaffolding and toy implementations or placeholders.
+- Update Documents: Evidences, Plans, ADRs, README, Design & most importantly **End‑of‑Session STATE SNAPSHOT**
 
 ## References:
 - ADR Index `docs/adr/INDEX.md`
 - Agents Handbook `docs/agents/HANDBOOK.md`.
-
