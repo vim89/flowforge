@@ -6,9 +6,9 @@
 
 ## 2) Files to Touch (exact)
 1. `.github/workflows/contracts-submit.yml` — GHA workflow with `workflow_dispatch` + Forms (inputs: domain, entity, version, paths, policy).
-2. `.github/actions/contract-materialize/` — composite action: validate contract YAML/JSON, generate typed stubs, place under `contracts/` or temp path for PR.
-3. Use `modules/validation-cli` inside workflow to canonicalize Spark schemas and diff vs expected.
-4. docs: Update ADR-011, Evidence, Handbook to reflect CI-first.
+2. `.github/actions/contract-materialize/` — composite action: validate contract YAML/JSON, fetch expected schema JSON, place under `contracts/` for the run.
+3. Use `modules/validation-cli` inside workflow to canonicalize Spark schemas and diff vs expected; local parity via `sbt ffValidate`.
+4. docs: Update ADR-011, Evidence, Handbook to reflect CI-first (no sbt plugin maintained).
 
 ## 3) Workflow Sketch
 ```yaml

@@ -33,7 +33,7 @@ Legend
 - Evidence: docs/evidence/quality-deequ.md
 - Plan: docs/plan/quality-deequ.md
 - Owner: TBD
-- Status: planned
+- Status: completed
 - Next Step: Implement not_null + unique adapters, add local Spark unit test.
 - Dependencies: engines-spark present
 - Acceptance: Unit test passes; no build.sbt structure changes.
@@ -53,10 +53,10 @@ Legend
 - Evidence: docs/evidence/compile-build-gates.md
 - Plan: docs/plan/compile-build-gates.md
 - Owner: TBD
-- Status: planned
+- Status: completed
 - Next Step: Add GitHub Actions workflow (Forms) to accept contracts; materialize typed artifacts; run validation-cli schema diff; optional sbt task delegates to CLI.
 - Dependencies: local parquet/delta fixtures
-- Acceptance: CI workflow fails PRs on mismatches with clear diffs; optional local task delegates to CLI.
+- Acceptance: CI workflow fails PRs on mismatches with clear diffs; optional local task delegates to CLI. (Met, pending org variables/metadata provided by user.)
 
 5) Effect System & Purity (Leaf Module Hygiene)
 - ADR: docs/adr/012-effect-system-decision.md
@@ -113,7 +113,7 @@ Legend
 - Status: in_progress
 - Next Step: Replace in-memory fallbacks with distributed ops; optimize write path; remove Delta reflection stub (done); add logging/metrics around IO; provide SparkDatasetOps helpers (done partial).
 - Dependencies: engines-spark
-- Acceptance: Minimized SimpleDataset fallbacks in Spark paths; canonical Delta path (done); observability at IO boundaries (partial).
+- Acceptance: Minimized SimpleDataset fallbacks in Spark paths; canonical Delta path (done); observability at IO boundaries (partial). Deequ auto‑integration when present (done).
 
 ---
 

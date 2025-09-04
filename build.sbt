@@ -94,6 +94,7 @@ lazy val root = (project in file("."))
     // CLIs
     validationCli,
     contractsExtractorCli,
+    contractsSdk,
     // Core modules
     core,
     contracts,
@@ -196,7 +197,7 @@ lazy val templates = moduleProject("templates")
 
 // ===== EXAMPLE & EXPERIMENTAL MODULES =====
 lazy val examples = moduleProject("examples")
-  .dependsOn(core, contracts)
+  .dependsOn(core, contracts, contractsSdk)
   .settings(
     description := "Example implementations",
     libraryDependencies ++= Dependencies.forModule("examples"),
@@ -252,7 +253,8 @@ addCommandAlias("fix", "all compile:scalafix test:scalafix")
 addCommandAlias("fixCheck", "compile:scalafix --check ; test:scalafix --check")
 addCommandAlias("testAll", "all test")
 addCommandAlias("testQuick", "testOnly * -- -l \"org.scalatest.tags.Slow\"")
-addCommandAlias("compileAll", "all compile test:compile")
+// Better compileAll: use aggregation-aware sequence, not `all`
+addCommandAlias("compileAll", ";clean; compile; test:compile")
 addCommandAlias("coverage", "clean; coverage; testAll; coverageReport")
 addCommandAlias("fullTest", "clean; compileAll; fmt; fix; testAll")
 addCommandAlias("fullCheck", "clean; compileAll; fmtCheck; fixCheck; testAll")
@@ -284,6 +286,11 @@ ThisBuild / assemblyMergeStrategy := {
 // MVR convenience alias: compile + unit tests only (no opt-in ITs)
 addCommandAlias("mvr", "clean; compileAll; testAll")
 
+// Ensure examples compiles after contracts-sdk (belt-and-suspenders ordering)
+examples / Compile / compile := (examples / Compile / compile)
+  .dependsOn(contractsSdk / Compile / compile)
+  .value
+
 // ===== LOCAL CONTRACT VALIDATION (delegates to validation-cli) =====
 // Usage:
 //   sbt ffValidate --mode parquet --input "/path/to/table" --expected-json contracts/avro/sales/Entity.v1.0.0.avsc --expected-format spark
@@ -294,3 +301,32 @@ ThisBuild / ffValidate := Def.inputTaskDyn {
   val args = spaceDelimited("").parsed
   (validationCli / Compile / run).toTask(" " + args.mkString(" "))
 }.evaluated
+// ===== CONTRACTS SDK (generated from contracts/avro) =====
+lazy val contractsSdk = moduleProject("contracts-sdk")
+  .dependsOn(core)
+  .settings(
+    description := "Generated typed contracts SDK (from contracts/avro)",
+    Compile / sourceGenerators += Def.task {
+      val out    = (Compile / sourceManaged).value / "contractsSdk"
+      val base   = (ThisBuild / baseDirectory).value / "contracts" / "avro"
+      val logger = streams.value.log
+      val files  = (base ** "*.avsc").get
+      IO.createDirectory(out)
+      val generated = files.flatMap { f =>
+        val rel     = IO.relativize(base, f).getOrElse(f.getName)
+        val content = IO.read(f)
+        ContractsCodegen.generateScala(rel, content) match {
+          case Right(codegen) =>
+            val file = out / codegen.relativePath
+            IO.createDirectory(file.getParentFile)
+            IO.write(file, codegen.contents)
+            logger.info(s"[contracts-sdk] generated: ${file.getAbsolutePath}")
+            Some(file)
+          case Left(err) =>
+            logger.warn(s"[contracts-sdk] skipped $rel: $err")
+            None
+        }
+      }
+      generated
+    }.taskValue,
+  )

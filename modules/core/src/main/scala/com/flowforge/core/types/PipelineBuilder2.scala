@@ -148,6 +148,25 @@ case class PipelineBuilder2[F[_]: EffectSystem, In, Out] private (
     PipelineBuilder2[F, In, Unit](name, description, stages :+ stage, config)
   }
 
+  /**
+   * Overload that accepts a plain DataSink; schema evidence derived from Out and inferred R.
+   */
+  def addTypedSink[R <: HList](
+    sink: DataSink,
+    writer: (Out, DataSink) => F[Unit],
+  )(implicit
+    L: LabelledGeneric.Aux[Out, R],
+    eq: SchemaEq[Out, R],
+  ): PipelineBuilder2[F, In, Unit] = {
+    val stage = PipelineStage.Sink[F, Out](
+      name = s"typed-sink-${stages.size}",
+      description = s"Write to ${sink.format} (typed)",
+      dataSink = sink,
+      execute = Kleisli((b: Out) => writer(b, sink)),
+    )
+    PipelineBuilder2[F, In, Unit](name, description, stages :+ stage, config)
+  }
+
   /** Policy-driven typed sink: Exact (default), Superset, or Subset. */
   def addTypedSinkWithPolicy[R <: HList, P <: SchemaPolicy](
     sink: TypedSink[R],

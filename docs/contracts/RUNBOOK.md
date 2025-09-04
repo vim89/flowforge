@@ -57,3 +57,9 @@ Arguments map 1:1 to validation‑cli flags.
 - ADR‑010: `docs/adr/010-contracts-authoring-operating-model.md`
 - ADR‑011: `docs/adr/011-contracts-compile-build-gates.md`
 - Validation CLI: `modules/validation-cli/src/main/scala/com/flowforge/validation/SchemaValidateCli.scala`
+### Toggle Avro `.avsc` Generation
+- Some organizations may prefer Scala case classes as the only source of truth and derive schemas only in specific environments.
+- Use a boolean flag to toggle `.avsc` generation in contracts CI:
+  - `generateAvsc` input in the contracts publish workflow (see `.github/workflows/contracts-publish-sdk.yml`).
+  - Or a repo variable `FF_GENERATE_AVSC` (read in the workflow and applied as default).
+- When disabled, typed compile gates still apply; physical validation can operate on Spark JSON canonicalization instead of `.avsc`.

@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "TransactionsV1",
+  "namespace": "com.example.sales",
+  "fields": [
+    { "name": "invoiceNumber", "type": "string" },
+    { "name": "customerId",    "type": "string" },
+    { "name": "amount",         "type": "double" },
+    { "name": "eventTs",        "type": "long" }
+  ]
+}
+

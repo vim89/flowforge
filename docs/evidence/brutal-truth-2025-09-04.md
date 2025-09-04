@@ -32,6 +32,6 @@
 - Risk of re‑implementing existing quality/schema checks; strategy should focus on adapters/integration (Deequ, registry) rather than reinvention.
 
 ## Immediate Priorities
-- Land CI‑first contract gates (forms + CLI schema diff) and typed artifact materialization.
-- Implement Deequ adapter MVP; add S3 connector; create one end‑to‑end guarded IT.
-- Trim effect deps in leaf modules; expand observability on IO paths.
+- Land CI‑first contract gates (forms + CLI schema diff) and typed artifact materialization. (Done: scaffold implemented; replace stub with real contracts source next.)
+- Implement Deequ adapter MVP; add S3 connector; create one end‑to‑end guarded IT. (Deequ MVP: done; S3: out of scope; guarded IT: present.)
+- Trim effect deps in leaf modules; expand observability on IO paths. (Partial: engines‑spark improved; observability still partial.)

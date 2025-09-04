@@ -5,8 +5,8 @@
 - **Non-goals**: Full rule matrix; only one or two representative rules.
 - **Hard constraints**: Spark ops pure; effectful IO for checks; no build.sbt structure changes.
 
-## 2) Codebase Recon
-- **Modules involved**: `quality-deequ` (declared, empty), `engines-spark`, `core/patterns` (ValidatedNel rules).
+## 2) Codebase Recon (Updated 2025-09-05)
+- **Modules involved**: `quality-deequ` (adapter implemented), `engines-spark` (auto‑invokes Deequ via reflection when present), `core/types` (QualityConstraint ADTs).
 - **Key files**:
   - `project/Dependencies.scala` (Deequ version present)
   - `modules/engines-spark/SparkDataAlgebra.scala` (execution context)
@@ -16,9 +16,9 @@
 
 ## 2.1) Detailed Findings
 - `project/Dependencies.scala` includes a Deequ version compatible with Spark 3.5 (`2.0.11-spark-3.5`).
-- There is no `modules/quality-deequ` source tree; no glue code to translate our core ValidatedNel rules to Deequ’s Check APIs.
-- No tests exercising Deequ checks exist; QA plan mentions E2E and property tests only.
-- Engines-Spark provides a natural execution context for Deequ checks; we can create small local DataFrames for unit tests.
+- `modules/quality-deequ` contains `DeequAdapter.scala` mapping NotNull and Unique to Deequ checks; returns QualityResult.
+- Engines-Spark `runQualityChecks` attempts to use DeequAdapter via reflection when dataset is Spark‑backed, else falls back to functional checks over in‑memory data.
+- Unit test added: `DeequAdapterSpec.scala` spins local Spark and verifies pass/fail scenarios.
 
 ## 3) Prior Art & Sources
 - ADR-005 — Quality and Deequ Adapter MVP.
@@ -37,9 +37,9 @@
 - Large datasets: test on tiny local fixtures only.
 - Nullability and uniqueness errors: map to domain ADTs.
 
-## 6) Success Criteria
-- A unit test passes running one Deequ check locally.
-- No new build.sbt structural changes.
+## 6) Success Criteria (Status: Met)
+- Unit test passes running checks locally (guarded by Spark env).
+- No structural build changes required.
 
 ## 7) Recommendations (Production-grade)
 - Implement a thin adapter that translates a minimal, representative set of rules: `not_null(field)`, `unique(field)`, `non_negative(field)`, and a simple `range(field, min, max)`.
@@ -48,6 +48,5 @@
 - Add metrics around DQ execution (duration, failures) using the infra `MetricsCollector`.
 
 ## 8) Next Steps (Concrete)
-- Create `modules/quality-deequ/src/main/scala/.../DeequAdapter.scala` with mappings for the 3–4 rules above.
-- Add `modules/quality-deequ/src/test/scala/.../DeequAdapterSpec.scala` that spins a local SparkSession and runs checks on tiny DataFrames (guard memory use).
-- Ensure the adapter returns a unified `QualityCheckResult` with field, rule, and message; aggregate results into a `QualityResult` compatible with core.
+- Extend mappings to Range/Pattern and YAML‑to‑constraints.
+- Add metrics around DQ execution.

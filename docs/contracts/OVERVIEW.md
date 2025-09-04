@@ -22,7 +22,11 @@ This page clarifies FlowForge’s contract model so there’s no confusion betwe
 - CI validation (physical schema checks):
   - `modules/validation-cli` — canonicalizes Spark/Delta/Hive/Parquet schemas and diffs vs contract JSON/Avro.
   - GitHub Actions Forms + workflow: contract submission → materialize typed artifacts → run validation.
-  - sbt AutoPlugin is optional and should delegate to the CLI.
+- No sbt AutoPlugin is maintained. Local checks invoke the same CLI directly (e.g., via `sbt ffValidate`).
+
+### Optional `.avsc` Generation
+- Contracts CI can generate Avro `.avsc` alongside Scala case classes (toggle via Forms flag `generateAvsc` or repo variable `FF_GENERATE_AVSC`).
+- When disabled, Scala typed gates still work; CI can validate physical schemas using Spark JSON canonicalization instead of Avro.
 
 - Business/DQ contracts (logical rules):
   - `modules/contracts` — DataContract, validation rules (ValidatedNel), builder patterns for dataset‑level checks.
@@ -37,4 +41,3 @@ This page clarifies FlowForge’s contract model so there’s no confusion betwe
 - ADR‑011 (CI‑first compile/build gates): `docs/adr/011-contracts-compile-build-gates.md`
 - ADR‑019 (Typed Contract Pipelines Example): `docs/adr/019-typed-contract-pipelines-example.md`
 - Archive design docs (superseded) include historical rationale and API sketches.
-

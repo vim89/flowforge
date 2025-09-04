@@ -9,12 +9,12 @@ Deliver fail-fast behavior: code fails to compile when types diverge from contra
 
 ## Decision
 - Compile-time gates: typed endpoints (PipelineBuilder2) + SchemaEq/SchemaConforms witnesses remain the primary type-level enforcement in code.
-- Build-time/CI validation: Contracts are submitted by non-technical stakeholders via GitHub Actions Forms. CI materializes contracts (typed artifacts/codegen where needed) and runs schema validation (CLI) against physical sources before merge. This is the authoritative “compile-time in CI” gate.
-- sbt plugin: Optional/local developer aid only. A minimal AutoPlugin may exist for local smoke checks, but CI is the source of truth.
+- Build-time/CI validation: Contracts are submitted by non-technical stakeholders via GitHub Actions Forms. CI materializes contracts (typed artifacts/codegen where needed) and runs schema validation (CLI) against physical sources before merge. This is the authoritative gate for physical schemas.
+- No sbt AutoPlugin: Local checks, when needed, invoke the same CLI directly (e.g., via an sbt input task). We avoid a separate plugin to remove drift and reduce maintenance.
 
 ## Consequences
-- Pros: Errors surface before runtime (in CI); non-engineers can author contracts; clear audit trail via PRs; no strict coupling to local sbt plumbing.
-- Cons: CI complexity increases; codegen/typed artifact lifecycle needs stewardship; optional sbt plugin must not diverge from CI validation logic.
+- Pros: Errors surface before runtime (in CI); non-engineers can author contracts; clear audit trail via PRs; no duplicate logic in a plugin.
+- Cons: CI complexity increases; codegen/typed artifact lifecycle needs stewardship; local runs simply delegate to the CLI.
 
 ## Verification
 - Code compiles only when typed witnesses resolve.
@@ -26,6 +26,7 @@ Deliver fail-fast behavior: code fails to compile when types diverge from contra
 - Source: `docs/archive/design/CONTRACTS_COMPILE_AND_BUILD_GATES.md`
 - Evidence: `docs/evidence/compile-build-gates.md`
 - Plan: `docs/plan/compile-build-gates.md`
+- Supersedes local plugin/codegen suggestions in prior designs; see ADR‑021 for CI templating and `.avsc`/case class generation.
 
 ## End Goal (Big Picture)
 - Fail-fast pipeline lifecycle: compile-time typed gates + build-time physical validation across Delta/Hive/Parquet/JDBC.
@@ -33,7 +34,7 @@ Deliver fail-fast behavior: code fails to compile when types diverge from contra
 ## Milestones
 - M1: CI workflow with GitHub Actions Forms for contract submission + CLI schema diff (Parquet/Delta/Hive/JDBC).
 - M2: Codegen/materialization of typed artifacts from submitted contracts wired into CI (branch artifacts or PR files).
-- M3: Optional sbt AutoPlugin for local smoke checks delegating to the same canonical CLI logic.
+- M3: Local developer task delegates directly to CLI; no sbt plugin maintained.
 
 ## Open Questions
 - Where to host codegen and compatibility checks (this repo vs separate plugin repos)?

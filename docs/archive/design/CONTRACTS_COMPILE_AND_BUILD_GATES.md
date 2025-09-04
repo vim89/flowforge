@@ -1,7 +1,7 @@
 # [ARCHIVED] FlowForge Contracts-as-Code: Compile-Time Gates + Build-Time Physical Validation
 
-> Superseded by ADR-011 (Contracts Compile-Time & Build-Time Gates, CI-first). See `docs/adr/011-contracts-compile-build-gates.md`.
-> Note: The sbt AutoPlugin concept remains optional for local smoke checks; the authoritative gate is CI (GitHub Actions Forms + validation-cli).
+> Superseded by ADR-011 (Contracts Compile-Time & Build-Time Gates, CI-first) and ADR-021 (Contracts Source of Truth and Codegen).
+> Note: No sbt AutoPlugin is maintained; the authoritative gate is CI (GitHub Actions Forms + validation-cli). Case classes and `.avsc` are generated in CI from Forms.
 
 Updated: 2025-09-03
 Status: Critical design — required for MVR→MVP
@@ -34,11 +34,7 @@ Result: “Won’t compile if your schema doesn’t match” holds for code-vs-c
 - If witnesses cannot be derived, compilation fails with a readable error.
 
 2) Build-time physical validation (contracts ↔ storage)
-- An sbt AutoPlugin runs before compile:
-  - ffVerifySourcePhysical: fetch schema from GCS/Hive/Delta and compare with the source contract; fail on mismatch.
-  - ffVerifyTargetPhysical: compare target table schema vs target contract; fail on mismatch.
-  - ffVerifyRegistryCompatibility (optional): enforce registry compatibility policy.
-- `Compile / compile := (Compile / compile).dependsOn(ffVerifySourcePhysical, ffVerifyTargetPhysical).value`
+- A GitHub Actions workflow materializes contracts and runs `validation-cli` to compare physical schemas vs contracts; PRs fail on mismatch.
 
 3) Platform gates (storage ↔ invariants) [optional]
 - Delta/Hive constraints (NOT NULL, CHECK) and/or DLT expectations with fail/drop semantics.

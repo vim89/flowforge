@@ -18,11 +18,11 @@
 ## 4) Options & Trade-offs
 | Option | Pros | Cons | Why |
 |---|---|---|---|
-| CI-first (GitHub Actions Forms + CLI) | Non-engineer friendly; auditable; decoupled from local sbt | CI complexity; artifact lifecycle | Accepted
-| sbt AutoPlugin only | Local developer loop | Diverges from non-engineer workflow; less auditable | Optional
+| CI-first (GitHub Actions Forms + CLI) | Non-engineer friendly; auditable; decoupled from local build | CI complexity; artifact lifecycle | Accepted
+| Local plugin | Familiar to some | Duplicates logic, drift risk | Rejected
 | Defer checks | Simpler now | Claims unmet | Rejected
 
-**Decision sketch**: CI-first approach is authoritative; sbt plugin optional and should delegate to CLI to avoid drift.
+**Decision sketch**: CI-first approach is authoritative; no sbt plugin maintained; local runs delegate to the same CLI.
 
 ## 2.1) Detailed Findings
 - Core typed path supports compile-time schema alignment (SchemaEq, TypedSource/Sink, PipelineBuilder2), but there is no canonical example exercising it.
@@ -34,10 +34,10 @@
 
 ## 6) Success Criteria
 - CI workflow exists and fails PRs on mismatches (clear diffs).
-- Optional sbt tasks can call the same CLI for local smoke tests.
+- Local sbt task calls the same CLI for smoke tests (no plugin).
 
 ## 7) Recommendations (Production-grade)
-- Keep canonical schema normalization in one place (validation-cli / shared lib) used by both CI and any sbt plugin wrappers.
+- Keep canonical schema normalization in one place (validation-cli / shared lib) used by CI and local tasks.
 - Canonical schema normalization:
   - Uniform model across Spark StructType, Delta describe detail, Parquet footer, JDBC metadata.
   - Compare field names/types/nullability; support nested structs via path notation.
