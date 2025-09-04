@@ -1,4 +1,4 @@
-# EVIDENCE — Quality and Deequ Adapter MVP
+# EVIDENCE — Quality and Deequ Adapter MVP (Status: Implemented)
 
 ## 1) Problem & Constraints
 - **Goal**: Validate a minimal Deequ adapter to back our DQ claims end-to-end.
@@ -50,3 +50,7 @@
 ## 8) Next Steps (Concrete)
 - Extend mappings to Range/Pattern and YAML‑to‑constraints.
 - Add metrics around DQ execution.
+
+## 9) Related Plans
+- Quality MVP Extension (Range + Pattern): docs/plan/quality-mvp-extension.md
+- Observability Hardening (DQ timing/metrics): docs/plan/observability.md

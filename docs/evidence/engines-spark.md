@@ -33,3 +33,7 @@
 - Refactor write path to avoid JSON round-trip; use proper encoders and `write.mode(...).format(...)`.
 - Reflection stub removed; docs updated to reflect canonical Delta path.
 - Add logger/metrics calls around IO ops (effect-safe); use `EffectSystem.timed` for latency.
+
+## 6) Related Plans
+- Observability Hardening: docs/plan/observability.md
+- Partitions & Table Ops: docs/plan/partitions-and-table-ops.md

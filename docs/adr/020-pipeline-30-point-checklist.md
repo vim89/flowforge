@@ -146,4 +146,47 @@ Adopt the following 30‑point checklist as a normative rubric for reviews, temp
 ## Open Questions
 - Which items should be enforced by scalafix/CI vs review checklists first?
 - How to phase adoption for existing pipelines without large rewrites?
+
+---
+
+## Appendix A — Affected Partitions Strategy (Discovery Order)
+
+Goal: Minimize shuffles and IO by restricting table ops to partitions touched in a time window, without scanning data. This complements checklist item 10 (Restartability) and 11 (Partitioning).
+
+Discovery order (configurable), with engine‑specific fast paths and generic fallbacks:
+
+1) DeltaInterpreter (provider=delta)
+- Source: `_delta_log` JSON + checkpoints.
+- Extract: `add.partitionValues`, `modificationTime` ∈ [start, end].
+- Pros: precise, fast; avoids data/FS listing.
+
+2) FsInterpreter (parquet/hive/unknown)
+- Source: Hadoop `FileSystem` listings under table root.
+- Extract: parse `col=value` path segments; filter files by `FileStatus.getModificationTime` in window; dedupe to PartitionSpec.
+- Pros: engine‑agnostic; metadata‑only.
+
+3) CloudSdkInterpreter (optional)
+- Source: object store SDKs (e.g., GCS/S3) via FlowForge connectors; list by prefix with pagination and bounded parallelism; filter by lastModified; parse keys → PartitionSpec.
+- Pros: useful when Hadoop FS is unavailable or inadequate.
+
+4) RegexInterpreter (optional)
+- Source: naming convention for date partitions (e.g., `dt=YYYY‑MM‑DD`). Enumerate candidate dates in window; verify existence lightly; map to PartitionSpec for configured `dateColumn`.
+- Pros: O(days) when conventions are strict.
+
+5) Fallback
+- Spark `inputFiles` listing + FS stat to infer mtimes, then parse into PartitionSpec.
+
+Behavior & Semantics
+- First run: if no `since`, return all partitions (via catalog `SHOW PARTITIONS` or FS directory listing).
+- Incremental: include partitions with any add/modify in [start, end].
+- Non‑partitioned: return empty list to signal full‑table.
+
+Observability
+- Log interpreter used, window, partitions found, duration; emit metrics for runs, latency, and partition count.
+
+Config Knobs (per table/engine)
+- Discovery order, `dateColumn`, `dateRegex`, max depth, parallelism and rate limits; provider override.
+
+References
+- Plan: docs/plan/partitions-and-table-ops.md
 ```

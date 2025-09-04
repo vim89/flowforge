@@ -2,7 +2,7 @@
 
 ## 1) Milestones Status (MVR/MVP/v1)
 - MVR: Partially achieved — Spark SCD1/SCD2, infra skeleton, typed builder exist; demo not turnkey.
-- MVP: Not achieved — config MVP unproven, S3 missing, Deequ adapter unimplemented, CI gates not fully wired, E2E ITs minimal.
+- MVP: Not achieved — config MVP unproven, S3 missing, Deequ adapter implemented (MVP scope: not_null, unique), CI gates not fully wired, E2E ITs minimal.
 - v1.0.0: Not achieved — API stabilization, breadth/connectors, schema evolution checks, coverage/runbooks pending.
 
 ## 2) README Teaser vs Reality
@@ -16,7 +16,7 @@
 
 ## 4) Codebase vs ADRs/Plans/Evidence Gaps
 - Compile/build gates: CI‑first approach now in ADR‑011; sbt plugin optional. Current plugin is stub; integration missing.
-- Quality/Deequ: modules empty; adapter needs implementation.
+- Quality/Deequ: Minimal adapter implemented (not_null, unique); extension to Range/Pattern planned (see links).
 - Effect discipline: Leaf modules receive IO+ZIO via common deps; trim as per Evidence.
 - Templates: g8 present; not mirrored under modules/templates; not contract‑first.
 - Connectors: S3 missing; GCS added; HDFS/local present.
@@ -35,3 +35,9 @@
 - Land CI‑first contract gates (forms + CLI schema diff) and typed artifact materialization. (Done: scaffold implemented; replace stub with real contracts source next.)
 - Implement Deequ adapter MVP; add S3 connector; create one end‑to‑end guarded IT. (Deequ MVP: done; S3: out of scope; guarded IT: present.)
 - Trim effect deps in leaf modules; expand observability on IO paths. (Partial: engines‑spark improved; observability still partial.)
+
+## Related Plans
+- Observability: docs/plan/observability.md
+- Partitions & Table Ops: docs/plan/partitions-and-table-ops.md
+- CI Contracts Submit: docs/plan/ci-contracts-submit.md
+- Quality MVP Extension (Deequ Range/Pattern): docs/plan/quality-mvp-extension.md

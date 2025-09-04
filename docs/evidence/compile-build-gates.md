@@ -51,3 +51,6 @@
 - Add `.github/workflows/contracts-submit.yml` (Forms + schema diff run via validation-cli).
 - Materialize typed artifacts (avsc + metadata) into `contracts/**` in PR or as artifacts.
 - Optionally, keep `project/ContractValidationPlugin.scala` delegating to validation-cli for local usage.
+
+## 9) Related Plans
+- CI Contracts Submit: docs/plan/ci-contracts-submit.md

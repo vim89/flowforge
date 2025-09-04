@@ -113,7 +113,16 @@ Legend
 - Status: in_progress
 - Next Step: Replace in-memory fallbacks with distributed ops; optimize write path; remove Delta reflection stub (done); add logging/metrics around IO; provide SparkDatasetOps helpers (done partial).
 - Dependencies: engines-spark
-- Acceptance: Minimized SimpleDataset fallbacks in Spark paths; canonical Delta path (done); observability at IO boundaries (partial). Deequ auto‑integration when present (done).
+  - Acceptance: Minimized SimpleDataset fallbacks in Spark paths; canonical Delta path (done); observability at IO boundaries (partial). Deequ auto‑integration when present (done).
+
+11) Comprehensive DX Roadmap (Dogfooding + Foundations)
+- ADR: ADR‑020 (Checklist), ADR‑011 (Gates), ADR‑012 (Effect), ADR‑002 (Spark purity)
+- Plan (MASTER): docs/plan/dx-dogfooding.md
+- Owner: TBD
+- Status: planned
+- Next Step: Execute MVR (Weeks 1–2): Quickstart, Quality MVP verify, Connectors (mock), initial observability, CI contracts skeleton.
+- Dependencies: examples module; Deequ adapter; CLI validation; engines‑spark
+- Acceptance: DX KPIs met; scenarios run; observability logs/metrics visible; ≥ 6 issues filed for gaps.
 
 ---
 
