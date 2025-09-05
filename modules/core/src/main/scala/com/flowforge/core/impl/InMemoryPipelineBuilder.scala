@@ -2,7 +2,6 @@ package com.flowforge.core.impl
 
 import cats.data.Kleisli
 import cats.effect.Sync
-import cats.syntax.functor._
 import com.flowforge.core.algebra.{ DataAlgebra, DataEncoder, EffectSystem }
 import com.flowforge.core.types._
 import com.flowforge.framework.{ Pipeline, PipelineMetadata }
@@ -94,7 +93,7 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
   def addBatchTransform[C](
     transform: DataAlgebra.Dataset[Out] => DataAlgebra.Dataset[C],
   ): InMemoryTypedBuilder[F, In, C] = {
-    val F = ef
+    ef
     val stage = InMemoryStage.BatchTransform[F, DataAlgebra.Dataset[Out], DataAlgebra.Dataset[C]](
       name = s"batch-transform-${stages.size}",
       description = "Batch transformation",
@@ -177,7 +176,7 @@ class InMemoryStreamBuilder[F[_]] private[impl] (
     stageName: String,
     operation: fs2.Stream[F, A] => fs2.Stream[F, B],
   ): InMemoryStreamBuilder[F] = {
-    val F = ef
+    ef
     val stage = InMemoryStage.Streaming[F, A, B](
       name = stageName,
       description = "fs2.Stream operation",

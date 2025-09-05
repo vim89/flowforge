@@ -9,7 +9,7 @@ package com.flowforge.core.examples
 import cats.effect.{ IO, IOApp }
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.instances.EffectInstances._
-import zio.{ Runtime, Task, ZIO }
+import zio.{Runtime, Task}
 
 /**
  * Tests both effect systems with simple operations

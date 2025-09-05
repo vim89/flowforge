@@ -275,8 +275,8 @@ class DataContractBuilder[A] {
   }
 
   def build: DataContract[A] = {
-    val schema  = schemaOpt.getOrElse(throw new IllegalStateException("Schema is required"))
-    val version = versionOpt.getOrElse(ContractVersion(1, 0, 0))
+    schemaOpt.getOrElse(throw new IllegalStateException("Schema is required"))
+    versionOpt.getOrElse(ContractVersion(1, 0, 0))
     val ruleList = NonEmptyList
       .fromList(rules.reverse)
       .getOrElse(

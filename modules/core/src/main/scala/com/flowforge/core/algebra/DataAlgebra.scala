@@ -1,7 +1,6 @@
 package com.flowforge.core.algebra
 
 import cats.data.{ NonEmptyList, ValidatedNel }
-// Avoid name clash with the type-class-style DataContract defined in this package
 import com.flowforge.core.types.PipelineTypes.{ DataContract => PDataContract, QualityCheck => PQualityCheck }
 import com.flowforge.core.types.RefinedTypes.FieldName
 import com.flowforge.core.types._

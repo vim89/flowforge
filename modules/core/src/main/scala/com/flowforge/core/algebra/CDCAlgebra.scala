@@ -36,7 +36,6 @@ import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.implicits._
 import com.flowforge.core.algebra.DataAlgebra.Dataset
 import com.flowforge.core.algebra.EffectSystem
-// Use function-style DataContract alias explicitly to avoid clash with type class
 import com.flowforge.core.types.PipelineTypes.{ DataContract => PDataContract }
 import com.flowforge.core.types.RefinedTypes.FieldName
 import com.flowforge.core.types.{ DataSink, DataSource, FlowForgeError }

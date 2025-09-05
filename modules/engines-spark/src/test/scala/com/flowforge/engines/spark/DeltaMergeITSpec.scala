@@ -1,14 +1,13 @@
 package com.flowforge.engines.spark
 
-import org.scalatest.funsuite.AnyFunSuite
-import org.scalatest.matchers.should.Matchers
-import org.apache.spark.sql.SparkSession
-import com.flowforge.core.algebra.{ CDCOperations, DataAlgebra, EffectSystem }
-import com.flowforge.core.impl.SimpleDataset
-import com.flowforge.core.types._
-import com.flowforge.core.algebra.DataAlgebra
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
+import com.flowforge.core.algebra.{CDCOperations, DataAlgebra, EffectSystem}
+import com.flowforge.core.impl.SimpleDataset
+import com.flowforge.core.types._
+import org.apache.spark.sql.SparkSession
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
 import java.nio.file.Files
 
@@ -81,8 +80,7 @@ class DeltaMergeITSpec extends AnyFunSuite with Matchers {
       res.updated shouldBe 1L
       res.inserted shouldBe 1L
       res.deleted shouldBe 1L
-    } finally {
+    } finally
       spark.stop()
-    }
   }
 }

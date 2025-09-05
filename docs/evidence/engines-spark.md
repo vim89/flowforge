@@ -12,7 +12,7 @@
   - Some transforms fallback to `SimpleDataset` (in-memory) when not working with `ProductionSparkDataset`.
   - JSON writes go through stringification then re-read for Parquet, adding overhead.
   - Delta reflection stub removed; Spark engine consolidates on direct Delta APIs.
-  - Observability (metrics) present for CDC latency only; logging not uniformly applied; tracing absent.
+  - Observability: metrics present for CDC latency previously; now logging + latency metrics added for read/write; tracing still absent.
 
 ## 3) Options & Trade-offs
 | Option | Pros | Cons | Why |
@@ -26,13 +26,13 @@
 - Prioritize `ProductionSparkDataset` paths for all transforms under Spark and avoid `SimpleDataset` fallback when a Spark session and encoders are available.
 - For writes, prefer encoders and direct DataFrame/Dataset write APIs rather than JSON stringify + re-read.
 - Consolidate on direct Delta usage (done; reflection stub removed).
-- Expand observability: add structured logging and metrics at start/end of read/write/merge ops (counts, durations, formats, locations); use tracing spans as optional hooks.
+- Expand observability: add structured logging and metrics at start/end of read/write/merge ops (counts, durations, formats, locations); use tracing spans as optional hooks. [DONE: read/write logging + latency metrics]
 
 ## 5) Next Steps (Concrete)
-- Audit transform methods and replace `SimpleDataset` fallbacks with Spark DataFrame/Dataset equivalents when possible.
+- Audit transform methods and replace `SimpleDataset` fallbacks with Spark DataFrame/Dataset equivalents when possible. [PARTIAL: take/drop use DataFrame limit/except; union uses unionByName]
 - Refactor write path to avoid JSON round-trip; use proper encoders and `write.mode(...).format(...)`.
 - Reflection stub removed; docs updated to reflect canonical Delta path.
-- Add logger/metrics calls around IO ops (effect-safe); use `EffectSystem.timed` for latency.
+- Add logger/metrics calls around IO ops (effect-safe); use `EffectSystem.timed` for latency. [DONE]
 
 ## 6) Related Plans
 - Observability Hardening: docs/plan/observability.md

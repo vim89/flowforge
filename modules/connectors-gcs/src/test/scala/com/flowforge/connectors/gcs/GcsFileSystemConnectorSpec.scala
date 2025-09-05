@@ -1,21 +1,21 @@
 package com.flowforge.connectors.gcs
 
-import org.scalatest.funsuite.AnyFunSuite
-import org.scalatest.matchers.should.Matchers
-import org.mockito.Mockito._
-import org.mockito.ArgumentMatchers.{any => many, eq => meq}
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.instances.EffectInstances
 import com.flowforge.core.types._
+import org.mockito.ArgumentMatchers.{ any => many, eq => meq }
+import org.mockito.Mockito._
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
 class GcsFileSystemConnectorSpec extends AnyFunSuite with Matchers {
 
   implicit val F: EffectSystem[IO] = EffectInstances.catsEffectSystemInstance
 
   private def gcsSource(path: String): DataSource = {
-    val parts = path.stripPrefix("gs://").split("/", 2)
+    val parts  = path.stripPrefix("gs://").split("/", 2)
     val bucket = parts(0)
     val key    = if (parts.length > 1) parts(1) else ""
     DataSource.GcsSource(
@@ -26,7 +26,7 @@ class GcsFileSystemConnectorSpec extends AnyFunSuite with Matchers {
   }
 
   private def gcsSink(path: String): DataSink = {
-    val parts = path.stripPrefix("gs://").split("/", 2)
+    val parts  = path.stripPrefix("gs://").split("/", 2)
     val bucket = parts(0)
     val key    = if (parts.length > 1) parts(1) else ""
     DataSink.GcsSink(
@@ -44,7 +44,8 @@ class GcsFileSystemConnectorSpec extends AnyFunSuite with Matchers {
     val conn = new GcsFileSystemConnector[IO](storage)
     val res  = conn.read(gcsSource("gs://data-bucket/file.json")).unsafeRunSync()
     res match {
-      case com.flowforge.connectors.FileSystemResult.Success(bytes) => new String(bytes, "UTF-8") shouldBe "hello"
+      case com.flowforge.connectors.FileSystemResult.Success(bytes) =>
+        new String(bytes, "UTF-8") shouldBe "hello"
       case other => fail(s"Expected success, got $other")
     }
   }
@@ -87,7 +88,13 @@ class GcsFileSystemConnectorSpec extends AnyFunSuite with Matchers {
     when(blob.getSize).thenReturn(java.lang.Long.valueOf(5L))
     when(blob.getUpdateTime).thenReturn(java.lang.Long.valueOf(1000L))
     when(page.iterateAll()).thenReturn(java.util.Arrays.asList(blob))
-    when(storage.list(meq("bucket"), many(classOf[com.google.cloud.storage.Storage.BlobListOption]), many(classOf[com.google.cloud.storage.Storage.BlobListOption]))).thenReturn(page)
+    when(
+      storage.list(
+        meq("bucket"),
+        many(classOf[com.google.cloud.storage.Storage.BlobListOption]),
+        many(classOf[com.google.cloud.storage.Storage.BlobListOption]),
+      ),
+    ).thenReturn(page)
     val conn = new GcsFileSystemConnector[IO](storage)
     val res  = conn.listFiles("gs://bucket/prefix").unsafeRunSync()
     res match {

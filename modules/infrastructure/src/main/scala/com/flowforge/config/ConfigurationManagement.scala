@@ -2,9 +2,9 @@ package com.flowforge.config
 
 import cats.data.ValidatedNel
 import cats.effect.Sync
-import com.flowforge.core.algebra.FlowForgeConfig
-import com.flowforge.core.algebra.ConfigurationAlgebra
+import com.flowforge.core.algebra.{ConfigurationAlgebra, FlowForgeConfig}
 import com.typesafe.config.{ Config, ConfigFactory }
+
 import scala.util.{ Failure, Success, Try }
 
 /**

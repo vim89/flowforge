@@ -9,11 +9,11 @@ package com.flowforge.core.instances
 import cats.effect.IO
 import cats.effect.testing.scalatest.AsyncIOSpec
 import cats.syntax.parallel._
-import cats.syntax.applicative._
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
 import org.scalatest.funspec.AsyncFunSpec
 import org.scalatest.matchers.should.Matchers
+
 import scala.concurrent.duration._
 
 class EffectInstancesLawsSpec extends AsyncFunSpec with AsyncIOSpec with Matchers {

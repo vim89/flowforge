@@ -3,6 +3,7 @@ package com.flowforge.infrastructure
 import cats.effect.Sync
 import cats.syntax.all._
 import io.prometheus.client.{ Counter, Histogram }
+
 import scala.concurrent.duration.FiniteDuration
 
 /**

@@ -1,9 +1,8 @@
 package com.flowforge.core.instances
 
 import com.flowforge.core.algebra._
-import com.flowforge.core.types._
-import com.flowforge.core.types.DataFormat
-import io.circe.{ parser, Json }
+import com.flowforge.core.types.{DataFormat, _}
+import io.circe.{Json, parser}
 
 /**
  * Practical default encoders/decoders for common shapes used in foundation flows.
@@ -102,38 +101,12 @@ object DefaultCodecs {
       }
 
     // Generic Circe-powered codecs for any A with Encoder/Decoder[A]
-    implicit def genericJsonEncoder[A](implicit enc: io.circe.Encoder[A]): DataEncoder[A] =
-      new DataEncoder[A] {
-        def encode(data: A, format: DataFormat) =
-          Right(EncodedData(enc.apply(data).noSpaces.getBytes("UTF-8"), format))
-        def schema(format: DataFormat): DataSchema =
-          DataSchema.builder.addField("json", DataType.String).build
-        def estimateSize(data: A, format: DataFormat): Long = enc.apply(data).noSpaces.length
-        def supportsFormat(format: DataFormat): Boolean =
-          format == DataFormat.JSON || format == DataFormat.JSONL
-        def optimizationHints(data: A, format: DataFormat): EncodingHints = EncodingHints.default
-      }
+    
 
-    implicit def genericJsonDecoder[A](implicit dec: io.circe.Decoder[A]): DataDecoder[A] =
-      new DataDecoder[A] {
-        def decode(encodedData: EncodedData, format: DataFormat) =
-          parser
-            .parse(new String(encodedData.data, "UTF-8"))
-            .left
-            .map(err => CorruptedData(err.getMessage))
-            .flatMap(json => dec.decodeJson(json).left.map(df => CorruptedData(df.getMessage())))
-        def validateSchema(encodedData: EncodedData, expectedSchema: DataSchema) = Right(())
-        def decodeWithEvolution(
-          encodedData: EncodedData,
-          format: DataFormat,
-          targetSchema: DataSchema,
-        ) = decode(encodedData, format)
-        def supportsFormat(format: DataFormat): Boolean =
-          format == DataFormat.JSON || format == DataFormat.JSONL
-      }
+    
 
     // Collections of common types
-    implicit val listStringEncoder: DataEncoder[List[String]] = new DataEncoder[List[String]] {
+    new DataEncoder[List[String]] {
       def encode(data: List[String], format: DataFormat) = format match {
         case DataFormat.JSON | DataFormat.JSONL =>
           Right(
@@ -154,7 +127,7 @@ object DefaultCodecs {
         EncodingHints.default
     }
 
-    implicit val listStringDecoder: DataDecoder[List[String]] = new DataDecoder[List[String]] {
+    new DataDecoder[List[String]] {
       def decode(encodedData: EncodedData, format: DataFormat) = format match {
         case DataFormat.JSON | DataFormat.JSONL =>
           parser
@@ -244,7 +217,7 @@ object DefaultCodecs {
         format match {
           case DataFormat.JSON | DataFormat.JSONL | DataFormat.CSV => true
           case _                                                   => false
-      }
+        }
     }
 
   // Tuple (K, V) encoder using a DataEncoder[V] and String rendering for K.
@@ -254,9 +227,10 @@ object DefaultCodecs {
       def encode(data: (K, V), format: DataFormat) = format match {
         case DataFormat.JSON | DataFormat.JSONL =>
           ev.encode(data._2, DataFormat.JSON).map { encV =>
-            val valueJson = io.circe.parser.parse(new String(encV.data, "UTF-8")).getOrElse(io.circe.Json.Null)
+            val valueJson =
+              io.circe.parser.parse(new String(encV.data, "UTF-8")).getOrElse(io.circe.Json.Null)
             val obj = io.circe.Json.obj(
-              "key" -> io.circe.Json.fromString(Option(data._1).map(_.toString).getOrElse("null")),
+              "key"   -> io.circe.Json.fromString(Option(data._1).map(_.toString).getOrElse("null")),
               "value" -> valueJson,
             )
             EncodedData(obj.noSpaces.getBytes("UTF-8"), format)

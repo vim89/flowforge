@@ -1,16 +1,10 @@
 package com.flowforge.validation
 
-import cats.effect.{ IO, IOApp, Resource }
-import com.flowforge.core.instances.EffectInstances._
+import cats.effect.{ExitCode, IO, IOApp, Resource}
 import com.flowforge.core.algebra.EffectSystem
+import com.flowforge.core.instances.EffectInstances._
 import org.apache.spark.sql.SparkSession
 import scopt.OParser
-
-/**
- * Minimal CLI to validate physical schemas (Delta/Parquet/Hive) against an expected JSON schema file.
- * Intended for CI use. Spark is used for schema discovery; no data scan performed.
- */
-import cats.effect.ExitCode
 object SchemaValidateCli extends IOApp {
 
   sealed trait Mode

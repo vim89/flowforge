@@ -756,10 +756,10 @@ case class UnsupportedFormat(format: DataFormat, dataType: String) extends Encod
   val isRetryable   = false
   val recoveryHints = List("Use a supported format", "Implement custom encoder")
 
-  def withContext(additionalContext: Map[String, Any]) =
-    copy().asInstanceOf[EncodingError] // Simplified for brevity
-  def withCause(underlyingCause: Throwable) =
-    copy().asInstanceOf[EncodingError] // Simplified for brevity
+  def withContext(additionalContext: Map[String, Any]): EncodingError =
+    copy() // Simplified for brevity
+  def withCause(underlyingCause: Throwable): EncodingError =
+    copy() // Simplified for brevity
 }
 
 /**
@@ -777,10 +777,10 @@ case class CorruptedData(details: String) extends DecodingError {
   val isRetryable   = false
   val recoveryHints = List("Check data source", "Re-download data", "Use backup data")
 
-  def withContext(additionalContext: Map[String, Any]) =
-    copy().asInstanceOf[DecodingError] // Simplified for brevity
-  def withCause(underlyingCause: Throwable) =
-    copy().asInstanceOf[DecodingError] // Simplified for brevity
+  def withContext(additionalContext: Map[String, Any]): DecodingError =
+    copy() // Simplified for brevity
+  def withCause(underlyingCause: Throwable): DecodingError =
+    copy() // Simplified for brevity
 }
 
 /**
@@ -799,10 +799,10 @@ case class SchemaIncompatible(expected: DataSchema, actual: DataSchema) extends 
   val isRetryable   = false
   val recoveryHints = List("Update schema", "Enable schema evolution", "Transform data")
 
-  def withContext(additionalContext: Map[String, Any]) =
-    copy().asInstanceOf[SchemaError] // Simplified for brevity
-  def withCause(underlyingCause: Throwable) =
-    copy().asInstanceOf[SchemaError] // Simplified for brevity
+  def withContext(additionalContext: Map[String, Any]): SchemaError =
+    copy() // Simplified for brevity
+  def withCause(underlyingCause: Throwable): SchemaError =
+    copy() // Simplified for brevity
 }
 
 /**
@@ -820,10 +820,10 @@ case class SerializationFailed(reason: String) extends SerializationError {
   val isRetryable   = true
   val recoveryHints = List("Retry operation", "Check data format", "Use alternative serializer")
 
-  def withContext(additionalContext: Map[String, Any]) =
-    copy().asInstanceOf[SerializationError] // Simplified for brevity
-  def withCause(underlyingCause: Throwable) =
-    copy().asInstanceOf[SerializationError] // Simplified for brevity
+  def withContext(additionalContext: Map[String, Any]): SerializationError =
+    copy() // Simplified for brevity
+  def withCause(underlyingCause: Throwable): SerializationError =
+    copy() // Simplified for brevity
 }
 
 /**
@@ -841,10 +841,10 @@ case class RuleViolation(ruleName: String, details: String) extends ContractViol
   val isRetryable   = false
   val recoveryHints = List("Fix data quality", "Update contract rules", "Contact data owner")
 
-  def withContext(additionalContext: Map[String, Any]) =
-    copy().asInstanceOf[ContractViolation] // Simplified for brevity
-  def withCause(underlyingCause: Throwable) =
-    copy().asInstanceOf[ContractViolation] // Simplified for brevity
+  def withContext(additionalContext: Map[String, Any]): ContractViolation =
+    copy() // Simplified for brevity
+  def withCause(underlyingCause: Throwable): ContractViolation =
+    copy() // Simplified for brevity
 }
 
 /**

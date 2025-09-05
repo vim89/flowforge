@@ -2,6 +2,7 @@ package com.flowforge.core.impl
 
 import com.flowforge.core.algebra.DataAlgebra
 import com.flowforge.core.types.DataSchema
+
 import java.time.Instant
 
 /**

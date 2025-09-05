@@ -10,8 +10,7 @@ import com.flowforge.core.types._
  * google-cloud-storage client. Operations are wrapped in EffectSystem[F] for effect safety.
  */
 class GcsFileSystemConnector[F[_]: EffectSystem](
-  storage: com.google.cloud.storage.Storage,
-)
+  storage: com.google.cloud.storage.Storage)
     extends com.flowforge.connectors.filesystem.FileSystemConnector[F] {
 
   private val F = EffectSystem[F]
@@ -31,7 +30,7 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
   private def toPath(ds: DataSource): String = ds match {
     case g: DataSource.GcsSource => g.path
     case l: LocalDataSource      => l.location
-    case other => s"unsupported://${other.getClass.getSimpleName}"
+    case other                   => s"unsupported://${other.getClass.getSimpleName}"
   }
 
   private def toPath(sink: DataSink): String = sink match {
@@ -54,7 +53,11 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
           }(t => FileSystemResult.failure(FileSystemError.ReadError(g.path, t.getMessage)))
       }
     case other =>
-      F.pure(FileSystemResult.failure(FileSystemError.ReadError(toPath(other), "Unsupported source type for GCS connector")))
+      F.pure(
+        FileSystemResult.failure(
+          FileSystemError.ReadError(toPath(other), "Unsupported source type for GCS connector"),
+        ),
+      )
   }
 
   def write(sink: DataSink, data: Array[Byte]): F[FileSystemResult[WriteMetadata]] = sink match {
@@ -71,7 +74,11 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
           }(t => FileSystemResult.failure(FileSystemError.WriteError(g.path, t.getMessage)))
       }
     case other =>
-      F.pure(FileSystemResult.failure(FileSystemError.WriteError(toPath(other), "Unsupported sink type for GCS connector")))
+      F.pure(
+        FileSystemResult.failure(
+          FileSystemError.WriteError(toPath(other), "Unsupported sink type for GCS connector"),
+        ),
+      )
   }
 
   def listFiles(path: String): F[FileSystemResult[List[FileMetadata]]] =
@@ -104,7 +111,7 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
 
   def exists(path: String): F[Boolean] =
     parseGsUri(path) match {
-      case Left(_)                  => F.pure(false)
+      case Left(_)              => F.pure(false)
       case Right(GsUri(b, key)) => F.blocking(storage.get(b, key) != null)
     }
 
@@ -154,20 +161,19 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
           F.blocking {
             val blob = storage.get(b, key)
             if (blob == null) FileSystemResult.failure(FileSystemError.FileNotFound(path))
-            else
-              {
-                val size       = Option(blob.getSize).map(_.longValue()).getOrElse(0L)
-                val updateTime = Option(blob.getUpdateTime).map(_.longValue()).getOrElse(0L)
-                FileSystemResult.success(
-                  FileMetadata(
-                    name = blob.getName,
-                    path = s"gs://$b/${blob.getName}",
-                    size = size,
-                    lastModified = java.time.Instant.ofEpochMilli(updateTime),
-                    format = DataFormat.JSON,
-                  ),
-                )
-              }
+            else {
+              val size       = Option(blob.getSize).map(_.longValue()).getOrElse(0L)
+              val updateTime = Option(blob.getUpdateTime).map(_.longValue()).getOrElse(0L)
+              FileSystemResult.success(
+                FileMetadata(
+                  name = blob.getName,
+                  path = s"gs://$b/${blob.getName}",
+                  size = size,
+                  lastModified = java.time.Instant.ofEpochMilli(updateTime),
+                  format = DataFormat.JSON,
+                ),
+              )
+            }
           }
         }(t => FileSystemResult.failure(FileSystemError.MetadataError(path, t.getMessage)))
     }

@@ -28,11 +28,9 @@
  * @since 2024
  */
 package com.flowforge.core.types
-
-import cats.FlatMap
 import cats.data.{ Kleisli, ValidatedNel }
-import cats.implicits._
 import cats.effect.Sync
+import cats.implicits._
 import com.flowforge.core.algebra.EffectSystem
 
 import java.util.UUID
@@ -154,7 +152,6 @@ object GADTStage {
     def execute: Kleisli[F, Input, Unit] = Kleisli { input =>
       import com.flowforge.core.algebra.DataAlgebra.{ DatasetMetadata, WriteOptions }
       import com.flowforge.core.impl.SimpleDataset
-      import com.flowforge.core.types.DataSchema
       val schema = enc.schema(com.flowforge.core.types.DataFormat.JSON)
       val ds = SimpleDataset(
         data = List(input),
@@ -175,7 +172,7 @@ object GADTStage {
       extends GADTStage[F, Input, Output] {
     override val stageName: String = s"${first.stageName}->${second.stageName}"
     def execute: Kleisli[F, Input, Output] = {
-      implicit val F: FlatMap[F] = implicitly[EffectSystem[F]]
+      implicitly[EffectSystem[F]]
       first.execute andThen second.execute
     }
   }
@@ -190,7 +187,7 @@ object GADTStage {
       extends GADTStage[F, Input, Output] {
     override val stageName: String = s"${stage.stageName}->kleisli"
     def execute: Kleisli[F, Input, Output] = {
-      implicit val F: FlatMap[F] = implicitly[EffectSystem[F]]
+      implicitly[EffectSystem[F]]
       stage.execute andThen kleisli
     }
   }
@@ -407,7 +404,7 @@ case class GADTPipeline[F[_]: EffectSystem, Input, Output](
 
     // Fuse adjacent transform stages
     case GADTStage.Composed(
-          GADTStage.Transform(f1, _, intermediateType, _, _),
+          GADTStage.Transform(f1, _, _, _, _),
           GADTStage.Transform(f2, _, outputType, _, _),
           _,
         ) =>
@@ -522,7 +519,7 @@ trait CompileTimeOptimization[F[_]] {
       // Compile-time fusion of transform stages
       GADTStage.Transform[F, A, C](
         {
-          implicit val F: FlatMap[F] = implicitly[EffectSystem[F]]
+          implicitly[EffectSystem[F]]
           (a: A) => t1.transformation(a).flatMap(t2.transformation)
         },
         inputType = t1.inputType,
@@ -572,7 +569,7 @@ object GADTPipelineExamples {
     val builder = GADTPipelineBuilder[F]
 
     // ✅ VALID: Correct stage order
-    val validPipeline = builder
+    builder
       .source[String](DataSource.gcs("bucket", "path", DataFormat.Parquet))
       .transform[Int](s => EffectSystem[F].pure(s.length))
       .quality((i: Int) =>

@@ -1,14 +1,15 @@
 package com.flowforge.engines.spark
 
+import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import cats.data.NonEmptyList
-import org.scalatest.funsuite.AnyFunSuite
 import com.flowforge.core.algebra.{ CDCOperations, DataAlgebra, DataContract, EffectSystem }
 import com.flowforge.core.impl.SimpleDataset
 import com.flowforge.core.instances.{ DataInstances, EffectInstances }
 import com.flowforge.core.types.DataSchema
 import com.flowforge.core.types.RefinedTypes.{ FieldName, SchemaVersion }
+import org.scalatest.funsuite.AnyFunSuite
+
 import java.time.Instant
 
 final case class Rec(id: Int, v: String)

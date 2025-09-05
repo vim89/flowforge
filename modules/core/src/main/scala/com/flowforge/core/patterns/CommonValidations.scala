@@ -82,9 +82,9 @@
 package com.flowforge.core.patterns
 
 import cats.syntax.all._
+import com.flowforge.core.patterns.ValidationTypes._
 import com.flowforge.core.types.RefinedTypes._
 import com.flowforge.core.types._
-import com.flowforge.core.patterns.ValidationTypes._
 
 /**
  * Pre-built validation patterns for common use cases.

@@ -1046,7 +1046,7 @@ object ConfigurationMigration {
       ): F[ValidatedNel[ConfigError, T]] =
         Sync[F].pure {
           // Simplified implementation - in real system would load from each source
-          val configs = sources.map { source =>
+          val configs = sources.map { _ =>
             // For now, return empty config for each source
             // TODO: Implement actual loading from different ConfigSource types
             val emptyConfig = Map.empty[String, String]

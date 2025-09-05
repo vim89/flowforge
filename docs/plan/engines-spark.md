@@ -32,3 +32,8 @@ val top50 = SparkDatasetOps.sortByColumn(ds2)(col("event_time"), ascending = fal
 - Transforms avoid in-memory SimpleDataset under Spark.
 - Delta reflection stub removed; canonical path documented.
 - Write path avoids JSON round-trip; observability present on IO ops.
+
+Status Update (2025-09-05)
+- DONE: Added latency metrics + info logs for read/write; CDC logging of counts.
+- PARTIAL: Replaced SimpleDataset fallback for `take`/`drop` when Spark-backed (use DataFrame `limit`/`exceptAll`), preserving `ProductionSparkDataset` consistency. `union` already uses `unionByName`.
+- TODO: Replace `sortBy`, `filter`, `groupBy`, `join` fallbacks where we can derive column expressions or typed encoders without heavy JSON round-trips.

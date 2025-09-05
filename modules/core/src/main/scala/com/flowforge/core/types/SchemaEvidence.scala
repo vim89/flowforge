@@ -1,7 +1,8 @@
 package com.flowforge.core.types
 
-import shapeless.{ HList, LabelledGeneric }
 import shapeless.ops.hlist.Align
+import shapeless.{ HList, LabelledGeneric }
+
 import scala.annotation.implicitNotFound
 
 /**

@@ -133,7 +133,7 @@ object ProductionSparkDataset {
   private def mapSparkTypeToFlowForgeType(
     sparkType: org.apache.spark.sql.types.DataType,
   ): DataType = {
-    import org.apache.spark.sql.types.{ DataType => SparkDataType, _ }
+    import org.apache.spark.sql.types.{ DataType => __, _ }
     sparkType match {
       case StringType    => DataType.String
       case IntegerType   => DataType.Integer

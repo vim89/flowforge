@@ -1,10 +1,9 @@
 package com.flowforge.framework
 
 import cats.data.Validated
-import cats.syntax.all._
+import com.flowforge.contracts.DataContract
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.types.{ BusinessError, FlowForgeError, PipelineBuilder2, PipelineStage }
-import com.flowforge.contracts.{ ContractViolation, DataContract }
 import shapeless.{ HList, LabelledGeneric }
 
 /**

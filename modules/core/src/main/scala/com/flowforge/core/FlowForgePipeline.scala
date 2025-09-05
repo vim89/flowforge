@@ -9,8 +9,8 @@ package com.flowforge.core
 
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.types._
 import com.flowforge.core.types.PipelineTypes._
+import com.flowforge.core.types._
 
 /**
  * Represents a complete FlowForge pipeline.
@@ -43,13 +43,13 @@ case class FlowForgePipeline[F[_]: EffectSystem](
   }
 
   /**
-   * Execute the pipeline and raise validation failures in the effect channel.
-   * This avoids throwing exceptions and preserves functional error handling.
+   * Execute the pipeline and raise validation failures in the effect channel. This avoids throwing exceptions
+   * and preserves functional error handling.
    */
   def execute[A](inputData: A): F[A] = {
     val F = EffectSystem[F]
     executeValidated(inputData).flatMap {
-      case cats.data.Validated.Valid(a)   => F.pure(a)
+      case cats.data.Validated.Valid(a) => F.pure(a)
       case cats.data.Validated.Invalid(e) =>
         F.raiseError(new RuntimeException(s"Validation failed: ${e.toList.map(_.message).mkString(", ")}"))
     }

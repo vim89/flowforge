@@ -69,7 +69,6 @@ import eu.timepit.refined.api.Refined
 import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.FiniteDuration
-import scala.util.{ Failure, Success, Try }
 
 // ===============================
 // CONFIGURATION ERRORS
@@ -668,24 +667,11 @@ object PipelineConfig {
     def getString(key: String): ValidatedNel[ConfigError, String] =
       configMap.get(key).toValidNel(ConfigError.MissingRequired(key))
 
-    def getOptionalString(key: String): ValidatedNel[ConfigError, Option[String]] =
-      configMap.get(key).validNel
+    
 
-    def getInt(key: String): ValidatedNel[ConfigError, Int] =
-      getString(key).andThen { value =>
-        Try(value.toInt) match {
-          case Success(int) => int.validNel
-          case Failure(_)   => ConfigError.InvalidFormat(key, value, "integer").invalidNel
-        }
-      }
+    
 
-    def getDuration(key: String): ValidatedNel[ConfigError, FiniteDuration] =
-      getString(key).andThen { value =>
-        Try(FiniteDuration(value.toLong, "seconds")) match {
-          case Success(dur) => dur.validNel
-          case Failure(_)   => ConfigError.InvalidFormat(key, value, "duration in seconds").invalidNel
-        }
-      }
+    
 
     // Parse all configuration components
     val nameValidation = getString("pipeline.name")

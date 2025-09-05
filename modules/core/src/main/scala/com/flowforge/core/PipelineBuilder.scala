@@ -10,8 +10,8 @@ package com.flowforge.core
 import cats.data._
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.types._
 import com.flowforge.core.types.PipelineTypes._
+import com.flowforge.core.types._
 
 /**
  * Fluent builder for constructing data pipelines.

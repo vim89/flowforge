@@ -4,10 +4,10 @@ import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.effect.Resource
 import cats.implicits._
 import com.flowforge.core.algebra._
+import com.flowforge.core.instances.DefaultCodecs._
 import com.flowforge.core.types.PipelineTypes.{ DataContract => PipelineDataContract, QualityCheck }
 import com.flowforge.core.types.RefinedTypes.{ FieldName, SchemaVersion }
 import com.flowforge.core.types._
-import com.flowforge.core.instances.DefaultCodecs._
 import org.apache.spark.sql.SparkSession
 
 import java.time.Instant
@@ -38,10 +38,9 @@ object SparkDataAlgebra {
   ): DataAlgebra[F] = new DataAlgebra[F] {
 
     import com.flowforge.core.impl.SimpleDataset
-    import org.apache.spark.sql.{ DataFrame, Dataset, Row }
-    import org.apache.spark.sql.functions._
 
     private val F     = EffectSystem[F]
+    private val log   = com.flowforge.core.logging.CoreLogger.noOp[F]
     private val spark = sparkSession
 
     // ========================================
@@ -81,7 +80,7 @@ object SparkDataAlgebra {
           )
       }
 
-      F.handleErrorWith(result) { error =>
+      F.handleErrorWith(F.timed(result)) { error =>
         F.raiseError(
           DataProcessingError.ProcessingFailure(
             stepName = "spark-read",
@@ -90,7 +89,25 @@ object SparkDataAlgebra {
             cause = Some(error),
           ),
         )
-      }
+      }.flatMap {
+          case (ds, dur) =>
+            val loc = source match {
+              case l: LocalDataSource            => l.location
+              case g: DataSource.GcsSource       => g.path
+              case s: DataSource.S3Source        => s.path
+              case bq: DataSource.BigQuerySource => bq.fullTableName
+              case j: DataSource.JdbcSource      => j.table.value
+              case _                             => source.getClass.getSimpleName
+            }
+            // Best-effort metrics/logging (errors swallowed)
+            F.delay {
+              try
+                com.flowforge.core.observability.PrometheusMetrics.Data.opLatencyMs
+                  .labels("read", "spark").observe(dur.toMillis.toDouble)
+              catch { case _: Throwable => () }
+            }.*>(log.info(s"spark.read ok format=${source.format} loc=${loc} ms=${dur.toMillis}"))
+              .as(ds)
+        }
     }
 
     override def readWithSchema[A: DataDecoder](
@@ -110,7 +127,7 @@ object SparkDataAlgebra {
       sink: DataSink,
       options: DataAlgebra.WriteOptions,
     ): F[DataAlgebra.WriteResult] =
-      F.blocking {
+      F.timed(F.blocking {
         // Prefer direct DataFrame writes when available to avoid JSON round-trip
         sink match {
           case s: LocalDataSink =>
@@ -163,7 +180,26 @@ object SparkDataAlgebra {
 
           case _ => throw new UnsupportedOperationException("Unsupported sink type for this path")
         }
-      }
+      }).flatMap {
+          case (wr, dur) =>
+            val loc = sink match {
+              case l: LocalDataSink    => l.location
+              case g: DataSink.GcsSink => g.path
+              case s: DataSink.S3Sink  => s.path
+              case _                   => sink.getClass.getSimpleName
+            }
+            F.delay {
+              try
+                com.flowforge.core.observability.PrometheusMetrics.Data.opLatencyMs
+                  .labels("write", "spark").observe(dur.toMillis.toDouble)
+              catch { case _: Throwable => () }
+            }.*>(
+              log.info(
+                s"spark.write ok format=${sink.format} loc=${loc} ms=${dur.toMillis} records=${wr.recordsWritten}",
+              ),
+            )
+              .as(wr)
+        }
 
     // ========================================
     // CDC (SCD1 + Delta Lake MERGE)
@@ -443,6 +479,9 @@ object SparkDataAlgebra {
               .observe((end - start).toDouble / 1e6)
           catch { case _: Throwable => () }
         }
+        _ <- log.info(
+          s"spark.cdc counts inserted=${counts._1} updated=${counts._2} deleted=${counts._3} unchanged=${counts._4}",
+        )
       } yield {
         val (ins, upd, del, same) = counts
         CDCOperations.CDCResult(
@@ -548,7 +587,7 @@ object SparkDataAlgebra {
       right: DataAlgebra.Dataset[A],
     ): DataAlgebra.Dataset[A] = (left, right) match {
       case (lp: ProductionSparkDataset[A], rp: ProductionSparkDataset[A]) =>
-        val unionDf = lp.sparkDataFrame.unionByName(rp.sparkDataFrame, allowMissingColumns = true)
+        val unionDf  = lp.sparkDataFrame.unionByName(rp.sparkDataFrame, allowMissingColumns = true)
         val combined = lp.data ++ rp.data
         lp.copy(
           data = combined,
@@ -563,13 +602,39 @@ object SparkDataAlgebra {
       dataset: DataAlgebra.Dataset[A],
       keyExtractor: A => K,
     ): DataAlgebra.Dataset[A] =
-      SimpleDataset(dataset.data.sortBy(keyExtractor), dataset.schema, dataset.metadata)
+      dataset match {
+        case pds: ProductionSparkDataset[A] =>
+          // Fallback to driver sort for now; keep Spark DF consistent with limit/except ops that may follow
+          val sortedData = pds.data.sortBy(keyExtractor)
+          pds.copy(data = sortedData, metadata = pds.metadata.copy(recordCount = sortedData.size.toLong))
+        case _ =>
+          SimpleDataset(dataset.data.sortBy(keyExtractor), dataset.schema, dataset.metadata)
+      }
 
-    override def take[A](dataset: DataAlgebra.Dataset[A], n: Int): DataAlgebra.Dataset[A] =
-      SimpleDataset(dataset.data.take(n), dataset.schema, dataset.metadata)
+    override def take[A](dataset: DataAlgebra.Dataset[A], n: Int): DataAlgebra.Dataset[A] = dataset match {
+      case pds: ProductionSparkDataset[A] if n >= 0 =>
+        val df2   = pds.sparkDataFrame.limit(n)
+        val data2 = pds.data.take(n)
+        pds.copy(
+          sparkDataFrame = df2,
+          data = data2,
+          metadata = pds.metadata.copy(recordCount = data2.size.toLong),
+        )
+      case _ => SimpleDataset(dataset.data.take(n), dataset.schema, dataset.metadata)
+    }
 
-    override def drop[A](dataset: DataAlgebra.Dataset[A], n: Int): DataAlgebra.Dataset[A] =
-      SimpleDataset(dataset.data.drop(n), dataset.schema, dataset.metadata)
+    override def drop[A](dataset: DataAlgebra.Dataset[A], n: Int): DataAlgebra.Dataset[A] = dataset match {
+      case pds: ProductionSparkDataset[A] if n > 0 =>
+        val prefix = pds.sparkDataFrame.limit(n)
+        val df2    = pds.sparkDataFrame.exceptAll(prefix)
+        val data2  = pds.data.drop(n)
+        pds.copy(
+          sparkDataFrame = df2,
+          data = data2,
+          metadata = pds.metadata.copy(recordCount = data2.size.toLong),
+        )
+      case _ => SimpleDataset(dataset.data.drop(n), dataset.schema, dataset.metadata)
+    }
 
     // ========================================
     // EFFECTFUL TRANSFORMATIONS (F[_] Required)
@@ -672,14 +737,15 @@ object SparkDataAlgebra {
       // Helper: evaluate function-based checks over in-memory data
       def evaluateFunctional: List[DataAlgebra.QualityCheckResult] = {
         val dataList = dataset.data
-        checks.toList.zipWithIndex.map { case (chk, idx) =>
-          val invalids = dataList.flatMap(a => chk(a).toEither.left.toOption.map(_.toList).getOrElse(Nil))
-          if (invalids.isEmpty)
-            DataAlgebra.QualityCheckResult(s"check_$idx", passed = true, message = "ok", score = 1.0)
-          else {
-            val msg = invalids.map(_.message).distinct.take(3).mkString("; ")
-            DataAlgebra.QualityCheckResult(s"check_$idx", passed = false, message = msg, score = 0.0)
-          }
+        checks.toList.zipWithIndex.map {
+          case (chk, idx) =>
+            val invalids = dataList.flatMap(a => chk(a).toEither.left.toOption.map(_.toList).getOrElse(Nil))
+            if (invalids.isEmpty)
+              DataAlgebra.QualityCheckResult(s"check_$idx", passed = true, message = "ok", score = 1.0)
+            else {
+              val msg = invalids.map(_.message).distinct.take(3).mkString("; ")
+              DataAlgebra.QualityCheckResult(s"check_$idx", passed = false, message = msg, score = 0.0)
+            }
         }
       }
 
@@ -694,15 +760,23 @@ object SparkDataAlgebra {
           // Try to invoke DeequAdapter via reflection if present on classpath
           val deequResultsF: F[Option[List[DataAlgebra.QualityCheckResult]]] = F.delay {
             try {
-              val cls     = Class.forName("com.flowforge.quality.deequ.DeequAdapter$")
-              val module  = cls.getField("MODULE$").get(null)
-              val m       = cls.getMethod("runChecks", classOf[org.apache.spark.sql.SparkSession], classOf[DataAlgebra.Dataset[_]], classOf[List[_]])
+              val cls    = Class.forName("com.flowforge.quality.deequ.DeequAdapter$")
+              val module = cls.getField("MODULE$").get(null)
+              val m = cls.getMethod(
+                "runChecks",
+                classOf[org.apache.spark.sql.SparkSession],
+                classOf[DataAlgebra.Dataset[_]],
+                classOf[List[_]],
+              )
               val quality = m
                 .invoke(module, spark, pds.asInstanceOf[DataAlgebra.Dataset[A]], constraints)
                 .asInstanceOf[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]]
               val qcr: List[DataAlgebra.QualityCheckResult] =
                 if (quality.violations.isEmpty)
-                  List(DataAlgebra.QualityCheckResult("deequ_auto", passed = true, message = "ok", score = quality.score))
+                  List(
+                    DataAlgebra
+                      .QualityCheckResult("deequ_auto", passed = true, message = "ok", score = quality.score),
+                  )
                 else
                   quality.violations.map { v =>
                     DataAlgebra.QualityCheckResult(v.rule, passed = false, message = v.message, score = 0.0)

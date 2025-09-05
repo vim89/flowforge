@@ -1,9 +1,9 @@
 package com.flowforge.connectors.filesystem
 
+import cats.effect.unsafe.implicits.global
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.types._
 import org.scalatest.funsuite.AnyFunSuite
-import cats.effect.unsafe.implicits.global
 
 class HDFSConnectorSpec extends AnyFunSuite {
 

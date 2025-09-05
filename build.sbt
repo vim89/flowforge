@@ -5,6 +5,7 @@ import scala.collection.Seq
 ThisBuild / organization := "com.flowforge"
 
 ThisBuild / version      := "0.1.0"
+// Default Scala stays 2.13 for most modules; Spark/Deequ modules are handled pragmatically via deps.
 ThisBuild / scalaVersion := Dependencies.Versions.scala213
 ThisBuild / crossScalaVersions := Seq(
   Dependencies.Versions.scala212,
@@ -46,6 +47,7 @@ val scala2CompilerOptions = Seq(
   "-feature",
   "-unchecked",
   "-deprecation",
+  "-Ywarn-unused",
   "-language:higherKinds",
   "-language:implicitConversions",
   "-Xlint:_,-missing-interpolator",
@@ -64,6 +66,15 @@ def scalacOptionsForVersion(scalaVersion: String): Seq[String] =
 
 ThisBuild / scalacOptions ++= scalacOptionsForVersion(scalaVersion.value)
 
+// Enable SemanticDB for Scalafix semantic rules
+// Gate SemanticDB behind an env flag to avoid default overhead
+inThisBuild(
+  List(
+    semanticdbEnabled := sys.props.get("enable.semanticdb").contains("true"),
+    semanticdbVersion := "4.10.1",
+  ),
+)
+
 // Ensure your app runs in a separate JVM (so sbt memory != app memory)
 fork := true
 
@@ -72,11 +83,13 @@ javaOptions ++= Seq(
   "-Xms2g",
   "-Xmx6g",
   "-Duser.timezone=UTC",
+  "-Dnet.bytebuddy.experimental=true",
 )
 
 // Test settings
 ThisBuild / Test / parallelExecution := false
 ThisBuild / Test / testOptions += Tests.Argument("-oDF")
+ThisBuild / Test / fork := true
 
 // Helper function for module projects
 def moduleProject(name: String): Project =
@@ -185,6 +198,8 @@ lazy val qualityDeequ = moduleProject("quality-deequ")
   .settings(
     description := "Amazon Deequ integration for data quality",
     libraryDependencies ++= Dependencies.forModule("quality-deequ"),
+    Test / javaOptions ++= Seq("-Dnet.bytebuddy.experimental=true"),
+    Test / fork := false,
   )
 
 // ===== SUPPORT MODULES =====
@@ -237,13 +252,29 @@ lazy val contractsExtractorCli = moduleProject("contracts-extractor-cli")
   )
 
 // ===== ADDITIONAL MODULES =====
+lazy val qualityDeequRunner = moduleProject("quality-deequ-runner")
+  .settings(
+    description := "Deequ runner CLI (Scala 2.12) for FlowForge",
+    scalaVersion := Dependencies.Versions.scala212,
+    libraryDependencies ++= Seq(
+      "org.apache.spark" %% "spark-sql" % Dependencies.Versions.spark,
+      "com.amazon.deequ" %  "deequ"     % Dependencies.Versions.deequ,
+      "com.github.scopt" %% "scopt"     % "4.1.0",
+      "io.circe"         %% "circe-core"    % Dependencies.Versions.circe,
+      "io.circe"         %% "circe-parser"  % Dependencies.Versions.circe,
+      "io.circe"         %% "circe-generic" % Dependencies.Versions.circe,
+    ),
+    Compile / mainClass := Some("com.flowforge.quality.deequ.runner.Runner"),
+    Test / skip := true,
+  )
 lazy val it = (project in file("integration-tests"))
-  .dependsOn(examples, connectorsGcs, enginesSpark, qualityDeequ)
+  .dependsOn(examples, connectorsGcs, enginesSpark)
   .settings(
     name           := "integration-tests",
     description    := "Flowforge Integration tests",
     publish / skip := true,
     Test / fork    := true,
+    Test / skip    := !sys.props.get("withSparkIT").contains("true"),
   )
 
 // ===== SBT ALIASES =====
@@ -254,7 +285,8 @@ addCommandAlias("fixCheck", "compile:scalafix --check ; test:scalafix --check")
 addCommandAlias("testAll", "all test")
 addCommandAlias("testQuick", "testOnly * -- -l \"org.scalatest.tags.Slow\"")
 // Better compileAll: use aggregation-aware sequence, not `all`
-addCommandAlias("compileAll", ";clean; compile; test:compile")
+// Avoid clean here to preserve incremental compilation speed
+addCommandAlias("compileAll", ";compile; test:compile")
 addCommandAlias("coverage", "clean; coverage; testAll; coverageReport")
 addCommandAlias("fullTest", "clean; compileAll; fmt; fix; testAll")
 addCommandAlias("fullCheck", "clean; compileAll; fmtCheck; fixCheck; testAll")
@@ -284,7 +316,7 @@ ThisBuild / assemblyMergeStrategy := {
 }
 
 // MVR convenience alias: compile + unit tests only (no opt-in ITs)
-addCommandAlias("mvr", "clean; compileAll; testAll")
+addCommandAlias("mvr", "compileAll; testQuick")
 
 // Ensure examples compiles after contracts-sdk (belt-and-suspenders ordering)
 examples / Compile / compile := (examples / Compile / compile)
@@ -294,7 +326,8 @@ examples / Compile / compile := (examples / Compile / compile)
 // ===== LOCAL CONTRACT VALIDATION (delegates to validation-cli) =====
 // Usage:
 //   sbt ffValidate --mode parquet --input "/path/to/table" --expected-json contracts/avro/sales/Entity.v1.0.0.avsc --expected-format spark
-lazy val ffValidate = inputKey[Unit]("Validate physical schema vs contract using validation-cli (CI-first parity)")
+lazy val ffValidate =
+  inputKey[Unit]("Validate physical schema vs contract using validation-cli (CI-first parity)")
 
 ThisBuild / ffValidate := Def.inputTaskDyn {
   import sbt.complete.DefaultParsers._

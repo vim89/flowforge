@@ -1,17 +1,16 @@
 package com.flowforge.core.impl
 
 import cats.data.{ NonEmptyList, Validated, ValidatedNel }
-import cats.implicits._
 import cats.effect.Sync
-import com.flowforge.core.algebra._
+import cats.implicits._
 import com.flowforge.core.algebra.DataAlgebra._
+import com.flowforge.core.algebra._
 import com.flowforge.core.types.PipelineTypes.{ DataContract => PDataContract, QualityCheck }
 import com.flowforge.core.types.RefinedTypes.FieldName
 import com.flowforge.core.types._
 
 import java.nio.file.Paths
 import java.time.Instant
-import fs2.Stream
 
 /**
  * PRODUCTION-READY In-Memory Data Algebra Implementation

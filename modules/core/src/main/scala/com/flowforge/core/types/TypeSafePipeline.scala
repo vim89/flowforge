@@ -115,7 +115,7 @@ object TypeSafeStage {
     override val stageId: String = UUID.randomUUID().toString,
     override val stageName: String = "sink")
       extends TypeSafeStage[F, A, Unit] {
-    def execute: Kleisli[F, A, Unit] = Kleisli { data =>
+    def execute: Kleisli[F, A, Unit] = Kleisli { _ =>
       // Mock implementation for basic functionality - replace with DataAlgebra integration
       EffectSystem[F].pure(())
     }

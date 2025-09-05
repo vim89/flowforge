@@ -609,7 +609,7 @@ class GCSConnector[F[_]: EffectSystem](
 
         val blobId   = BlobId.of(bucket, key)
         val blobInfo = BlobInfo.newBuilder(blobId).build()
-        val blob     = storage.create(blobInfo, data)
+        storage.create(blobInfo, data)
 
         FileSystemResult.success(
           WriteMetadata(
@@ -1124,7 +1124,7 @@ object FileSystemOps {
   def batchRead[F[_]: EffectSystem](
     sources: List[DataSource],
   ): F[List[FileSystemResult[Array[Byte]]]] = {
-    val effectSystem = EffectSystem[F]
+    EffectSystem[F]
     val connector    = FileSystemConnector.local[F]
     sources.traverse(connector.read)
   }

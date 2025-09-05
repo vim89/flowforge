@@ -59,7 +59,7 @@ object SchemaUtils {
     case _: java.time.Instant => DataType.Timestamp
     case l: List[_]           => DataType.Array(l.headOption.map(scalaToType).getOrElse(DataType.String))
     case a: Array[_]          => DataType.Array(a.headOption.map(scalaToType).getOrElse(DataType.String))
-    case m: Map[_, _]         => DataType.Map(DataType.String, DataType.String)
+    case _: Map[_, _]         => DataType.Map(DataType.String, DataType.String)
     case p: Product =>
       val names =
         try p.productElementNames.toList

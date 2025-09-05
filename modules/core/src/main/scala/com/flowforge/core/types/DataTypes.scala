@@ -66,11 +66,11 @@ package com.flowforge.core.types
 import cats.Show
 import cats.syntax.show._
 import com.flowforge.core.types.DataSink.WriteMode
-import shapeless.HList
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.collection.NonEmpty
 import eu.timepit.refined.numeric.{ NonNegative, Positive }
 import eu.timepit.refined.string.MatchesRegex
+import shapeless.HList
 
 import java.time.Instant
 
@@ -904,6 +904,19 @@ object QualityConstraint {
       extends QualityConstraint {
     val name        = s"pattern_${field.show}"
     val description = s"Field ${field.show} must match pattern: $regex"
+  }
+
+  /**
+   * Compliance constraint using a SQL-like boolean expression evaluated on the dataset.
+   * Example: predicateSql = "amount > 0 AND id IS NOT NULL"
+   */
+  case class Compliance(
+    ruleName: String,
+    predicateSql: String,
+    severity: QualitySeverity = QualitySeverity.Warning,
+  ) extends QualityConstraint {
+    val name        = s"compliance_${ruleName}"
+    val description = s"Rows must satisfy: $predicateSql"
   }
 }
 
