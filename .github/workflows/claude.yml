@@ -1,75 +1,50 @@
-name: Claude code review (Reusable)
+name: Claude Code
 
 on:
-  workflow_dispatch:
-    inputs:
-      review_instructions:
-        description: 'Custom instructions for Claude code review'
-        required: false
-        default: |
-          - Convention over Configuration with Functional Purity - This framework/project will be a true integrated system for Data Engineering & Data pipelines - which collectively works with other libraries, but pieces built specifically for each other to Data Engineering that work as one cohesive whole. Framework also must be unified abstraction layer. Framework makes best architectural decisions as well. Wherever applicable Data Engineers interact with APIs & exposed patterns/ layers not the underlying logic which libraries gives us to use.
-          - Best scala functional programming design patterns. Best practices of SOLID patterns, creational, structural & behavioral design patterns. Best scala functional programming design patterns - all best possible patterns that suits us & solve problems may be Kleisl etc.
-          - We are writing data pipelines. So say goodbye to config/metadata chaos! Let Scala’s type & effect systems co-author them with you. We want to show how we built a contract-first, pluggable platform using Giter8, Refined, Cats Effect, ZIO, Kyo & Caprese ( Kyo & Caprese experimental only) - delivering compile-time guarantees and fiber-safe execution.
-          - What if your data platform stopped relying on configuration-driven / metadata-driven and postmortems - and instead enforced correctness, traceability, and effect boundaries at compile time?
-          - We want to build a production-ready data pipeline archetype system in Scala. We want to use Giter8 templates to scaffold pipelines that are contract-driven, type-safe, effectful, and pluggable - all enforced through the Scala type system and effect libraries.
-          - 📦 Giter8 templates bootstrap consistent, compile-time safe projects • 🛡️ Refined types validate configuration before runtime • ✅ Cats ValidatedNel catches multi-rule violations in DQ checks • 🔌 Type classes enable pluggable validation and ingestion • ⚙️ ZIO Layers and Cats Effect offer fiber-safe orchestration • 🚀 Trait-based runners switch between Spark, Flink, and Kafka • 📊 Data Quality and custom rules enforce data contract quality at runtime • 🧠 Experimental: Kyo - tracks multiple effects via intersection types and Caprese - capture-checking tracks capabilities
-          - Use potential & power of Scala ecosystem but not over engineer it.
-          - All possible USPs of Scala - Monads, Pattern Matching, Generics, Variance, Type classes, Type class patterns, Self Types, Structural types, F-Bounded Polymorphism, Higher-Kinded Types, Reflections, Lazy Evals, Concurrency with Futures, Implicits. All we need to make best use of yet keeping simplicity by not over engineering it. Apply only where they fit perfectly to solve that bit of problem or make other things relevant & elegant.
-          - For project specific types create plenty of type aliases. Create type class patterns etc.
-          - Use Zio & Cats-Effect separately because we are providing an option of Effect system. Use cats core as well - Semigroups, Monoids, Monads, Functors, Applicatives, Creative Type class patterns etc.
-          - We need to be creative, innovative & something like Wow such a thing can be achieved who'd have never thought about such things in Data Engineering Data Pipelines.
-          - No Over Engineering - Keep simplicity, scalable, understandable, adaptable yet creative - We need to be creative, innovative & something like Wow such a thing can be achieved who'd have never thought about such things in Data Engineering Data Pipelines.
-          - Code quality and best practices
-          - Potential bugs or issues
-          - Performance considerations
-          - Security concerns
-          - Test coverage
-          - Documentation clarity
-          - Overall maintainability
-          - Give revised code of each & every improvement from above points
-          - Give revised code of all suggest improvements
-          - Give revised improvements in project structure as well
-
-concurrency:
-  group: ${{ github.repository }}-claude-review-${{ github.event.pull_request.number || github.event.issue.number }}
-  cancel-in-progress: false
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
 
 jobs:
-  claude-review:
+  claude:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: read
       issues: read
       id-token: write
-
+      actions: read # Required for Claude to read CI results on PRs
     steps:
-      - name: Checkout PR
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.event.issue.pull_request.head.sha }}
+          fetch-depth: 1
 
-      # ✅ Step to check if secret exists
-      - name: Check for Claude Token
-        id: check_token
-        run: |
-          if [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
-            echo "no_token=true" >> $GITHUB_OUTPUT
-          else
-            echo "no_token=false" >> $GITHUB_OUTPUT
-          fi
-
-      # ✅ Only run Claude review if token is present
-      - name: Run Claude code improvements
-        if: steps.check_token.outputs.no_token == 'false'
-        uses: anthropics/claude-code-action@beta
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
         with:
-          mode: agent
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          direct_prompt: ${{ github.event.inputs.review_instructions }}
+          
+          # This is an optional setting that allows Claude to read CI results on PRs
+          additional_permissions: |
+            actions: read
 
-      # ✅ Friendly log if token is missing
-      - name: Skip Claude review (no token configured)
-        if: steps.check_token.outputs.no_token == 'true'
-        run: echo "⚠️ Skipping Claude code review — CLAUDE_CODE_OAUTH_TOKEN not configured."
+          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
+          # prompt: 'Update the pull request description to include a summary of changes.'
+
+          # Optional: Add claude_args to customize behavior and configuration
+          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
+          # or https://docs.anthropic.com/en/docs/claude-code/sdk#command-line for available options
+          # claude_args: '--model claude-opus-4-1-20250805 --allowed-tools Bash(gh pr:*)'
+
