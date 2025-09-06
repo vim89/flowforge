@@ -1,17 +1,18 @@
 /**
  * FlowForge Core Module - Pipeline Builder
  *
- * File: modules/core/src/main/scala/com/flowforge/core/PipelineBuilder.scala Package: com.flowforge.core
+ * File: modules/core/src/main/scala/com/flowforge/core/LegacyPipelineBuilder.scala Package: com.flowforge.core
  *
  * Type-safe, fluent builder for constructing FlowForge data pipelines.
  */
-package com.flowforge.core
+package com.flowforge.core.internal
 
 import cats.data._
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.types.PipelineTypes._
 import com.flowforge.core.types._
+import com.flowforge.core.{ConfigValidation, FlowForgePipeline}
 
 /**
  * Fluent builder for constructing data pipelines.

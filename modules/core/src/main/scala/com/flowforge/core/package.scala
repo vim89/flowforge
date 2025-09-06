@@ -71,12 +71,13 @@ import cats.data._
 import cats.effect.Resource
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.types.RefinedTypes.{ BucketName, TableName }
+import com.flowforge.core.internal
+import com.flowforge.core.types.RefinedTypes.{BucketName, TableName}
 import com.flowforge.core.types._
 
-import java.time.{ Duration, Instant }
+import java.time.{Duration, Instant}
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 /**
@@ -159,8 +160,8 @@ package object core {
      * @return
      *   Pipeline builder for fluent construction
      */
-    def builder[F[_]: EffectSystem]: com.flowforge.core.PipelineBuilder[F] =
-      com.flowforge.core.PipelineBuilder.empty[F]
+    def builder[F[_]: EffectSystem]: internal.PipelineBuilder[F] =
+      internal.PipelineBuilder.empty[F]
 
     /**
      * Create a simple transformation pipeline.
@@ -582,6 +583,6 @@ package object core {
   // PIPELINE BUILDER
   // ===============================
 
-  // Moved PipelineBuilder and FlowForgePipeline to separate files to avoid
-  // package object anti-pattern - see PipelineBuilder.scala and FlowForgePipeline.scala
+  // Moved LegacyPipelineBuilder and FlowForgePipeline to separate files to avoid
+  // package object anti-pattern - see LegacyPipelineBuilder.scala and FlowForgePipeline.scala
 }

@@ -8,19 +8,19 @@ import eu.timepit.refined.api.Refined
 /**
  * Fluent builder for pipeline construction (legacy). Prefer PipelineBuilder2 for compile-time type safety.
  */
-case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
+case class LegacyPipelineBuilder[F[_]: EffectSystem, A, B] private(
   name: String,
   description: String = "",
   stages: List[PipelineStage[F, _, _]] = List.empty,
   config: Option[PipelineConfig] = None) {
 
-  def withDescription(desc: String): PipelineBuilder[F, A, B] =
+  def withDescription(desc: String): LegacyPipelineBuilder[F, A, B] =
     copy(description = desc)
 
-  def withConfig(pipelineConfig: PipelineConfig): PipelineBuilder[F, A, B] =
+  def withConfig(pipelineConfig: PipelineConfig): LegacyPipelineBuilder[F, A, B] =
     copy(config = Some(pipelineConfig))
 
-  def addSource[C](source: DataSource, reader: DataSource => F[C]): PipelineBuilder[F, Unit, C] = {
+  def addSource[C](source: DataSource, reader: DataSource => F[C]): LegacyPipelineBuilder[F, Unit, C] = {
     val stage = PipelineStage.Source(
       name = s"source-${stages.size}",
       description = s"Read from ${source.format}",
@@ -28,7 +28,7 @@ case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
       execute = Kleisli(_ => reader(source)),
     )
     // FIXED: Create new builder with proper type parameters
-    PipelineBuilder[F, Unit, C](
+    LegacyPipelineBuilder[F, Unit, C](
       name = name,
       description = description,
       stages = stages :+ stage.asInstanceOf[PipelineStage[F, _, _]],
@@ -36,14 +36,14 @@ case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
     )
   }
 
-  def addTransform[C](transform: B => F[C]): PipelineBuilder[F, A, C] = {
+  def addTransform[C](transform: B => F[C]): LegacyPipelineBuilder[F, A, C] = {
     val stage = PipelineStage.Transform(
       name = s"transform-${stages.size}",
       description = "Data transformation",
       execute = Kleisli(transform),
     )
     // FIXED: Create new builder with proper type parameters
-    PipelineBuilder[F, A, C](
+    LegacyPipelineBuilder[F, A, C](
       name = name,
       description = description,
       stages = stages :+ stage.asInstanceOf[PipelineStage[F, _, _]],
@@ -51,7 +51,7 @@ case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
     )
   }
 
-  def addFilter(predicate: B => Boolean): PipelineBuilder[F, A, B] = {
+  def addFilter(predicate: B => Boolean): LegacyPipelineBuilder[F, A, B] = {
     val F = implicitly[EffectSystem[F]]
     val stage = PipelineStage.Filter(
       name = s"filter-${stages.size}",
@@ -66,7 +66,7 @@ case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
     copy(stages = stages :+ stage)
   }
 
-  def addSink(sink: DataSink, writer: (B, DataSink) => F[Unit]): PipelineBuilder[F, A, Unit] = {
+  def addSink(sink: DataSink, writer: (B, DataSink) => F[Unit]): LegacyPipelineBuilder[F, A, Unit] = {
     val stage = PipelineStage.Sink(
       name = s"sink-${stages.size}",
       description = s"Write to ${sink.format}",
@@ -74,7 +74,7 @@ case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
       execute = Kleisli((b: B) => writer(b, sink)),
     )
     // FIXED: Create new builder with proper type parameters
-    PipelineBuilder[F, A, Unit](
+    LegacyPipelineBuilder[F, A, Unit](
       name = name,
       description = description,
       stages = stages :+ stage.asInstanceOf[PipelineStage[F, _, _]],
@@ -132,8 +132,8 @@ case class PipelineBuilder[F[_]: EffectSystem, A, B] private (
     }
 }
 
-object PipelineBuilder {
+object LegacyPipelineBuilder {
 
-  def apply[F[_]: EffectSystem](name: String): PipelineBuilder[F, Unit, Unit] =
-    PipelineBuilder[F, Unit, Unit](name)
+  def apply[F[_]: EffectSystem](name: String): LegacyPipelineBuilder[F, Unit, Unit] =
+    LegacyPipelineBuilder[F, Unit, Unit](name)
 }

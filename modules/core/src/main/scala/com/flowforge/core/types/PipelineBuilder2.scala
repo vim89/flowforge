@@ -8,7 +8,7 @@ import shapeless.{ HList, LabelledGeneric }
 
 /**
  * A small, non-invasive typed builder prototype that enforces stage chaining at compile-time. It lives
- * alongside the legacy PipelineBuilder so you can migrate consumers incrementally.
+ * alongside the legacy LegacyPipelineBuilder so you can migrate consumers incrementally.
  *
  * Usage example (compile-time safety): val builder = PipelineBuilder2[F].apply("typed")
  * .addSource[Int](mySource, reader) .addTransform[String](i => F.pure(i.toString)) .addSink(mySink, (s, sink) =>
