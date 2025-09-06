@@ -67,34 +67,34 @@ package object connectors {
 
   // File system specific error types
   object FileSystemError {
-    def FileNotFound(path: String): ConnectorError =
+    def fileNotFound(path: String): ConnectorError =
       ConnectorError(s"File not found: $path", code = "FILE_NOT_FOUND")
 
-    def DirectoryNotFound(path: String): ConnectorError =
+    def directoryNotFound(path: String): ConnectorError =
       ConnectorError(s"Directory not found: $path", code = "DIRECTORY_NOT_FOUND")
 
-    def AccessDenied(path: String): ConnectorError =
+    def accessDenied(path: String): ConnectorError =
       ConnectorError(s"Access denied: $path", code = "ACCESS_DENIED")
 
-    def IOError(path: String, cause: Throwable): ConnectorError =
+    def ioError(path: String, cause: Throwable): ConnectorError =
       ConnectorError(s"IO error for path: $path", Some(cause), "IO_ERROR")
 
-    def ReadError(path: String, message: String): ConnectorError =
+    def readError(path: String, message: String): ConnectorError =
       ConnectorError(s"Read error for path $path: $message", code = "READ_ERROR")
 
-    def WriteError(path: String, message: String): ConnectorError =
+    def writeError(path: String, message: String): ConnectorError =
       ConnectorError(s"Write error for path $path: $message", code = "WRITE_ERROR")
 
-    def ListError(path: String, message: String): ConnectorError =
+    def listError(path: String, message: String): ConnectorError =
       ConnectorError(s"List error for path $path: $message", code = "LIST_ERROR")
 
-    def CreateDirectoryError(path: String, message: String): ConnectorError =
+    def createDirectoryError(path: String, message: String): ConnectorError =
       ConnectorError(s"Create directory error for path $path: $message", code = "CREATE_DIR_ERROR")
 
-    def DeleteError(path: String, message: String): ConnectorError =
+    def deleteError(path: String, message: String): ConnectorError =
       ConnectorError(s"Delete error for path $path: $message", code = "DELETE_ERROR")
 
-    def MetadataError(path: String, message: String): ConnectorError =
+    def metadataError(path: String, message: String): ConnectorError =
       ConnectorError(s"Metadata error for path $path: $message", code = "METADATA_ERROR")
 
     def NotImplemented(operation: String): ConnectorError =

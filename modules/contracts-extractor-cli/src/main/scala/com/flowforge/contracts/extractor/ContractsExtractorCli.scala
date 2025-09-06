@@ -90,12 +90,12 @@ object ContractsExtractorCli extends IOApp {
   private def sparkResource(master: Option[String]): Resource[IO, SparkSession] =
     Resource.make {
       EffectSystem[IO].blocking {
-        val b = SparkSession
+        val builder = SparkSession
           .builder()
           .appName("ff-contract-extractor")
           .config("spark.ui.enabled", "false")
-        master.foreach(b.master)
-        b.getOrCreate()
+        master.foreach(builder.master)
+        builder.getOrCreate()
       }
     }(s => EffectSystem[IO].blocking(s.stop()).void)
 

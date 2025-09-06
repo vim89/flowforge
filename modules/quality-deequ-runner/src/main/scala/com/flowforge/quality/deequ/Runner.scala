@@ -67,23 +67,23 @@ object Runner {
     val arr     = parsed.hcursor.downField("constraints").as[List[io.circe.Json]].getOrElse(Nil)
 
     val check0 = new Check(CheckLevel.Error, "flowforge-deequ-runner")
-    val check = arr.foldLeft(check0) { (acc, j) =>
-      val c   = j.hcursor
-      val tpe = c.get[String]("type").getOrElse("")
+    val check = arr.foldLeft(check0) { (acc, jsonConstraint) =>
+      val cursor = jsonConstraint.hcursor
+      val tpe = cursor.get[String]("type").getOrElse("")
       tpe.toLowerCase match {
         case "not_null" =>
-          acc.isComplete(c.get[String]("field").getOrElse(throw new IllegalArgumentException("field missing")))
+          acc.isComplete(cursor.get[String]("field").getOrElse(throw new IllegalArgumentException("field missing")))
         case "unique" =>
-          acc.isUnique(c.get[String]("field").getOrElse(throw new IllegalArgumentException("field missing")))
+          acc.isUnique(cursor.get[String]("field").getOrElse(throw new IllegalArgumentException("field missing")))
         case "pattern" =>
-          val fld = c.get[String]("field").getOrElse(throw new IllegalArgumentException("field missing"))
-          val rgx = c.get[String]("regex").getOrElse(throw new IllegalArgumentException("regex missing"))
+          val fld = cursor.get[String]("field").getOrElse(throw new IllegalArgumentException("field missing"))
+          val rgx = cursor.get[String]("regex").getOrElse(throw new IllegalArgumentException("regex missing"))
           // deequ has hasPattern; minFraction optional is ignored for now
           acc.hasPattern(fld, rgx.r)
         case "range" =>
-          val fld = c.get[String]("field").getOrElse(throw new IllegalArgumentException("field missing"))
-          val min = c.get[Double]("min").toOption
-          val max = c.get[Double]("max").toOption
+          val fld = cursor.get[String]("field").getOrElse(throw new IllegalArgumentException("field missing"))
+          val min = cursor.get[Double]("min").toOption
+          val max = cursor.get[Double]("max").toOption
           (min, max) match {
             case (Some(a), Some(b)) => acc.isContainedIn(fld, Array(a.toString, b.toString))
             case (Some(a), None)    => acc.isGreaterThan(fld, a.toString)
@@ -91,8 +91,8 @@ object Runner {
             case _                  => acc
           }
         case "compliance" =>
-          val rule = c.get[String]("ruleName").getOrElse("rule")
-          val sql  = c.get[String]("predicateSql").getOrElse(throw new IllegalArgumentException("predicateSql missing"))
+          val rule = cursor.get[String]("ruleName").getOrElse("rule")
+          val sql = cursor.get[String]("predicateSql").getOrElse(throw new IllegalArgumentException("predicateSql missing"))
           acc.satisfies(sql, rule)
         case _ => acc
       }

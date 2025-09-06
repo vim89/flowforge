@@ -111,9 +111,9 @@ object ConfigurationManagement {
         import scala.jdk.CollectionConverters._
         val entries = cfg.entrySet().asScala.toList
         val flat: Map[String, String] = entries.flatMap { e =>
-          val k = e.getKey
+          val key = e.getKey
           // Try to read everything as string; downstream decoders parse as needed
-          scala.util.Try(cfg.getString(k)).toOption.map(v => k -> v)
+          scala.util.Try(cfg.getString(key)).toOption.map(v => key -> v)
         }.toMap
         val coreDecoder = ConfigurationAlgebra.flowForgeConfigDecoder
         coreDecoder

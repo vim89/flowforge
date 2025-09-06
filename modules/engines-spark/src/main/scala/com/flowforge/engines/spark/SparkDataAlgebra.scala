@@ -2,39 +2,38 @@ package com.flowforge.engines.spark
 
 /**
  * ARCHITECTURAL DECISION: Reflection-based quality system integration
- * 
- * This casting is architecturally necessary for the modular quality system design.
- * FlowForge loads quality adapters (like Deequ) via reflection to avoid hard dependencies.
- * The method signature guarantees type safety, making this cast architecturally sound.
- * 
+ *
+ * This casting is architecturally necessary for the modular quality system design. FlowForge loads quality
+ * adapters (like Deequ) via reflection to avoid hard dependencies. The method signature guarantees type
+ * safety, making this cast architecturally sound.
+ *
  * This is NOT a design flaw - it's how plugin-based quality systems work.
  */
 private object ReflectionCasting {
   import com.flowforge.core.algebra.DataAlgebra
-  
-  def castQualityResult[A](result: Any): DataAlgebra.QualityResult[DataAlgebra.Dataset[A]] = {
+
+  def castQualityResult[A](result: Any): DataAlgebra.QualityResult[DataAlgebra.Dataset[A]] =
     result match {
       case qr: DataAlgebra.QualityResult[_] =>
         // ARCHITECTURAL: Reflection guarantees type safety here - required for modular quality system
         qr.asInstanceOf[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]]
       case _ => throw new RuntimeException(s"Unexpected result type: ${result.getClass}")
     }
-  }
 }
 
-import cats.data.{NonEmptyList, ValidatedNel}
+import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.effect.Resource
 import cats.implicits._
-import com.flowforge.core.algebra.{DataAlgebra, _}
+import com.flowforge.core.algebra.{ DataAlgebra, _ }
 import com.flowforge.core.instances.DefaultCodecs._
-import com.flowforge.core.types.PipelineTypes.{QualityCheck, DataContract => PipelineDataContract}
-import com.flowforge.core.types.RefinedTypes.{FieldName, SchemaVersion}
+import com.flowforge.core.types.PipelineTypes.{ DataContract => PipelineDataContract, QualityCheck }
+import com.flowforge.core.types.RefinedTypes.{ FieldName, SchemaVersion }
 import com.flowforge.core.types._
 import org.apache.spark.sql.SparkSession
 
 import java.time.Instant
 import java.util.UUID
-import scala.concurrent.duration.{DurationLong, FiniteDuration, NANOSECONDS}
+import scala.concurrent.duration.{ DurationLong, FiniteDuration, NANOSECONDS }
 
 /**
  * PRODUCTION-READY Spark Data Algebra Implementation
@@ -809,14 +808,14 @@ object SparkDataAlgebra {
               try {
                 val cls    = Class.forName("com.flowforge.quality.deequ.DeequAdapter$")
                 val module = cls.getField("MODULE$").get(None.orNull)
-                val m = cls.getMethod(
+                val method = cls.getMethod(
                   "runChecks",
                   classOf[org.apache.spark.sql.SparkSession],
                   classOf[DataAlgebra.Dataset[_]],
                   classOf[List[_]],
                 )
-                val qualityResult = m.invoke(module, spark, pds, constraints)
-                val quality = ReflectionCasting.castQualityResult[A](qualityResult)
+                val qualityResult = method.invoke(module, spark, pds, constraints)
+                val quality       = ReflectionCasting.castQualityResult[A](qualityResult)
                 val qcr: List[DataAlgebra.QualityCheckResult] =
                   if (quality.violations.isEmpty)
                     List(

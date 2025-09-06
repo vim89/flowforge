@@ -79,10 +79,10 @@ object SchemaValidateCli extends IOApp {
   private def sparkResource(master: Option[String]): Resource[IO, SparkSession] =
     Resource.make {
       EffectSystem[IO].blocking {
-        val b =
+        val builder =
           SparkSession.builder().appName("ff-validate-schema").config("spark.ui.enabled", "false")
-        master.foreach(b.master)
-        b.getOrCreate()
+        master.foreach(builder.master)
+        builder.getOrCreate()
       }
     }(s => EffectSystem[IO].blocking(s.stop()).void)
 
@@ -138,16 +138,16 @@ object SchemaValidateCli extends IOApp {
       case ExpectedFormat.Spark =>
         parse(json).toOption.flatMap(_.hcursor.downField("fields").as[List[Json]].toOption) match {
           case Some(arr) =>
-            val fields = arr.flatMap { j =>
-              val c = j.hcursor
+            val fields = arr.flatMap { jsonField =>
+              val cursor = jsonField.hcursor
               for {
-                name <- c.get[String]("name").toOption
-                tpe <- c
+                name <- cursor.get[String]("name").toOption
+                tpe <- cursor
                   .downField("type")
                   .get[String]("type")
-                  .orElse(c.get[String]("type"))
+                  .orElse(cursor.get[String]("type"))
                   .toOption
-                nul <- c.get[Boolean]("nullable").toOption
+                nul <- cursor.get[Boolean]("nullable").toOption
               } yield Field(name, tpe, nul)
             }
             Model(fields)
@@ -171,13 +171,14 @@ object SchemaValidateCli extends IOApp {
       val missing = expMap.keySet.diff(actMap.keySet).toList.map(Diff.MissingField)
       val extra   = actMap.keySet.diff(expMap.keySet).toList.map(Diff.ExtraField)
       val common = expMap.keySet.intersect(actMap.keySet).toList.flatMap { n =>
-        val e = expMap(n); val a = actMap(n)
+        val expected = expMap(n); val actual = actMap(n)
         val d1 =
-          if (normalizeTypeName(e.tpe) != normalizeTypeName(a.tpe))
-            Some(Diff.TypeMismatch(n, e.tpe, a.tpe))
+          if (normalizeTypeName(expected.tpe) != normalizeTypeName(actual.tpe))
+            Some(Diff.TypeMismatch(n, expected.tpe, actual.tpe))
           else None
         val d2 =
-          if (e.nullable != a.nullable) Some(Diff.NullabilityMismatch(n, e.nullable, a.nullable))
+          if (expected.nullable != actual.nullable)
+            Some(Diff.NullabilityMismatch(n, expected.nullable, actual.nullable))
           else None
         List(d1, d2).flatten
       }

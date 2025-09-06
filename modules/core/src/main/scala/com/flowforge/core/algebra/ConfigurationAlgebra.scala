@@ -929,7 +929,8 @@ object ConfigurationMigration {
    * @return
    *   CCM compatibility layer instance
    */
-  def fromCCMEndpoint[F[_]: Sync: Temporal](@annotation.unused ccmEndpoint: String): CCMCompatibilityLayer[F] =
+  def fromCCMEndpoint[F[_]: Sync: Temporal](@annotation.unused ccmEndpoint: String)
+    : CCMCompatibilityLayer[F] =
     new CCMCompatibilityLayer[F] {
 
       def getCcmConfig(configName: String): F[Option[Map[String, String]]] =

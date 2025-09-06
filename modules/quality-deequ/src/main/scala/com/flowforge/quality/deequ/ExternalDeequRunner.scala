@@ -26,7 +26,7 @@ object ExternalDeequRunner {
       Left("Runner jar not provided. Set -Dff.dq.runner=/path/to/jar or FF_DEEQU_RUNNER_JAR env var")
     } else {
       val jar = jarOpt.get
-      
+
       val modeAndPath = dataset match {
         case p: ProductionSparkDataset[A] =>
           val tmp  = File.createTempFile("ff_dq_tmp", ""); tmp.delete(); tmp.mkdirs()
@@ -35,18 +35,18 @@ object ExternalDeequRunner {
           Some(("parquet", path))
         case _ => None
       }
-      
+
       if (modeAndPath.isEmpty) {
         Left("External runner requires a Spark-backed dataset")
       } else {
         val (mode, inputPath) = modeAndPath.get
-        
+
         val constraintsFile = File.createTempFile("ff_constraints", ".json")
         val json            = toJson(constraints)
         val pw              = new PrintWriter(constraintsFile)
         try pw.write(json)
         finally pw.close()
-    
+
         val cmd = Seq(
           "java",
           "-Dnet.bytebuddy.experimental=true",
@@ -74,15 +74,15 @@ object ExternalDeequRunner {
           parse(out) match {
             case Left(_) => Left("Invalid runner JSON")
             case Right(parsed) =>
-              val cur = parsed.hcursor
+              val cur    = parsed.hcursor
               val passed = cur.get[Boolean]("passed").getOrElse(false)
               val score  = cur.get[Double]("score").getOrElse(0.0)
               val violations: List[DataAlgebra.QualityViolation] =
-                cur.downField("violations").as[List[io.circe.Json]].getOrElse(Nil).flatMap { j =>
-                  val c = j.hcursor
+                cur.downField("violations").as[List[io.circe.Json]].getOrElse(Nil).flatMap { jsonViolation =>
+                  val cursor = jsonViolation.hcursor
                   for {
-                    rule <- c.get[String]("rule").toOption
-                    msg  <- c.get[String]("message").toOption
+                    rule <- cursor.get[String]("rule").toOption
+                    msg  <- cursor.get[String]("message").toOption
                   } yield DataAlgebra.QualityViolation(
                     rule = rule,
                     message = msg,
@@ -90,7 +90,9 @@ object ExternalDeequRunner {
                     recordsAffected = 0L,
                   )
                 }
-              Right(DataAlgebra.QualityResult(dataset, passed = passed, violations = violations, score = score))
+              Right(
+                DataAlgebra.QualityResult(dataset, passed = passed, violations = violations, score = score),
+              )
           }
         }
       }

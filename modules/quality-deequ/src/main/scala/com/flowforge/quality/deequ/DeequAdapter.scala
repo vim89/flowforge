@@ -34,16 +34,16 @@ object DeequAdapter {
             val dups       = total - distinctCt
             (c, dups == 0, dups)
           case c @ FFConstraint.Range(field, min, max, _) =>
-            val v      = col(field.value).cast("double")
-            val geMin  = min.map(m => v.geq(lit(m))).getOrElse(lit(true))
-            val leMax  = max.map(m => v.leq(lit(m))).getOrElse(lit(true))
-            val valid  = geMin && leMax && v.isNotNull
+            val value  = col(field.value).cast("double")
+            val geMin  = min.map(m => value.geq(lit(m))).getOrElse(lit(true))
+            val leMax  = max.map(m => value.leq(lit(m))).getOrElse(lit(true))
+            val valid  = geMin && leMax && value.isNotNull
             val failed = df.filter(not(valid)).count()
             (c, failed == 0, failed)
           case c @ FFConstraint.Pattern(field, regex, _) =>
-            val s      = col(field.value).cast("string")
-            val valid  = s.isNotNull && s.rlike(regex)
-            val failed = df.filter(not(valid)).count()
+            val stringCol = col(field.value).cast("string")
+            val valid     = stringCol.isNotNull && stringCol.rlike(regex)
+            val failed    = df.filter(not(valid)).count()
             (c, failed == 0, failed)
           case c @ FFConstraint.Compliance(_, predicate, _) =>
             val failed = df.filter(not(expr(predicate))).count()

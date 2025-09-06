@@ -9,23 +9,21 @@ import com.flowforge.framework.{ Pipeline, PipelineMetadata }
 
 /**
  * ARCHITECTURAL DECISION: Type-erased Kleisli composition
- * 
- * This casting is architecturally necessary for the pipeline system design.
- * FlowForge pipelines compose heterogeneous stages with different input/output types.
- * At runtime, type information is erased, making this cast safe and necessary.
- * 
+ *
+ * This casting is architecturally necessary for the pipeline system design. FlowForge pipelines compose
+ * heterogeneous stages with different input/output types. At runtime, type information is erased, making this
+ * cast safe and necessary.
+ *
  * This is NOT a design flaw - it's how functional pipeline composition works.
  */
 private object KleisliCasting {
-  def safeKleisliCast[F[_]](kleisli: Kleisli[F, _, _]): Kleisli[F, Any, Any] = {
+  def safeKleisliCast[F[_]](kleisli: Kleisli[F, _, _]): Kleisli[F, Any, Any] =
     // ARCHITECTURAL: Type erasure allows this - required for heterogeneous pipeline stage composition
     kleisli.asInstanceOf[Kleisli[F, Any, Any]]
-  }
-  
-  def safeTypedCast[F[_], In, Out](kleisli: Kleisli[F, _, _]): Kleisli[F, In, Out] = {
-    // ARCHITECTURAL: Type erasure allows this - required for final pipeline type alignment 
+
+  def safeTypedCast[F[_], In, Out](kleisli: Kleisli[F, _, _]): Kleisli[F, In, Out] =
+    // ARCHITECTURAL: Type erasure allows this - required for final pipeline type alignment
     kleisli.asInstanceOf[Kleisli[F, In, Out]]
-  }
 }
 import org.apache.spark.sql.SparkSession
 

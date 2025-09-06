@@ -131,7 +131,7 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
         bytes <- effectSystem.delay(Files.readAllBytes(path))
       } yield FileSystemResult.success(bytes)
     } { error =>
-      FileSystemResult.failure(FileSystemError.ReadError(location, error.getMessage))
+      FileSystemResult.failure(FileSystemError.readError(location, error.getMessage))
     }
   }
 
@@ -150,7 +150,7 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
         )
       } yield FileSystemResult.success(metadata)
     } { error =>
-      FileSystemResult.failure(FileSystemError.WriteError(location, error.getMessage))
+      FileSystemResult.failure(FileSystemError.writeError(location, error.getMessage))
     }
   }
 
@@ -178,7 +178,7 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
         }
       } yield FileSystemResult.success(files)
     } { error =>
-      FileSystemResult.failure(FileSystemError.ListError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.listError(path, error.getMessage))
     }
 
   def exists(path: String): F[Boolean] =
@@ -191,7 +191,7 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
         FileSystemResult.success(())
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.CreateDirectoryError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.createDirectoryError(path, error.getMessage))
     }
 
   def delete(path: String, recursive: Boolean = false): F[FileSystemResult[Unit]] =
@@ -211,7 +211,7 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
           }
       } yield FileSystemResult.success(())
     } { error =>
-      FileSystemResult.failure(FileSystemError.DeleteError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.deleteError(path, error.getMessage))
     }
 
   def getMetadata(path: String): F[FileSystemResult[FileMetadata]] =
@@ -230,7 +230,7 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
         )
       } yield FileSystemResult.success(metadata)
     } { error =>
-      FileSystemResult.failure(FileSystemError.MetadataError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.metadataError(path, error.getMessage))
     }
 
   def streamRead(source: DataSource): F[List[Array[Byte]]] = {
@@ -320,7 +320,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
       effectSystem.bracket(acquire) { fs =>
         effectSystem.blocking {
           val path = new org.apache.hadoop.fs.Path(location)
-          if (!fs.exists(path)) FileSystemResult.failure(FileSystemError.FileNotFound(location))
+          if (!fs.exists(path)) FileSystemResult.failure(FileSystemError.fileNotFound(location))
           else {
             val inputStream = fs.open(path)
             val bytes       = inputStream.readAllBytes()
@@ -329,7 +329,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
           }
         }
       }(fs => effectSystem.blocking(fs.close()).void)
-    }(error => FileSystemResult.failure(FileSystemError.ReadError(location, error.getMessage)))
+    }(error => FileSystemResult.failure(FileSystemError.readError(location, error.getMessage)))
   }
 
   def write(sink: DataSink, data: Array[Byte]): F[FileSystemResult[WriteMetadata]] = {
@@ -350,7 +350,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
           )
         }
       }(fs => effectSystem.blocking(fs.close()).void)
-    }(error => FileSystemResult.failure(FileSystemError.WriteError(location, error.getMessage)))
+    }(error => FileSystemResult.failure(FileSystemError.writeError(location, error.getMessage)))
   }
 
   def listFiles(path: String): F[FileSystemResult[List[FileMetadata]]] =
@@ -361,7 +361,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
         try {
           val hadoopPath = new org.apache.hadoop.fs.Path(path)
           if (!fs.exists(hadoopPath) || !fs.isDirectory(hadoopPath)) {
-            FileSystemResult.failure(FileSystemError.DirectoryNotFound(path))
+            FileSystemResult.failure(FileSystemError.directoryNotFound(path))
           } else {
             val fileStatuses = fs.listStatus(hadoopPath)
             val metadata = fileStatuses.map { status =>
@@ -379,7 +379,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
           fs.close()
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.ListError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.listError(path, error.getMessage))
     }
 
   def exists(path: String): F[Boolean] =
@@ -406,14 +406,14 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
             FileSystemResult.success(())
           } else {
             FileSystemResult.failure(
-              FileSystemError.CreateDirectoryError(path, "Failed to create directory"),
+              FileSystemError.createDirectoryError(path, "Failed to create directory"),
             )
           }
         } finally
           fs.close()
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.CreateDirectoryError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.createDirectoryError(path, error.getMessage))
     }
 
   def delete(path: String, recursive: Boolean = false): F[FileSystemResult[Unit]] =
@@ -427,13 +427,13 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
           if (success) {
             FileSystemResult.success(())
           } else {
-            FileSystemResult.failure(FileSystemError.DeleteError(path, "Failed to delete"))
+            FileSystemResult.failure(FileSystemError.deleteError(path, "Failed to delete"))
           }
         } finally
           fs.close()
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.DeleteError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.deleteError(path, error.getMessage))
     }
 
   def getMetadata(path: String): F[FileSystemResult[FileMetadata]] =
@@ -444,7 +444,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
         try {
           val hadoopPath = new org.apache.hadoop.fs.Path(path)
           if (!fs.exists(hadoopPath)) {
-            FileSystemResult.failure(FileSystemError.FileNotFound(path))
+            FileSystemResult.failure(FileSystemError.fileNotFound(path))
           } else {
             val status = fs.getFileStatus(hadoopPath)
             val metadata = FileMetadata(
@@ -460,7 +460,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
           fs.close()
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.MetadataError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.metadataError(path, error.getMessage))
     }
 
   def streamRead(source: DataSource): F[List[Array[Byte]]] = {
@@ -586,14 +586,14 @@ class GCSConnector[F[_]: EffectSystem](
         val storage = createStorageClient()
         val blob    = storage.get(bucket, key)
         if (blob == null || !blob.exists()) {
-          FileSystemResult.failure(FileSystemError.FileNotFound(gcsPath))
+          FileSystemResult.failure(FileSystemError.fileNotFound(gcsPath))
         } else {
           val bytes = blob.getContent()
           FileSystemResult.success(bytes)
         }
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.ReadError(gcsPath, error.getMessage))
+      FileSystemResult.failure(FileSystemError.readError(gcsPath, error.getMessage))
     }
   }
 
@@ -619,7 +619,7 @@ class GCSConnector[F[_]: EffectSystem](
         )
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.WriteError(gcsPath, error.getMessage))
+      FileSystemResult.failure(FileSystemError.writeError(gcsPath, error.getMessage))
     }
   }
 
@@ -646,7 +646,7 @@ class GCSConnector[F[_]: EffectSystem](
         FileSystemResult.success(metadata)
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.ListError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.listError(path, error.getMessage))
     }
   }
 
@@ -679,7 +679,7 @@ class GCSConnector[F[_]: EffectSystem](
         FileSystemResult.success(())
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.CreateDirectoryError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.createDirectoryError(path, error.getMessage))
     }
   }
 
@@ -701,7 +701,7 @@ class GCSConnector[F[_]: EffectSystem](
           if (!success) {
             return effectSystem.pure(
               FileSystemResult.failure(
-                FileSystemError.DeleteError(path, "File not found or already deleted"),
+                FileSystemError.deleteError(path, "File not found or already deleted"),
               ),
             )
           }
@@ -710,7 +710,7 @@ class GCSConnector[F[_]: EffectSystem](
         FileSystemResult.success(())
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.DeleteError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.deleteError(path, error.getMessage))
     }
   }
 
@@ -723,7 +723,7 @@ class GCSConnector[F[_]: EffectSystem](
         val blob    = storage.get(bucket, key)
 
         if (blob == null || !blob.exists()) {
-          FileSystemResult.failure(FileSystemError.FileNotFound(path))
+          FileSystemResult.failure(FileSystemError.fileNotFound(path))
         } else {
           val metadata = FileMetadata(
             name = blob.getName,
@@ -736,7 +736,7 @@ class GCSConnector[F[_]: EffectSystem](
         }
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.MetadataError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.metadataError(path, error.getMessage))
     }
   }
 
@@ -923,7 +923,7 @@ class S3Connector[F[_]: EffectSystem](
           s3Client.close()
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.ListError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.listError(path, error.getMessage))
     }
   }
 
@@ -964,7 +964,7 @@ class S3Connector[F[_]: EffectSystem](
           s3Client.close()
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.CreateDirectoryError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.createDirectoryError(path, error.getMessage))
     }
   }
 
@@ -1001,7 +1001,7 @@ class S3Connector[F[_]: EffectSystem](
           s3Client.close()
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.DeleteError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.deleteError(path, error.getMessage))
     }
   }
 
@@ -1029,7 +1029,7 @@ class S3Connector[F[_]: EffectSystem](
           s3Client.close()
       }
     } { error =>
-      FileSystemResult.failure(FileSystemError.MetadataError(path, error.getMessage))
+      FileSystemResult.failure(FileSystemError.metadataError(path, error.getMessage))
     }
   }
 

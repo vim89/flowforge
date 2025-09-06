@@ -67,19 +67,19 @@ object ContractsCodegen {
   }
   private def extractFields(json: String): List[(String, String)] = {
     // Isolate the fields array content
-    val s     = json
-    val key   = "\"fields\""
-    val start = s.indexOf(key)
+    val jsonString = json
+    val key        = "\"fields\""
+    val start      = jsonString.indexOf(key)
     if (start < 0) return Nil
-    val lb = s.indexOf('[', start)
+    val lb = jsonString.indexOf('[', start)
     if (lb < 0) return Nil
     var i     = lb + 1
     var depth = 1
     var end   = -1
     var inStr = false
     var prev  = '\u0000'
-    while (i < s.length && end == -1) {
-      val ch = s.charAt(i)
+    while (i < jsonString.length && end == -1) {
+      val ch = jsonString.charAt(i)
       if (ch == '"' && prev != '\\') inStr = !inStr
       if (!inStr) {
         if (ch == '[') depth += 1
@@ -88,41 +88,41 @@ object ContractsCodegen {
       prev = ch
       i += 1
     }
-    val arr = if (end > lb) s.substring(lb + 1, end) else s
+    val arr = if (end > lb) jsonString.substring(lb + 1, end) else jsonString
     // Extract objects and read name/type pairs
-    val out = scala.collection.mutable.ListBuffer.empty[(String, String)]
-    var j   = 0
-    while (j < arr.length) {
-      val so = arr.indexOf('{', j)
-      if (so < 0) j = arr.length
+    val out   = scala.collection.mutable.ListBuffer.empty[(String, String)]
+    var index = 0
+    while (index < arr.length) {
+      val startObj = arr.indexOf('{', index)
+      if (startObj < 0) index = arr.length
       else {
-        var k     = so + 1
-        var d     = 1
-        var eo    = -1
-        var str   = false
-        var pprev = '\u0000'
-        while (k < arr.length && eo == -1) {
-          val ch = arr.charAt(k)
+        var pos    = startObj + 1
+        var depth  = 1
+        var endObj = -1
+        var str    = false
+        var pprev  = '\u0000'
+        while (pos < arr.length && endObj == -1) {
+          val ch = arr.charAt(pos)
           if (ch == '"' && pprev != '\\') str = !str
           if (!str) {
-            if (ch == '{') d += 1
-            else if (ch == '}') { d -= 1; if (d == 0) eo = k }
+            if (ch == '{') depth += 1
+            else if (ch == '}') { depth -= 1; if (depth == 0) endObj = pos }
           }
           pprev = ch
-          k += 1
+          pos += 1
         }
-        if (eo > so) {
-          val obj       = arr.substring(so, eo + 1)
+        if (endObj > startObj) {
+          val obj       = arr.substring(startObj, endObj + 1)
           val nameRegex = """"name"\s*:\s*"([^"]+)"""".r
           val typeRegex = """"type"\s*:\s*"([^"]+)"""".r
           val nameOpt   = nameRegex.findFirstMatchIn(obj).map(_.group(1))
           val typeOpt   = typeRegex.findFirstMatchIn(obj).map(_.group(1))
           (nameOpt, typeOpt) match {
-            case (Some(n), Some(t)) => out += (n -> t)
-            case _                  => // ignore complex types for demo
+            case (Some(name), Some(fieldType)) => out += (name -> fieldType)
+            case _                             => // ignore complex types for demo
           }
-          j = eo + 1
-        } else j = arr.length
+          index = endObj + 1
+        } else index = arr.length
       }
     }
     out.toList

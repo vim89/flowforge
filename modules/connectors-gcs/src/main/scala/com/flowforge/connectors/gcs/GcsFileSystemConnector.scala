@@ -24,8 +24,8 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
       val bucket = if (idx >= 0) rest.substring(0, idx) else rest
       val key    = if (idx >= 0) rest.substring(idx + 1) else ""
       if (bucket.nonEmpty) Right(GsUri(bucket, key))
-      else Left(FileSystemError.MetadataError(path, "Invalid GCS URI: missing bucket"))
-    } else Left(FileSystemError.MetadataError(path, "Invalid GCS URI: must start with gs://"))
+      else Left(FileSystemError.metadataError(path, "Invalid GCS URI: missing bucket"))
+    } else Left(FileSystemError.metadataError(path, "Invalid GCS URI: must start with gs://"))
 
   private def toPath(ds: DataSource): String = ds match {
     case g: DataSource.GcsSource => g.path
@@ -47,15 +47,15 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
           F.handleError {
             F.blocking {
               val blob = storage.get(bucket, key)
-              if (blob == null) FileSystemResult.failure(FileSystemError.FileNotFound(g.path))
+              if (blob == null) FileSystemResult.failure(FileSystemError.fileNotFound(g.path))
               else FileSystemResult.success(blob.getContent())
             }
-          }(t => FileSystemResult.failure(FileSystemError.ReadError(g.path, t.getMessage)))
+          }(t => FileSystemResult.failure(FileSystemError.readError(g.path, t.getMessage)))
       }
     case other =>
       F.pure(
         FileSystemResult.failure(
-          FileSystemError.ReadError(toPath(other), "Unsupported source type for GCS connector"),
+          FileSystemError.readError(toPath(other), "Unsupported source type for GCS connector"),
         ),
       )
   }
@@ -71,12 +71,12 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
               storage.create(blobInfo, data)
               FileSystemResult.success(WriteMetadata(path = g.path, bytesWritten = data.length.toLong))
             }
-          }(t => FileSystemResult.failure(FileSystemError.WriteError(g.path, t.getMessage)))
+          }(t => FileSystemResult.failure(FileSystemError.writeError(g.path, t.getMessage)))
       }
     case other =>
       F.pure(
         FileSystemResult.failure(
-          FileSystemError.WriteError(toPath(other), "Unsupported sink type for GCS connector"),
+          FileSystemError.writeError(toPath(other), "Unsupported sink type for GCS connector"),
         ),
       )
   }
@@ -106,7 +106,7 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
             }
             FileSystemResult.success(files)
           }
-        }(t => FileSystemResult.failure(FileSystemError.ListError(path, t.getMessage)))
+        }(t => FileSystemResult.failure(FileSystemError.listError(path, t.getMessage)))
     }
 
   def exists(path: String): F[Boolean] =
@@ -126,7 +126,7 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
             storage.create(info, Array.emptyByteArray)
             FileSystemResult.success(())
           }
-        }(t => FileSystemResult.failure(FileSystemError.CreateDirectoryError(path, t.getMessage)))
+        }(t => FileSystemResult.failure(FileSystemError.createDirectoryError(path, t.getMessage)))
     }
 
   def delete(path: String, recursive: Boolean = false): F[FileSystemResult[Unit]] =
@@ -147,10 +147,10 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
             } else {
               val ok = storage.delete(b, key)
               if (ok) FileSystemResult.success(())
-              else FileSystemResult.failure(FileSystemError.DeleteError(path, "Not found"))
+              else FileSystemResult.failure(FileSystemError.deleteError(path, "Not found"))
             }
           }
-        }(t => FileSystemResult.failure(FileSystemError.DeleteError(path, t.getMessage)))
+        }(t => FileSystemResult.failure(FileSystemError.deleteError(path, t.getMessage)))
     }
 
   def getMetadata(path: String): F[FileSystemResult[FileMetadata]] =
@@ -160,7 +160,7 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
         F.handleError {
           F.blocking {
             val blob = storage.get(b, key)
-            if (blob == null) FileSystemResult.failure(FileSystemError.FileNotFound(path))
+            if (blob == null) FileSystemResult.failure(FileSystemError.fileNotFound(path))
             else {
               val size       = Option(blob.getSize).map(_.longValue()).getOrElse(0L)
               val updateTime = Option(blob.getUpdateTime).map(_.longValue()).getOrElse(0L)
@@ -175,7 +175,7 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
               )
             }
           }
-        }(t => FileSystemResult.failure(FileSystemError.MetadataError(path, t.getMessage)))
+        }(t => FileSystemResult.failure(FileSystemError.metadataError(path, t.getMessage)))
     }
 
   def streamRead(source: DataSource): F[List[Array[Byte]]] =
