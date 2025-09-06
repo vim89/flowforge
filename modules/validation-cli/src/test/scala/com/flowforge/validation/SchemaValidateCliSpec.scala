@@ -59,9 +59,9 @@ class SchemaValidateCliSpec extends AnyFunSuite with Matchers {
     } shouldBe true
 
     val msg = Canonical.prettyDiffs(diffs)
-    msg should include ("Schema differences:")
-    msg should include ("Extra field: flag")
-    msg should include ("Nullability mismatch for amount")
+    msg should include("Schema differences:")
+    msg should include("Extra field: flag")
+    msg should include("Nullability mismatch for amount")
   }
 
   test("Canonical.diff returns empty list when schemas match") {
@@ -71,7 +71,7 @@ class SchemaValidateCliSpec extends AnyFunSuite with Matchers {
         StructField("amount", DoubleType, nullable = true),
       ),
     )
-    val actual   = Canonical.fromSpark(schema)
+    val actual = Canonical.fromSpark(schema)
     val expected = Canonical.fromFile(
       """
         |{
@@ -86,4 +86,3 @@ class SchemaValidateCliSpec extends AnyFunSuite with Matchers {
     Canonical.diff(expected, actual) shouldBe Nil
   }
 }
-

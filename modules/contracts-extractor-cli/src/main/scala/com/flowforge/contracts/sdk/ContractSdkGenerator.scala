@@ -4,7 +4,7 @@ import cats.effect.IO
 import cats.implicits._
 import io.circe.parser._
 
-import java.nio.file.{Files => JFiles, Paths}
+import java.nio.file.{ Files => JFiles, Paths }
 import scala.collection.JavaConverters._
 
 object ContractSdkGenerator {

@@ -20,7 +20,7 @@ import com.flowforge.connectors.FileSystemResult._
 import com.flowforge.connectors._
 import com.flowforge.connectors.filesystem._
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.types.{LocalDataSink, LocalDataSource, _}
+import com.flowforge.core.types.{ LocalDataSink, LocalDataSource, _ }
 
 import java.nio.file.{ Files, Paths }
 import java.time.Instant

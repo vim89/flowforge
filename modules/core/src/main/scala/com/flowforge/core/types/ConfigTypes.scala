@@ -667,12 +667,6 @@ object PipelineConfig {
     def getString(key: String): ValidatedNel[ConfigError, String] =
       configMap.get(key).toValidNel(ConfigError.MissingRequired(key))
 
-    
-
-    
-
-    
-
     // Parse all configuration components
     val nameValidation = getString("pipeline.name")
       .map(name => Refined.unsafeApply(name): NonEmptyString)

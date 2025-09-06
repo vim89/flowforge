@@ -1,8 +1,8 @@
 package com.flowforge.core.instances
 
 import com.flowforge.core.algebra._
-import com.flowforge.core.types.{DataFormat, _}
-import io.circe.{Json, parser}
+import com.flowforge.core.types.{ DataFormat, _ }
+import io.circe.{ parser, Json }
 
 /**
  * Practical default encoders/decoders for common shapes used in foundation flows.
@@ -101,9 +101,6 @@ object DefaultCodecs {
       }
 
     // Generic Circe-powered codecs for any A with Encoder/Decoder[A]
-    
-
-    
 
     // Collections of common types
     new DataEncoder[List[String]] {

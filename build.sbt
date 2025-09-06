@@ -4,7 +4,7 @@ import scala.collection.Seq
 // ===== GLOBAL BUILD SETTINGS =====
 ThisBuild / organization := "com.flowforge"
 
-ThisBuild / version      := "0.1.0"
+ThisBuild / version := "0.1.0"
 // Default Scala stays 2.13 for most modules; Spark/Deequ modules are handled pragmatically via deps.
 ThisBuild / scalaVersion := Dependencies.Versions.scala213
 ThisBuild / crossScalaVersions := Seq(
@@ -254,18 +254,18 @@ lazy val contractsExtractorCli = moduleProject("contracts-extractor-cli")
 // ===== ADDITIONAL MODULES =====
 lazy val qualityDeequRunner = moduleProject("quality-deequ-runner")
   .settings(
-    description := "Deequ runner CLI (Scala 2.12) for FlowForge",
+    description  := "Deequ runner CLI (Scala 2.12) for FlowForge",
     scalaVersion := Dependencies.Versions.scala212,
     libraryDependencies ++= Seq(
-      "org.apache.spark" %% "spark-sql" % Dependencies.Versions.spark,
-      "com.amazon.deequ" %  "deequ"     % Dependencies.Versions.deequ,
-      "com.github.scopt" %% "scopt"     % "4.1.0",
+      "org.apache.spark" %% "spark-sql"     % Dependencies.Versions.spark,
+      "com.amazon.deequ"  % "deequ"         % Dependencies.Versions.deequ,
+      "com.github.scopt" %% "scopt"         % "4.1.0",
       "io.circe"         %% "circe-core"    % Dependencies.Versions.circe,
       "io.circe"         %% "circe-parser"  % Dependencies.Versions.circe,
       "io.circe"         %% "circe-generic" % Dependencies.Versions.circe,
     ),
     Compile / mainClass := Some("com.flowforge.quality.deequ.runner.Runner"),
-    Test / skip := true,
+    Test / skip         := true,
   )
 lazy val it = (project in file("integration-tests"))
   .dependsOn(examples, connectorsGcs, enginesSpark)

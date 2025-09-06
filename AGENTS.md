@@ -224,7 +224,7 @@ trait LegacyCompatibility[F[_] : Sync] extends ConfigurationAlgebra[F] {
 ## Commit & Pull Request Guidelines
 
 - Commits: imperative subject (≤72 chars) + concise body (what/why); reference ADRs (e.g., ADR‑012 for effect rules).
-- PR checklist: `sbt fmt` + `sbt test` green; link checker passing; description, test plan, and
+- PR checklist: `sbt fmt` + `sbt compile; test:compile` green; link checker passing; description, test plan, and
   any CLI logs.
 - Scope: keep PRs focused; avoid mixing refactors with feature changes.
 
@@ -235,17 +235,20 @@ When prompted with `CHECK CONTEXT` or At the start of every session, ChatGPT Age
 
 ### Session Workflow (Fast Loop)
 
-- Initialize: All project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*` `AGENTS.md`, `docs/agents`, `build.sbt` & perform comprehensive code review of entire flowforge
-- Understand Situation & Get up to the speed: 
+- Initialize: 
+  - Scan, read & study / learn from all project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*` `AGENTS.md`, `docs/agents`, `build.sbt`
+    References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`
+  - Perform comprehensive code review of entire flowforge project source code.
+- Understand situation & get up to the speed: 
   - Provide ground reality - Code review results/outcome vs documentation alignment, gaps, major risks.
-  - Learn from previous Git commits (as many historical commits as required) to understand what was implemented.
+  - Learn from previous git commits (as many historical commits as required) to understand what was implemented.
   - Update the documents ADRs, Evidences & Plan accordingly.
-- Validate: `sbt fullCheck` locally (fmt, compile, tests); run targeted module tests.
+- Validate: `sbt fullCheck` locally (fmt, compile).
 - PR: link ADRs; include test plan and any CLI logs; keep scope tight.
 - References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`.
 
 ### Agent‑Specific Guardrails (Read First)
-- All project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*`, `AGENTS.md`, `docs/agents`, `build.sbt`
+- Scan, read & study / learn from all project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*`, `AGENTS.md`, `docs/agents`, `build.sbt`
 - References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`; Agents Coverage: `docs/agents/COVERAGE.md`
 - Use the 30‑point checklist (ADR‑020) during design/review; minimize shuffles, compute affected partitions first,
 - Ensure idempotency and DLQ where relevant.

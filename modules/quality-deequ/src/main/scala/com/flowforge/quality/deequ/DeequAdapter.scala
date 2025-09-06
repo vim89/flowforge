@@ -1,7 +1,7 @@
 package com.flowforge.quality.deequ
 
 import com.flowforge.core.algebra.DataAlgebra
-import com.flowforge.core.types.{QualityConstraint => FFConstraint}
+import com.flowforge.core.types.{ QualityConstraint => FFConstraint }
 import com.flowforge.engines.spark.ProductionSparkDataset
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
@@ -62,7 +62,12 @@ object DeequAdapter {
         val total = results.size.max(1)
         val ok    = results.count { case (_, p, _) => p }
         val score = ok.toDouble / total
-        DataAlgebra.QualityResult(dataset, passed = violations.isEmpty, violations = violations, score = score)
+        DataAlgebra.QualityResult(
+          dataset,
+          passed = violations.isEmpty,
+          violations = violations,
+          score = score,
+        )
     }
   }
 }

@@ -1,6 +1,6 @@
 package com.flowforge.validation
 
-import cats.effect.{ExitCode, IO, IOApp, Resource}
+import cats.effect.{ ExitCode, IO, IOApp, Resource }
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.instances.EffectInstances._
 import org.apache.spark.sql.SparkSession

@@ -2,7 +2,7 @@ package com.flowforge.engines.spark
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import com.flowforge.core.algebra.{CDCOperations, DataAlgebra, EffectSystem}
+import com.flowforge.core.algebra.{ CDCOperations, DataAlgebra, EffectSystem }
 import com.flowforge.core.impl.SimpleDataset
 import com.flowforge.core.types._
 import org.apache.spark.sql.SparkSession

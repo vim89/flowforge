@@ -52,9 +52,11 @@ class DeequAdapterSpec extends AnyFunSuite with Matchers {
         com.flowforge.core.types.QualityConstraint.NotNull(RefinedTypes.FieldName.unsafeFrom("id"))
       val unique = com.flowforge.core.types.QualityConstraint.Unique(RefinedTypes.FieldName.unsafeFrom("id"))
       val pattern =
-        com.flowforge.core.types.QualityConstraint.Pattern(RefinedTypes.FieldName.unsafeFrom("id"), "^[a-z]+$")
+        com.flowforge.core.types.QualityConstraint
+          .Pattern(RefinedTypes.FieldName.unsafeFrom("id"), "^[a-z]+$")
       val range =
-        com.flowforge.core.types.QualityConstraint.Range(RefinedTypes.FieldName.unsafeFrom("amount"), Some(0.0), Some(1000.0))
+        com.flowforge.core.types.QualityConstraint
+          .Range(RefinedTypes.FieldName.unsafeFrom("amount"), Some(0.0), Some(1000.0))
       val compliance =
         com.flowforge.core.types.QualityConstraint.Compliance("positive_amount", "amount > 0")
       val checks = List(notNull, unique, pattern, range, compliance)

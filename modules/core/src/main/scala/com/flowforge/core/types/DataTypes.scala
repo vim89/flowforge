@@ -907,14 +907,14 @@ object QualityConstraint {
   }
 
   /**
-   * Compliance constraint using a SQL-like boolean expression evaluated on the dataset.
-   * Example: predicateSql = "amount > 0 AND id IS NOT NULL"
+   * Compliance constraint using a SQL-like boolean expression evaluated on the dataset. Example: predicateSql =
+   * "amount > 0 AND id IS NOT NULL"
    */
   case class Compliance(
     ruleName: String,
     predicateSql: String,
-    severity: QualitySeverity = QualitySeverity.Warning,
-  ) extends QualityConstraint {
+    severity: QualitySeverity = QualitySeverity.Warning)
+      extends QualityConstraint {
     val name        = s"compliance_${ruleName}"
     val description = s"Rows must satisfy: $predicateSql"
   }

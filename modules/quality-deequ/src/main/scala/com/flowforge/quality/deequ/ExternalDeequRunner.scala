@@ -13,8 +13,7 @@ object ExternalDeequRunner {
   final case class RunnerResult(
     passed: Boolean,
     score: Double,
-    violations: List[Violation],
-  )
+    violations: List[Violation])
   final case class Violation(rule: String, message: String)
 
   def runChecks[A](
@@ -28,7 +27,7 @@ object ExternalDeequRunner {
 
     val (mode, inputPath) = dataset match {
       case p: ProductionSparkDataset[A] =>
-        val tmp = File.createTempFile("ff_dq_tmp", ""); tmp.delete(); tmp.mkdirs()
+        val tmp  = File.createTempFile("ff_dq_tmp", ""); tmp.delete(); tmp.mkdirs()
         val path = new File(tmp, "data").getAbsolutePath
         p.sparkDataFrame.coalesce(1).write.mode("overwrite").parquet(path)
         ("parquet", path)
@@ -57,14 +56,14 @@ object ExternalDeequRunner {
     val stderr = new StringBuilder
     val logger = ProcessLogger(
       (line: String) => { stdout.append(line + "\n"); () },
-      (line: String) => { stderr.append(line + "\n"); () }
+      (line: String) => { stderr.append(line + "\n"); () },
     )
-    val code   = cmd.!(logger)
+    val code = cmd.!(logger)
     if (code != 0) return Left(s"Runner failed: ${stderr.toString}")
 
     import io.circe.parser._
-    val out = stdout.toString.trim.split("\n").lastOption.getOrElse("{}")
-    val cur = parse(out).fold(_ => return Left("Invalid runner JSON"), _.hcursor)
+    val out    = stdout.toString.trim.split("\n").lastOption.getOrElse("{}")
+    val cur    = parse(out).fold(_ => return Left("Invalid runner JSON"), _.hcursor)
     val passed = cur.get[Boolean]("passed").getOrElse(false)
     val score  = cur.get[Double]("score").getOrElse(0.0)
     val violations: List[DataAlgebra.QualityViolation] =
@@ -105,12 +104,11 @@ object ExternalDeequRunner {
         )
       case FFConstraint.Compliance(name, sql, _) =>
         Json.obj(
-          "type"       -> Json.fromString("compliance"),
-          "ruleName"   -> Json.fromString(name),
+          "type"         -> Json.fromString("compliance"),
+          "ruleName"     -> Json.fromString(name),
           "predicateSql" -> Json.fromString(sql),
         )
     }
     Json.obj("constraints" -> Json.fromValues(arr)).noSpaces
   }
 }
-

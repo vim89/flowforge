@@ -11,16 +11,16 @@ object Dependencies {
 
     // Core functional libraries
     val cats           = "2.10.0"
-    val catsEffect     = "3.6.1"      // Performance upgrade: was 3.5.4
+    val catsEffect     = "3.6.1"    // Performance upgrade: was 3.5.4
     val fs2            = "3.9.4"
-    val zio            = "2.1.20"     // Major improvements: was 2.0.19 (binary compatible)
-    val zioInteropCats = "23.1.0.2"   // Updated: was 23.1.0.0
+    val zio            = "2.1.20"   // Major improvements: was 2.0.19 (binary compatible)
+    val zioInteropCats = "23.1.0.2" // Updated: was 23.1.0.0
     val refined        = "0.11.3"
     val kittens        = "3.1.0"
     val shapeless      = "2.3.13"
 
     // JSON & Config
-    val circe      = "0.14.14"  // Security update: was 0.14.6
+    val circe      = "0.14.14" // Security update: was 0.14.6
     val pureconfig = "0.17.9"
 
     // Big Data engines
@@ -42,20 +42,20 @@ object Dependencies {
 
     // Monitoring & Observability
     val prometheus = "0.16.0"
-    val otel       = "1.53.0"  // Latest stable: was 1.32.0
+    val otel       = "1.53.0" // Latest stable: was 1.32.0
     val micrometer = "1.12.1"
 
     // Logging
     val scalaLogging = "3.9.5"
-    val logback      = "1.5.18"  // Already latest available
+    val logback      = "1.5.18" // Already latest available
     val log4cats     = "2.7.1"
 
     // Experimental libraries
     val kyo = "0.8.5"
 
     // Testing
-    val scalaTest      = "3.2.19"     // Updated: was 3.2.17  
-    val scalaCheck     = "1.18.1"     // Updated: was 1.17.0
+    val scalaTest      = "3.2.19" // Updated: was 3.2.17
+    val scalaCheck     = "1.18.1" // Updated: was 1.17.0
     val testContainers = "0.40.17"
     val wiremock       = "3.0.1"
     val mockito        = "5.13.0"
@@ -229,7 +229,7 @@ object Dependencies {
     case "engines-spark"  => common ++ Engines.spark ++ TypedSpark.frameless
     case "engines-flink"  => common ++ Engines.flink
     case "quality"        => Core.functional ++ Testing.unit
-    case "quality-deequ"  =>
+    case "quality-deequ" =>
       common ++ Quality.all ++ Seq(
         // Spark SQL needed at compile time for Spark-native checks
         "org.apache.spark" %% "spark-sql" % Versions.spark,
@@ -248,8 +248,8 @@ object Dependencies {
     "org.typelevel"          %% "cats-kernel" % Versions.cats,
     "org.scala-lang.modules" %% "scala-xml"   % "2.2.0",
     // Ensure Byte Buddy supports newer JDKs (Mockito/others)
-    "net.bytebuddy"           % "byte-buddy"       % "1.15.11",
-    "net.bytebuddy"           % "byte-buddy-agent" % "1.15.11",
+    "net.bytebuddy" % "byte-buddy"       % "1.15.11",
+    "net.bytebuddy" % "byte-buddy-agent" % "1.15.11",
     // Align Netty across AWS/GCP/Hadoop stacks
     "io.netty" % "netty-common"      % "4.1.110.Final",
     "io.netty" % "netty-buffer"      % "4.1.110.Final",
@@ -263,6 +263,6 @@ object Dependencies {
     "com.google.guava"  % "guava"              % "33.4.0-jre",
     "com.google.j2objc" % "j2objc-annotations" % "3.0.0",
     // Align SLF4J
-    "org.slf4j" % "slf4j-api" % "2.0.16",  // Security update: was 2.0.13
+    "org.slf4j" % "slf4j-api" % "2.0.16", // Security update: was 2.0.13
   )
 }

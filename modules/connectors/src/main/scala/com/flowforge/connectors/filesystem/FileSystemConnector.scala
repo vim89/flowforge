@@ -1125,7 +1125,7 @@ object FileSystemOps {
     sources: List[DataSource],
   ): F[List[FileSystemResult[Array[Byte]]]] = {
     EffectSystem[F]
-    val connector    = FileSystemConnector.local[F]
+    val connector = FileSystemConnector.local[F]
     sources.traverse(connector.read)
   }
 
