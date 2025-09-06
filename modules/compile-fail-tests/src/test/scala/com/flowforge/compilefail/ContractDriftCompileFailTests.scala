@@ -1,7 +1,8 @@
 package com.flowforge.compilefail
 
 import cats.effect.IO
-import com.flowforge.core.types.{ DataFormat, DataSink, DataSource, PipelineBuilder2 }
+import com.flowforge.core.PipelineBuilder
+import com.flowforge.core.types.{ DataFormat, DataSink, DataSource }
 import com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
 
 /**
@@ -89,7 +90,7 @@ object ContractDriftCompileFailTests {
     val sink   = DataSink.gcs("test-bucket", "processed/", DataFormat.Parquet)
 
     // ✅ This SHOULD compile - schemas match exactly
-    val workingPipeline = PipelineBuilder2[IO]("working-pipeline")
+    val workingPipeline = PipelineBuilder[IO]("working-pipeline")
       .withDescription("Pipeline with perfect schema match")
       .addTransform[UserRecord](_ => IO.pure(UserRecord("1", "test@example.com", 25)))
       .buildWithExactContract[UserContract] // ✅ This compiles!
@@ -102,7 +103,7 @@ object ContractDriftCompileFailTests {
     val sink   = DataSink.gcs("test-bucket", "processed/", DataFormat.Parquet)
 
     // ✅ This SHOULD compile - using BackwardCompatible policy for extra fields
-    val backwardCompatiblePipeline = PipelineBuilder2[IO]("backward-compatible-pipeline")
+    val backwardCompatiblePipeline = PipelineBuilder[IO]("backward-compatible-pipeline")
       .withDescription("Pipeline with extra field using correct policy")
       .addTransform[ExtraFieldUserRecord](_ =>
         IO.pure(ExtraFieldUserRecord("1", "test@example.com", 25, System.currentTimeMillis())),
@@ -123,7 +124,7 @@ object ContractDriftCompileFailTests {
   def testBuildingWithoutSink(): Unit = {
     val source = DataSource.gcs("test-bucket", "users/*.parquet", DataFormat.Parquet)
 
-    val incompletePipeline = PipelineBuilder2[IO]("incomplete-pipeline")
+    val incompletePipeline = PipelineBuilder[IO]("incomplete-pipeline")
       .withDescription("This pipeline is missing a sink")
       .addTransform[UserRecord](_ => IO.pure(UserRecord("1", "test@example.com", 25)))
       // ❌ NO SINK DEFINED - should not compile
@@ -136,7 +137,7 @@ object ContractDriftCompileFailTests {
     val source = DataSource.gcs("test-bucket", "users/*.parquet", DataFormat.Parquet)
     val sink   = DataSink.gcs("test-bucket", "processed/", DataFormat.Parquet)
 
-    val driftedPipeline = PipelineBuilder2[IO]("schema-drift-pipeline")
+    val driftedPipeline = PipelineBuilder[IO]("schema-drift-pipeline")
       .withDescription("Pipeline with schema drift")
       .addTransform[DriftedUserRecord](_ => IO.pure(DriftedUserRecord("1", "test@example.com", 25)))
     // ❌ SCHEMA DRIFT: DriftedUserRecord has 'emailAddress' but contract expects 'email'
@@ -151,7 +152,7 @@ object ContractDriftCompileFailTests {
     val source = DataSource.gcs("test-bucket", "users/*.parquet", DataFormat.Parquet)
     val sink   = DataSink.gcs("test-bucket", "processed/", DataFormat.Parquet)
 
-    val incompletePipeline = PipelineBuilder2[IO]("incomplete-schema-pipeline")
+    val incompletePipeline = PipelineBuilder[IO]("incomplete-schema-pipeline")
       .withDescription("Pipeline with missing field")
       .addTransform[IncompleteUserRecord](_ => IO.pure(IncompleteUserRecord("1", "test@example.com")))
     // ❌ MISSING FIELD: IncompleteUserRecord missing 'age' field required by contract
@@ -164,7 +165,7 @@ object ContractDriftCompileFailTests {
     val source = DataSource.gcs("test-bucket", "users/*.parquet", DataFormat.Parquet)
     val sink   = DataSink.gcs("test-bucket", "processed/", DataFormat.Parquet)
 
-    val extraFieldPipeline = PipelineBuilder2[IO]("extra-field-pipeline")
+    val extraFieldPipeline = PipelineBuilder[IO]("extra-field-pipeline")
       .withDescription("Pipeline with extra field using wrong policy")
       .addTransform[ExtraFieldUserRecord](_ =>
         IO.pure(ExtraFieldUserRecord("1", "test@example.com", 25, System.currentTimeMillis())),

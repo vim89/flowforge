@@ -2,8 +2,9 @@ package com.flowforge.framework
 
 import cats.data.Validated
 import com.flowforge.contracts.DataContract
+import com.flowforge.core.PipelineBuilder
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.types.{ BusinessError, FlowForgeError, PipelineBuilder2, PipelineStage }
+import com.flowforge.core.types.{ BusinessError, FlowForgeError, PipelineStage }
 import shapeless.{ HList, LabelledGeneric }
 
 /**
@@ -18,17 +19,17 @@ final case class TypedContract[A, R <: HList](
 object TypedContractsSyntax {
 
   /**
-   * PipelineBuilder2 syntax to attach a typed contract stage. Enforces at compile time that Out’s
+   * PipelineBuilder syntax to attach a typed contract stage. Enforces at compile time that Out’s
    * labelled-generic representation matches the contract’s type-level schema R.
    */
   implicit final class PipelineBuilder2ContractsOps[F[_], In, Out](
-    private val b: PipelineBuilder2[F, In, Out])
+    private val b: PipelineBuilder[F, In, Out])
       extends AnyVal {
 
     def contractTyped[R <: HList](
       tc: TypedContract[Out, R],
     )(implicit F: EffectSystem[F],
-    ): PipelineBuilder2[F, In, Out] = {
+    ): PipelineBuilder[F, In, Out] = {
       val stage = PipelineStage.Transform[F, Out, Out](
         name = s"typed-contract-${b.stages.size}",
         description = "Compile-time aligned contract validation",

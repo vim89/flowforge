@@ -2,12 +2,13 @@ package com.flowforge.core.types
 
 import cats.Parallel
 import cats.data.Kleisli
+import com.flowforge.core.PipelineBuilder
 import com.flowforge.core.algebra.EffectSystem
 
 import scala.concurrent.duration.FiniteDuration
 
 /**
- * Typed combinators for PipelineBuilder2.
+ * Typed combinators for PipelineBuilder.
  */
 object PipelineBuilder2Combinators {
 
@@ -15,10 +16,10 @@ object PipelineBuilder2Combinators {
    * Sequentially compose two PipelineBuilder2s.
    */
   def sequence[F[_]: EffectSystem, In, Mid, Out](
-    first: PipelineBuilder2[F, In, Mid],
-    second: PipelineBuilder2[F, Mid, Out],
-  ): PipelineBuilder2[F, In, Out] =
-    PipelineBuilder2[F, In, Out](
+    first: PipelineBuilder[F, In, Mid],
+    second: PipelineBuilder[F, Mid, Out],
+  ): PipelineBuilder[F, In, Out] =
+    PipelineBuilder[F, In, Out](
       name = first.name,
       description = first.description,
       stages = first.stages ++ second.stages,
@@ -29,9 +30,9 @@ object PipelineBuilder2Combinators {
    * Run two PipelineBuilder2s in parallel and combine their outputs.
    */
   def parallel[F[_]: EffectSystem: Parallel, In, Out1, Out2](
-    left: PipelineBuilder2[F, In, Out1],
-    right: PipelineBuilder2[F, In, Out2],
-  ): PipelineBuilder2[F, In, (Out1, Out2)] = {
+    left: PipelineBuilder[F, In, Out1],
+    right: PipelineBuilder[F, In, Out2],
+  ): PipelineBuilder[F, In, (Out1, Out2)] = {
     require(left.stages.nonEmpty, s"Left pipeline ${left.name} must have at least one stage")
     require(right.stages.nonEmpty, s"Right pipeline ${right.name} must have at least one stage")
 
@@ -55,7 +56,7 @@ object PipelineBuilder2Combinators {
       },
     )
 
-    PipelineBuilder2[F, In, (Out1, Out2)](
+    PipelineBuilder[F, In, (Out1, Out2)](
       name = s"parallel(${left.name},${right.name})",
       description = s"Parallel execution of ${left.name} and ${right.name}",
       stages = List(customStage),
@@ -64,12 +65,12 @@ object PipelineBuilder2Combinators {
   }
 
   /**
-   * Retry a PipelineBuilder2 on failure up to maxRetries.
+   * Retry a PipelineBuilder on failure up to maxRetries.
    */
   def retry[F[_]: EffectSystem, In, Out](
-    builder: PipelineBuilder2[F, In, Out],
+    builder: PipelineBuilder[F, In, Out],
     maxRetries: Int,
-  ): PipelineBuilder2[F, In, Out] = {
+  ): PipelineBuilder[F, In, Out] = {
     val F = implicitly[EffectSystem[F]]
     val retryStage = PipelineStage.Custom[F, In, Out](
       name = s"retry-${builder.name}",
@@ -89,7 +90,7 @@ object PipelineBuilder2Combinators {
         )
       },
     )
-    PipelineBuilder2[F, In, Out](
+    PipelineBuilder[F, In, Out](
       name = s"retry($maxRetries,${builder.name})",
       description = s"Retry ${builder.name} up to $maxRetries times",
       stages = List(retryStage),
@@ -102,9 +103,9 @@ object PipelineBuilder2Combinators {
    */
   def conditional[F[_]: EffectSystem, In, Out](
     cond: In => Boolean,
-    ifTrue: PipelineBuilder2[F, In, Out],
-    ifFalse: PipelineBuilder2[F, In, Out],
-  ): PipelineBuilder2[F, In, Out] = {
+    ifTrue: PipelineBuilder[F, In, Out],
+    ifFalse: PipelineBuilder[F, In, Out],
+  ): PipelineBuilder[F, In, Out] = {
     val conditionalStage = PipelineStage.Custom[F, In, Out](
       name = s"conditional-${ifTrue.name}-${ifFalse.name}",
       description = "Conditional pipeline execution",
@@ -117,7 +118,7 @@ object PipelineBuilder2Combinators {
         else ifFalse.build().execute(in)
       },
     )
-    PipelineBuilder2[F, In, Out](
+    PipelineBuilder[F, In, Out](
       name = s"conditional(${ifTrue.name},${ifFalse.name})",
       description = "Conditional pipeline execution",
       stages = List(conditionalStage),

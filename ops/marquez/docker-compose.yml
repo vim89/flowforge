@@ -1,0 +1,25 @@
+version: "3.7"
+services:
+  marquez:
+    image: marquezproject/marquez:latest
+    ports:
+      - "5000:5000"
+    environment:
+      - MARQUEZ_PORT=5000
+      - MARQUEZ_DB_HOST=postgres
+      - MARQUEZ_DB_PORT=5432
+      - MARQUEZ_DB_USER=marquez
+      - MARQUEZ_DB_PASSWORD=marquez
+      - MARQUEZ_DB_NAME=marquez
+    depends_on:
+      - postgres
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=marquez
+      - POSTGRES_PASSWORD=marquez
+      - POSTGRES_DB=marquez
+    ports:
+      - "5432:5432"
+
+- 

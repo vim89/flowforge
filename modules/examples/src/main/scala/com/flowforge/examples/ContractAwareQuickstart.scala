@@ -2,9 +2,10 @@ package com.flowforge.examples
 
 import cats.effect.{ IO, IOApp }
 import cats.implicits._
+import com.flowforge.core.PipelineBuilder
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
-import com.flowforge.core.types.{ DataFormat, DataSink, DataSource, PipelineBuilder2 }
+import com.flowforge.core.types.{ DataFormat, DataSink, DataSource }
 import com.flowforge.core.types.{ SchemaEvolutionPolicy, SchemaWitness }
 
 /**
@@ -120,7 +121,7 @@ object ContractAwareQuickstart extends IOApp.Simple {
       IO.println(s"💾 Writing to sink: $processed")
 
     // 🎯 THIS IS THE KEY: Pipeline with contract enforcement
-    contractValidatedPipeline = PipelineBuilder2[IO]("sales-processing")
+    contractValidatedPipeline = PipelineBuilder[IO]("sales-processing")
       .withDescription("Sales data processing with contract validation")
       .addTransform[RawSalesRecord](_ => readSales(source))
       .addTransform[ProcessedSalesRecord](processSales)
@@ -158,7 +159,7 @@ object ContractAwareQuickstart extends IOApp.Simple {
     for {
       _ <- IO.println("🔄 Testing Backward Compatible Policy (pipeline has extra fields)...")
       // This should compile - pipeline output is superset of contract
-      backwardCompatiblePipeline = PipelineBuilder2[IO]("backward-compatible-demo")
+      backwardCompatiblePipeline = PipelineBuilder[IO]("backward-compatible-demo")
         .addTransform[ExtendedProcessedSalesRecord](_ =>
           IO.pure(ExtendedProcessedSalesRecord("tx-002", "cust-002", 0.5, "USD", true)),
         )
@@ -169,7 +170,7 @@ object ContractAwareQuickstart extends IOApp.Simple {
 
       _ <- IO.println("🔄 Testing Forward Compatible Policy (contract has extra fields)...")
       // This should compile - pipeline output is subset of contract
-      forwardCompatiblePipeline = PipelineBuilder2[IO]("forward-compatible-demo")
+      forwardCompatiblePipeline = PipelineBuilder[IO]("forward-compatible-demo")
         .addTransform[MinimalProcessedSalesRecord](_ =>
           IO.pure(MinimalProcessedSalesRecord("tx-003", "cust-003", 0.75)),
         )
@@ -207,7 +208,7 @@ object ContractDriftDemo {
   )
 
   def demonstrateCompileFailure: IO[Unit] = {
-    val failingPipeline = PipelineBuilder2[IO]("contract-drift-demo")
+    val failingPipeline = PipelineBuilder[IO]("contract-drift-demo")
       .addTransform[DriftedPipelineOutput](_ =>
         IO.pure(DriftedPipelineOutput("tx-001", "cust-001", 0.5, "USD", true)))
       // ❌ THIS WILL NOT COMPILE:
@@ -243,7 +244,7 @@ object ContractDriftDemo {
   )
 
   def demonstrateCompileFix: IO[Unit] = {
-    val fixedPipeline = PipelineBuilder2[IO]("fixed-contract-demo")
+    val fixedPipeline = PipelineBuilder[IO]("fixed-contract-demo")
       .addTransform[FixedPipelineOutput](_ =>
         IO.pure(FixedPipelineOutput("tx-001", "cust-001", 0.5, "USD", true)))
       .buildWithExactContract[ContractAwareQuickstart.ProcessedSalesContract] // ✅ Now compiles!

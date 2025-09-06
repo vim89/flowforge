@@ -20,25 +20,25 @@ import com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
 
 // Define our contract
 case class UserContract(
-  id: String,
-  email: String,
-  age: Int
-)
+                         id: String,
+                         email: String,
+                         age: Int
+                       )
 
 // Define matching pipeline output
 case class UserRecord(
-  id: String,
-  email: String,
-  age: Int
-)
+                       id: String,
+                       email: String,
+                       age: Int
+                     )
 
 val source = DataSource.gcs("test-bucket", "users/*.parquet", DataFormat.Parquet)
 val sink = DataSink.gcs("test-bucket", "processed/", DataFormat.Parquet)
 
 // ✅ This compiles successfully - schemas match exactly
-val workingPipeline = PipelineBuilder2[IO]("working-pipeline")
+val workingPipeline = PipelineBuilder[IO]("working-pipeline")
   .withDescription("Pipeline with perfect schema match")
-  .addTransform[UserRecord](_ => 
+  .addTransform[UserRecord](_ =>
     IO.pure(UserRecord("1", "test@example.com", 25)))
   .buildWithExactContract[UserContract] // ✅ Compiles!
 ```
