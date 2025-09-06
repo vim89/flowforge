@@ -228,7 +228,7 @@ object ContractsExtractorCli extends IOApp {
               |  late_data_policy: accept_with_flag
               |""".stripMargin
         JFiles.write(dqPath, dqYaml.getBytes("UTF-8"))
-        JFiles.write(metaPath, metaYaml.getBytes("UTF-8"))
+        val _ = JFiles.write(metaPath, metaYaml.getBytes("UTF-8"))
       }
 
     private def firstField(avroJson: String): Option[String] = {

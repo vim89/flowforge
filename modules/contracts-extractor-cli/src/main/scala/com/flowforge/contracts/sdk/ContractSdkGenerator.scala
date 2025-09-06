@@ -5,7 +5,7 @@ import cats.implicits._
 import io.circe.parser._
 
 import java.nio.file.{ Files => JFiles, Paths }
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object ContractSdkGenerator {
 
@@ -161,6 +161,6 @@ object ContractSdkGenerator {
       if (subDir.nonEmpty) Paths.get(baseDir, "src", "main", "scala", subDir.replace(".", "/"))
       else Paths.get(baseDir)
     if (!JFiles.exists(dir)) JFiles.createDirectories(dir)
-    JFiles.write(dir.resolve(fileName), content.getBytes("UTF-8"))
+    val _ = JFiles.write(dir.resolve(fileName), content.getBytes("UTF-8"))
   }
 }

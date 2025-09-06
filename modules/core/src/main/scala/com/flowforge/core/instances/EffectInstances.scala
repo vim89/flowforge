@@ -476,7 +476,7 @@ object EffectInstances {
      * Convert any effect to a different effect type (when both have EffectSystem instances). Note: This is a
      * conceptual method. Real effect transformation requires runtime bridging.
      */
-    def liftTo[G[_]](implicit F: EffectSystem[F], G: EffectSystem[G]): G[A] =
+    def liftTo[G[_]](implicit @annotation.unused F: EffectSystem[F], G: EffectSystem[G]): G[A] =
       // Placeholder for effect transformation - would need runtime interop
       // For production use, consider using cats-interop-zio or similar
       G.raiseError(

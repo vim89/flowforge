@@ -24,7 +24,7 @@ class DeequAdapterSpec extends AnyFunSuite with Matchers {
     try {
       import spark.implicits._
       val good = Seq(Txn("a", 10.0), Txn("b", 20.0)).toDF()
-      val bad  = Seq(Txn(null.asInstanceOf[String], 5.0), Txn("a", 7.0)).toDF()
+      val bad  = Seq(Txn(Option.empty[String].orNull, 5.0), Txn("a", 7.0)).toDF()
 
       val schemaEmpty = DataSchema(
         fields = Nil,

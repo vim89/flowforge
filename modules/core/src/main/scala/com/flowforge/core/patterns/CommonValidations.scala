@@ -140,7 +140,7 @@ object CommonValidations {
    */
   def validateDataQuality[A](
     data: List[A],
-    rules: QualityRules,
+    @annotation.unused rules: QualityRules,
   ): QualityValidationResult[List[A]] =
     // Simplified quality validation - in practice would be much more sophisticated
     if (data.nonEmpty) {

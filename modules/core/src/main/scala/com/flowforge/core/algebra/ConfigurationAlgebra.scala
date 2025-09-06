@@ -929,7 +929,7 @@ object ConfigurationMigration {
    * @return
    *   CCM compatibility layer instance
    */
-  def fromCCMEndpoint[F[_]: Sync: Temporal](ccmEndpoint: String): CCMCompatibilityLayer[F] =
+  def fromCCMEndpoint[F[_]: Sync: Temporal](@annotation.unused ccmEndpoint: String): CCMCompatibilityLayer[F] =
     new CCMCompatibilityLayer[F] {
 
       def getCcmConfig(configName: String): F[Option[Map[String, String]]] =
@@ -1072,8 +1072,8 @@ object ConfigurationMigration {
   )
 
   private def generateMigrationSteps(
-    ccm: List[String],
-    flowforge: List[String],
+    @annotation.unused ccm: List[String],
+    @annotation.unused flowforge: List[String],
   ): List[MigrationStep] =
     // Generate step-by-step migration plan
     List(
