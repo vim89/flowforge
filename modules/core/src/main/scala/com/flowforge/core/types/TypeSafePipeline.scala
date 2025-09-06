@@ -320,13 +320,13 @@ object TypeSafePipeline {
     // Use existential types to maintain type safety during composition
     type ExistentialStage = TypeSafeStage[F, X, Y] forSome { type X; type Y }
 
-    val existentialStages: List[ExistentialStage] = stages.map(stage => 
-      stage.asInstanceOf[ExistentialStage] // Temporary - will be replaced with proper witnesses
+    val existentialStages: List[ExistentialStage] = stages.map(stage =>
+      stage.asInstanceOf[ExistentialStage], // Temporary - will be replaced with proper witnesses
     )
 
     // Build composition using type-safe chaining
     existentialStages match {
-      case head :: tail =>
+      case head :: _ =>
         // Type-safe composition using existential type witnesses
         composeStagesSequentially(existentialStages)
       case Nil =>
@@ -338,16 +338,14 @@ object TypeSafePipeline {
    * Compose stages sequentially with type-safe existential handling
    */
   private def composeStagesSequentially[F[_]: EffectSystem](
-    stages: List[TypeSafeStage[F, _, _]]
-  ): Kleisli[F, _, _] = {
+    stages: List[TypeSafeStage[F, _, _]],
+  ): Kleisli[F, _, _] =
     // For now, use sequential composition with dynamic typing
     // TODO: Replace with proper GADT composition
-    stages.foldLeft(Kleisli.pure[F, Any, Any]((x: Any) => x)) { (acc, _) =>
-      acc.andThen(Kleisli[F, Any, Any](_ => 
-        EffectSystem[F].pure(()).asInstanceOf[F[Any]]
-      ))
-    }.asInstanceOf[Kleisli[F, _, _]]
-  }
+    stages
+      .foldLeft(Kleisli.pure[F, Any, Any]((x: Any) => x)) { (acc, _) =>
+        acc.andThen(Kleisli[F, Any, Any](_ => EffectSystem[F].pure(()).asInstanceOf[F[Any]]))
+      }.asInstanceOf[Kleisli[F, _, _]]
 }
 
 // ===============================
@@ -374,11 +372,11 @@ object TypeWitness {
   }
 
   /**
-   * UNSAFE: Direct casting witness - only for migration from asInstanceOf
-   * TODO: Replace with proper type-level computation
+   * UNSAFE: Direct casting witness - only for migration from asInstanceOf TODO: Replace with proper
+   * type-level computation
    */
   def unsafe[A, B]: TypeWitness[A, B] = new TypeWitness[A, B] {
-    def apply(a: A): B = a.asInstanceOf[B]
+    def apply(a: A): B   = a.asInstanceOf[B]
     def reverse(b: B): A = b.asInstanceOf[A]
   }
 

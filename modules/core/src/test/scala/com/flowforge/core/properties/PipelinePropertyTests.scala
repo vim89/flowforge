@@ -147,11 +147,11 @@ class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaChe
       start <- es.delay(System.currentTimeMillis())
       fiber <- es.start(
         // Use cancellable operation instead of Thread.sleep which blocks cancellation
-        es.sleep(10.seconds) >> es.pure("should not complete")
+        es.sleep(10.seconds) >> es.pure("should not complete"),
       )
-      _     <- es.sleep(50.millis) // Give fiber time to start
-      _     <- fiber.cancel        // Cancel the running fiber
-      end   <- es.delay(System.currentTimeMillis())
+      _   <- es.sleep(50.millis) // Give fiber time to start
+      _   <- fiber.cancel        // Cancel the running fiber
+      end <- es.delay(System.currentTimeMillis())
     } yield end - start
 
     cancellationTest.map { elapsed =>

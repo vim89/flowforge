@@ -9,9 +9,9 @@ import java.time.Instant
 /**
  * Production-ready Spark dataset wrapper with MEMORY-SAFE distributed processing.
  *
- * CRITICAL FIX: No longer stores entire dataset in memory. Uses Spark DataFrame
- * for distributed operations with sample data for compatibility.
- * 
+ * CRITICAL FIX: No longer stores entire dataset in memory. Uses Spark DataFrame for distributed operations
+ * with sample data for compatibility.
+ *
  * This bridges the gap between FlowForge's functional interface and Spark's distributed computation model
  * while maintaining type safety and preventing OOM errors.
  */
@@ -28,13 +28,13 @@ final case class ProductionSparkDataset[A](
   override def size: Int = sparkDataFrame.count().toInt
 
   /**
-   * Check emptiness from Spark DataFrame - DISTRIBUTED SAFE  
+   * Check emptiness from Spark DataFrame - DISTRIBUTED SAFE
    */
   override def isEmpty: Boolean = sparkDataFrame.isEmpty
-  
+
   /**
-   * COMPATIBILITY: Returns sample data for legacy compatibility
-   * WARNING: This is only a sample, not the full dataset
+   * COMPATIBILITY: Returns sample data for legacy compatibility WARNING: This is only a sample, not the full
+   * dataset
    */
   override def data: List[A] = sampleData
 
@@ -97,7 +97,7 @@ object ProductionSparkDataset {
 
   /**
    * Create ProductionSparkDataset from DataFrame with MEMORY-SAFE lazy decoding
-   * 
+   *
    * CRITICAL FIX: No longer loads entire DataFrame into driver memory
    */
   def fromDataFrame[A: DataDecoder](
@@ -110,7 +110,7 @@ object ProductionSparkDataset {
       List.empty[A]
     } else {
       // Take only small sample for compatibility, not entire dataset
-      val sampleSize = math.min(100, df.count()).toInt
+      val sampleSize  = math.min(100, df.count()).toInt
       val jsonStrings = df.toJSON.limit(sampleSize).collect().toList
       jsonStrings.flatMap { js =>
         val bytes = js.getBytes("UTF-8")
