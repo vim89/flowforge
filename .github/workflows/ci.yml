@@ -28,7 +28,7 @@ jobs:
             ${{ runner.os }}-sbt-
       - name: sbt mvr (compile + unit tests)
         run: |
-          sbt -v compileAll; test:compile
+          sbt -v mvr
       - name: Report Ivy cache size
         run: du -sh ~/.ivy2/cache || true
 

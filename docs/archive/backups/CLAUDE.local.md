@@ -262,6 +262,207 @@ Apply only where they fit perfectly to solve that bit of problem or make other t
     - **Comprehensive ecosystem** for functional programming
     - **Interoperability** with existing libraries and frameworks
     - **Decorator Pattern with Effect Systems**: Using the decorator pattern to add additional behavior to existing components in a type-safe manner, while leveraging the capabilities of effect systems like ZIO or Cats Effect to manage side effects and resource safety. time, ensuring robust and reliable applications.
+
+### 🔬 **Effect System Research Findings & Architecture Decision**
+
+Based on comprehensive research and analysis of FlowForge's production-grade pipeline requirements, **Effect Systems are essential** for our data engineering platform. Here are the key findings:
+
+#### **🎯 Critical Distinction: Spark vs Non-Spark Effects**
+
+The research revealed a crucial architectural principle:
+- **Spark Operations**: Already have distributed execution, fault tolerance, and retry mechanisms built-in
+- **Non-Spark Effects**: JDBC connections, HTTP APIs, filesystem operations, audit logging, schema registry interactions require proper effect management
+- **Pipeline Orchestration**: Composing heterogeneous systems (Spark + databases + APIs + file systems) demands effect composition
+- **Resource Safety**: Multi-cloud operations, connection pooling, and cleanup require bracket patterns
+
+**Key Decision**: Effect systems are NOT needed for pure Spark transformations, but are **mandatory** for:
+1. External system integration (databases, APIs, file systems)
+2. Pipeline orchestration across multiple engines
+3. Audit logging and lineage tracking
+4. Schema registry and metadata management
+5. Typed error handling and recovery patterns
+
+#### **📋 Production Pipeline Concerns (35+ Requirements)**
+
+Research expanded the original 12 pipeline concerns into 35+ production-grade requirements:
+
+**1. Correctness & Safety (6 principles)**
+- Data contracts validation at compile-time (schemas as types, ADTs, phantom types)
+- Schema evolution & compatibility rules (forward/backward/full compatibility)
+- Business transformations with typed error channels (no silent failures)
+- Idempotency & reprocessing guarantees (support backfills, retries)
+- Exactly-once vs at-least-once semantics made explicit
+- Dead-letter queues (DLQ) for failed records, record-level retries
+
+**2. Scalability & Performance (6 principles)**
+- Affected partitions computation (process only what changed)
+- Partition-aware joins and shuffle minimization
+- CDC & incremental updates (Kimball, delta lake, append vs merge)
+- Compression & encoding (Parquet/Avro/Arrow)
+- Batch-stream unification (treat stream as first-class, batch = replay)
+- Concurrency & ordering guarantees (partition ordering vs global)
+
+**3. Reliability & Resilience (6 principles)**
+- Audit logging around every stage
+- Lineage & provenance tracked as first-class data
+- Monitoring data freshness (latency SLAs, data timeliness)
+- Distributed systems hazards (network partitions, retries, clock skew)
+- Fault isolation (restart at partition-level, not entire pipeline)
+- Transactional sink writes / outbox pattern for multi-sink outputs
+
+**4. Governance & Maintainability (8+ principles)**
+- Profile & anomaly detection before and after transformations
+- Data quality checks pre/post ingestion
+- Versioned transformations for reproducibility
+- Reprocessability of historical data
+- Data contracts as APIs (review schema changes like code changes)
+- Observability hooks (metrics, logs, traces)
+- Audit + lineage integrated with catalog (BigQuery, Glue, DataHub, etc)
+- DDIA-derived concerns: consistency models, serialization, distributed transactions
+
+#### **🏗 Technical Implementation Strategy**
+
+**Tagless Final + Typed Errors + Schema Evolution**:
+
+```scala
+// Core pipeline algebra with typed errors
+trait DataPipelineAlg[F[_]] {
+  def readSource[A: DataDecoder](src: DataSource): F[Either[DataError, Dataset[A]]]
+  def validate[A](ds: Dataset[A], contract: DataContract[A]): F[ValidatedNel[DataError, Dataset[A]]]
+  def transform[A, B: DataEncoder](ds: Dataset[A])(f: A => B): F[Dataset[B]]
+  def performCDC[A](src: Dataset[A], tgt: Dataset[A], keys: NonEmptyList[FieldName]): F[CDCResult[A]]
+  def audit[A](stage: String, ds: Dataset[A]): F[Unit]
+  def write[A: DataEncoder](ds: Dataset[A], sink: DataSink): F[WriteResult]
+}
+
+// Typed error hierarchy
+sealed trait DataError extends Product with Serializable {
+  def message: String
+}
+
+object DataError {
+  case class DecodeError(source: String, cause: Option[String], message: String) extends DataError
+  case class SchemaMismatch(expected: DataSchema, actual: DataSchema, message: String) extends DataError
+  case class ContractViolation(reason: String, details: Map[String, String]) extends DataError
+  case class StorageError(location: String, cause: Option[String], message: String) extends DataError
+  case class CDCError(reason: String, message: String) extends DataError
+}
+
+// Pipeline composition with Kleisli arrows
+val pipeline: Kleisli[F, PipelineInput, PipelineResult] = for {
+  raw    <- readKleisli
+  valid  <- validateKleisli  
+  clean  <- transformKleisli
+  delta  <- cdcKleisli
+  result <- writeKleisli
+} yield result
+```
+
+#### **🔄 Schema Evolution & Migration Strategy**
+
+**Schema Registry with Automatic Migration**:
+- **DataDecoder[A]** returns `Either[DataError, A]` instead of throwing exceptions
+- **SchemaCompatibility** checks determine forward/backward compatibility
+- **SchemaMigration** trait enables pluggable record transformations
+- **SafeDecode** utility applies migrations before decoding
+- **Version-aware** encoding/decoding with automatic schema registry integration
+
+#### **⚡ Effect System Usage Guidelines**
+
+1. **Spark-Only Operations**: Use `F.pure(dataset)` for pure Spark transformations (map/filter/join)
+2. **External IO**: Use `Sync[F].delay(...)` for JDBC, HTTP, filesystem operations
+3. **Resource Management**: All external integrations must use `Resource[F, _]` for cleanup
+4. **Error Handling**: Use `EitherT[F, DataError, A]` for composable error handling
+5. **Validation**: Multi-error scenarios use `ValidatedNel[DataError, A]`, never fail-fast exceptions
+6. **Testing**: Provide both `Id` interpreter (for unit tests) and `IO` interpreter (for integration tests)
+
+#### **🎮 Multi-Engine Strategy**
+
+Effect polymorphism enables true multi-engine support:
+- **SparkDataAlgebra[F]**: Spark-based implementation
+- **FlinkDataAlgebra[F]**: Flink-based implementation
+- **LocalDataAlgebra[F]**: In-memory implementation for testing
+- **Same business logic**: Pipeline definitions work across all engines
+- **Engine-specific optimizations**: Each algebra can optimize for its runtime
+
+This research confirms that Effect Systems are not optional ceremony, but essential infrastructure for production-grade data engineering platforms. They enable composability, testability, resource safety, and typed error handling across heterogeneous systems while maintaining the flexibility to work with multiple execution engines.
+
+## 🔧 **Critical Implementation Guidelines from Effect System Research**
+
+### **Mandatory Effect Usage Separation**
+
+Based on the Effect System research findings, FlowForge implementations **MUST** follow this separation:
+
+#### **❌ WRONG: Using F[_] for Pure Spark Operations**
+```scala
+// INCORRECT - Pure Spark transformations don't need effects
+def filter[A](ds: Dataset[A])(pred: A => Boolean): F[Dataset[A]] = 
+  F.delay(ds.filter(pred))  // Unnecessary effect wrapper
+
+def map[A, B](ds: Dataset[A])(f: A => B): F[Dataset[B]] = 
+  F.delay(ds.map(f))  // Spark already handles this
+```
+
+#### **✅ CORRECT: Spark-Only vs External IO Separation**
+```scala
+// CORRECT - Pure Spark transformations as direct operations
+def filter[A](ds: Dataset[A])(pred: A => Boolean): Dataset[A] = 
+  ds.filter(pred)  // Direct Spark operation, no effect needed
+
+def map[A, B](ds: Dataset[A])(f: A => B): Dataset[B] = 
+  ds.map(f)  // Pure transformation, no side effects
+
+// CORRECT - External IO operations require effects
+def read[A: DataDecoder](source: DataSource): F[Dataset[A]] = 
+  F.bracketCase(
+    acquire = F.delay(openConnection(source)),
+    use = conn => F.delay(readFromSource[A](conn)),
+    release = (conn, _) => F.delay(conn.close())
+  )
+
+def write[A: DataEncoder](ds: Dataset[A], sink: DataSink): F[WriteResult] = 
+  F.bracket(
+    acquire = F.delay(openSink(sink)),
+    use = s => F.delay(writeToSink(ds, s)),
+    release = s => F.delay(s.close())
+  )
+```
+
+### **Effect System Implementation Rules**
+
+1. **Pure Spark Operations**: Return `Dataset[A]` directly, no `F[_]` wrapper
+2. **External IO Operations**: Use `F[_]` with proper resource management (`bracket`, `Resource[F, _]`)
+3. **Pipeline Orchestration**: Use `F[_]` for composing heterogeneous systems
+4. **Configuration/Metadata**: Use `F[_]` for schema registry, config loading, audit logging
+5. **Error Handling**: Use `ValidatedNel[DataError, A]` for multi-error scenarios
+
+### **Refactoring Existing Code**
+
+All current FlowForge implementations that use `F[_]` for pure Spark transformations **MUST** be refactored:
+
+```scala
+// Before: Effect system everywhere (INCORRECT)
+trait SparkDataAlgebra[F[_]: EffectSystem] {
+  def filter[A](ds: Dataset[A])(pred: A => Boolean): F[Dataset[A]]
+  def map[A, B](ds: Dataset[A])(f: A => B): F[Dataset[B]]
+  def read[A](source: DataSource): F[Dataset[A]]
+}
+
+// After: Proper separation (CORRECT)  
+trait SparkDataAlgebra[F[_]: EffectSystem] {
+  // Pure Spark operations - no effects
+  def filter[A](ds: Dataset[A])(pred: A => Boolean): Dataset[A]
+  def map[A, B](ds: Dataset[A])(f: A => B): Dataset[B]
+  def join[A, B](left: Dataset[A], right: Dataset[B]): Dataset[(A, B)]
+  
+  // External IO operations - effects required
+  def read[A: DataDecoder](source: DataSource): F[Dataset[A]]
+  def write[A: DataEncoder](ds: Dataset[A], sink: DataSink): F[WriteResult]
+  def auditOperation[A](stage: String, ds: Dataset[A]): F[Unit]
+}
+```
+
+This architectural principle is **non-negotiable** and must be applied to all FlowForge implementations to align with the Effect System research findings.
 - **Phantom Types**: Using phantom types to encode additional type information at compile time without affecting runtime representation, enhancing type safety and expressiveness.
 - **Type-Level Programming**: Leveraging Scala's advanced type system to perform computations and enforce
 - **F-Bounded Polymorphism**: Using F-bounded polymorphism to define type hierarchies where a type parameter is constrained to be a subtype of a specific type, enabling more precise typing and code reuse. For Type-Safe Composition
@@ -480,6 +681,24 @@ Instead:
 
 This supports code clarity, discoverability, and matches Scala community conventions.
 
+#### More Guidelines
+
+1. **Commit Messages**: Use [Conventional Commits](https://www.conventionalcommits.org/) format. Examples include:
+- `feat:` for new features
+- `fix:` for bug fixes
+- `docs:` for documentation changes
+- `test:` for test-related changes
+- `chore:` for maintenance tasks
+
+2. **Simplicity First**: Prefer simpler implementations over overly complex solutions.
+
+3. **Uniform Structure**: Maintain a consistent code structure across modules so files and packages are easy to navigate.
+
+4. **Explain Why**: Add comments explaining *why* something is done if it is not obvious from code alone.
+
+5. **Architectural Decision Records (ADRs)**: For non-trivial design choices, add a short ADR (docs/adr/NNN-*.md) explaining context, the decision, and alternatives.
+
+
 ---
 
 ####  Why This Matters (Supported by Scala Style Guides)
@@ -557,4 +776,4 @@ When wrapping up, Claude must summarize:
 - Summaries and checkpoints reduce token bloat and maintain conversation coherence
 - Conflict detection and small patches dramatically cut down wasted labor and merge conflicts
 
-**NOTE: This file CLAUDE.md must have maximum 40k characters. If it exceeds, rephrase, shorten, summarize, compress, reduce the content without losing any information.**
+**NOTE: This file CLAUDE.local.md must have maximum 40k characters. If it exceeds, rephrase, shorten, summarize, compress, reduce the content without losing any information.**
