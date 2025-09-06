@@ -19,9 +19,9 @@ object Shape {
         ctx.parameters.toList.map { p =>
           Field(
             name = p.label,
-            tpe = p.typeInfo.full,
+            tpe = p.typeName.full,
             hasDefault = p.default.isDefined,
-            isOptional = p.typeInfo.full.startsWith("scala.Option["),
+            isOptional = p.typeName.full.startsWith("scala.Option["),
           )
         }
     }

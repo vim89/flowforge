@@ -23,7 +23,7 @@ object SchemaConformsMacros {
     val missing0 = con.collect { case (n, t, hasDef, isOpt) if !outMap.contains(n) => (n, t, hasDef, isOpt) }
     val extra0   = out.collect { case (n, t, _, _) if !conMap.contains(n) => (n, t) }
     val mismatched = con.collect {
-      case (n, t, _, _) if outMap.get(n).exists(_._2 != t) => (n, expected = t, found = outMap(n)._2)
+      case (n, t, _, _) if outMap.get(n).exists(_._2 != t) => (n, t, outMap(n)._2)
     }
 
     def allowMissingForBackward(x: (String, String, Boolean, Boolean)) =
@@ -41,7 +41,7 @@ object SchemaConformsMacros {
     if (missing.nonEmpty || extra.nonEmpty || mismatched.nonEmpty) {
       def fmtMissing = missing.map { case (n, t, _, _) => s"$n:$t" }.mkString(", ")
       def fmtExtra   = extra.map { case (n, t) => s"$n:$t" }.mkString(", ")
-      def fmtMis     = mismatched.map { case (n, e, f) => s"$n expected $e, found $f" }.mkString("; ")
+      def fmtMis     = mismatched.map { case (n, exp, got) => s"$n expected $exp, found $got" }.mkString("; ")
       val msg =
         s"""FlowForge: Contract drift (policy: ${weakTypeOf[P]}).
            |Out: ${weakTypeOf[Out]} vs Contract: ${weakTypeOf[Contract]}
