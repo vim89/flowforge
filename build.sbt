@@ -118,6 +118,7 @@ lazy val root = (project in file("."))
     qualityDeequ,
     templates,
     examples,
+    compileFailTests,
     it,
   )
   .settings(
@@ -330,6 +331,16 @@ addCommandAlias("mvr", "compileAll; testQuick")
 examples / Compile / compile := (examples / Compile / compile)
   .dependsOn(contractsSdk / Compile / compile)
   .value
+
+// ===== COMPILE-FAIL TESTS MODULE =====
+lazy val compileFailTests = moduleProject("compile-fail-tests")
+  .dependsOn(core, contracts, examples)
+  .settings(
+    description := "Compile-fail tests proving FlowForge's core USP: pipelines become unbuildable on schema drift",
+    libraryDependencies ++= Dependencies.forModule("core"),
+    // These tests are designed to fail compilation when uncommented
+    publish / skip := true,
+  )
 
 // ===== LOCAL CONTRACT VALIDATION (delegates to validation-cli) =====
 // Usage:

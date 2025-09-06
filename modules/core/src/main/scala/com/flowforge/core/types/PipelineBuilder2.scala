@@ -2,6 +2,7 @@ package com.flowforge.core.types
 
 import cats.data.Kleisli
 import com.flowforge.core.algebra.EffectSystem
+import com.flowforge.core.types.{ SchemaEvolutionPolicy, SchemaWitness }
 import eu.timepit.refined.api.Refined
 import shapeless.{ HList, LabelledGeneric }
 
@@ -192,9 +193,59 @@ case class PipelineBuilder2[F[_]: EffectSystem, In, Out] private (
   ): PipelineBuilder2[F, In, Unit] =
     addTypedSinkWithPolicy[R, SchemaPolicy.ExactUnordered](sink, writer)
 
-  // build returns a typed Pipeline[F, In, Out]
-  def build(): Pipeline[F, In, Out] = {
+  /**
+   * Legacy build method - builds pipeline without contract validation.
+   *
+   * WARNING: This method is deprecated. Use buildWithContract for compile-time safety. Will be removed in
+   * future versions to enforce contract-first approach.
+   */
+  @deprecated("Use buildWithContract for compile-time contract validation", "0.1.0")
+  def build(): Pipeline[F, In, Out] = buildInternal()
 
+  /**
+   * Build pipeline with mandatory contract validation using phantom types. This is the primary method that
+   * enforces FlowForge's compile-time contract guarantee.
+   *
+   * Following CLAUDE.md principles:
+   *   - Phantom types track pipeline output type at compile time
+   *   - SchemaWitness provides compile-time evidence of contract compliance
+   *   - Type-safe composition prevents invalid pipeline states
+   *   - Pure functional approach with immutable pipeline construction
+   *
+   * @tparam Contract
+   *   The contract type that pipeline output must match
+   * @tparam Policy
+   *   The schema evolution policy (Exact, BackwardCompatible, etc.)
+   * @param witness
+   *   Compile-time evidence that Out matches Contract under Policy
+   * @return
+   *   Validated pipeline that cannot be built if contract drifts
+   */
+  def buildWithContract[Contract, Policy <: SchemaEvolutionPolicy](
+    implicit witness: SchemaWitness[Out, Contract, Policy],
+  ): Pipeline[F, In, Out] = buildInternal()
+
+  /**
+   * Build pipeline with exact schema matching (most strict policy). Convenience method for common case of
+   * exact contract compliance.
+   */
+  def buildWithExactContract[Contract](
+    implicit witness: SchemaWitness[Out, Contract, SchemaEvolutionPolicy.Exact],
+  ): Pipeline[F, In, Out] = buildWithContract[Contract, SchemaEvolutionPolicy.Exact]
+
+  /**
+   * Build pipeline with backward compatible schema matching. Allows pipeline output to have additional fields
+   * beyond contract.
+   */
+  def buildWithBackwardCompatibleContract[Contract](
+    implicit witness: SchemaWitness[Out, Contract, SchemaEvolutionPolicy.BackwardCompatible],
+  ): Pipeline[F, In, Out] = buildWithContract[Contract, SchemaEvolutionPolicy.BackwardCompatible]
+
+  /**
+   * Internal build implementation following DRY principle. Shared by all public build methods to avoid code
+   * duplication.
+   */
+  private def buildInternal(): Pipeline[F, In, Out] = {
     val defaultConfig = config.getOrElse(
       PipelineConfig(
         name = Refined.unsafeApply(if (name.nonEmpty) name else "default"),
