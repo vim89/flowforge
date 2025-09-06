@@ -132,6 +132,7 @@ object Dependencies {
     )
 
     val flink = Seq(
+      // NOTE: Flink Scala API only available for 2.12, documented constraint
       "org.apache.flink" % "flink-scala_2.12"           % Versions.flink % "provided",
       "org.apache.flink" % "flink-streaming-scala_2.12" % Versions.flink % "provided",
       "org.apache.flink" % "flink-table-runtime"        % Versions.flink % "provided",

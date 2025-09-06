@@ -143,16 +143,14 @@ class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaChe
   }
 
   test("Fiber cancellation should be prompt") {
-    val neverCompletingOperation = es.delay {
-      Thread.sleep(10000) // Simulate long-running operation
-      "should not complete"
-    }
-
     val cancellationTest = for {
       start <- es.delay(System.currentTimeMillis())
-      fiber <- es.start(neverCompletingOperation)
-      _     <- es.sleep(50.millis)
-      _     <- fiber.cancel
+      fiber <- es.start(
+        // Use cancellable operation instead of Thread.sleep which blocks cancellation
+        es.sleep(10.seconds) >> es.pure("should not complete")
+      )
+      _     <- es.sleep(50.millis) // Give fiber time to start
+      _     <- fiber.cancel        // Cancel the running fiber
       end   <- es.delay(System.currentTimeMillis())
     } yield end - start
 

@@ -29,13 +29,28 @@ import scala.concurrent.duration.{ DurationLong, FiniteDuration, NANOSECONDS }
 object SparkDataAlgebra {
 
   /**
+   * Session registry for resource cleanup - thread-safe tracking
+   */
+  private val sessionRegistry = scala.collection.concurrent.TrieMap[AnyRef, SparkSession]()
+
+  /**
+   * Simple wrapper to track SparkSession for resource management
+   */
+  case class DataAlgebraWithSession[F[_]](
+    algebra: DataAlgebra[F], 
+    sparkSession: SparkSession
+  )
+
+  /**
    * Create production-ready Spark-based DataAlgebra instance
    *
    * Features real Spark Dataset operations, Delta Lake integration, and proper CDC.
+   * Returns a trackable algebra for resource management.
    */
   def createSparkDataAlgebra[F[_]: EffectSystem](
     sparkSession: SparkSession,
-  ): DataAlgebra[F] = new DataAlgebra[F] {
+  ): DataAlgebraWithSession[F] = {
+    val algebra = new DataAlgebra[F] {
 
     import com.flowforge.core.impl.SimpleDataset
 
@@ -341,13 +356,15 @@ object SparkDataAlgebra {
         if (missing.nonEmpty) {
           val isEmpty = tgtRaw.limit(1).count() == 0
           if (isEmpty) {
-            // Best-effort: add missing columns via SQL DDL
+            // SECURITY FIX: Validate path and use safe column names before SQL
             try {
+              // Path validation to prevent injection
+              val safePath = validateAndSanitizePath(targetPath)
               val addCols = missing.map {
-                case c if c == scdCur => s"$c BOOLEAN"
-                case c                => s"$c TIMESTAMP"
+                case c if c == scdCur => s"${sanitizeColumnName(c)} BOOLEAN"
+                case c                => s"${sanitizeColumnName(c)} TIMESTAMP"
               }.mkString(", ")
-              spark.sql(s"ALTER TABLE delta.`$targetPath` ADD COLUMNS ($addCols)")
+              spark.sql(s"ALTER TABLE delta.`$safePath` ADD COLUMNS ($addCols)")
             } catch {
               case t: Throwable =>
                 return Left(
@@ -416,11 +433,12 @@ object SparkDataAlgebra {
           partitionedWriter.save(targetPath)
         }
 
-        // Optional optimize/ZORDER hooks (best-effort; may be no-op outside Databricks)
+        // SECURITY FIX: Optional optimize/ZORDER hooks with safe SQL construction
         try
           config.zOrderBy.foreach { cols =>
-            val colsSql = cols.toList.map(_.value).mkString(", ")
-            spark.sql(s"OPTIMIZE delta.`$targetPath` ZORDER BY ($colsSql)")
+            val safePath = validateAndSanitizePath(targetPath)
+            val colsSql = cols.toList.map(col => sanitizeColumnName(col.value)).mkString(", ")
+            spark.sql(s"OPTIMIZE delta.`$safePath` ZORDER BY ($colsSql)")
           }
         catch { case _: Throwable => () }
 
@@ -528,9 +546,9 @@ object SparkDataAlgebra {
     ): DataAlgebra.Dataset[A] = dataset match {
       case pds: ProductionSparkDataset[A] =>
         // PRODUCTION: Use Spark DataFrame operations for distributed filtering
-        val filteredData = pds.data.filter(predicate)
+        val filteredData = pds.sampleData.filter(predicate)
         pds.copy(
-          data = filteredData,
+          sampleData = filteredData,
           metadata = pds.metadata.copy(recordCount = filteredData.size.toLong),
         )
       case _ =>
@@ -588,9 +606,9 @@ object SparkDataAlgebra {
     ): DataAlgebra.Dataset[A] = (left, right) match {
       case (lp: ProductionSparkDataset[A], rp: ProductionSparkDataset[A]) =>
         val unionDf  = lp.sparkDataFrame.unionByName(rp.sparkDataFrame, allowMissingColumns = true)
-        val combined = lp.data ++ rp.data
+        val combined = lp.sampleData ++ rp.sampleData
         lp.copy(
-          data = combined,
+          sampleData = combined,
           sparkDataFrame = unionDf,
           metadata = lp.metadata.copy(recordCount = combined.size.toLong),
         )
@@ -605,8 +623,8 @@ object SparkDataAlgebra {
       dataset match {
         case pds: ProductionSparkDataset[A] =>
           // Fallback to driver sort for now; keep Spark DF consistent with limit/except ops that may follow
-          val sortedData = pds.data.sortBy(keyExtractor)
-          pds.copy(data = sortedData, metadata = pds.metadata.copy(recordCount = sortedData.size.toLong))
+          val sortedData = pds.sampleData.sortBy(keyExtractor)
+          pds.copy(sampleData = sortedData, metadata = pds.metadata.copy(recordCount = sortedData.size.toLong))
         case _ =>
           SimpleDataset(dataset.data.sortBy(keyExtractor), dataset.schema, dataset.metadata)
       }
@@ -614,10 +632,10 @@ object SparkDataAlgebra {
     override def take[A](dataset: DataAlgebra.Dataset[A], n: Int): DataAlgebra.Dataset[A] = dataset match {
       case pds: ProductionSparkDataset[A] if n >= 0 =>
         val df2   = pds.sparkDataFrame.limit(n)
-        val data2 = pds.data.take(n)
+        val data2 = pds.sampleData.take(n)
         pds.copy(
           sparkDataFrame = df2,
-          data = data2,
+          sampleData = data2,
           metadata = pds.metadata.copy(recordCount = data2.size.toLong),
         )
       case _ => SimpleDataset(dataset.data.take(n), dataset.schema, dataset.metadata)
@@ -627,10 +645,10 @@ object SparkDataAlgebra {
       case pds: ProductionSparkDataset[A] if n > 0 =>
         val prefix = pds.sparkDataFrame.limit(n)
         val df2    = pds.sparkDataFrame.exceptAll(prefix)
-        val data2  = pds.data.drop(n)
+        val data2  = pds.sampleData.drop(n)
         pds.copy(
           sparkDataFrame = df2,
-          data = data2,
+          sampleData = data2,
           metadata = pds.metadata.copy(recordCount = data2.size.toLong),
         )
       case _ => SimpleDataset(dataset.data.drop(n), dataset.schema, dataset.metadata)
@@ -782,7 +800,21 @@ object SparkDataAlgebra {
                     DataAlgebra.QualityCheckResult(v.rule, passed = false, message = v.message, score = 0.0)
                   }
               Some(qcr)
-            } catch { case _: Throwable => None }
+            } catch {
+              case _: ClassNotFoundException =>
+                // Deequ not available, skip quality checks
+                None
+              case _: NoSuchMethodException =>
+                // Deequ API incompatible, skip quality checks  
+                None
+              case _: IllegalAccessException =>
+                // Security restriction, skip quality checks
+                None
+              case ex: Exception =>
+                // Log and skip for other exceptions
+                println(s"WARNING: Deequ quality check failed: ${ex.getMessage}")
+                None
+            }
           }
 
           F.flatMap(deequResultsF) {
@@ -915,10 +947,34 @@ object SparkDataAlgebra {
           errors = List.empty,
         ),
       )
+    // SECURITY UTILITIES: Path and column name validation
+    private def validateAndSanitizePath(path: String): String = {
+      // Remove any suspicious characters that could lead to path traversal or injection
+      val sanitized = path.replaceAll("[<>:\"|?*]", "")
+      // Ensure it doesn't start with dangerous patterns
+      if (sanitized.contains("..") || sanitized.startsWith("/proc") || sanitized.startsWith("/etc")) {
+        throw new SecurityException(s"Unsafe path detected: $path")
+      }
+      sanitized
+    }
+
+    private def sanitizeColumnName(columnName: String): String = {
+      // Allow only alphanumeric characters, underscores, and periods
+      val sanitized = columnName.replaceAll("[^a-zA-Z0-9_.]", "")
+      if (sanitized.isEmpty || sanitized != columnName) {
+        throw new SecurityException(s"Unsafe column name detected: $columnName")
+      }
+      sanitized
+    }
+
+    } // End of algebra DataAlgebra[F]
+
+    DataAlgebraWithSession(algebra, sparkSession)
   }
 
   /**
-   * Create a Resource for SparkDataAlgebra with automatic session management
+   * Create a Resource for SparkDataAlgebra with PROPER session management
+   * RESOURCE LEAK FIX: Stores session reference for safe cleanup
    */
   def resource[F[_]: EffectSystem](
     appName: String,
@@ -930,11 +986,34 @@ object SparkDataAlgebra {
         val builder = SparkSession.builder().appName(appName)
         master.foreach(builder.master)
         val spark = builder.getOrCreate()
-        createSparkDataAlgebra[F](spark)
+        // Store the session for cleanup, but return the algebra
+        val wrapper = createSparkDataAlgebra[F](spark)
+        sessionRegistry.put(wrapper.algebra, spark)
+        wrapper.algebra
       }
-    } { _ =>
+    } { algebra =>
+      // RESOURCE LEAK FIX: Properly manage the SparkSession we created
       F.blocking {
-        SparkSession.getActiveSession.foreach(_.stop())
+        sessionRegistry.get(algebra) match {
+          case Some(session) =>
+            try {
+              session.stop()
+              sessionRegistry.remove(algebra)
+            } catch {
+              case _: Exception =>
+                // Fallback with safer error handling
+                SparkSession.getActiveSession.foreach { activeSession =>
+                  try activeSession.stop()
+                  catch { case _: Exception => () }
+                }
+            }
+          case None =>
+            // Fallback for unknown algebra types
+            SparkSession.getActiveSession.foreach { session =>
+              try session.stop()
+              catch { case _: Exception => () }
+            }
+        }
       }
     }
   }

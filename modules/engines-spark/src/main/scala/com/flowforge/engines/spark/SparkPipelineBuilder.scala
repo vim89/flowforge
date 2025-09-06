@@ -261,7 +261,7 @@ object SparkPipelineBuilder {
   def create[F[_]: EffectSystem](
     sparkSession: SparkSession,
   ): SparkPipelineBuilder[F] = {
-    val dataAlgebra = SparkDataAlgebra.createSparkDataAlgebra[F](sparkSession)
+    val dataAlgebra = SparkDataAlgebra.createSparkDataAlgebra[F](sparkSession).algebra
     new SparkPipelineBuilder[F](sparkSession, dataAlgebra)
   }
 

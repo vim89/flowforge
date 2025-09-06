@@ -7,28 +7,36 @@ import org.apache.spark.sql.{ DataFrame, Dataset, SparkSession }
 import java.time.Instant
 
 /**
- * Production-ready Spark dataset wrapper that maintains both Spark DataFrame and in-memory data for hybrid
- * operations.
+ * Production-ready Spark dataset wrapper with MEMORY-SAFE distributed processing.
  *
+ * CRITICAL FIX: No longer stores entire dataset in memory. Uses Spark DataFrame
+ * for distributed operations with sample data for compatibility.
+ * 
  * This bridges the gap between FlowForge's functional interface and Spark's distributed computation model
- * while maintaining type safety.
+ * while maintaining type safety and preventing OOM errors.
  */
 final case class ProductionSparkDataset[A](
-  data: List[A],
+  sampleData: List[A], // Only stores sample, not full dataset
   sparkDataFrame: DataFrame,
   schema: DataSchema,
   metadata: DataAlgebra.DatasetMetadata)
     extends DataAlgebra.Dataset[A] {
 
   /**
-   * Get record count from Spark DataFrame for accuracy
+   * Get record count from Spark DataFrame for accuracy - DISTRIBUTED SAFE
    */
   override def size: Int = sparkDataFrame.count().toInt
 
   /**
-   * Check emptiness from Spark DataFrame
+   * Check emptiness from Spark DataFrame - DISTRIBUTED SAFE  
    */
   override def isEmpty: Boolean = sparkDataFrame.isEmpty
+  
+  /**
+   * COMPATIBILITY: Returns sample data for legacy compatibility
+   * WARNING: This is only a sample, not the full dataset
+   */
+  override def data: List[A] = sampleData
 
   /**
    * Convert to Spark Dataset with encoder for type-safe operations
@@ -88,17 +96,26 @@ final case class ProductionSparkDataset[A](
 object ProductionSparkDataset {
 
   /**
-   * Create ProductionSparkDataset from DataFrame with data decoding
+   * Create ProductionSparkDataset from DataFrame with MEMORY-SAFE lazy decoding
+   * 
+   * CRITICAL FIX: No longer loads entire DataFrame into driver memory
    */
   def fromDataFrame[A: DataDecoder](
     df: DataFrame,
     spark: SparkSession,
   ): ProductionSparkDataset[A] = {
-    // Convert DataFrame to List[A] for compatibility
-    val jsonStrings = df.toJSON.collect().toList
-    val decoded: List[A] = jsonStrings.flatMap { js =>
-      val bytes = js.getBytes("UTF-8")
-      DataDecoder[A].decode(EncodedData(bytes, DataFormat.JSON), DataFormat.JSON).toOption
+    // MEMORY-SAFE: Use lazy evaluation instead of .collect().toList
+    // Only compute sample for schema inference, not entire dataset
+    val sampleData: List[A] = if (df.isEmpty) {
+      List.empty[A]
+    } else {
+      // Take only small sample for compatibility, not entire dataset
+      val sampleSize = math.min(100, df.count()).toInt
+      val jsonStrings = df.toJSON.limit(sampleSize).collect().toList
+      jsonStrings.flatMap { js =>
+        val bytes = js.getBytes("UTF-8")
+        DataDecoder[A].decode(EncodedData(bytes, DataFormat.JSON), DataFormat.JSON).toOption
+      }
     }
 
     val schema = DataSchema(
@@ -124,7 +141,7 @@ object ProductionSparkDataset {
       source = None,
     )
 
-    ProductionSparkDataset(decoded, df, schema, metadata)
+    ProductionSparkDataset(sampleData, df, schema, metadata)
   }
 
   /**

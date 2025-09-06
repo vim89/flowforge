@@ -71,7 +71,7 @@ class DeltaMergeITSpec extends AnyFunSuite with Matchers {
         ),
       )
 
-      val algebra: DataAlgebra[IO] = SparkDataAlgebra.createSparkDataAlgebra[IO](spark)
+      val algebra: DataAlgebra[IO] = SparkDataAlgebra.createSparkDataAlgebra[IO](spark).algebra
       val cfg = CDCOperations.CDCConfig(
         keyColumns = cats.data.NonEmptyList.one(RefinedTypes.FieldName.unsafeFrom("id")),
       )

@@ -66,12 +66,11 @@ def scalacOptionsForVersion(scalaVersion: String): Seq[String] =
 
 ThisBuild / scalacOptions ++= scalacOptionsForVersion(scalaVersion.value)
 
-// Enable SemanticDB for Scalafix semantic rules
-// Gate SemanticDB behind an env flag to avoid default overhead
+// Enable SemanticDB for Scalafix semantic rules with version compatibility
 inThisBuild(
   List(
-    semanticdbEnabled := sys.props.get("enable.semanticdb").contains("true"),
-    semanticdbVersion := "4.10.1",
+    semanticdbEnabled := true,
+    semanticdbVersion := "4.10.1", // Compatible with Scala 2.13.16
   ),
 )
 
@@ -181,7 +180,9 @@ lazy val enginesSpark = moduleProject("engines-spark")
 lazy val enginesFlink = moduleProject("engines-flink")
   .dependsOn(core, connectors)
   .settings(
-    description := "Apache Flink execution engine",
+    description := "Apache Flink execution engine (Scala 2.12 only)",
+    // DEPENDENCY CONSTRAINT: Flink Scala API only supports 2.12
+    crossScalaVersions := Seq(Dependencies.Versions.scala212),
     libraryDependencies ++= Dependencies.forModule("engines-flink"),
   )
 
@@ -205,7 +206,7 @@ lazy val qualityDeequ = moduleProject("quality-deequ")
       "--add-opens=java.base/java.nio=ALL-UNNAMED",
       "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
     ),
-    Test / fork := true,
+    Test / fork              := true,
     Test / parallelExecution := false,
   )
 
