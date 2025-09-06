@@ -78,7 +78,8 @@ class SchemaWitnessCompileFailSpec extends AnyWordSpec with Matchers {
     // NOTE: These are documented as failing cases that would cause compilation errors
     // In a real scenario, these would be in separate files that we verify DON'T compile
 
-    "document compile failure for field name mismatch under exact policy" in
+    "document compile failure for field name mismatch under exact policy" in {
+      val _ = 10
       /*
        * COMPILE FAILURE DEMONSTRATION:
        *
@@ -86,7 +87,7 @@ class SchemaWitnessCompileFailSpec extends AnyWordSpec with Matchers {
        * case class ContractSchema(id: String, value: Int, active: Boolean)   // 'value' field
        *
        * // This WOULD NOT COMPILE:
-       * val witness = implicitly[SchemaWitness[PipelineOutput, ContractSchema, SchemaEvolutionPolicy.Exact]]
+       *
        *
        * ERROR: FlowForge Contract Drift Detected!
        * Pipeline output type 'PipelineOutput' does not match contract 'ContractSchema' under policy 'Exact'.
@@ -94,8 +95,9 @@ class SchemaWitnessCompileFailSpec extends AnyWordSpec with Matchers {
 
       // This test documents the expected failure - actual compilation would fail
       info("Field name mismatch prevents SchemaWitness resolution under exact policy")
+    }
 
-    "document compile failure for type mismatch under exact policy" in
+    "document compile failure for type mismatch under exact policy" in {
       /*
        * COMPILE FAILURE DEMONSTRATION:
        *
@@ -108,10 +110,11 @@ class SchemaWitnessCompileFailSpec extends AnyWordSpec with Matchers {
        * ERROR: FlowForge Contract Drift Detected!
        * Pipeline output type 'PipelineOutput' does not match contract 'ContractSchema' under policy 'Exact'.
        */
-
+      val _ = 10
       info("Type mismatch prevents SchemaWitness resolution under exact policy")
+    }
 
-    "document compile failure for missing fields under backward compatible policy" in
+    "document compile failure for missing fields under backward compatible policy" in {
       /*
        * COMPILE FAILURE DEMONSTRATION:
        *
@@ -124,10 +127,11 @@ class SchemaWitnessCompileFailSpec extends AnyWordSpec with Matchers {
        * ERROR: Schema Subset Validation Failed
        * Schema 'ContractRepr' is not a valid subset of 'PipelineRepr'.
        */
-
+      val _ = 10
       info("Missing required fields prevent SchemaWitness resolution under backward compatible policy")
+    }
 
-    "document compile failure for field order differences under exact policy" in
+    "document compile failure for field order differences under exact policy" in {
       /*
        * COMPILE FAILURE DEMONSTRATION:
        *
@@ -140,120 +144,122 @@ class SchemaWitnessCompileFailSpec extends AnyWordSpec with Matchers {
        * ERROR: FlowForge Contract Drift Detected!
        * Pipeline output type 'PipelineOutput' does not match contract 'ContractSchema' under policy 'Exact'.
        */
-
+      val _ = 10
       info(
         "Field order differences prevent SchemaWitness resolution under exact policy - field names and positions must match exactly",
       )
-  }
-
-  "Real-world contract validation scenarios" should {
-
-    "handle common e-commerce pipeline output validation" in {
-      case class OrderPipelineOutput(
-        orderId: String,
-        customerId: String,
-        amount: BigDecimal,
-        currency: String,
-        timestamp: Long)
-
-      case class OrderContract(
-        orderId: String,
-        customerId: String,
-        amount: BigDecimal,
-        currency: String,
-        timestamp: Long)
-
-      // Exact match - should compile successfully
-      val witness = implicitly[SchemaWitness[OrderPipelineOutput, OrderContract, SchemaEvolutionPolicy.Exact]]
-      witness shouldBe a[SchemaWitness[_, _, _]]
     }
 
-    "handle user profile pipeline with backward compatibility" in {
-      case class UserProfilePipelineOutput(
-        userId: String,
-        email: String,
-        firstName: String,
-        lastName: String,
-        createdAt: Long,
-        // Extra fields added in new version
-        lastLoginAt: Option[Long],
-        preferences: Map[String, String])
+    "Real-world contract validation scenarios" should {
 
-      case class UserProfileContract(
-        userId: String,
-        email: String,
-        firstName: String,
-        lastName: String,
-        createdAt: Long)
+      "handle common e-commerce pipeline output validation" in {
+        case class OrderPipelineOutput(
+          orderId: String,
+          customerId: String,
+          amount: BigDecimal,
+          currency: String,
+          timestamp: Long)
 
-      // Backward compatible - pipeline can have extra fields
-      val witness = implicitly[SchemaWitness[
-        UserProfilePipelineOutput,
-        UserProfileContract,
-        SchemaEvolutionPolicy.BackwardCompatible,
-      ]]
-      witness shouldBe a[SchemaWitness[_, _, _]]
+        case class OrderContract(
+          orderId: String,
+          customerId: String,
+          amount: BigDecimal,
+          currency: String,
+          timestamp: Long)
+
+        // Exact match - should compile successfully
+        val witness =
+          implicitly[SchemaWitness[OrderPipelineOutput, OrderContract, SchemaEvolutionPolicy.Exact]]
+        witness shouldBe a[SchemaWitness[_, _, _]]
+      }
+
+      "handle user profile pipeline with backward compatibility" in {
+        case class UserProfilePipelineOutput(
+          userId: String,
+          email: String,
+          firstName: String,
+          lastName: String,
+          createdAt: Long,
+          // Extra fields added in new version
+          lastLoginAt: Option[Long],
+          preferences: Map[String, String])
+
+        case class UserProfileContract(
+          userId: String,
+          email: String,
+          firstName: String,
+          lastName: String,
+          createdAt: Long)
+
+        // Backward compatible - pipeline can have extra fields
+        val witness = implicitly[SchemaWitness[
+          UserProfilePipelineOutput,
+          UserProfileContract,
+          SchemaEvolutionPolicy.BackwardCompatible,
+        ]]
+        witness shouldBe a[SchemaWitness[_, _, _]]
+      }
+
+      "validate product catalog minimal output with forward compatibility" in {
+        case class ProductPipelineOutput(
+          productId: String,
+          name: String,
+          price: BigDecimal)
+
+        case class ProductContract(
+          productId: String,
+          name: String,
+          description: String,
+          price: BigDecimal,
+          category: String,
+          tags: List[String])
+
+        // Forward compatible - contract can specify more fields than pipeline provides
+        val witness = implicitly[
+          SchemaWitness[ProductPipelineOutput, ProductContract, SchemaEvolutionPolicy.ForwardCompatible],
+        ]
+        witness shouldBe a[SchemaWitness[_, _, _]]
+      }
     }
 
-    "validate product catalog minimal output with forward compatibility" in {
-      case class ProductPipelineOutput(
-        productId: String,
-        name: String,
-        price: BigDecimal)
+    "Edge cases and advanced type scenarios" should {
 
-      case class ProductContract(
-        productId: String,
-        name: String,
-        description: String,
-        price: BigDecimal,
-        category: String,
-        tags: List[String])
+      "handle nested case class structures" in {
+        case class Address(
+          street: String,
+          city: String,
+          country: String)
+        case class PipelineOutput(id: String, address: Address)
+        case class ContractSchema(id: String, address: Address)
 
-      // Forward compatible - contract can specify more fields than pipeline provides
-      val witness = implicitly[
-        SchemaWitness[ProductPipelineOutput, ProductContract, SchemaEvolutionPolicy.ForwardCompatible],
-      ]
-      witness shouldBe a[SchemaWitness[_, _, _]]
-    }
-  }
+        // Nested structures should work with exact matching
+        val witness = implicitly[SchemaWitness[PipelineOutput, ContractSchema, SchemaEvolutionPolicy.Exact]]
+        witness shouldBe a[SchemaWitness[_, _, _]]
+      }
 
-  "Edge cases and advanced type scenarios" should {
+      "handle Option types for nullable fields" in {
+        case class PipelineOutput(id: String, optionalField: Option[String])
+        case class ContractSchema(id: String, optionalField: Option[String])
 
-    "handle nested case class structures" in {
-      case class Address(
-        street: String,
-        city: String,
-        country: String)
-      case class PipelineOutput(id: String, address: Address)
-      case class ContractSchema(id: String, address: Address)
+        // Option types should match exactly
+        val witness = implicitly[SchemaWitness[PipelineOutput, ContractSchema, SchemaEvolutionPolicy.Exact]]
+        witness shouldBe a[SchemaWitness[_, _, _]]
+      }
 
-      // Nested structures should work with exact matching
-      val witness = implicitly[SchemaWitness[PipelineOutput, ContractSchema, SchemaEvolutionPolicy.Exact]]
-      witness shouldBe a[SchemaWitness[_, _, _]]
-    }
+      "handle collection types" in {
+        case class PipelineOutput(
+          id: String,
+          tags: List[String],
+          scores: Vector[Int])
+        case class ContractSchema(
+          id: String,
+          tags: List[String],
+          scores: Vector[Int])
 
-    "handle Option types for nullable fields" in {
-      case class PipelineOutput(id: String, optionalField: Option[String])
-      case class ContractSchema(id: String, optionalField: Option[String])
-
-      // Option types should match exactly
-      val witness = implicitly[SchemaWitness[PipelineOutput, ContractSchema, SchemaEvolutionPolicy.Exact]]
-      witness shouldBe a[SchemaWitness[_, _, _]]
-    }
-
-    "handle collection types" in {
-      case class PipelineOutput(
-        id: String,
-        tags: List[String],
-        scores: Vector[Int])
-      case class ContractSchema(
-        id: String,
-        tags: List[String],
-        scores: Vector[Int])
-
-      // Collection types should match exactly
-      val witness = implicitly[SchemaWitness[PipelineOutput, ContractSchema, SchemaEvolutionPolicy.Exact]]
-      witness shouldBe a[SchemaWitness[_, _, _]]
+        // Collection types should match exactly
+        val witness = implicitly[SchemaWitness[PipelineOutput, ContractSchema, SchemaEvolutionPolicy.Exact]]
+        witness shouldBe a[SchemaWitness[_, _, _]]
+      }
     }
   }
 }
