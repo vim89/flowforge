@@ -198,8 +198,15 @@ lazy val qualityDeequ = moduleProject("quality-deequ")
   .settings(
     description := "Amazon Deequ integration for data quality",
     libraryDependencies ++= Dependencies.forModule("quality-deequ"),
-    Test / javaOptions ++= Seq("-Dnet.bytebuddy.experimental=true"),
-    Test / fork := false,
+    // Run Spark tests in a forked JVM and open JDK internals Spark needs on modern JDKs
+    Test / javaOptions ++= Seq(
+      "-Dnet.bytebuddy.experimental=true",
+      "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED",
+      "--add-opens=java.base/java.nio=ALL-UNNAMED",
+      "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
+    ),
+    Test / fork := true,
+    Test / parallelExecution := false,
   )
 
 // ===== SUPPORT MODULES =====

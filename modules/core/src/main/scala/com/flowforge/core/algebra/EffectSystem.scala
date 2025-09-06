@@ -461,10 +461,13 @@ trait EffectSystem[F[_]] extends MonadError[F, Throwable] {
         if (attempt >= maxRetries) raiseError(error)
         else
           flatMap(sleep(delay)) { _ =>
-            go(
-              attempt + 1,
-              FiniteDuration((delay.toNanos * backoffFactor).toLong, delay.unit),
-            )
+            // Compute next delay in a unit-safe manner (previously mixed nanos with the original unit)
+            val nextDelay =
+              scala.concurrent.duration.FiniteDuration(
+                (delay.toNanos * backoffFactor).toLong,
+                scala.concurrent.duration.NANOSECONDS,
+              )
+            go(attempt + 1, nextDelay)
           }
       }
     go(0, initialDelay)
