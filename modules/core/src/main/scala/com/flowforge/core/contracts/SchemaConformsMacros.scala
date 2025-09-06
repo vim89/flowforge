@@ -1,8 +1,8 @@
-package com.flowforge.core.contracts.internal
+package com.flowforge.core.contracts
+
+import com.flowforge.core.contracts.derive._
 
 import scala.reflect.macros.blackbox
-import com.flowforge.core.contracts._
-import com.flowforge.core.contracts.derive._
 
 object SchemaConformsMacros {
   def materializeImpl[Out: c.WeakTypeTag, Contract: c.WeakTypeTag, P <: SchemaPolicy: c.WeakTypeTag](

@@ -1,5 +1,9 @@
 package com.flowforge.core.types
 
+// NOTE: This file uses shapeless HList/LabelledGeneric. It remains temporarily for backward-compat
+//       while the Magnolia-based SchemaConforms is rolled out. New code MUST NOT depend on this API.
+//       Track removal in ADR: docs/adr/ADR-compile-time-contracts.md
+
 import shapeless.{ HList, LabelledGeneric }
 import shapeless.ops.hlist.Intersection
 import scala.annotation.implicitNotFound
@@ -34,6 +38,10 @@ import scala.annotation.implicitNotFound
 ║  📖 See: docs/contracts/SCHEMA_EVOLUTION.md                                  ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 """)
+@deprecated(
+  "Legacy shapeless/HList-based witness. Migrate to com.flowforge.core.contracts.SchemaConforms (Magnolia-based) for compile-time contracts.",
+  since = "0.9.0",
+)
 sealed trait SchemaWitness[PipelineOut, Contract, Policy <: SchemaEvolutionPolicy]
 
 object SchemaWitness {

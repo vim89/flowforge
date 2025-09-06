@@ -71,7 +71,6 @@ import eu.timepit.refined.api.Refined
 import eu.timepit.refined.collection.NonEmpty
 import eu.timepit.refined.numeric.{ NonNegative, Positive }
 import eu.timepit.refined.string.MatchesRegex
-import shapeless.HList
 
 import java.time.Instant
 

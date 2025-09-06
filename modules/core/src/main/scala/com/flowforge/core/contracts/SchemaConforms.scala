@@ -20,5 +20,5 @@ object SchemaConforms {
     so: Shape[Out],
     sc: Shape[Contract],
   ): SchemaConforms[Out, Contract, P] =
-    macro internal.SchemaConformsMacros.materializeImpl[Out, Contract, P]
+    macro SchemaConformsMacros.materializeImpl[Out, Contract, P]
 }
