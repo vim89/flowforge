@@ -1,6 +1,6 @@
 package com.flowforge.core.types
 
-import shapeless.HList
+import com.flowforge.core.contracts.derive.Shape
 
 /**
  * Convenience constructors for typed sources and sinks. These simply wrap existing untyped
@@ -8,16 +8,16 @@ import shapeless.HList
  */
 object TypedIO {
   // Sources
-  def localParquetSource[R <: HList](path: String): TypedSource[R] =
+  def localParquetSource[R: Shape](path: String): TypedSource[R] =
     TypedSource[R](LocalDataSource(path, DataFormat.Parquet))
 
-  def gcsParquetSource[R <: HList](bucket: String, prefix: String): TypedSource[R] =
+  def gcsParquetSource[R: Shape](bucket: String, prefix: String): TypedSource[R] =
     TypedSource[R](DataSource.gcs(bucket, prefix, DataFormat.Parquet))
 
-  def s3ParquetSource[R <: HList](bucket: String, prefix: String): TypedSource[R] =
+  def s3ParquetSource[R: Shape](bucket: String, prefix: String): TypedSource[R] =
     TypedSource[R](DataSource.s3(bucket, prefix, DataFormat.Parquet))
 
-  def bigQuerySource[R <: HList](
+  def bigQuerySource[R: Shape](
     project: String,
     dataset: String,
     table: String,
@@ -25,12 +25,12 @@ object TypedIO {
     TypedSource[R](DataSource.bigQuery(project, dataset, table))
 
   // Sinks
-  def localParquetSink[R <: HList](path: String): TypedSink[R] =
+  def localParquetSink[R: Shape](path: String): TypedSink[R] =
     TypedSink[R](LocalDataSink(path, DataFormat.Parquet))
 
-  def gcsParquetSink[R <: HList](bucket: String, prefix: String): TypedSink[R] =
+  def gcsParquetSink[R: Shape](bucket: String, prefix: String): TypedSink[R] =
     TypedSink[R](DataSink.gcs(bucket, prefix, DataFormat.Parquet))
 
-  def s3ParquetSink[R <: HList](bucket: String, prefix: String): TypedSink[R] =
+  def s3ParquetSink[R: Shape](bucket: String, prefix: String): TypedSink[R] =
     TypedSink[R](DataSink.s3(bucket, prefix, DataFormat.Parquet))
 }

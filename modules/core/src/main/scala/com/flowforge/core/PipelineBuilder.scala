@@ -2,24 +2,10 @@ package com.flowforge.core
 
 import cats.data.Kleisli
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.types.{
-  DataFormat,
-  DataSink,
-  DataSource,
-  Environment,
-  Pipeline,
-  PipelineConfig,
-  PipelineStage,
-  SchemaConforms,
-  SchemaEq,
-  SchemaEvolutionPolicy,
-  SchemaPolicy,
-  SchemaWitness,
-  TypedSink,
-  TypedSource,
-}
+import com.flowforge.core.contracts.derive.Shape
+import com.flowforge.core.types.{DataFormat, DataSink, DataSource, Environment, Pipeline, PipelineConfig, PipelineStage, SchemaConforms, SchemaEq, SchemaEvolutionPolicy, SchemaPolicy, SchemaWitness, TypedSink, TypedSource}
 import eu.timepit.refined.api.Refined
-import shapeless.{ HList, LabelledGeneric }
+import com.flowforge.core.contracts.{SchemaConforms, SchemaPolicy}
 
 /**
  * A small, non-invasive typed builder prototype that enforces stage chaining at compile-time. It lives
@@ -57,13 +43,10 @@ case class PipelineBuilder[F[_]: EffectSystem, In, Out] private (
   /**
    * Add source with compile-time schema evidence for the produced type `C`.
    */
-  def addTypedSource[C, R <: HList](
+  def addTypedSource[R, C, P <: SchemaPolicy](
     source: DataSource,
     reader: DataSource => F[C],
-  )(implicit
-    L: LabelledGeneric.Aux[C, R],
-    eq: SchemaEq[C, R],
-  ): PipelineBuilder[F, Unit, C] = {
+  )(implicit ev: SchemaConforms[R, C, P]): PipelineBuilder[F, Unit, C] = {
     val stage = PipelineStage.Source[F, C](
       name = s"typed-source-${stages.size}",
       description = s"Read from ${source.format} (typed)",
@@ -74,14 +57,10 @@ case class PipelineBuilder[F[_]: EffectSystem, In, Out] private (
   }
 
   /** Overload that accepts a TypedSource wrapper for ergonomics. */
-  def addTypedSource[C, R <: HList](
+  def addTypedSink[R, C, P <: SchemaPolicy](
     source: TypedSource[R],
     reader: DataSource => F[C],
-  )(implicit
-    L: LabelledGeneric.Aux[C, R],
-    eq: SchemaEq[C, R],
-  ): PipelineBuilder[F, Unit, C] =
-    addTypedSource[C, R](source.underlying, reader)
+  )(implicit ev: SchemaConforms[R, C, P]): PipelineBuilder[F, Unit, C] = ???
 
   def addTransform[C](transform: Out => F[C]): PipelineBuilder[F, In, C] = {
     val stage = PipelineStage.Transform[F, Out, C](
@@ -148,13 +127,10 @@ case class PipelineBuilder[F[_]: EffectSystem, In, Out] private (
    * that matches the typed sink's expected schema. If they do not match, this method cannot be called
    * (compilation fails).
    */
-  def addTypedSink[R <: HList](
+  def addTypedSink[R, C, P <: SchemaPolicy](
     sink: TypedSink[R],
     writer: (Out, DataSink) => F[Unit],
-  )(implicit
-    eq: SchemaEq[Out, R],
-    L: LabelledGeneric.Aux[Out, R],
-  ): PipelineBuilder[F, In, Unit] = {
+  )(implicit ev: SchemaConforms[R, C, P]): PipelineBuilder[F, In, Unit] = {
     val stage = PipelineStage.Sink[F, Out](
       name = s"typed-sink-${stages.size}",
       description = s"Write to ${sink.underlying.format} (typed)",
@@ -167,13 +143,10 @@ case class PipelineBuilder[F[_]: EffectSystem, In, Out] private (
   /**
    * Overload that accepts a plain DataSink; schema evidence derived from Out and inferred R.
    */
-  def addTypedSink[R <: HList](
+  def addTypedSink[R, C, P <: SchemaPolicy](
     sink: DataSink,
     writer: (Out, DataSink) => F[Unit],
-  )(implicit
-    L: LabelledGeneric.Aux[Out, R],
-    eq: SchemaEq[Out, R],
-  ): PipelineBuilder[F, In, Unit] = {
+  )(implicit ev: SchemaConforms[R, C, P]): PipelineBuilder[F, In, Unit] = {
     val stage = PipelineStage.Sink[F, Out](
       name = s"typed-sink-${stages.size}",
       description = s"Write to ${sink.format} (typed)",
@@ -184,7 +157,7 @@ case class PipelineBuilder[F[_]: EffectSystem, In, Out] private (
   }
 
   /** Policy-driven typed sink: Exact (default), Superset, or Subset. */
-  def addTypedSinkWithPolicy[R <: HList, P <: SchemaPolicy](
+  def addTypedSinkWithPolicy[R : Shape, P <: SchemaPolicy](
     sink: TypedSink[R],
     writer: (Out, DataSink) => F[Unit],
   )(implicit
@@ -200,7 +173,7 @@ case class PipelineBuilder[F[_]: EffectSystem, In, Out] private (
   }
 
   /** Convenience for order-insensitive exact matching of fields and types. */
-  def addTypedSinkExactUnordered[R <: HList](
+  def addTypedSinkExactUnordered[R <: SchemaPolicy](
     sink: TypedSink[R],
     writer: (Out, DataSink) => F[Unit],
   )(implicit

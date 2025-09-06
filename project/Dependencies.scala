@@ -1,4 +1,5 @@
-import sbt._
+import sbt.*
+import sbt.Keys.scalaVersion
 
 object Dependencies {
 
@@ -88,8 +89,10 @@ object Dependencies {
     )
 
     val typeSafety = Seq(
-      "eu.timepit"  %% "refined"   % Versions.refined,
-      "com.chuusai" %% "shapeless" % Versions.shapeless,
+      "eu.timepit"                   %% "refined"       % Versions.refined,
+      "com.chuusai"                  %% "shapeless"     % Versions.shapeless,
+      "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.10",
+      "org.scala-lang"                % "scala-reflect" % Versions.scala213 % Provided,
     )
 
     val json = Seq(
