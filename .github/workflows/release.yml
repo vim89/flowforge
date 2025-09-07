@@ -75,7 +75,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   pre-release-tests:
-    name: Pre-Release Tests
+    name: Pre-release tests
     needs: [validate-release]
     runs-on: ubuntu-latest
     steps:
@@ -116,7 +116,7 @@ jobs:
         run: sbt coverageAggregate
 
   build-artifacts:
-    name: Build Release Artifacts
+    name: Build release artifacts
     needs: [validate-release, pre-release-tests]
     runs-on: ubuntu-latest
     steps:
@@ -188,32 +188,31 @@ jobs:
           VERSION="${{ needs.validate-release.outputs.version }}"
           cat > release-notes.md << EOF
           # FlowForge v$VERSION
-          
+
           ## 🚀 Features
-          - 100% Compile-Time Contracts - Pipelines fail to compile if schema drift occurs
-          - Phantom-State Builder Pattern - Incomplete pipelines cannot be built
-          - SchemaConforms Evidence System - Macro-based schema validation
-          - Contract-Aware Quickstart Demo - Working examples of compile-time validation
-          
+          - 100% Compile-time contracts - Data pipelines fail to compile if schema drift occurs
+          - Phantom-state builder pattern - Incomplete pipelines cannot be built
+          - SchemaConforms evidence system - Macro-based schema validation
+          - Contract-aware quickstart demo - Working examples of compile-time validation
+
           ## 🛠 CLI Tools
           - **validation-cli**: Schema validation and contract checking
           - **contracts-extractor-cli**: Extract contracts from data sources
-          
+
           ## 📋 What's New
-          - Migrated from shapeless to reflection-based macro approach
           - Implemented 3 required compile-fail tests (missing sink, schema mismatch, illegal evolution)
           - Deprecated legacy SchemaWitness system
           - Enhanced template generation with contract enforcement
-          
+
           ## 🧪 Testing
           - All modules tested with coverage reporting
           - Compile-fail tests validate contract enforcement
           - Integration tests for Spark/Delta workflows
-          
+
           Generated from commit: ${{ github.sha }}
           EOF
 
-      - name: Create GitHub Release
+      - name: Create gitHub release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ needs.validate-release.outputs.version }}

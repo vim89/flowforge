@@ -12,18 +12,18 @@ env:
 
 jobs:
   build-and-test:
-    name: Build and Test
+    name: Build and test
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
-          
+
       - name: Cache SBT and dependencies
         uses: actions/cache@v4
         with:
@@ -34,26 +34,26 @@ jobs:
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt', '**/project/**/*.sbt', '**/project/**/Dependencies.scala') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
-            
+
       - name: Check formatting
         run: sbt scalafmtCheckAll
-        
+
       - name: Compile all modules
         run: sbt compile Test/compile
-        
+
       - name: Run tests with coverage
         run: |
           sbt coverage test
           sbt coverageReport
           sbt coverageAggregate
-          
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4
         with:
           file: target/scala-2.13/scoverage-report/scoverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
-          
+
       - name: Run compile-fail tests
         run: sbt "compile-fail-tests / test"
 
