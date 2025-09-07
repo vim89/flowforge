@@ -1,152 +1,235 @@
-Buckle up. Here’s the unvarnished survey—grounded in what the broader data-engineering world is doing right now and where FlowForge actually stands.
+Alright, I blew away the old cache, unzipped the new /mnt/data/flowforge.zip, and read through the whole tree (core, connectors, engines, examples, compile-fail tests, templates, CI, ADRs, migration notes). Here’s the blunt, engineering-grade review.
 
-⸻
+High-level snapshot of this zip
 
-1) Is FlowForge ready for v1.0.0?
+Compile-time contracts are real and central.
 
-Short answer: not yet. You’re close conceptually, but a 1.0 needs a frozen public surface, production-readiness signals, and proof (not prose) for your core claim: compile-time contracts. Think SemVer’s promise: once you slap 1.0.0 on it, you’re committing to API stability, compatibility rules, and meaningful versioning.  ￼
+SchemaConforms + a Scala 2 macro (reflection-based, no c.eval) enforces SchemaPolicy at the edges (typed source & sink).
 
-Gaps → fixes (by layer)
+The macro produces human-readable “Missing/Extra/Mismatched” diffs.
 
-Public API & stability
-•	Gap: Two parallel DSLs / builders and multiple ways to wire a pipeline.
-Fix: Collapse to one canonical typed builder; deprecate the others. Add compile-fail tests that prove illegal states (e.g., no sink / schema drift) don’t compile. This is your 1.0 line in the sand.
-•	Gap: No clearly documented public vs internal packages.
-Fix: Move internals under ...internal packages; document the stable surface and SemVer policy. Publish a short “What breaks SemVer?” doc.  ￼
+The Magnolia-backed “Shape” derivation exists (magnolia1, proper join, sums intentionally aborted) and feeds the macro with (name, fqnType, default?, option?).
 
-Contracts & schema evolution
-•	Gap: Contracts are described, but enforcement still leans on runtime paths.
-Fix: Ship a SchemaWitness[R, C, Policy] (or equivalent) that is required by .build. If R≠C under the chosen evolution policy, there simply is no implicit in scope → build fails. Add contract evolution examples (Backward/Forward/Full) and compile-fail tests.
-•	Gap: Contract story isn’t integrated with lineage/observability.
-Fix: Emit OpenLineage (Marquez) events for contract versions and runs so drift is visible in lineage UIs. Provide a tiny “flowforge-openlineage” module + example.  ￼
+One typed builder (phantom-state) with edge evidence wiring: ✅
+PipelineBuilder.addTypedSource and addTypedSink require SchemaConforms[…, P].
 
-Data quality
-•	Gap: Deequ integration is clever but operationally brittle when invoked via external runners.
-Fix: Prefer in-process Deequ by default; keep the external runner as a fallback with strict input quoting & temp-file hygiene. Document when to use which. (Deequ is the right primitive for Spark-scale checks.)  ￼ ￼
-•	Gap: No first-class “asset check” abstraction.
-Fix: Add a small AssetCheck API aligned with “asset checks” patterns from the ecosystem (boolean check + severity + owner + hint). Map it to Deequ or other providers.  ￼
+Engine boundaries are mostly clean. Core doesn’t import Spark; Spark-specific instances live under engines-spark.
 
-Engines & kernels
-•	Gap: Effects bleed into Spark kernels in a few spots.
-Fix: Keep Spark transforms pure (like Frameless and the Spark Dataset ethos); do effects only at IO/orchestration boundaries. This keeps tests fast and code predictable.  ￼ ￼
-•	Gap: Multi-engine pitch (Spark, Flink, Beam) lacks a real Beam/Flink runner.
-Fix: Pick one second engine (Beam or Flink) and land a minimal runner. Beam gives you a single model for batch+stream with a strong ecosystem. Don’t hand-wave—publish an example.  ￼ ￼
+Templates/examples exist and show the intended API (good!), and there’s a compile-fail tests module (great idea) — but see gaps below.
 
-Connectors & sinks
-•	Gap: Some connectors still throw exceptions instead of returning domain errors.
-Fix: Unify on typed error ADTs across all connectors; never throw in libraries. Emit lineage + contract metadata on write.
+Legacy shapeless: a single SchemaWitness.scala remains as a clearly flagged legacy shim. It’s isolated; not used by the builder or new contracts.
 
-Observability & ops
-•	Gap: No “production readiness” checklist or runbooks in-repo.
-Fix: Add a minimal PRR doc (SLOs, alerts, dashboards, rollbacks, on-call notes). Link it from CI artifacts. It doesn’t need to be huge; it needs to exist.  ￼ ￼
+That’s the “good bones” summary. Now the spicy parts.
 
-DX (learning time, smallest diff, feedback loop)
-•	Gap: “Hello, Contract” is not a five-minute path yet.
-Fix: A g8 template: sbt new flowforge/quickstart.g8 that compiles a toy pipeline with a contract mismatch that fails at compile time; flip one field, recompile, and it passes. That’s your show-don’t-tell.
-•	Gap: Slow inner loops around Spark.
-Fix: Local runner + tiny CSV/Parquet fixtures and deterministic generators; unit tests must run in seconds. (Kedro/Scio communities lean hard into fast local dev; you should too.)  ￼ ￼
+1) Is it ready for v1.0.0?
 
-Docs & examples
-•	Gap: Docs preach; they don’t pin you down.
-Fix: Add a “Why FlowForge vs X?” page with concrete contrasts: Dagster assets, dbt model contracts, Deequ, Frameless, Scio—what you do and don’t do. Link to real code.  ￼ ￼ ￼ ￼
+Not yet. You’re at a strong 0.9-quality milestone. The core promise is there, but a few essentials are missing to claim “1.0” with a straight face.
 
-CI/CD & release
-•	Gap: CI doesn’t enforce compile-fail tests or coverage gates.
-Fix: Add jobs for scalafmtCheckAll, scalafixAll --check, compile-fail test suite, unit tests with coverage, and artifact publishing of docs. Keep Spark ITs opt-in. (Use a production-readiness gate before tagging 1.0.)  ￼
+The gaps (and precise fixes)
+A) Negative tests aren’t automatic
 
-Verdict: call the next cut 0.9 with the new DSL + compile-fail suite; run that in the wild for at least a few weeks; tag 1.0.0 only after the public surface survives real users (SemVer expectations are real).  ￼
+What I see: “compile-fail tests” are documentation-style (failing snippets are commented). CI won’t actually fail if someone breaks a contract.
 
-⸻
+Fix: adopt a real negative harness (no shapeless needed):
 
-2) Is FlowForge unique?
+ScalaTest: assertDoesNotCompile / assertTypeError / shouldNot typeCheck for small snippets.
+ScalaTest
++2
+ScalaTest
++2
 
-What the market already has
-•	Orchestration & asset thinking: Dagster made “software-defined assets” mainstream, including asset checks and strong lineage UIs.  ￼ ￼
-•	SQL-first transforms & contracts: dbt now includes model contracts and schema enforcement out of the box; massive adoption.  ￼ ￼
-•	Data quality: Great Expectations (GX) and Soda cover quality testing across warehouses/lakes; Deequ covers Spark scale.  ￼ ￼ ￼
-•	Lineage standard: OpenLineage/Marquez is the de facto open standard.  ￼
-•	Type safety on Spark (Scala): Frameless offers compile-time guarantees for Spark Dataset/Columns and better errors.  ￼ ￼ ￼
-•	Unified execution model (multi-runner): Apache Beam (with Scio for Scala) gives you one model across Spark/Flink/Dataflow.  ￼ ￼
+MUnit: compileErrors (works great for tiny repros; nice messages).
+Scala Documentation
+scalameta.org
 
-So what’s truly yours?
-•	Contracts-first at compile time in Scala as the primary abstraction (phantom-state builders + type-level witnesses + effect-safe orchestration). That combination—contract drift fails to compile—is rare even among Scala libraries. Frameless checks Spark operations, dbt enforces schema at run/CI time, Dagster asserts assets & checks; none of them makes the pipeline itself unbuildable when a contract drifts in Scala code. That’s a crisp USP if you finish it.  ￼ ￼ ￼
-•	Effect-safe plumbing across engines (ZIO/Cats) with typed error channels—not unique individually, but unusual when married to contract types and a staged builder that forbids illegal states. (Plenty of teams overuse effects; the win is fences + clarity.)  ￼ ￼
+Or add an sbt scripted subproject that intentionally fails to compile.
+scala-sbt.org
 
-Where it’s not unique (yet)
-•	Lineage, DQ, and orchestration stories are derivative unless you ship first-class integrations and examples (OpenLineage emitter, Deequ adapter & in-process runner, etc.).  ￼ ￼
+Wire this as a required CI job (e.g., contracts-negative).
 
-How to carve a first-mover niche
-1.	Prove the compile-time contract claim publicly: tiny repo with screenshots of compile errors for mismatched schemas + a one-line fix that makes it compile.
-2.	Ship a “contract-aware quickstart”: generate a new project, run sbt compile, see a failure; flip one field; green build; run tiny job locally.
-3.	Bridge to the big ecosystem: ready-made exporters for OpenLineage, readers for dbt model contracts (so dbt users can opt into your guarantees), and an asset-check mapping so you can live beside Dagster/dbt rather than against them.  ￼ ￼
+B) Policy semantics need hardening + docs alignment
 
-⸻
+What I see: Policy logic is implemented and sensible (Exact / ExactUnordered / Backward / Forward / Full), but nuances (e.g., Backward allowing missing only if default || Option) aren’t spelled out in a single canonical doc.
 
-3) Are you over-engineering anything?
+Fix: A one-pager “How it fails” with 4 tables and copy-pasta snippets: for each policy show (pass/fail) nested, option, list, type mismatch.
+This maps the mental model many users know from dbt contracts, but your enforcement is Scala compile-time instead of SQL build-time—make that comparison explicit in docs.
+dbt Developer Hub
++1
 
-Some, yes.
-•	Two DSLs, three ways to wire pipelines → cognitive load without extra value. Pick one.
-•	Effect system everywhere → resist the urge. Keep Spark kernels pure; effects only at boundaries. Many practitioners warn about effect-system sprawl and accidental complexity; keep it boringly constrained.  ￼
-•	Shapeless-heavy edges → use derivation where it earns compile-time guarantees (the contract witness), not for flourishes.
-•	External DQ subprocess → neat hack, but operationally fragile. Offer a stable in-process path; keep the subprocess as an escape hatch.  ￼
+C) Sums (sealed traits) are explicitly not supported
 
-Over-engineering rule of thumb: if a newcomer can’t explain why a type exists in one sentence, it belongs in internal/ or it should be deleted.
+What I see: Shape.split aborts on coproducts by design (totally fine for 1.0 if documented).
 
-⸻
+Fix: Document “contracts are product types (case classes) in v1.0” and make the abort message point to that page. Use CI to ensure no test exercises sums accidentally.
 
-4) About the “brutal-truth” doc & your thesis
+D) Source of truth for “type strings”
 
-You’re right about the need: the Scala world does lack a batteries-included, functional-first, data-engineering toolkit that (a) onboards fast, (b) keeps code tiny and modular, (c) gives a fast feedback loop. You don’t need a million features; you need a few that work flawlessly.
+What I see: typeName.full (from Magnolia) and reflection-derived strings drive diffs. This is good, but FQNs need consistency across both paths.
 
-Concretely: DX measured in 3 things
+Fix: Centralize one pretty-printer that yields FQNs identically; snapshot test a few tricky types (nested generics, aliased types).
+Magnolia API reference confirms you’re using the intended fields for case-class metadata.
+javadoc.io
 
-Low learning time
-•	A single g8 template with:
-•	a contract type,
-•	a tiny case class schema,
-•	a failing compile (drift),
-•	one-field fix to pass,
-•	runLocal that prints a small table.
-•	A page “I have 15 minutes—show me” with the exact commands.
+E) CI gates don’t yet enforce the promise
 
-Small, clear code
-•	Keep kernels as plain functions (no F[_]); builders guide you, not fight you.
-•	Ban wildcard imports except cats.syntax._ and org.apache.spark.sql.functions._.
-•	Replace println with a minimal logger wrapper for consistent output.
+What I see: CI compiles & runs tests, but nothing hard-fails on drift regressions.
 
-Fast feedback loops
-•	Local runner + handful of CSVs; unit tests in < 10s.
-•	Compile-fail tests for contracts (instant signal).
-•	Optional Spark ITs behind a flag. The established projects that win hearts focus on quick local dev (see Scio & Kedro).  ￼ ￼
+Fix: Add a contracts-negative job (ScalaTest/MUnit/scripted) and a template-smoke job (generate → compile → run “fail-then-fix” demo). Make both required.
 
-Scalability of the experience
-•	New dev: sbt new → edit one field → see compile error → fix → run locally.
-•	Seasoned dev: flip a flag to target Spark or Beam; attach Deequ checks; emit OpenLineage. (Beam/Scio helps you promise “one code, many runners”—if you actually ship a runner.)  ￼
+F) DX: make the “wow” one command
 
-⸻
+What I see: Examples/templates exist, but not a 30–60 second red→green quickstart.
 
-Crisp roadmap (8 weeks to credible 1.0)
-1.	Canonize the DSL (week 1–2)
-•	Merge to one builder with phantom-state stages and SchemaWitness.
-•	Ship 3 compile-fail tests: missing sink, schema mismatch, illegal evolution.
-2.	DX + docs (week 2–3)
-•	flowforge-quickstart.g8 with a 5-minute journey.
-•	“Why FlowForge vs X” doc with references (Dagster/dbt/Frameless/Scio/Deequ).  ￼ ￼ ￼ ￼
-3.	Quality & lineage (week 3–4)
-•	In-process Deequ adapter + AssetCheck API.
-•	OpenLineage emitter and example job.  ￼ ￼
-4.	Second engine (week 4–5)
-•	Minimal Beam (or Flink) runner with one end-to-end example. Publish “runner comparison” doc.  ￼ ￼
-5.	Production readiness (week 5–6)
-•	Add a production-readiness checklist to the repo (alerts, dashboards, runbooks, rollback).
-•	CI gates: scalafmt, scalafix, compile-fail tests, coverage report.  ￼
-6.	Stabilize & tag (week 7–8)
-•	Trial with 1–2 design partners; fix only P0 issues.
-•	Tag 1.0.0 with a short SemVer note and a migration guide.  ￼
+Fix: Giter8 template that compiles red by default (one field drift), prints a short error, then one-line fix (or switch policy to Backward) turns it green.
+Call it out in the README hero section.
 
-⸻
+G) “Legacy witness” removal plan
 
-Final reality check
-•	Unique? If you prove compile-time contracts (pipeline won’t build on drift) and keep the surface tiny and effect-safe, yes—you’ll occupy a clear niche no one else quite owns in Scala. Frameless protects Spark ops; dbt/Dagster protect assets at run/CI time; you protect the program at compile time.  ￼ ￼ ￼
-•	Over-engineering? Trim to one DSL, fence effects, and keep Deequ in-process by default.  ￼
-•	1.0 now? Resist. Ship a solid 0.9 with the proof (compile-fail suite + quickstart), then 1.0. Your future users—and your future self—will thank you.
+What I see: SchemaWitness.scala is quarantined and marked legacy.
+
+Fix: Add a scalafix or grep step in CI to ban shapeless imports outside legacy/ or test. Kill the file once all downstream modules are clean.
+
+Bottom line for 1.0: land automated negative tests, document policy edges, add the one-minute demo, and lock the CI gates. Then 1.0 is defensible.
+
+2) Is this unique?
+
+In part—yes—and you can sharpen it.
+
+dbt contracts block builds when the SQL model’s schema diverges; that’s build-time in the SQL stack. You’re providing compile-time gates in Scala with engine-agnostic edges. That’s distinct.
+dbt Developer Hub
++1
+
+Dagster asset checks and Great Expectations are runtime validation—excellent complements but different points in time. Your “fail before it runs” story is compelling.
+Dagster Docs
++1
+Great Expectations
+Great Expectations
+
+Magnolia derivation is the right fit for Scala-2 product shapes; you correctly avoid runtime string soup by doing the heavy lifting at compile time.
+GitHub
+
+USPs you should lean into:
+
+Compile-time contracts at the edges (source/sink) with clear, actionable diffs.
+
+Phantom-state builder where incomplete/invalid pipelines simply can’t be built.
+
+Engine-agnostic core, with engine adapters that supply instances—no Spark in core.
+
+DX-first template: fail-then-fix in under a minute.
+
+Where it’s not “first in the world”:
+
+Schema contracts, quality checks, and lineage exist across the stack—but not with this Scala-compile-time, engine-agnostic, turnkey combo. Your angle is credible if the demo and CI gates are rock-solid.
+
+First-mover advantage: package the compile-time gate as the default experience (template + CI). Other tools make it possible; you make it unavoidable.
+
+3) Over-engineering?
+
+Mostly under control, with two watchpoints:
+
+✅ Good restraint: single builder, targeted macro, clean engine boundary, Magnolia instead of broad metaprogramming sprawl.
+
+⚠️ Watch: keeping a legacy shapeless file around (fine short-term; just don’t let it creep into public APIs again), and letting templates/examples proliferate without a single “golden path”.
+
+Recommendation: Declare a golden path (Scala 2.13 + Cats-Effect + Spark adapter). Everything else lives as optional examples.
+
+4) The “Brutal Truth” and whether Scala needs this
+
+Yes, Scala needs a batteries-included, functional-first data engineering kit that doesn’t punt schema & quality to runtime. Your approach is aligned with that need.
+
+Few features, strongly done is the right ethos. The crucial features here are contracts, builder, engine boundary, tests, DX. Nail those before chasing breadth.
+
+Developer Experience goals (and concrete examples)
+
+Low learning time: a single archetype → sbt compile shows a friendly error with the exact drift.
+
+Small, clear code: the builder API forces structure; users write tiny transforms and wire typed IO.
+
+Fast feedback loop: ~compile + negative tests that run quickly; no waiting for Spark to start.
+
+Example “minute-one” flow:
+
+sbt new flowforge.g8 → project with a mismatched Contract vs Out.
+
+sbt compile → RED:
+
+FlowForge: Contract drift (policy: Exact).
+Out: example.User vs Contract: example.UserContract
+Missing: email:String
+Extra: -
+Mismatched: id expected Long, found Int
+
+
+Change id: Int → Long or set policy to Backward.
+
+sbt compile → GREEN.
+
+Scalability (new devs & seasoned devs)
+
+New devs: the archetype + fail-then-fix demo is the ramp. They get compile-time guidance before they even learn the whole API.
+
+Seasoned devs: engine adapters via type classes, capability tags, structured policies; they can add sinks, custom policies (post-1.0), and quality hooks without touching core.
+
+Specific, prioritized “ship-1.0” checklist
+
+Negative test harness (no shapeless):
+Add ScalaTest assertDoesNotCompile/assertTypeError (or MUnit compileErrors) cases for each policy + nested/option/collection. Wire as a required CI job.
+ScalaTest
++1
+Scala Documentation
+
+One-pager “How it fails”:
+Tables + code for Exact, ExactUnordered, Backward, Forward; link the error messages to anchors in this doc. (Users will love having the message clickable.)
+
+Golden-path template:
+Giter8 project that starts red, then green after one edit; README hero walks exactly those steps.
+
+CI gates:
+
+contracts-negative (must fail on drift)
+
+template-smoke (generate → compile → run)
+
+ban shapeless imports outside legacy/test via scalafix/grep
+
+Retire legacy witness:
+When CI shows zero dependencies, delete SchemaWitness.scala, drop shapeless from prod deps.
+
+Docs polish:
+
+“Architecture & Boundaries” (no Spark in core, how adapters work)
+
+“Scala 3 posture” (same API, inline/Mirror backend later)
+
+(Nice-to-have, after 1.0): minimal lineage emitter + Marquez compose; runtime checks via engine adapters (e.g., null-rate, freshness) — complements your compile-time guarantees. (OpenLineage/Marquez docs have straightforward quickstarts.)
+scala-sbt.org
+
+Competitive context (so you can position it)
+
+dbt contracts: block at build-time (SQL). Your edge is Scala compile-time + engine-agnostic edges.
+dbt Developer Hub
++1
+
+Dagster asset checks / Great Expectations: runtime checks; excellent complements. You can suggest wiring these for post-ingest checks while contracts guard compilation.
+Dagster Docs
++1
+Great Expectations
+Great Expectations
+
+Magnolia: you’re using the right bits (CaseClass, Param.typeName); keep sums out for 1.0.
+javadoc.io
+
+Final blunt take
+
+The implementation in this zip hits the right architecture and nails the core promise. What blocks 1.0 isn’t the idea—it’s the proof:
+
+make negative tests real and required,
+
+make the one-minute fail-then-fix unmissable,
+
+document the exact policy rules and their edge cases,
+
+lock the CI gates.
+
+Do that, and FlowForge is not just “another framework”—it’s the compiler as QA for data pipelines. That’s a message people remember.

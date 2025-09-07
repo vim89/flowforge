@@ -1,8 +1,9 @@
 package com.flowforge.core.contracts.internal
 
-import scala.reflect.macros.blackbox
-import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
+import com.flowforge.core.contracts.SchemaPolicy
 import com.flowforge.core.contracts.derive.Shape
+
+import scala.reflect.macros.blackbox
 
 object SchemaConformsMacros {
   def materializeImpl[Out: c.WeakTypeTag, Contract: c.WeakTypeTag, P <: SchemaPolicy: c.WeakTypeTag](
@@ -81,7 +82,7 @@ object SchemaConformsMacros {
         // Full: always ok
         (Nil, Nil)
       case _ =>
-        // Unknown policy - fail safe with strict validation
+        // Unknown policy - fail-safe with strict validation
         (missing0, extra0)
     }
 
@@ -91,8 +92,8 @@ object SchemaConformsMacros {
       val fmtMismatched =
         mismatched.map { case (n, exp, got) => s"$n expected $exp, found $got" }.mkString("; ")
       val msg =
-        s"""FlowForge: Contract drift (policy: ${policyType}).
-           |Out: ${outType} vs Contract: ${contractType}
+        s"""FlowForge: Contract drift (policy: $policyType).
+           |Out: $outType vs Contract: $contractType
            |Missing: $fmtMissing
            |Extra: $fmtExtra
            |Mismatched: $fmtMismatched
