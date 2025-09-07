@@ -72,6 +72,7 @@ import eu.timepit.refined.numeric.{ NonNegative, Positive }
 import eu.timepit.refined.string.MatchesRegex
 
 import java.time.Instant
+import com.flowforge.core.contracts.derive.Shape
 
 // ===============================
 // REFINED TYPE ALIASES
@@ -845,10 +846,10 @@ object DataSink {
  * PipelineBuilder.addTypedSink to enforce compile-time schema compatibility between pipeline output type and
  * sink expectation. Record-typed endpoints; schema carried by compile-time Shape evidence.
  */
-final case class TypedSource[R](underlying: DataSource)
+final case class TypedSource[C](underlying: DataSource)(implicit val sc: Shape[C])
 
 /** A source that encodes its expected schema at the type level. */
-final case class TypedSink[R](underlying: DataSink)
+final case class TypedSink[R](underlying: DataSink)(implicit val sr: Shape[R])
 
 // ===============================
 // DATA QUALITY TYPES

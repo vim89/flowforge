@@ -57,9 +57,8 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
       // Uncomment to test compile failure:
       //
       // val incompleteBuilder = PipelineBuilder[IO]("incomplete-pipeline")
-      //   .addTypedSource[User, SchemaPolicy.Exact](
+      //   .addTypedSource[User, User, SchemaPolicy.Exact](
       //     gcsParquetSource[User]("bucket", "users/*.parquet"),
-      //     SchemaPolicy.Exact,
       //     _ => IO.pure(User(1, "John", "john@example.com"))
       //   )
       //   .addTransform[User](user => IO.pure(user.copy(name = user.name.toUpperCase)))
@@ -83,10 +82,9 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
       // Uncomment to test compile failure:
       //
       // val schemaMismatchBuilder = PipelineBuilder[IO]("schema-mismatch-pipeline")
-      //   .addTypedSource[UserMissingEmail, SchemaPolicy.Exact]( // MISMATCH: Missing email field!
-      //     gcsParquetSource[UserMissingEmail]("bucket", "incomplete-users/*.parquet"),
-      //     SchemaPolicy.Exact,  // Exact policy requires ALL fields to match
-      //     _ => IO.pure(UserMissingEmail(1, "John"))
+      //   .addTypedSource[UserMissingEmail, User, SchemaPolicy.Exact]( // MISMATCH: Missing email field!
+      //     gcsParquetSource[User]("bucket", "complete-users/*.parquet"),
+      //     _ => IO.pure(UserMissingEmail(1, "John")) // Returns UserMissingEmail but contract expects User
       //   )
       //
       // // This line MUST NOT COMPILE - SchemaConforms evidence cannot be found:
@@ -107,15 +105,13 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
       // Uncomment to test compile failure:
       //
       // val evolutionViolationBuilder = PipelineBuilder[IO]("illegal-evolution-pipeline")
-      //   .addTypedSource[User, SchemaPolicy.Exact](
+      //   .addTypedSource[User, User, SchemaPolicy.Exact](
       //     gcsParquetSource[User]("bucket", "users/*.parquet"),
-      //     SchemaPolicy.Exact,
       //     _ => IO.pure(User(1, "John", "john@example.com"))
       //   )
       //   .addTransform[User](user => IO.pure(user)) // Output is User
       //   .addTypedSink[UserWithAge, SchemaPolicy.Exact]( // MISMATCH: Sink expects UserWithAge!
       //     gcsParquetSink[UserWithAge]("bucket", "users-with-age/"),
-      //     SchemaPolicy.Exact,  // Exact policy forbids missing fields
       //     (_, _) => IO.unit
       //   )
       //
@@ -128,15 +124,13 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
     "demonstrate that valid schemas DO compile correctly" in {
       // This test SHOULD compile to prove the system works for valid cases
       val validBuilder = PipelineBuilder[IO]("valid-pipeline")
-        .addTypedSource[User, SchemaPolicy.Exact](
+        .addTypedSource[User, User, SchemaPolicy.Exact](
           gcsParquetSource[User]("bucket", "users/*.parquet"),
-          SchemaPolicy.Exact,
           _ => IO.pure(User(1, "John", "john@example.com")),
         )
         .addTransform[User](user => IO.pure(user.copy(name = user.name.toUpperCase)))
         .addTypedSink[User, SchemaPolicy.Exact](
           gcsParquetSink[User]("bucket", "processed-users/"),
-          SchemaPolicy.Exact,
           (_, _) => IO.unit,
         )
 
@@ -150,15 +144,13 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
     "demonstrate backward compatibility DOES work when appropriate" in {
       // This test SHOULD compile - UserWithAge is backward compatible with User base schema
       val backwardCompatBuilder = PipelineBuilder[IO]("backward-compat-pipeline")
-        .addTypedSource[UserWithAge, SchemaPolicy.Backward]( // Extra 'age' field allowed
-          gcsParquetSource[UserWithAge]("bucket", "users-with-age/*.parquet"),
-          SchemaPolicy.Backward, // Backward policy allows extra fields
+        .addTypedSource[UserWithAge, User, SchemaPolicy.Backward]( // Extra 'age' field allowed
+          gcsParquetSource[User]("bucket", "users/*.parquet"),
           _ => IO.pure(UserWithAge(1, "John", "john@example.com", 25)),
         )
         .addTransform[UserWithAge](user => IO.pure(user))
         .addTypedSink[UserWithAge, SchemaPolicy.Exact](
           gcsParquetSink[UserWithAge]("bucket", "processed/"),
-          SchemaPolicy.Exact,
           (_, _) => IO.unit,
         )
 

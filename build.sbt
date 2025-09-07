@@ -9,8 +9,8 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / scalaVersion := Dependencies.Versions.scala213
 ThisBuild / crossScalaVersions := Seq(
   Dependencies.Versions.scala212,
-  Dependencies.Versions.scala213,
-  // Dependencies.Versions.scala3
+  Dependencies.Versions.scala213
+  // Dependencies.Versions.scala3  // TODO: Enable when Scala 3 implementation for compile-time contracts is ready
 )
 
 // ===== REPOSITORY RESOLVERS =====
@@ -141,6 +141,36 @@ lazy val core = moduleProject("core")
   .settings(
     description := "Core abstractions and custom type system",
     libraryDependencies ++= Dependencies.forModule("core"),
+    // Section 13.3 - Version-specific dependencies for Scala 2/3 cross-build
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, _)) => Seq(
+          "com.softwaremill.magnolia1_2" %% "magnolia" % "1.1.10",
+          "org.scala-lang" % "scala-reflect" % scalaVersion.value
+        )
+        case Some((3, _)) => Seq(
+          // Scala 3 uses built-in Mirrors, no external dependencies needed
+        )
+        case _ => Seq.empty
+      }
+    },
+    // Section 13.3 - Version-specific source directories for Scala 2/3 cross-build
+    Compile / unmanagedSourceDirectories ++= {
+      val base = (Compile / sourceDirectory).value
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, _)) => Seq(base / "scala-2")
+        case Some((3, _)) => Seq(base / "scala-3")
+        case _            => Nil
+      }
+    },
+    Test / unmanagedSourceDirectories ++= {
+      val base = (Test / sourceDirectory).value
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, _)) => Seq(base / "scala-2")
+        case Some((3, _)) => Seq(base / "scala-3")
+        case _            => Nil
+      }
+    }
   )
 
 lazy val contracts = moduleProject("contracts")

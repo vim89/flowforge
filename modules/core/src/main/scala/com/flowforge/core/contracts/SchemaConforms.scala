@@ -1,19 +1,20 @@
 package com.flowforge.core.contracts
 
 import scala.annotation.implicitNotFound
+import com.flowforge.core.contracts.derive.Shape
 
 @implicitNotFound("""
-╔══════════════════════════════════════════════════════════════════════╗
-║ 🚨 FlowForge Contract Drift (policy: ${P})                           ║
-║ Out: ${Out}  vs  Contract: ${Contract}                               ║
-║ Schema mismatch detected - compilation failed.                       ║
-║ See docs/how-it-fails.md for policy-specific error details.          ║
-╚══════════════════════════════════════════════════════════════════════╝
+FlowForge: Contract drift (policy: ${P})
+Out: ${Out} vs Contract: ${Contract}
+Missing: ... | Extra: ... | Mismatched: ...
 """)
 trait SchemaConforms[Out, Contract, P <: SchemaPolicy]
 
 object SchemaConforms {
-  import language.experimental.macros
-  implicit def materialize[Out, Contract, P <: SchemaPolicy]: SchemaConforms[Out, Contract, P] =
-    macro SchemaConformsMacros.materializeImpl[Out, Contract, P]
+  import scala.language.experimental.macros
+  implicit def materialize[Out, Contract, P <: SchemaPolicy](
+    implicit so: Shape[Out],
+    sc: Shape[Contract],
+  ): SchemaConforms[Out, Contract, P] =
+    macro internal.SchemaConformsMacros.materializeImpl[Out, Contract, P]
 }

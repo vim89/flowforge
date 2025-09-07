@@ -46,22 +46,21 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
    * Add typed source with explicit contract and policy. This is the ONLY way to add sources - no untyped
    * escape hatches.
    *
-   * Advances phantom state: Empty -> HasSource with HasContract
+   * SOURCE: produced C must conform to declared contract R under policy P Advances phantom state: Empty ->
+   * HasSource with HasContract
    */
-  def addTypedSource[R, P <: SchemaPolicy](
+  def addTypedSource[C, R, P <: SchemaPolicy](
     source: TypedSource[R],
-    policy: P,
-    reader: DataSource => F[R],
-  )(implicit
-    ev: SchemaConforms[R, R, P], // Self-conformance for typed sources
-  ): PipelineBuilder[HasSource with HasContract, F, Unit, R] = {
-    val stage = PipelineStage.Source[F, R](
+    reader: DataSource => F[C],
+  )(implicit ev: SchemaConforms[C, R, P],
+  ): PipelineBuilder[HasSource with HasContract, F, Unit, C] = {
+    val stage = PipelineStage.Source[F, C](
       name = s"contract-source-${stages.size}",
-      description = s"Contract-aware source with ${policy.getClass.getSimpleName} policy",
+      description = s"Contract-aware source with compile-time validation",
       dataSource = source.underlying,
       execute = Kleisli(_ => reader(source.underlying)),
     )
-    PipelineBuilder[HasSource with HasContract, F, Unit, R](
+    PipelineBuilder[HasSource with HasContract, F, Unit, C](
       name,
       description,
       stages :+ stage,
@@ -95,19 +94,19 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
    * Add typed sink with explicit contract and policy. This is the ONLY way to add sinks - no untyped escape
    * hatches.
    *
-   * Advances phantom state: ... -> Complete (HasSource with HasContract with HasTransform with HasSink)
+   * SINK: current Out must conform to declared contract R under policy P Advances phantom state: ... ->
+   * Complete (HasSource with HasContract with HasTransform with HasSink)
    */
   def addTypedSink[R, P <: SchemaPolicy](
     sink: TypedSink[R],
-    policy: P,
     writer: (Out, DataSink) => F[Unit],
   )(implicit
     transformComplete: S <:< (HasSource with HasContract with HasTransform),
-    schemaEvidence: SchemaConforms[Out, R, P],
+    ev: SchemaConforms[Out, R, P],
   ): PipelineBuilder[BuilderState.Complete, F, In, Out] = {
     val stage = PipelineStage.Sink[F, Out](
       name = s"contract-sink-${stages.size}",
-      description = s"Contract-aware sink with ${policy.getClass.getSimpleName} policy",
+      description = s"Contract-aware sink with compile-time validation",
       dataSink = sink.underlying,
       execute = Kleisli(data =>
         // Schema conformance is enforced at compile time via SchemaConforms evidence

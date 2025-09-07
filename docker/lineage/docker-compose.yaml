@@ -1,0 +1,71 @@
+version: '3.8'
+
+# FlowForge Lineage Demo Stack
+# Implements Section 8.2 from docs/plan/End-to-End-Compile-time.md (lines 291-294)
+# Boots Marquez + Postgres, exposes UI
+
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: marquez
+      POSTGRES_USER: marquez
+      POSTGRES_PASSWORD: marquez
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - lineage
+
+  marquez:
+    image: marquezproject/marquez:0.43.0
+    depends_on:
+      - postgres
+    environment:
+      MARQUEZ_CONFIG: |
+        database:
+          driverClassName: org.postgresql.Driver
+          url: jdbc:postgresql://postgres:5432/marquez
+          user: marquez
+          password: marquez
+        flyway:
+          locations:
+            - classpath:marquez/db/migration/common
+            - classpath:marquez/db/migration/postgres
+        logging:
+          level: INFO
+          appenders:
+            - type: console
+              threshold: INFO
+        server:
+          applicationConnectors:
+            - type: http
+              port: 5000
+          adminConnectors:
+            - type: http
+              port: 5001
+    ports:
+      - "5000:5000"  # API
+      - "5001:5001"  # Admin
+    networks:
+      - lineage
+
+  marquez-web:
+    image: marquezproject/marquez-web:0.43.0
+    depends_on:
+      - marquez
+    environment:
+      MARQUEZ_HOST: marquez
+      MARQUEZ_PORT: 5000
+    ports:
+      - "3000:3000"  # Web UI
+    networks:
+      - lineage
+
+volumes:
+  postgres_data:
+
+networks:
+  lineage:
+    driver: bridge

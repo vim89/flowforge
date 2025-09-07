@@ -311,7 +311,7 @@ case class SparkConfig(
   executorCores: PositiveInt = Refined.unsafeApply(2),
   driverMemory: String = "1g",
   maxResultSize: String = "1g",
-  serializer: String = "org.apache.spark.serializer.KryoSerializer",
+  serializer: String = "kryo",
   dynamicAllocation: Boolean = true,
   adaptiveQueryExecution: Boolean = true,
   additionalProps: Map[String, String] = Map.empty) {

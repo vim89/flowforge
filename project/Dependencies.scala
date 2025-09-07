@@ -87,11 +87,24 @@ object Dependencies {
       "org.typelevel" %% "kittens"     % Versions.kittens,
     )
 
-    val typeSafety = Seq(
-      "eu.timepit"                   %% "refined"       % Versions.refined,
-      "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.10",
-      "org.scala-lang"                % "scala-reflect" % Versions.scala213,
-    )
+    def typeSafety(scalaVersion: String) = {
+      val common = Seq(
+        "eu.timepit" %% "refined" % Versions.refined
+      )
+      
+      val versionSpecific = CrossVersion.partialVersion(scalaVersion) match {
+        case Some((2, _)) => Seq(
+          "com.softwaremill.magnolia1_2" %% "magnolia" % "1.1.10",
+          "org.scala-lang" % "scala-reflect" % scalaVersion
+        )
+        case Some((3, _)) => Seq(
+          // Scala 3 uses built-in Mirrors, no external dependencies needed
+        )
+        case _ => Seq.empty
+      }
+      
+      common ++ versionSpecific
+    }
 
     val json = Seq(
       "io.circe" %% "circe-core"    % Versions.circe,
@@ -107,7 +120,10 @@ object Dependencies {
       "org.typelevel"              %% "log4cats-slf4j"  % Versions.log4cats,
     )
 
-    val all: Seq[ModuleID] = functional ++ typeSafety ++ json ++ logging ++ validation
+    val all: Seq[ModuleID] = functional ++ Seq(
+      "eu.timepit" %% "refined" % Versions.refined
+      // Note: Magnolia now conditionally added in build.sbt for Scala 2 only
+    ) ++ json ++ logging ++ validation
   }
 
   object TypedSpark {

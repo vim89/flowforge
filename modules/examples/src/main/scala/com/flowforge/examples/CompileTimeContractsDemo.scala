@@ -6,6 +6,7 @@ import com.flowforge.core.contracts.SchemaPolicy
 import com.flowforge.core.instances.EffectInstances._
 import com.flowforge.core.types.TypedIO._
 import com.flowforge.core.types._
+import com.flowforge.core.contracts.derive.Shape
 
 /**
  * COMPILE-TIME CONTRACTS DEMO
@@ -37,6 +38,10 @@ object CompileTimeContractsDemo extends IOApp.Simple {
     id: Long,
     upperName: String,
     domain: String)
+
+  // Provide Shape instances explicitly until Magnolia derivation works
+  implicit val userShape: Shape[User]                   = Shape.gen[User]
+  implicit val processedUserShape: Shape[ProcessedUser] = Shape.gen[ProcessedUser]
 
   def run: IO[Unit] =
     for {
@@ -111,27 +116,25 @@ object CompileTimeContractsDemo extends IOApp.Simple {
       _ <- IO.println("🚀 Building and running a contract-validated pipeline...")
 
       // This pipeline COMPILES because schemas match under Exact policy
-      validPipeline = PipelineBuilder[IO]("valid-contract-pipeline")
-        .withDescription("Demonstrates working compile-time contract validation")
-        .addTypedSource[User, SchemaPolicy.Exact](
-          gcsParquetSource[User]("demo-bucket", "users/*.parquet"),
-          SchemaPolicy.Exact,
-          readUser,
-        )
-        .addTransform[ProcessedUser] { user =>
-          val emailDomain = user.email.split("@").last
-          IO.pure(ProcessedUser(user.id, user.name.toUpperCase, emailDomain))
-        }
-        .addTypedSink[ProcessedUser, SchemaPolicy.Exact](
-          gcsParquetSink[ProcessedUser]("demo-bucket", "processed/"),
-          SchemaPolicy.Exact,
-          writeProcessedUser,
-        )
-
-      // Build and run - this compiles because all contracts match!
-      pipeline <- IO.pure(validPipeline.build())
-      _        <- IO.println(s"   ✓ Pipeline built successfully: ${pipeline.name}")
-      _        <- IO.println(s"   ✓ Pipeline has ${pipeline.stages.length} stages")
+      pipeline <- IO.pure {
+        PipelineBuilder[IO]("valid-contract-pipeline")
+          .withDescription("Demonstrates working compile-time contract validation")
+          .addTypedSource[User, User, SchemaPolicy.Exact](
+            gcsParquetSource[User]("demo-bucket", "users/*.parquet"),
+            readUser _,
+          )
+          .addTransform[ProcessedUser] { user =>
+            val emailDomain = user.email.split("@").last
+            IO.pure(ProcessedUser(user.id, user.name.toUpperCase, emailDomain))
+          }
+          .addTypedSink[ProcessedUser, SchemaPolicy.Exact](
+            gcsParquetSink[ProcessedUser]("demo-bucket", "processed/"),
+            writeProcessedUser _,
+          )
+          .build()
+      }
+      _ <- IO.println(s"   ✓ Pipeline built successfully: ${pipeline.name}")
+      _ <- IO.println(s"   ✓ Pipeline has ${pipeline.stages.length} stages")
 
       // Execute pipeline (note: actual execution would depend on pipeline orchestration)
       _ <- IO.println(s"   ✓ Pipeline ready to execute with ${pipeline.stages.length} stages")

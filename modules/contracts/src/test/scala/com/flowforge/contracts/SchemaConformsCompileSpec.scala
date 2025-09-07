@@ -1,6 +1,7 @@
 package com.flowforge.contracts
 
 import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
+import com.flowforge.core.contracts.derive.Shape
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -54,6 +55,8 @@ class SchemaConformsCompileSpec extends AnyWordSpec with Matchers {
         metadata: Map[String, String],
         tags: List[String],
         score: Option[Double])
+
+      implicit val complexRecordShape: Shape[ComplexRecord] = Shape.gen[ComplexRecord]
 
       val evidence: SchemaConforms[ComplexRecord, ComplexRecord, SchemaPolicy.Exact] =
         implicitly[SchemaConforms[ComplexRecord, ComplexRecord, SchemaPolicy.Exact]]

@@ -1,17 +1,23 @@
 package com.flowforge.contracts
 
 import com.flowforge.core.types.{ DataFormat, DataSource }
+import com.flowforge.core.contracts.derive.Shape
 
 /**
- * A TypedSource represents a data source with compile-time schema information. The phantom type R encodes the
+ * A TypedSource represents a data source with compile-time schema information. The phantom type C encodes the
  * schema structure for compile-time validation.
  */
-final case class TypedSource[R](
-  identifier: String,
-  underlying: DataSource)
+final case class TypedSource[C](underlying: DataSource)(implicit val sc: Shape[C])
 
 object TypedSource {
-  def apply[R](id: String, ds: DataSource): TypedSource[R] = TypedSource[R](id, ds)
-  def apply[R](id: String): TypedSource[R] =
-    TypedSource[R](id, DataSource.gcs("generated", s"$id", DataFormat.Parquet))
+  def apply[C](ds: DataSource)(implicit sc: Shape[C]): TypedSource[C] =
+    TypedSource[C](ds)
+
+  def apply[C](
+    bucket: String,
+    prefix: String,
+    format: DataFormat,
+  )(implicit sc: Shape[C],
+  ): TypedSource[C] =
+    TypedSource[C](DataSource.gcs(bucket, prefix, format))
 }
