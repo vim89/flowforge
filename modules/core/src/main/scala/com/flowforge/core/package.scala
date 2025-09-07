@@ -71,9 +71,8 @@ import cats.data._
 import cats.effect.Resource
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.types.BuilderState
 import com.flowforge.core.types.RefinedTypes.{ BucketName, TableName }
-import com.flowforge.core.types._
+import com.flowforge.core.types.{BuilderState, _}
 
 import java.time.{ Duration, Instant }
 import scala.concurrent.duration.FiniteDuration

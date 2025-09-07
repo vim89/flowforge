@@ -4,8 +4,9 @@ package com.flowforge.core.types
 //       while the Magnolia-based SchemaConforms is rolled out. New code MUST NOT depend on this API.
 //       Track removal in ADR: docs/adr/ADR-compile-time-contracts.md
 
-import shapeless.{ HList, LabelledGeneric }
 import shapeless.ops.hlist.Intersection
+import shapeless.{ HList, LabelledGeneric }
+
 import scala.annotation.implicitNotFound
 
 /**

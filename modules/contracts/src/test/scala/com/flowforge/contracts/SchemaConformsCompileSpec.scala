@@ -1,9 +1,8 @@
 package com.flowforge.contracts
 
 import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
-
-import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 /**
  * Compile-time test suite for SchemaConforms functionality. This demonstrates that FlowForge contracts work

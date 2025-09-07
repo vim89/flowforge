@@ -62,7 +62,7 @@ class CompileTimeContractSpec extends AnyWordSpec with Matchers {
        */
     }
 
-    "enforce complete pipeline stages at compile time" in {
+    "enforce complete pipeline stages at compile time" in
       /*
        * DOCUMENTED COMPILE-TIME GUARANTEE #1: Missing sink
        *
@@ -79,9 +79,8 @@ class CompileTimeContractSpec extends AnyWordSpec with Matchers {
 
       // This test documents the guarantee
       succeed
-    }
 
-    "enforce schema compatibility at source and sink" in {
+    "enforce schema compatibility at source and sink" in
       /*
        * DOCUMENTED COMPILE-TIME GUARANTEE #2: Schema mismatch
        *
@@ -108,7 +107,6 @@ class CompileTimeContractSpec extends AnyWordSpec with Matchers {
 
       // This test documents the guarantee
       succeed
-    }
 
     "provide the correct schema policy types" in {
       // Test that SchemaPolicy case objects exist and can be used

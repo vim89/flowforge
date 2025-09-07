@@ -65,7 +65,6 @@ package com.flowforge.core.types
 
 import cats.Show
 import cats.syntax.show._
-// Shape import removed - using simple type-level markers
 import com.flowforge.core.types.DataSink.WriteMode
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.collection.NonEmpty

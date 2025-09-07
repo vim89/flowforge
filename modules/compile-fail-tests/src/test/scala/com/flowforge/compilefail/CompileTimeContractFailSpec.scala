@@ -46,7 +46,7 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
 
   "FlowForge 100% Compile-Time Contracts" should {
 
-    "FAIL TEST #1: Missing Sink - Pipeline cannot be built without all required stages" in {
+    "FAIL TEST #1: Missing Sink - Pipeline cannot be built without all required stages" in
       // SPECIFICATION REQUIREMENT: "Ship 3 compile-fail tests: missing sink"
       //
       // This test demonstrates that incomplete pipelines are literally unbuildable.
@@ -69,9 +69,8 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
       // val pipeline = incompleteBuilder.build()
 
       succeed // Test documents the compile failure requirement
-    }
 
-    "FAIL TEST #2: Schema Mismatch - Source schema doesn't conform to expected type under Exact policy" in {
+    "FAIL TEST #2: Schema Mismatch - Source schema doesn't conform to expected type under Exact policy" in
       // SPECIFICATION REQUIREMENT: "Ship 3 compile-fail tests: schema mismatch"
       //
       // This test demonstrates that schema mismatches are caught at compile time.
@@ -92,9 +91,8 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
       // // This line MUST NOT COMPILE - SchemaConforms evidence cannot be found:
 
       succeed // Test documents the compile failure requirement
-    }
 
-    "FAIL TEST #3: Illegal Evolution - Schema evolution violates Exact policy constraints" in {
+    "FAIL TEST #3: Illegal Evolution - Schema evolution violates Exact policy constraints" in
       // SPECIFICATION REQUIREMENT: "Ship 3 compile-fail tests: illegal evolution"
       //
       // This test demonstrates that illegal schema evolution is prevented at compile time.
@@ -123,7 +121,6 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
       // val pipeline = evolutionViolationBuilder.build()
 
       succeed // Test documents the compile failure requirement
-    }
 
     "demonstrate that valid schemas DO compile correctly" in {
       // This test SHOULD compile to prove the system works for valid cases

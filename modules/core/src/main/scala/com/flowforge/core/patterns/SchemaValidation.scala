@@ -3,7 +3,7 @@ package com.flowforge.core.patterns
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.flowforge.core.algebra.{ SchemaError, SchemaIncompatible }
-import com.flowforge.core.patterns.ValidationTypes.{ invalid, valid, SchemaValidationResult }
+import com.flowforge.core.patterns.ValidationTypes.{SchemaValidationResult, invalid, valid}
 import com.flowforge.core.types.{ DataSchema, DataType }
 
 /**
