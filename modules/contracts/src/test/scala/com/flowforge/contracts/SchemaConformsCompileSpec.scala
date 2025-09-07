@@ -6,14 +6,21 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
 
 /**
- * Compile-time test suite for SchemaConforms functionality.
- * This demonstrates that FlowForge contracts work correctly with Magnolia-based schema validation.
+ * Compile-time test suite for SchemaConforms functionality. This demonstrates that FlowForge contracts work
+ * correctly with Magnolia-based schema validation.
  */
 class SchemaConformsCompileSpec extends AnyWordSpec with Matchers {
 
   // Shared test types defined at class level
-  case class BaseRecord(id: String, value: Int, active: Boolean)
-  case class ExtendedRecord(id: String, value: Int, active: Boolean, extraField: String)
+  case class BaseRecord(
+    id: String,
+    value: Int,
+    active: Boolean)
+  case class ExtendedRecord(
+    id: String,
+    value: Int,
+    active: Boolean,
+    extraField: String)
   case class SubsetRecord(id: String, value: Int)
 
   "SchemaConforms with Magnolia" should {
@@ -27,7 +34,7 @@ class SchemaConformsCompileSpec extends AnyWordSpec with Matchers {
     }
 
     "provide evidence for backward compatibility with extra fields" in {
-      // Extended type should conform to base type under backward policy  
+      // Extended type should conform to base type under backward policy
       val evidence: SchemaConforms[ExtendedRecord, BaseRecord, SchemaPolicy.Backward] =
         implicitly[SchemaConforms[ExtendedRecord, BaseRecord, SchemaPolicy.Backward]]
 
@@ -47,8 +54,7 @@ class SchemaConformsCompileSpec extends AnyWordSpec with Matchers {
         id: String,
         metadata: Map[String, String],
         tags: List[String],
-        score: Option[Double]
-      )
+        score: Option[Double])
 
       val evidence: SchemaConforms[ComplexRecord, ComplexRecord, SchemaPolicy.Exact] =
         implicitly[SchemaConforms[ComplexRecord, ComplexRecord, SchemaPolicy.Exact]]
@@ -61,7 +67,7 @@ class SchemaConformsCompileSpec extends AnyWordSpec with Matchers {
       info("Field name mismatches would prevent SchemaConforms resolution")
       info("Type mismatches would prevent SchemaConforms resolution")
       info("Missing required fields would prevent SchemaConforms resolution under strict policies")
-      
+
       // These tests pass because they're just documentation
       succeed
     }

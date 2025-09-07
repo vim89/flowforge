@@ -45,7 +45,7 @@ import scala.annotation.implicitNotFound
 sealed trait SchemaWitness[PipelineOut, Contract, Policy <: SchemaEvolutionPolicy]
 
 object SchemaWitness {
-  
+
   // Type alias for migration - use SchemaConforms instead
   @deprecated("Use SchemaConforms[Out, Contract, P] instead", "0.9.0")
   type Witness[Out, Contract, P <: SchemaEvolutionPolicy] = SchemaWitness[Out, Contract, P]

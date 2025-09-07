@@ -9,7 +9,7 @@ object SchemaPolicy {
   sealed trait Backward       extends SchemaPolicy
   sealed trait Forward        extends SchemaPolicy
   sealed trait Full           extends SchemaPolicy
-  
+
   // Case objects for runtime usage - implement the traits
   case object Exact          extends SchemaPolicy.Exact
   case object ExactUnordered extends SchemaPolicy.ExactUnordered

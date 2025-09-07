@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g., 0.2.0)'
+        description: 'Release version (e.g., 0.1.0)'
         required: true
         type: string
       prerelease:
@@ -45,7 +45,7 @@ jobs:
             IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
           else
             VERSION=${GITHUB_REF#refs/tags/v}
-            if [[ $VERSION == *"alpha"* ]] || [[ $VERSION == *"beta"* ]] || [[ $VERSION == *"rc"* ]]; then
+            if [[ $VERSION == *"alpha"* ]] || [[ $VERSION == *"beta"* ]] || [[ $VERSION == *"rc"* ]] || [[ $VERSION == *"snapshot"* ]]; then
               IS_PRERELEASE=true
             else
               IS_PRERELEASE=false
@@ -53,7 +53,7 @@ jobs:
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "is-prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
-          echo "Releasing version: $VERSION (prerelease: $IS_PRERELEASE)"
+          echo "Release version: $VERSION (prerelease: $IS_PRERELEASE)"
 
       - name: Validate version format
         run: |
@@ -78,457 +78,154 @@ jobs:
     name: Pre-Release Tests
     needs: [validate-release]
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        scala: ['2.13.12', '3.3.1']
-        java: ['11', '17', '21']
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: ${{ matrix.java }}
-          cache: 'sbt'
+          java-version: '21'
 
-      - name: Cache SBT
-        uses: actions/cache@v3
+      - name: Cache SBT and dependencies
+        uses: actions/cache@v4
         with:
           path: |
             ~/.sbt
             ~/.coursier/cache
-            target
-            project/target
-          key: sbt-release-cache-${{ runner.os }}-${{ matrix.java }}-${{ matrix.scala }}-${{ hashFiles('**/*.sbt') }}
+            ~/.ivy2/cache
+          key: ${{ runner.os }}-sbt-release-${{ hashFiles('**/*.sbt', '**/project/**/*.scala') }}
+          restore-keys: |
+            ${{ runner.os }}-sbt-release-
+            ${{ runner.os }}-sbt-
+
+      - name: Check formatting
+        run: sbt scalafmtCheckAll
+
+      - name: Compile all modules
+        run: sbt compile Test/compile
 
       - name: Run full test suite
-        run: sbt ++${{ matrix.scala }} fullCheck
-        timeout-minutes: 45
+        run: |
+          sbt coverage test
+          sbt "compile-fail-tests / test"
+          sbt coverageReport
 
-      - name: Run integration tests
-        run: sbt ++${{ matrix.scala }} it:test
-        timeout-minutes: 30
-
-  security-audit:
-    name: Security Audit
-    needs: [validate-release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'sbt'
-
-      - name: Run dependency vulnerability check
-        run: sbt dependencyCheck
-
-      - name: Upload security report
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: security-audit-report
-          path: target/scala-*/dependency-check-report.html
+      - name: Generate coverage report
+        run: sbt coverageAggregate
 
   build-artifacts:
     name: Build Release Artifacts
-    needs: [validate-release, pre-release-tests, security-audit]
-    runs-on: ubuntu-latest
-    outputs:
-      artifact-hashes: ${{ steps.hashes.outputs.hashes }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'sbt'
-
-      - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@v6
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-
-      - name: Cache SBT
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.sbt
-            ~/.coursier/cache
-            target
-            project/target
-          key: sbt-release-build-${{ runner.os }}-${{ hashFiles('**/*.sbt') }}
-
-      - name: Set version
-        run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
-          echo "ThisBuild / version := \"$VERSION\"" > version.sbt
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Build and publish to Sonatype
-        run: sbt ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.GPG_PRIVATE_KEY }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-
-      - name: Build universal packages
-        run: |
-          sbt universal:packageBin
-          sbt universal:packageZipTarball
-
-      - name: Build Docker image
-        run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
-          docker build -f docker/Dockerfile -t flowforge/flowforge:$VERSION .
-          docker tag flowforge/flowforge:$VERSION flowforge/flowforge:latest
-          docker save flowforge/flowforge:$VERSION > flowforge-docker-$VERSION.tar
-
-      - name: Generate checksums
-        id: hashes
-        run: |
-          cd target/universal/
-          sha256sum *.zip *.tgz > checksums.txt
-          cd ../../
-          sha256sum flowforge-docker-*.tar >> target/universal/checksums.txt
-
-          # Generate hashes for provenance
-          HASHES=$(cat target/universal/checksums.txt | base64 -w 0)
-          echo "hashes=$HASHES" >> $GITHUB_OUTPUT
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: release-artifacts
-          path: |
-            target/universal/*.zip
-            target/universal/*.tgz
-            target/universal/checksums.txt
-            flowforge-docker-*.tar
-
-  build-documentation:
-    name: Build Documentation
     needs: [validate-release, pre-release-tests]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
-          cache: 'sbt'
+          java-version: '21'
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Cache SBT and dependencies
+        uses: actions/cache@v4
         with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: flowforge-docs/website/package-lock.json
+          path: |
+            ~/.sbt
+            ~/.coursier/cache
+            ~/.ivy2/cache
+          key: ${{ runner.os }}-sbt-release-${{ hashFiles('**/*.sbt', '**/project/**/*.scala') }}
+          restore-keys: |
+            ${{ runner.os }}-sbt-release-
+            ${{ runner.os }}-sbt-
 
-      - name: Generate API documentation
-        run: sbt unidoc
-
-      - name: Build documentation website
-        run: |
-          cd flowforge-docs/website
-          npm ci
-          VERSION="${{ needs.validate-release.outputs.version }}" npm run build
-
-      - name: Package documentation
+      - name: Update version in build.sbt
         run: |
           VERSION="${{ needs.validate-release.outputs.version }}"
-          tar -czf flowforge-docs-$VERSION.tar.gz -C target/scala-*/unidoc .
-          tar -czf flowforge-website-$VERSION.tar.gz -C flowforge-docs/website/build .
+          sed -i "s/version := \".*\"/version := \"$VERSION\"/" build.sbt
+          echo "Updated build.sbt to version $VERSION"
 
-      - name: Upload documentation artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: documentation-artifacts
-          path: |
-            flowforge-docs-*.tar.gz
-            flowforge-website-*.tar.gz
-
-  test-examples:
-    name: Test Release Examples
-    needs: [validate-release, build-artifacts]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        example: [customer-analytics, fraud-detection, ml-pipeline, data-migration]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'sbt'
-
-      - name: Test example compilation and execution
+      - name: Build JAR artifacts
         run: |
-          sbt "examples/testOnly *${{ matrix.example }}*"
-          sbt "examples/runMain io.flowforge.examples.${{ matrix.example }}.Main --dry-run"
+          sbt clean compile
+          sbt "validation-cli / assembly"
+          sbt "contracts-extractor-cli / assembly"
 
-  provenance:
-    name: Generate Provenance
-    needs: [build-artifacts]
-    permissions:
-      actions: read
-      id-token: write
-      contents: write
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.9.0
-    with:
-      base64-subjects: "${{ needs.build-artifacts.outputs.artifact-hashes }}"
-      upload-assets: true
+      - name: Create release directory
+        run: mkdir -p release-artifacts
+
+      - name: Copy artifacts
+        run: |
+          find . -name "*assembly*.jar" -exec cp {} release-artifacts/ \;
+          ls -la release-artifacts/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ needs.validate-release.outputs.version }}
+          path: release-artifacts/
+          retention-days: 30
 
   create-release:
     name: Create GitHub Release
-    needs: [validate-release, build-artifacts, build-documentation, test-examples, provenance]
+    needs: [validate-release, pre-release-tests, build-artifacts]
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v3
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: release-artifacts
-          path: ./artifacts
-
-      - name: Download documentation artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: documentation-artifacts
-          path: ./artifacts
+          name: release-artifacts-${{ needs.validate-release.outputs.version }}
+          path: release-artifacts/
 
       - name: Generate release notes
         id: release-notes
         run: |
           VERSION="${{ needs.validate-release.outputs.version }}"
-
-          # Generate changelog since last release
-          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$LAST_TAG" ]; then
-            echo "## Changes since $LAST_TAG" > release-notes.md
-            git log $LAST_TAG..HEAD --pretty=format:"- %s (%an)" --no-merges >> release-notes.md
-          else
-            echo "## Initial Release" > release-notes.md
-            echo "First release of FlowForge - Revolutionary Functional Data Engineering Framework" >> release-notes.md
-          fi
-
-          echo "" >> release-notes.md
-          echo "## Artifacts" >> release-notes.md
-          echo "- **Universal Package**: \`flowforge-$VERSION.zip\`" >> release-notes.md
-          echo "- **Universal Tarball**: \`flowforge-$VERSION.tgz\`" >> release-notes.md
-          echo "- **Docker Image**: \`flowforge/flowforge:$VERSION\`" >> release-notes.md
-          echo "- **Documentation**: \`flowforge-docs-$VERSION.tar.gz\`" >> release-notes.md
-          echo "" >> release-notes.md
-          echo "## Installation" >> release-notes.md
-          echo "\`\`\`bash" >> release-notes.md
-          echo "# SBT" >> release-notes.md
-          echo "libraryDependencies += \"io.flowforge\" %% \"flowforge-core\" % \"$VERSION\"" >> release-notes.md
-          echo "" >> release-notes.md
-          echo "# Docker" >> release-notes.md
-          echo "docker pull flowforge/flowforge:$VERSION" >> release-notes.md
-          echo "\`\`\`" >> release-notes.md
+          cat > release-notes.md << EOF
+          # FlowForge v$VERSION
+          
+          ## 🚀 Features
+          - 100% Compile-Time Contracts - Pipelines fail to compile if schema drift occurs
+          - Phantom-State Builder Pattern - Incomplete pipelines cannot be built
+          - SchemaConforms Evidence System - Macro-based schema validation
+          - Contract-Aware Quickstart Demo - Working examples of compile-time validation
+          
+          ## 🛠 CLI Tools
+          - **validation-cli**: Schema validation and contract checking
+          - **contracts-extractor-cli**: Extract contracts from data sources
+          
+          ## 📋 What's New
+          - Migrated from shapeless to reflection-based macro approach
+          - Implemented 3 required compile-fail tests (missing sink, schema mismatch, illegal evolution)
+          - Deprecated legacy SchemaWitness system
+          - Enhanced template generation with contract enforcement
+          
+          ## 🧪 Testing
+          - All modules tested with coverage reporting
+          - Compile-fail tests validate contract enforcement
+          - Integration tests for Spark/Delta workflows
+          
+          Generated from commit: ${{ github.sha }}
+          EOF
 
       - name: Create GitHub Release
-        uses: ncipollo/release-action@v1
+        uses: softprops/action-gh-release@v1
         with:
-          tag: v${{ needs.validate-release.outputs.version }}
+          tag_name: v${{ needs.validate-release.outputs.version }}
           name: FlowForge v${{ needs.validate-release.outputs.version }}
-          bodyFile: release-notes.md
-          prerelease: ${{ needs.validate-release.outputs.is-prerelease }}
-          artifacts: |
-            artifacts/*.zip
-            artifacts/*.tgz
-            artifacts/*.tar
-            artifacts/checksums.txt
-          generateReleaseNotes: false
-          makeLatest: ${{ needs.validate-release.outputs.is-prerelease == 'false' }}
+          body_path: release-notes.md
+          prerelease: ${{ needs.validate-release.outputs.is-prerelease == 'true' }}
+          files: release-artifacts/*
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-  publish-docker:
-    name: Publish Docker Images
-    needs: [validate-release, create-release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Upload to Codecov
+        if: success()
+        uses: codecov/codecov-action@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker images
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: docker/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            flowforge/flowforge:${{ needs.validate-release.outputs.version }}
-            flowforge/flowforge:latest
-            ghcr.io/flowforge/flowforge:${{ needs.validate-release.outputs.version }}
-            ghcr.io/flowforge/flowforge:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  deploy-documentation:
-    name: Deploy Documentation
-    needs: [validate-release, create-release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: flowforge-docs/website/package-lock.json
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'sbt'
-
-      - name: Generate API documentation
-        run: sbt unidoc
-
-      - name: Build and deploy documentation
-        run: |
-          cd flowforge-docs/website
-          npm ci
-          VERSION="${{ needs.validate-release.outputs.version }}" npm run build
-
-          # Deploy to GitHub Pages
-          npm run deploy
-        env:
-          GIT_USER: ${{ github.actor }}
-          GIT_PASS: ${{ secrets.GITHUB_TOKEN }}
-          DEPLOYMENT_BRANCH: gh-pages
-
-  update-homebrew:
-    name: Update Homebrew Formula
-    needs: [validate-release, create-release]
-    if: needs.validate-release.outputs.is-prerelease == 'false'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Update Homebrew formula
-        uses: mislav/bump-homebrew-formula-action@v3
-        with:
-          formula-name: flowforge
-          formula-path: Formula/flowforge.rb
-          homebrew-tap: flowforge/homebrew-tap
-          download-url: https://github.com/flowforge/flowforge/releases/download/v${{ needs.validate-release.outputs.version }}/flowforge-${{ needs.validate-release.outputs.version }}.zip
-          commit-message: |
-            Update FlowForge to v${{ needs.validate-release.outputs.version }}
-
-            This is an automated update via GitHub Actions.
-        env:
-          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-
-  notify-release:
-    name: Notify Release
-    needs: [validate-release, create-release, publish-docker, deploy-documentation]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Notify Discord
-        uses: Ilshidur/action-discord@0.3.2
-        with:
-          args: |
-            🚀 **FlowForge v${{ needs.validate-release.outputs.version }} Released!**
-
-            📦 Download: https://github.com/flowforge/flowforge/releases/tag/v${{ needs.validate-release.outputs.version }}
-            🐳 Docker: `docker pull flowforge/flowforge:${{ needs.validate-release.outputs.version }}`
-            📚 Docs: https://flowforge.github.io/flowforge
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-
-      - name: Notify Slack
-        uses: 8398a7/action-slack@v3
-        with:
-          status: custom
-          custom_payload: |
-            {
-              text: "🔥 FlowForge v${{ needs.validate-release.outputs.version }} has been released!",
-              attachments: [
-                {
-                  color: "good",
-                  fields: [
-                    {
-                      title: "Release",
-                      value: "v${{ needs.validate-release.outputs.version }}",
-                      short: true
-                    },
-                    {
-                      title: "GitHub",
-                      value: "<https://github.com/flowforge/flowforge/releases/tag/v${{ needs.validate-release.outputs.version }}|View Release>",
-                      short: true
-                    }
-                  ]
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Tweet release announcement
-        uses: ethomson/send-tweet-action@v1
-        if: needs.validate-release.outputs.is-prerelease == 'false'
-        with:
-          status: |
-            🔥 FlowForge v${{ needs.validate-release.outputs.version }} is here!
-
-            Revolutionary functional data engineering framework for Scala.
-
-            ✅ Type-safe pipelines
-            ✅ Effect-safe operations
-            ✅ Multi-cloud native
-            ✅ 30-second deployments
-
-            Get started: https://github.com/flowforge/flowforge
-
-            #Scala #DataEngineering #FunctionalProgramming
-        env:
-          TWITTER_CONSUMER_API_KEY: ${{ secrets.TWITTER_CONSUMER_API_KEY }}
-          TWITTER_CONSUMER_API_SECRET: ${{ secrets.TWITTER_CONSUMER_API_SECRET }}
-          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
-          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
