@@ -7,49 +7,55 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 
 /**
  * Minimal Flink runner demo proving "same business logic, different runner".
- * 
- * This demo shows that FlowForge's pure domain transforms can be reused
- * across different execution engines (Spark, Flink, etc.) without modification.
- * 
- * The business logic (data transformations) remains pure and engine-agnostic,
- * while only the execution framework changes.
+ *
+ * This demo shows that FlowForge's pure domain transforms can be reused across different execution engines
+ * (Spark, Flink, etc.) without modification.
+ *
+ * The business logic (data transformations) remains pure and engine-agnostic, while only the execution
+ * framework changes.
  */
 object FlinkStreamingDemo {
 
   // Domain model (same as used in Spark examples)
-  case class User(id: Long, name: String, email: String)
-  case class ProcessedUser(id: Long, name: String, email: String, processed: Boolean)
+  case class User(
+    id: Long,
+    name: String,
+    email: String)
+  case class ProcessedUser(
+    id: Long,
+    name: String,
+    email: String,
+    processed: Boolean)
 
   // Flink requires explicit TypeInformation for case classes
   implicit val userTypeInfo: TypeInformation[User] = TypeInformation.of(classOf[User])
-  implicit val processedUserTypeInfo: TypeInformation[ProcessedUser] = TypeInformation.of(classOf[ProcessedUser])
+  implicit val processedUserTypeInfo: TypeInformation[ProcessedUser] =
+    TypeInformation.of(classOf[ProcessedUser])
   implicit val stringTypeInfo: TypeInformation[String] = TypeInformation.of(classOf[String])
 
   /**
    * PURE DOMAIN TRANSFORM - Engine Agnostic
-   * 
-   * This is the same business logic used in Spark pipelines.
-   * Notice it has no Flink dependencies - it's a pure function.
+   *
+   * This is the same business logic used in Spark pipelines. Notice it has no Flink dependencies - it's a
+   * pure function.
    */
-  def processUser(user: User): ProcessedUser = {
+  def processUser(user: User): ProcessedUser =
     ProcessedUser(
       id = user.id,
       name = user.name.toUpperCase,
       email = user.email.toLowerCase,
-      processed = true
+      processed = true,
     )
-  }
 
   /**
    * PURE DOMAIN FILTER - Engine Agnostic
-   * 
+   *
    * Same validation logic across all engines.
    */
-  def isValidUser(user: User): Boolean = {
-    user.id > 0 && 
-    user.name.nonEmpty && 
-    user.email.contains("@")
-  }
+  def isValidUser(user: User): Boolean =
+    user.id > 0 &&
+      user.name.nonEmpty &&
+      user.email.contains("@")
 
   def main(args: Array[String]): Unit = {
     // Set up Flink execution environment
@@ -69,21 +75,21 @@ object FlinkStreamingDemo {
     val users = Seq(
       User(1, "john doe", "JOHN@EXAMPLE.COM"),
       User(2, "jane smith", "JANE@TEST.ORG"),
-      User(0, "", "invalid"),  // Invalid user - will be filtered
-      User(3, "bob wilson", "BOB@COMPANY.NET")
+      User(0, "", "invalid"), // Invalid user - will be filtered
+      User(3, "bob wilson", "BOB@COMPANY.NET"),
     )
 
     val dataStream = env.fromCollection(users)
 
     // Apply the same business logic as Spark pipelines
     val processedStream = dataStream
-      .filter(isValidUser)                    // Pure domain filter
-      .process(new UserProcessFunction)       // Flink wrapper around pure transform
+      .filter(isValidUser)              // Pure domain filter
+      .process(new UserProcessFunction) // Flink wrapper around pure transform
       .name("Process Users")
 
     // Output results - both console and file sink (as specified in plan)
     processedStream.print("Processed Users")
-    
+
     // File sink as required by plan
     processedStream
       .map((user: ProcessedUser) => user.toString)
@@ -114,15 +120,15 @@ Run this with: sbt "engines-flink/run"
 
   /**
    * Flink-specific wrapper around pure domain transform.
-   * 
-   * This is the only part that knows about Flink - the actual business logic
-   * (processUser function) is engine-agnostic.
+   *
+   * This is the only part that knows about Flink - the actual business logic (processUser function) is
+   * engine-agnostic.
    */
   private class UserProcessFunction extends ProcessFunction[User, ProcessedUser] {
     override def processElement(
-      user: User, 
-      ctx: ProcessFunction[User, ProcessedUser]#Context, 
-      out: Collector[ProcessedUser]
+      user: User,
+      ctx: ProcessFunction[User, ProcessedUser]#Context,
+      out: Collector[ProcessedUser],
     ): Unit = {
       // Call the pure domain transform (same as used in Spark)
       val processed = processUser(user)
