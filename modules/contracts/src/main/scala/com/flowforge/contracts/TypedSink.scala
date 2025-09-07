@@ -11,7 +11,7 @@ final case class TypedSink[R](underlying: DataSink)(implicit val sr: Shape[R])
 
 object TypedSink {
   def apply[R](ds: DataSink)(implicit sr: Shape[R]): TypedSink[R] =
-    TypedSink[R](ds)
+    new TypedSink[R](ds)(sr)
 
   def apply[R](
     bucket: String,
@@ -19,5 +19,5 @@ object TypedSink {
     format: DataFormat,
   )(implicit sr: Shape[R],
   ): TypedSink[R] =
-    TypedSink[R](DataSink.gcs(bucket, prefix, format))
+    new TypedSink[R](DataSink.gcs(bucket, prefix, format))(sr)
 }

@@ -11,7 +11,7 @@ final case class TypedSource[C](underlying: DataSource)(implicit val sc: Shape[C
 
 object TypedSource {
   def apply[C](ds: DataSource)(implicit sc: Shape[C]): TypedSource[C] =
-    TypedSource[C](ds)
+    new TypedSource[C](ds)(sc)
 
   def apply[C](
     bucket: String,
@@ -19,5 +19,5 @@ object TypedSource {
     format: DataFormat,
   )(implicit sc: Shape[C],
   ): TypedSource[C] =
-    TypedSource[C](DataSource.gcs(bucket, prefix, format))
+    new TypedSource[C](DataSource.gcs(bucket, prefix, format))(sc)
 }

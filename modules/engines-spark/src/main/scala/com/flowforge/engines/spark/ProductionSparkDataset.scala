@@ -207,7 +207,7 @@ object ProductionSparkDataset {
       }
     }
 
-    val df = spark.read.json(spark.createDataset(jsonStrings).rdd)
+    val df = spark.read.json(spark.createDataset(jsonStrings))
 
     val schema = DataSchema(
       fields = df.schema.fields

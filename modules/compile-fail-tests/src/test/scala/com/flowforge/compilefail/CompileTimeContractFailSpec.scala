@@ -10,10 +10,10 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
 
 /**
- * Compile-Fail Tests: The 3 Required Tests from compile-time-*.md specifications
+ * Compile-fail tests: 3 required tests
  *
- * These tests MUST NOT COMPILE to prove that FlowForge achieves the USP: "Data pipelines won't even compile
- * if contracts/schema of source or target do not match or align!"
+ * These tests MUST NOT COMPILE to prove that flowForge achieves: "Data pipelines won't even compile if
+ * contracts/schema of source or target do not match or align!"
  *
  * Per specification requirements:
  *   1. Missing sink - pipeline cannot be built without all stages
@@ -21,10 +21,8 @@ import org.scalatest.matchers.should.Matchers
  *   3. Illegal evolution - schema evolution violates policy constraints
  *
  * To verify compile failures:
- *   1. Uncomment any test section below
- *   2. Run `sbt compile-fail-tests/test:compile`
- *   3. Observe compilation failure with helpful error message
- *   4. Comment out test to restore clean build
+ *   1. Run `sbt compile-fail-tests/test:compile`
+ *   2. Observe compilation failure with helpful error message
  */
 class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
 
@@ -63,7 +61,7 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
           )
           .addTransform[User](user => IO.pure(user.copy(name = user.name.toUpperCase)))
           // Missing: .addTypedSink[User, SchemaPolicy.Exact](...)
-        
+
         // This line MUST NOT COMPILE - build() requires BuilderState.Complete evidence:
         val pipeline = incompleteBuilder.build()
       """)
@@ -108,7 +106,7 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
             gcsParquetSink[UserWithAge]("bucket", "users-with-age/"),
             (_, _) => IO.unit
           )
-        
+
         val pipeline = evolutionViolationBuilder.build()
       """)
     }
