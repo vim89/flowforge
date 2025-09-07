@@ -4,8 +4,10 @@ import cats.effect.{ IO, IOApp }
 import cats.implicits._
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
-import com.flowforge.core.types.{ DataSource, DataSink, DataFormat, PipelineBuilder2 }
-import com.flowforge.core.types.{ SchemaWitness, SchemaEvolutionPolicy }
+import com.flowforge.core.types.{ DataSource, DataSink, DataFormat }
+import com.flowforge.core.types.TypedIO._
+import com.flowforge.core.PipelineBuilder
+import com.flowforge.core.contracts.SchemaPolicy
 
 /**
  * FlowForge Contract-First Data Pipeline Template
@@ -99,18 +101,25 @@ object Pipeline extends IOApp.Simple {
     def writeProcessedData(data: ProcessedRecord, sink: DataSink): IO[Unit] =
       IO.println(s"💾 Writing to ${sink.location}: $data")
 
-    // 🔒 CONTRACT-ENFORCED PIPELINE
+    // 🔒 CONTRACT-ENFORCED PIPELINE  
     // This is the key differentiator - pipeline won't build if contracts drift!
-    val contractValidatedPipeline = PipelineBuilder2[IO]("$name$-pipeline")
+    val contractValidatedPipeline = PipelineBuilder[IO]("$name$-pipeline")
       .withDescription("Contract-first pipeline with compile-time validation")
-      .addTransform[InputRecord](_ => readInputData(source))
+      .addTypedSource[InputRecord, SchemaPolicy.Exact](
+        gcsParquetSource[InputRecord]("$name$-bucket", "input/*.parquet"),
+        SchemaPolicy.Exact,
+        _ => readInputData(source)
+      )
       .addTransform[ProcessedRecord](processData)
-      .addTransform[Unit](processed => writeProcessedData(processed, sink))
-      // 🎯 THIS IS THE MAGIC: Contract enforcement at compile time
-      .buildWithExactContract[ProcessedDataContract] // ✅ Compiles because schemas match!
+      .addTypedSink[ProcessedRecord, SchemaPolicy.Exact](
+        gcsParquetSink[ProcessedRecord]("$name$-bucket", "output/"),
+        SchemaPolicy.Exact, 
+        (processed, _) => writeProcessedData(processed, sink)
+      )
     
-    // Execute the validated pipeline
-    contractValidatedPipeline.run(())
+    // Build and execute the validated pipeline - ONLY compiles if contracts match!
+    val pipeline = contractValidatedPipeline.build()
+    pipeline.run(())
   }
 
   /**

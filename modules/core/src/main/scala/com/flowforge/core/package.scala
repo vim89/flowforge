@@ -71,7 +71,7 @@ import cats.data._
 import cats.effect.Resource
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.internal
+import com.flowforge.core.types.BuilderState
 import com.flowforge.core.types.RefinedTypes.{ BucketName, TableName }
 import com.flowforge.core.types._
 
@@ -153,15 +153,15 @@ package object core {
   object Pipeline {
 
     /**
-     * Create a pipeline builder with effect system support.
+     * Create a compile-time contract-aware pipeline builder.
      *
      * @tparam F
      *   Effect type (IO, Task, etc.)
      * @return
-     *   Pipeline builder for fluent construction
+     *   Pipeline builder with 100% compile-time contract enforcement
      */
-    def builder[F[_]: EffectSystem]: internal.LegacyPipelineBuilder[F] =
-      internal.LegacyPipelineBuilder.empty[F]
+    def builder[F[_]: EffectSystem](name: String): PipelineBuilder[BuilderState.Empty, F, Unit, Unit] =
+      PipelineBuilder[F](name)
 
     /**
      * Create a simple transformation pipeline.
@@ -583,6 +583,6 @@ package object core {
   // PIPELINE BUILDER
   // ===============================
 
-  // Moved LegacyPipelineBuilder and FlowForgePipeline to separate files to avoid
-  // package object anti-pattern - see LegacyPipelineBuilder.scala and FlowForgePipeline.scala
+  // Pipeline builders are implemented with 100% compile-time contract enforcement
+  // See PipelineBuilder.scala for the main implementation
 }

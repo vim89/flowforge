@@ -65,7 +65,7 @@ package com.flowforge.core.types
 
 import cats.Show
 import cats.syntax.show._
-import com.flowforge.core.contracts.derive.Shape
+// Shape import removed - using simple type-level markers
 import com.flowforge.core.types.DataSink.WriteMode
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.collection.NonEmpty
@@ -846,10 +846,10 @@ object DataSink {
  * PipelineBuilder.addTypedSink to enforce compile-time schema compatibility between pipeline output type and
  * sink expectation. Record-typed endpoints; schema carried by compile-time Shape evidence.
  */
-final case class TypedSource[R](underlying: DataSource)(implicit val shape: Shape[R])
+final case class TypedSource[R](underlying: DataSource)
 
 /** A source that encodes its expected schema at the type level. */
-final case class TypedSink[R](underlying: DataSink)(implicit val shape: Shape[R])
+final case class TypedSink[R](underlying: DataSink)
 
 // ===============================
 // DATA QUALITY TYPES

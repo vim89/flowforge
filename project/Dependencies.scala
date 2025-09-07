@@ -18,7 +18,6 @@ object Dependencies {
     val zioInteropCats = "23.1.0.2" // Updated: was 23.1.0.0
     val refined        = "0.11.3"
     val kittens        = "3.1.0"
-    val shapeless      = "2.3.13"
 
     // JSON & Config
     val circe      = "0.14.14" // Security update: was 0.14.6
@@ -90,9 +89,8 @@ object Dependencies {
 
     val typeSafety = Seq(
       "eu.timepit"                   %% "refined"       % Versions.refined,
-      "com.chuusai"                  %% "shapeless"     % Versions.shapeless,
       "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.10",
-      "org.scala-lang"                % "scala-reflect" % Versions.scala213 % Provided,
+      "org.scala-lang"                % "scala-reflect" % Versions.scala213,
     )
 
     val json = Seq(

@@ -39,12 +39,16 @@ import scala.annotation.implicitNotFound
 ╚══════════════════════════════════════════════════════════════════════════════╝
 """)
 @deprecated(
-  "Legacy shapeless/HList-based witness. Migrate to com.flowforge.core.contracts.SchemaConforms (Magnolia-based) for compile-time contracts.",
+  "Legacy shapeless/HList-based witness. Migrate to com.flowforge.core.contracts.SchemaConforms for compile-time contracts. Will be removed in 1.0.0.",
   since = "0.9.0",
 )
 sealed trait SchemaWitness[PipelineOut, Contract, Policy <: SchemaEvolutionPolicy]
 
 object SchemaWitness {
+  
+  // Type alias for migration - use SchemaConforms instead
+  @deprecated("Use SchemaConforms[Out, Contract, P] instead", "0.9.0")
+  type Witness[Out, Contract, P <: SchemaEvolutionPolicy] = SchemaWitness[Out, Contract, P]
 
   /**
    * Exact match witness using pure functional composition. Requires identical field names, types, and order
