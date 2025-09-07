@@ -64,14 +64,19 @@ import scala.util.{ Failure, Success, Try }
 /**
  * Universal effect system abstraction.
  *
- * This type class provides a unified interface for working with different effect systems in the Scala
- * ecosystem. It combines capabilities from:
- *   - Cats: Functor, Applicative, Monad, MonadError
- *   - Cats-Effect: Sync, Async, Concurrent, Resource management
- *   - Custom: FlowForge-specific operations like parallel processing
+ * NOTE: Per ADR-012 "Effect System Decision", this abstraction is TRIMMED to essential operations. For
+ * modules requiring full Cats-Effect capabilities, accept `Async[F]` directly instead of re-abstracting.
+ *
+ * This provides a unified interface for edge operations only:
+ *   - Core monadic ops: pure, map, flatMap, raiseError, handleErrorWith (from MonadError)
+ *   - Essential async: fromFuture, async
+ *   - Essential timing: sleep, timeout
+ *   - Essential concurrency: parTraverse, start, race
+ *   - Essential resource safety: bracket, bracketCase
+ *   - Essential utilities: traverse, sequence, retry
  *
  * The abstraction is designed to be:
- *   - Complete: Covers all essential effect operations
+ *   - Essential: Only operations actually needed at edges
  *   - Performant: Optimized implementations for each effect system
  *   - Safe: Stack-safe recursion and resource management
  *   - Composable: Enables functional composition patterns

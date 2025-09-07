@@ -35,8 +35,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-sbt-
 
-      - name: Check formatting
-        run: sbt scalafmtCheckAll
+      - name: Check formatting and linting
+        run: sbt scalafmtCheckAll scalafixAll
 
       - name: Compile all modules
         run: sbt compile Test/compile
@@ -54,8 +54,35 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
-      - name: Run compile-fail tests
-        run: sbt "compile-fail-tests / test"
+      - name: Run compile-fail tests  
+        run: |
+          echo "🔥 Running compile-fail tests - proving FlowForge's core USP..."
+          sbt "compile-fail-tests / test"
+          echo "✅ Compile-fail tests passed - contract drift prevention verified!"
+
+      - name: Spark smoke test
+        run: |
+          echo "🚀 Running Spark local smoke test..."
+          sbt "engines-spark/testOnly *StreamingCDCSpec" 
+          echo "✅ Spark smoke test passed!"
+
+      - name: Flink smoke test
+        run: |
+          echo "🌊 Running Flink smoke test..."
+          sbt "engines-flink/testOnly *EngineAbstractionSpec"
+          echo "✅ Flink smoke test passed!"
+
+      - name: Test g8 template generation
+        run: |
+          echo "📋 Testing g8 template generation..."
+          cd /tmp
+          sbt new file://${{ github.workspace }}/flowforge.g8 --name="ci-test-pipeline" --organization="com.flowforge.ci"
+          cd ci-test-pipeline
+          echo "🔨 Testing generated project compilation..."
+          sbt compile
+          echo "🧪 Testing generated project tests..."  
+          sbt test
+          echo "✅ G8 template test passed - turnkey experience verified!"
 
   spark-it:
     if: github.event_name == 'workflow_dispatch'

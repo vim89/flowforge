@@ -59,10 +59,18 @@ case class Pipeline[F[_], A, B](
    */
   def executeWithMonitoring(input: A): F[PipelineResult[B]] = {
     val startTime = System.currentTimeMillis()
+    val runId     = UUID.randomUUID().toString
+
+    // Emit OpenLineage START event
+    emitLineageEvent("START", runId, startTime)
 
     F.map(F.attempt(execute(input))) { result =>
       val endTime  = System.currentTimeMillis()
       val duration = endTime - startTime
+
+      // Emit OpenLineage COMPLETE/FAIL event
+      val eventType = if (result.isRight) "COMPLETE" else "FAIL"
+      emitLineageEvent(eventType, runId, endTime)
 
       PipelineResult(
         pipelineId = id,
@@ -76,6 +84,27 @@ case class Pipeline[F[_], A, B](
         errors = result.left.toOption.map(e => List(e.getMessage)).getOrElse(List.empty),
       )
     }
+  }
+
+  /**
+   * Emit OpenLineage events to track pipeline lifecycle. Lineage is "on by default" per the end-to-end plan.
+   *
+   * TODO: Move lineage code to core module or create proper dependency For now, just log the event for
+   * demonstration purposes.
+   */
+  private def emitLineageEvent(
+    eventType: String,
+    runId: String,
+    timestamp: Long,
+  ): Unit = {
+    // Temporary implementation - just log for demonstration
+    val eventTime = java.time.Instant.ofEpochMilli(timestamp).toString
+    println(s"[OpenLineage] $eventType event for pipeline '$name' (run: $runId) at $eventTime")
+
+    // Future: Emit to actual OpenLineage endpoint
+    // val config = OpenLineageConfig(endpoint, namespace, name)
+    // val emitter = LineageEmitter.http(config)
+    // emitter.emit(eventJson)
   }
 
   /**

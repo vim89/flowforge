@@ -53,21 +53,20 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
       // The phantom type system prevents build() unless all stages are present.
       //
       // EXPECTED ERROR: Cannot prove that (HasSource with HasContract with HasTransform) <:< Complete
+      val _ = 42 // Prevent formatter from removing braces
 
-      // Uncomment to test compile failure:
-      //
-      // val incompleteBuilder = PipelineBuilder[IO]("incomplete-pipeline")
-      //   .addTypedSource[User, User, SchemaPolicy.Exact](
-      //     gcsParquetSource[User]("bucket", "users/*.parquet"),
-      //     _ => IO.pure(User(1, "John", "john@example.com"))
-      //   )
-      //   .addTransform[User](user => IO.pure(user.copy(name = user.name.toUpperCase)))
-      //   // Missing: .addTypedSink[User, SchemaPolicy.Exact](...)
-      //
-      // // This line MUST NOT COMPILE - build() requires BuilderState.Complete evidence:
-      // val pipeline = incompleteBuilder.build()
-      val _ = 42
-      succeed // Test documents the compile failure requirement
+      assertTypeError("""
+        val incompleteBuilder = PipelineBuilder[IO]("incomplete-pipeline")
+          .addTypedSource[User, User, SchemaPolicy.Exact](
+            gcsParquetSource[User]("bucket", "users/*.parquet"),
+            _ => IO.pure(User(1, "John", "john@example.com"))
+          )
+          .addTransform[User](user => IO.pure(user.copy(name = user.name.toUpperCase)))
+          // Missing: .addTypedSink[User, SchemaPolicy.Exact](...)
+        
+        // This line MUST NOT COMPILE - build() requires BuilderState.Complete evidence:
+        val pipeline = incompleteBuilder.build()
+      """)
     }
 
     "FAIL TEST #2: Schema Mismatch - Source schema doesn't conform to expected type under Exact policy" in {
@@ -76,49 +75,42 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
       // This test demonstrates that schema mismatches are caught at compile time.
       // UserMissingEmail lacks the 'email' field required by User under Exact policy.
       //
-      // EXPECTED ERROR: No SchemaConforms[UserMissingEmail, UserMissingEmail, SchemaPolicy.Exact]
-      // found. Missing fields: email
+      // EXPECTED ERROR: No SchemaConforms[UserMissingEmail, User, SchemaPolicy.Exact] found
+      val _ = 42 // Prevent formatter from removing braces
 
-      // Uncomment to test compile failure:
-      //
-      // val schemaMismatchBuilder = PipelineBuilder[IO]("schema-mismatch-pipeline")
-      //   .addTypedSource[UserMissingEmail, User, SchemaPolicy.Exact]( // MISMATCH: Missing email field!
-      //     gcsParquetSource[User]("bucket", "complete-users/*.parquet"),
-      //     _ => IO.pure(UserMissingEmail(1, "John")) // Returns UserMissingEmail but contract expects User
-      //   )
-      //
-      // // This line MUST NOT COMPILE - SchemaConforms evidence cannot be found:
-      val _ = 42
-      succeed // Test documents the compile failure requirement
+      assertTypeError("""
+        val schemaMismatchBuilder = PipelineBuilder[IO]("schema-mismatch-pipeline")
+          .addTypedSource[UserMissingEmail, User, SchemaPolicy.Exact](
+            gcsParquetSource[User]("bucket", "complete-users/*.parquet"),
+            _ => IO.pure(UserMissingEmail(1, "John"))
+          )
+      """)
     }
 
     "FAIL TEST #3: Illegal Evolution - Schema evolution violates Exact policy constraints" in {
       // SPECIFICATION REQUIREMENT: "Ship 3 compile-fail tests: illegal evolution"
       //
+      val _ = 42 // Prevent formatter from removing braces
       // This test demonstrates that illegal schema evolution is prevented at compile time.
       // Trying to write User data to a UserWithAge sink under Exact policy fails because
       // the output type doesn't have the required 'age' field.
       //
-      // EXPECTED ERROR: No SchemaConforms[User, UserWithAge, SchemaPolicy.Exact] found.
-      // Missing fields in output: age
+      // EXPECTED ERROR: No SchemaConforms[User, UserWithAge, SchemaPolicy.Exact] found
 
-      // Uncomment to test compile failure:
-      //
-      // val evolutionViolationBuilder = PipelineBuilder[IO]("illegal-evolution-pipeline")
-      //   .addTypedSource[User, User, SchemaPolicy.Exact](
-      //     gcsParquetSource[User]("bucket", "users/*.parquet"),
-      //     _ => IO.pure(User(1, "John", "john@example.com"))
-      //   )
-      //   .addTransform[User](user => IO.pure(user)) // Output is User
-      //   .addTypedSink[UserWithAge, SchemaPolicy.Exact]( // MISMATCH: Sink expects UserWithAge!
-      //     gcsParquetSink[UserWithAge]("bucket", "users-with-age/"),
-      //     (_, _) => IO.unit
-      //   )
-      //
-      // // This line MUST NOT COMPILE - SchemaConforms[User, UserWithAge, Exact] impossible:
-      // val pipeline = evolutionViolationBuilder.build()
-      val _ = 42
-      succeed // Test documents the compile failure requirement
+      assertTypeError("""
+        val evolutionViolationBuilder = PipelineBuilder[IO]("illegal-evolution-pipeline")
+          .addTypedSource[User, User, SchemaPolicy.Exact](
+            gcsParquetSource[User]("bucket", "users/*.parquet"),
+            _ => IO.pure(User(1, "John", "john@example.com"))
+          )
+          .addTransform[User](user => IO.pure(user))
+          .addTypedSink[UserWithAge, SchemaPolicy.Exact](
+            gcsParquetSink[UserWithAge]("bucket", "users-with-age/"),
+            (_, _) => IO.unit
+          )
+        
+        val pipeline = evolutionViolationBuilder.build()
+      """)
     }
 
     "demonstrate that valid schemas DO compile correctly" in {

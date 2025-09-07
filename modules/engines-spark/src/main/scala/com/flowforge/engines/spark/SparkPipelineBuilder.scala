@@ -31,12 +31,20 @@ import org.apache.spark.sql.SparkSession
  * Production-ready Spark-specific pipeline builder that integrates typed builders with Spark DataAlgebra
  * implementation.
  *
+ * @deprecated
+ *   Since 0.9.0. Use com.flowforge.core.PipelineBuilder with Spark engine instead. This class will be removed
+ *   in 1.0.0. The canonical DSL is now engine-agnostic.
+ *
+ * MIGRATION: Replace SparkPipelineBuilder with PipelineBuilder[F] and use SparkDataAlgebra as the underlying
+ * engine implementation.
+ *
  * This builder provides:
  *   - Direct integration with SparkDataAlgebra for distributed processing
  *   - Type-safe pipeline construction with compile-time validation
  *   - Resource-safe SparkSession management
  *   - Production-ready error handling and recovery
  */
+@deprecated("Use com.flowforge.core.PipelineBuilder instead. Will be removed in 1.0.0.", "0.9.0")
 class SparkPipelineBuilder[F[_]: EffectSystem] private (
   private val sparkSession: SparkSession,
   private val dataAlgebra: DataAlgebra[F]) {
@@ -272,11 +280,16 @@ object SparkStage {
   }
 }
 
+@deprecated("Use com.flowforge.core.PipelineBuilder instead. Will be removed in 1.0.0.", "0.9.0")
 object SparkPipelineBuilder {
 
   /**
    * Create a new Spark pipeline builder with resource-safe session management
+   *
+   * @deprecated
+   *   Use PipelineBuilder with SparkDataAlgebra instead
    */
+  @deprecated("Use com.flowforge.core.PipelineBuilder with SparkDataAlgebra instead.", "0.9.0")
   def create[F[_]: EffectSystem](
     sparkSession: SparkSession,
   ): SparkPipelineBuilder[F] = {

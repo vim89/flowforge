@@ -108,12 +108,37 @@ jobs:
 
       - name: Run full test suite
         run: |
+          echo "🧪 Running full test suite for release..."
           sbt coverage test
+          echo "🔥 Running compile-fail tests - proving contract enforcement..."
           sbt "compile-fail-tests / test"
+          echo "🚀 Running engine smoke tests..."
+          sbt "engines-spark/testOnly *StreamingCDCSpec"
+          sbt "engines-flink/testOnly *EngineAbstractionSpec" 
           sbt coverageReport
+          echo "✅ All release tests passed!"
 
       - name: Generate coverage report
         run: sbt coverageAggregate
+
+      - name: Validate g8 template for release
+        run: |
+          echo "📋 Validating g8 template for release..."
+          cd /tmp
+          sbt new file://${{ github.workspace }}/flowforge.g8 --name="release-test-pipeline" --organization="com.flowforge.release"
+          cd release-test-pipeline
+          echo "🔨 Testing template compilation..."
+          sbt compile
+          echo "🧪 Testing template tests..."
+          sbt test
+          echo "🎯 Testing contract drift demo..."
+          sed -i 's/id: Long/id: String/' src/main/scala/Contract.scala
+          if sbt compile; then
+            echo "❌ Contract drift should have failed compilation!"
+            exit 1
+          else
+            echo "✅ Contract drift prevention working correctly!"
+          fi
 
   build-artifacts:
     name: Build release artifacts

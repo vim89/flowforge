@@ -9,7 +9,7 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / scalaVersion := Dependencies.Versions.scala213
 ThisBuild / crossScalaVersions := Seq(
   Dependencies.Versions.scala212,
-  Dependencies.Versions.scala213
+  Dependencies.Versions.scala213,
   // Dependencies.Versions.scala3  // TODO: Enable when Scala 3 implementation for compile-time contracts is ready
 )
 
@@ -144,13 +144,15 @@ lazy val core = moduleProject("core")
     // Section 13.3 - Version-specific dependencies for Scala 2/3 cross-build
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, _)) => Seq(
-          "com.softwaremill.magnolia1_2" %% "magnolia" % "1.1.10",
-          "org.scala-lang" % "scala-reflect" % scalaVersion.value
-        )
-        case Some((3, _)) => Seq(
-          // Scala 3 uses built-in Mirrors, no external dependencies needed
-        )
+        case Some((2, _)) =>
+          Seq(
+            "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.10",
+            "org.scala-lang"                % "scala-reflect" % scalaVersion.value,
+          )
+        case Some((3, _)) =>
+          Seq(
+            // Scala 3 uses built-in Mirrors, no external dependencies needed
+          )
         case _ => Seq.empty
       }
     },
@@ -170,7 +172,7 @@ lazy val core = moduleProject("core")
         case Some((3, _)) => Seq(base / "scala-3")
         case _            => Nil
       }
-    }
+    },
   )
 
 lazy val contracts = moduleProject("contracts")
@@ -239,6 +241,8 @@ lazy val qualityDeequ = moduleProject("quality-deequ")
     ),
     Test / fork              := true,
     Test / parallelExecution := false,
+    // Make it runnable for ffCheck command
+    Compile / mainClass := Some("com.flowforge.quality.deequ.ContractToDeltaExample"),
   )
 
 // ===== SUPPORT MODULES =====
@@ -356,6 +360,17 @@ ThisBuild / assemblyMergeStrategy := {
 
 // MVR convenience alias: compile + unit tests only (no opt-in ITs)
 addCommandAlias("mvr", "compileAll; testQuick")
+
+// FlowForge DX commands per end-to-end plan
+// FlowForge aliases required by end-to-end plan section 8
+addCommandAlias(
+  "ffCheck",
+  "compile-fail-tests/test; quality-deequ/run",
+)                                                  // compile-fail + contract diff check
+addCommandAlias("ffDev", "compileAll; testQuick")  // local run with fixtures in <3s
+addCommandAlias("ffRunSpark", "engines-spark/run") // Spark local[*], DQ + Delta sink
+
+// Legacy aliases removed - using canonical ffCheck, ffDev, ffRunSpark above
 
 // Ensure examples compiles after contracts-sdk (belt-and-suspenders ordering)
 examples / Compile / compile := (examples / Compile / compile)
