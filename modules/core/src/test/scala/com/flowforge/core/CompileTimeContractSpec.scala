@@ -143,8 +143,8 @@ class CompileTimeContractSpec extends AnyWordSpec with Matchers {
        * The phantom type system would prevent these at compile time:
        *
        * emptyBuilder.build()              // ERROR: Empty ≠ Complete
-       * emptyBuilder.addTransform(...)    // ERROR: Empty doesn't have source
-       * emptyBuilder.addSink(...)         // ERROR: Empty doesn't have source+transform
+       * emptyBuilder.addTransform(<args>)    // ERROR: Empty doesn't have source
+       * emptyBuilder.addSink(<args>)         // ERROR: Empty doesn't have source+transform
        */
     }
   }

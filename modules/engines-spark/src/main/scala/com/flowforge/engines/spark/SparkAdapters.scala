@@ -8,7 +8,7 @@ import org.apache.spark.sql.Dataset
  *
  * Lines 175-187:
  *   - type DS[A] = org.apache.spark.sql.Dataset[A]
- *   - final case class SparkHandle[R, Caps](...)
+ *   - final case class SparkHandle[R, Caps]
  *   - implicit writers: CanWrite[DS[R], R, SupportsMerge, SparkHandle[R, Caps]], etc.
  */
 

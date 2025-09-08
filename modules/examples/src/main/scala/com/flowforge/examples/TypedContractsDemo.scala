@@ -64,7 +64,7 @@ object TypedContractsDemo extends IOApp.Simple {
       IO.println(s"   💾 Writing curated sales data: $data")
 
     for {
-      _ <- IO.println("🚀 Building typed contract pipeline...")
+      _ <- IO.println("🚀 Building typed contract pipeline")
 
       // This pipeline COMPILES because schemas align under Exact policy
       pipeline <- IO.pure {

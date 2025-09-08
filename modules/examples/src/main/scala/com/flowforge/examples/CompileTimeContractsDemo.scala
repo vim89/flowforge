@@ -70,7 +70,7 @@ object CompileTimeContractsDemo extends IOApp.Simple {
 
   private def demonstratePhantomStates: IO[Unit] =
     for {
-      _ <- IO.println("📋 Creating empty pipeline builder...")
+      _ <- IO.println("📋 Creating empty pipeline builder")
 
       // This works - creating empty builder
       emptyBuilder = PipelineBuilder[IO]("demo-pipeline")
@@ -113,7 +113,7 @@ object CompileTimeContractsDemo extends IOApp.Simple {
       IO.println(s"   💾 Writing processed user to sink: $user")
 
     for {
-      _ <- IO.println("🚀 Building and running a contract-validated pipeline...")
+      _ <- IO.println("🚀 Building and running a contract-validated pipeline")
 
       // This pipeline COMPILES because schemas match under Exact policy
       pipeline <- IO.pure {

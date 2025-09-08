@@ -10,24 +10,24 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
-echo "🚀 Preparing FlowForge release $VERSION..."
+echo "🚀 Preparing FlowForge release $VERSION"
 
 # Run full test suite
-echo "🧪 Running full test suite..."
+echo "🧪 Running full test suite"
 sbt fullCheck
 
 # Update version
-echo "📝 Updating version to $VERSION..."
+echo "📝 Updating version to $VERSION"
 echo "ThisBuild / version := \"$VERSION\"" > version.sbt
 
 # Create git tag
-echo "🏷️ Creating git tag..."
+echo "🏷️ Creating git tag"
 git add version.sbt
 git commit -m "Release $VERSION"
 git tag "v$VERSION"
 
 # Push to trigger release
-echo "📤 Pushing release..."
+echo "📤 Pushing release"
 git push origin main
 git push origin "v$VERSION"
 

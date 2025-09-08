@@ -13,9 +13,9 @@ import java.time.Instant
 
 /**
  * FlowForge Production Spark Pipeline with 100% compile-time contract validation.
- * 
+ *
  * Generated Configuration:
- * - Effect System: $effect_system$ 
+ * - Effect System: $effect_system$
  * - Execution Engine: $execution_engine$ (Spark 3.5.6)
  * - Data Format: CSV → Parquet with Delta constraints
  * - Cloud Provider: $cloud_provider$
@@ -97,7 +97,7 @@ object UsersPipeline extends IOApp.Simple {
 
   private def generateSampleData(spark: SparkSession): IO[DataFrame] = {
     import spark.implicits._
-    
+
     IO.delay {
       // Sample data generation - in production this reads from your CSV source
       val sampleData = Seq(
@@ -107,7 +107,7 @@ object UsersPipeline extends IOApp.Simple {
         RawUser(4L, "David Wilson", "david@example.com", Some(35), "Australia"),
         RawUser(5L, "Eve Brown", "eve@example.com", Some(22), "USA")
       )
-      
+
       sampleData.toDF()
     }
   }
@@ -119,7 +119,7 @@ object UsersPipeline extends IOApp.Simple {
       metadata = Map("generated" -> "true"),
       createdAt = Instant.now()
     )
-    
+
     val metadata = DatasetMetadata(
       recordCount = df.count(),
       schema = schema,
@@ -127,23 +127,23 @@ object UsersPipeline extends IOApp.Simple {
       createdAt = Instant.now(),
       source = None
     )
-    
+
     ProductionSparkDataset(sampleData, df, schema, metadata)
   }
 
   private def cleanUserData(
-    rawDataset: ProductionSparkDataset[RawUser], 
+    rawDataset: ProductionSparkDataset[RawUser],
     spark: SparkSession
   ): IO[Either[String, ProductionSparkDataset[CleanedUser]]] = {
     import spark.implicits._
-    
+
     IO.delay {
       try {
         // Contract-enforced data cleaning transformation
         val cleaned = rawDataset.df
           .filter(col("age").isNotNull && col("age") > 0)
           .withColumn("age", col("age").cast("int"))
-          .withColumn("ageGroup", 
+          .withColumn("ageGroup",
             when(col("age") < 25, "Young")
             .when(col("age") >= 25 && col("age") < 35, "Adult")
             .otherwise("Senior")
@@ -151,7 +151,7 @@ object UsersPipeline extends IOApp.Simple {
           .select(
             col("id").cast("long"),
             col("name"),
-            col("email"), 
+            col("email"),
             col("age").cast("int"),
             col("country"),
             col("ageGroup")
@@ -159,7 +159,7 @@ object UsersPipeline extends IOApp.Simple {
 
         val sampleCleaned = List(CleanedUser(1, "Alice", "alice@test.com", 25, "USA", "Adult"))
         val cleanedDataset = createTypedDataset(cleaned, sampleCleaned)
-        
+
         Right(cleanedDataset)
       } catch {
         case ex: Exception => Left(s"Data cleaning failed: \${ex.getMessage}")
@@ -175,7 +175,7 @@ object UsersPipeline extends IOApp.Simple {
         QualityConstraint.NotNull("email", "Email must not be null"),
         QualityConstraint.Range("age", Some(18), Some(100), "Age must be between 18-100")
       )
-      
+
       // Simulate quality validation (in production, this uses Deequ)
       QualityResult(
         data = dataset,
@@ -191,7 +191,7 @@ object UsersPipeline extends IOApp.Simple {
     if (result.passed) {
       IO.println("✅ All quality checks passed!")
     } else {
-      IO.println("⚠️ Quality issues detected but continuing...") *>
+      IO.println("⚠️ Quality issues detected but continuing") *>
       IO.println(s"Errors: \${result.errors.mkString(", ")}")
     }
   }
@@ -203,9 +203,9 @@ object UsersPipeline extends IOApp.Simple {
         .coalesce(1)
         .write
         .mode("overwrite")
-        .option("compression", "snappy")  
+        .option("compression", "snappy")
         .parquet("output/users_cleaned.parquet")
-        
+
       println("📁 Data saved to output/users_cleaned.parquet")
     }
   }

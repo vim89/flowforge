@@ -55,7 +55,7 @@ object FileSystemExample extends IOApp.Simple {
    */
   def setupTestEnvironment: IO[Unit] =
     for {
-      _ <- IO.println("🔧 Setting up test environment...")
+      _ <- IO.println("🔧 Setting up test environment")
 
       // Create test directories
       _ <- IO.delay(Files.createDirectories(Paths.get("/tmp/flowforge/input")))
@@ -324,7 +324,7 @@ object FileSystemExample extends IOApp.Simple {
     val connector = FileSystemConnector.local[IO]
 
     for {
-      _ <- IO.println("🧹 Cleaning up...")
+      _ <- IO.println("🧹 Cleaning up")
 
       // Clean up test directories (in production, you might want to keep outputs)
       _ <- connector.delete("/tmp/flowforge", recursive = true)

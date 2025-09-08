@@ -1,7 +1,7 @@
 # Gaps preventing a credible v1.0.0
 
 > Lineage "by default" is not wired
-> You have a good OpenLineageEmitter (modules/lineage/...), but I couldn’t find it invoked from PipelineBuilder.build or stage boundaries.
+> You have a good OpenLineageEmitter (modules/lineage/), but I couldn’t find it invoked from PipelineBuilder.build or stage boundaries.
 > That means the “run → see lineage immediately” promise isn’t true yet.
 Fix: Emit START/COMPLETE/FAIL from inside PipelineBuilder.build for each stage and the pipeline run.
 > Include a tiny ops/marquez/docker-compose.yml walkthrough so people can see runs in Marquez without custom glue. 

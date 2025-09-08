@@ -106,7 +106,7 @@ object ContractToDeltaExample {
    Deequ Check: isUnique("id")
    Implementation: DeequAdapter.runChecks() with FFConstraint.Unique
 
-   Field: name (String)  
+   Field: name (String)
    Contract: Must be non-null
    Deequ Check: isComplete("name")
    Implementation: DeequAdapter.runChecks() with FFConstraint.NotNull
@@ -121,25 +121,25 @@ object ContractToDeltaExample {
     """
    Field: email (String) - EXACT PLAN SPECIFICATION EXAMPLE
    Contract: email nonEmpty
-   Deequ Check: isComplete("email")  
+   Deequ Check: isComplete("email")
    Delta Constraint: CHECK (length(email) > 0)
-   
+
    Field: id (Long)
    Contract: Must be unique
    Delta Constraint: ALTER TABLE users ADD CONSTRAINT unique_id UNIQUE (id)
-   SQL Generation: CREATE TABLE users (..., CONSTRAINT unique_id UNIQUE (id))
+   SQL Generation: CREATE TABLE users (<columns>, CONSTRAINT unique_id UNIQUE (id))
 
    Field: name (String)
-   Contract: Must be non-null  
+   Contract: Must be non-null
    Delta Constraint: ALTER TABLE users ALTER COLUMN name SET NOT NULL
-   SQL Generation: CREATE TABLE users (id BIGINT, name STRING NOT NULL, ...)
+   SQL Generation: CREATE TABLE users (id BIGINT, name STRING NOT NULL, <columns>)
 
    Field: email (String)
    Contract: Must be non-null and valid email
-   Delta Constraints: 
+   Delta Constraints:
      - ALTER TABLE users ALTER COLUMN email SET NOT NULL
      - ALTER TABLE users ADD CONSTRAINT valid_email CHECK (email RLIKE '^[\\w\\.-]+@[\\w\\.-]+\\.[a-zA-Z]{2,}$')
-   SQL Generation: CREATE TABLE users (..., email STRING NOT NULL,
+   SQL Generation: CREATE TABLE users (<columns>, email STRING NOT NULL,
                    CONSTRAINT valid_email CHECK (email RLIKE '^[\\w\\.-]+@[\\w\\.-]+\\.[a-zA-Z]{2,}$'))
    """
 
@@ -172,7 +172,7 @@ object ContractToDeltaExample {
        |-- FlowForge Generated Delta Table DDL
        |CREATE TABLE IF NOT EXISTS $tableName (
        |  id BIGINT,
-       |  name STRING, 
+       |  name STRING,
        |  email STRING,
        |  ${constraintClauses.mkString(",\n  ")}
        |) USING DELTA

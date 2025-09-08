@@ -68,7 +68,7 @@ object SimpleWorkingPipeline extends IOApp.Simple {
 
     // Stage 2: Data transformation with validation
     val transformStage: Kleisli[IO, List[RawRecord], List[ProcessedRecord]] = Kleisli { rawData =>
-      IO.println("🔄 Transforming records...") *>
+      IO.println("🔄 Transforming records") *>
         rawData.traverse { record =>
           IO.delay {
             val normalizedValue = math.min(record.value / 500.0, 1.0) // Normalize to [0,1]
@@ -79,7 +79,7 @@ object SimpleWorkingPipeline extends IOApp.Simple {
 
     // Stage 3: Data aggregation
     val aggregateStage: Kleisli[IO, List[ProcessedRecord], List[AggregatedRecord]] = Kleisli { processedData =>
-      IO.println("📊 Aggregating by category...") *>
+      IO.println("📊 Aggregating by category") *>
         IO.delay {
           processedData
             .groupBy(_.category)
@@ -98,7 +98,7 @@ object SimpleWorkingPipeline extends IOApp.Simple {
 
     // Stage 4: Quality validation
     val qualityStage: Kleisli[IO, List[AggregatedRecord], List[AggregatedRecord]] = Kleisli { aggregated =>
-      IO.println("🛡️  Validating data quality...") *>
+      IO.println("🛡️  Validating data quality") *>
         aggregated.traverse { record =>
           if (record.count > 0 && record.totalValue >= 0) {
             IO.pure(record)
@@ -144,7 +144,7 @@ object SimpleWorkingPipeline extends IOApp.Simple {
     println("\n🛡️ Resource Safety Demo")
 
     val resourceOperation = es.bracket(
-      acquire = IO.println("🔓 Acquiring resource...") *> IO.pure("mock-resource"),
+      acquire = IO.println("🔓 Acquiring resource") *> IO.pure("mock-resource"),
     )(
       use = resource =>
         IO.println(s"⚙️  Using resource: $resource") *>

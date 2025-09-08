@@ -3,14 +3,14 @@
 
 set -euo pipefail
 
-echo "🔧 Setting up FlowForge development environment..."
+echo "🔧 Setting up FlowForge development environment"
 
 # Install dependencies
-echo "📦 Installing dependencies..."
+echo "📦 Installing dependencies"
 sbt compile
 
 # Setup git hooks
-echo "🪝 Setting up git hooks..."
+echo "🪝 Setting up git hooks"
 mkdir -p .git/hooks
 
 cat > .git/hooks/pre-commit << "EOF"
@@ -21,7 +21,7 @@ EOF
 chmod +x .git/hooks/pre-commit
 
 # Setup IDE configurations
-echo "💻 Setting up IDE configurations..."
+echo "💻 Setting up IDE configurations"
 sbt bloopInstall
 
 echo "✅ Development environment setup complete!"

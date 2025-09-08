@@ -228,7 +228,7 @@ object UsersPipeline {
       }
 
       if (!result.passed) {
-        println("⚠️ Quality checks failed but continuing with available data...")
+        println("⚠️ Quality checks failed but continuing with available data")
       }
     }
 
@@ -304,7 +304,7 @@ object UsersPipeline {
       println("✅ Delta table created successfully")
 
       // Add Delta table constraints (as required by v10-3.md plan)
-      println("🔒 Adding Delta table constraints...")
+      println("🔒 Adding Delta table constraints")
 
       try {
         // NOT NULL constraints
@@ -313,7 +313,7 @@ object UsersPipeline {
 
         // CHECK constraints for data quality
         spark.sql(s"""
-          ALTER TABLE delta.`$deltaPath` 
+          ALTER TABLE delta.`$deltaPath`
           ADD CONSTRAINT valid_age CHECK (age >= 13 AND age <= 120)
         """)
 

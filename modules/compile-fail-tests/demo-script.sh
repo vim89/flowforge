@@ -13,9 +13,9 @@ uncomment_test() {
     local test_name="$1"
     local start_marker="def ${test_name}():"
     local end_marker="  }"
-    
-    echo "🔧 Uncommenting ${test_name}..."
-    
+
+    echo "🔧 Uncommenting ${test_name}"
+
     # Use sed to uncomment the test block
     sed -i.bak "/\/\* *$/,/\*\/ *$/{
         /\/\* *$/d
@@ -28,8 +28,8 @@ uncomment_test() {
 # Function to comment a test back
 comment_test() {
     local test_name="$1"
-    echo "📝 Commenting ${test_name} back..."
-    
+    echo "📝 Commenting ${test_name} back"
+
     # Restore from backup
     mv src/test/scala/com/flowforge/compilefail/ContractDriftCompileFailTests.scala.bak \
        src/test/scala/com/flowforge/compilefail/ContractDriftCompileFailTests.scala
@@ -37,7 +37,7 @@ comment_test() {
 
 # Function to attempt compilation and capture result
 try_compile() {
-    echo "🔨 Attempting to compile..."
+    echo "🔨 Attempting to compile"
     if sbt compile 2>&1 | tee /tmp/compile_output.log; then
         echo "✅ Compilation succeeded"
         return 0
@@ -66,7 +66,7 @@ fi
 comment_test "testFieldNameDrift"
 
 echo ""
-echo "📋 Demo #2: Missing Field Detection" 
+echo "📋 Demo #2: Missing Field Detection"
 echo "---"
 echo "This test shows what happens when a required field is missing"
 
@@ -77,7 +77,7 @@ if try_compile; then
     exit 1
 else
     echo "✅ SUCCESS: Missing field correctly detected at compile time!"
-fi  
+fi
 comment_test "testMissingField"
 
 echo ""
@@ -100,7 +100,7 @@ echo "📋 Demo #4: The Working Example"
 echo "---"
 echo "Now let's show that correct schemas DO compile successfully"
 
-echo "🔨 Compiling working examples..."
+echo "🔨 Compiling working examples"
 if try_compile; then
     echo "✅ SUCCESS: Working examples compile correctly!"
 else
@@ -113,7 +113,7 @@ echo "🎉 FlowForge Compile-Fail Demo Complete!"
 echo ""
 echo "📊 Summary:"
 echo "  ✅ Field name drift detection works"
-echo "  ✅ Missing field detection works" 
+echo "  ✅ Missing field detection works"
 echo "  ✅ Wrong evolution policy detection works"
 echo "  ✅ Working examples compile successfully"
 echo ""

@@ -7,7 +7,7 @@ import scala.annotation.implicitNotFound
 @implicitNotFound("""
 FlowForge: Contract drift (policy: ${P})
 Out: ${Out} vs Contract: ${Contract}
-Missing: ... | Extra: ... | Mismatched: ...
+Missing: <> | Extra: <> | Mismatched: <>
 """)
 trait SchemaConforms[Out, Contract, P <: SchemaPolicy]
 

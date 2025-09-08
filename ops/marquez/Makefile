@@ -6,7 +6,7 @@
 
 # Start the lineage stack (Marquez + PostgreSQL + Web UI)
 lineage-up:
-	@echo "Starting FlowForge lineage stack..."
+	@echo "Starting FlowForge lineage stack"
 	docker compose -f docker-compose.yml up -d
 	@echo "✓ Lineage stack started"
 	@echo "  • Marquez Web UI: http://localhost:3000"
@@ -17,7 +17,7 @@ lineage-up:
 
 # Stop the lineage stack
 lineage-down:
-	@echo "Stopping FlowForge lineage stack..."
+	@echo "Stopping FlowForge lineage stack"
 	docker compose -f docker-compose.yml down
 	@echo "✓ Lineage stack stopped"
 
@@ -38,7 +38,7 @@ lineage-status:
 
 # Clean up all data (removes PostgreSQL volume)
 lineage-clean:
-	@echo "Cleaning up lineage stack and data..."
+	@echo "Cleaning up lineage stack and data"
 	docker compose -f docker-compose.yml down -v
 	docker volume prune -f
 	@echo "✓ All lineage data cleaned"
@@ -51,7 +51,7 @@ help:
 	@echo "FlowForge Lineage Management Commands:"
 	@echo "====================================="
 	@echo "  make lineage-up     - Start the lineage stack"
-	@echo "  make lineage-down   - Stop the lineage stack" 
+	@echo "  make lineage-down   - Stop the lineage stack"
 	@echo "  make lineage-logs   - View service logs"
 	@echo "  make lineage-status - Check service health"
 	@echo "  make lineage-clean  - Clean up all data"

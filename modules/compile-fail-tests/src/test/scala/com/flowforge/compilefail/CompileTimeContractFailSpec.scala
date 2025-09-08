@@ -59,7 +59,7 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
             _ => IO.pure(User(1, "John", "john@example.com"))
           )
           .addTransform[User](user => IO.pure(user.copy(name = user.name.toUpperCase)))
-          // Missing: .addTypedSink[User, SchemaPolicy.Exact](...)
+          // Missing: .addTypedSink[User, SchemaPolicy.Exact](<code-here>)
 
         // This line MUST NOT COMPILE - build() requires BuilderState.Complete evidence:
         val pipeline = incompleteBuilder.build()
