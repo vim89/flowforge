@@ -1,4 +1,4 @@
-package $organization$.$name;format="packaged"$
+package $organization$.$name;format="word"$
 
 import cats.effect.IO
 import cats.effect.testing.scalatest.AsyncIOSpec

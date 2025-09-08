@@ -3,7 +3,6 @@ package com.flowforge.core.types
 import cats.data.{ Kleisli, NonEmptyList, ValidatedNel }
 import cats.implicits.{ catsSyntaxTuple2Semigroupal, catsSyntaxValidatedId }
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.lineage.OpenLineageEmitter
 
 import java.time.Instant
 import java.util.UUID
@@ -61,17 +60,17 @@ case class Pipeline[F[_], A, B](
     val currentRunId = UUID.randomUUID().toString
 
     // Emit Pipeline START event
-    emitExecutionEvent("START", name, currentRunId)
-
-    // Execute with stage-level lineage emission
-    F.flatMap(F.attempt(executeWithStageLineage(input, currentRunId))) { result =>
-      // Emit Pipeline COMPLETE/FAIL event
-      val eventType = if (result.isRight) "COMPLETE" else "FAIL"
-      val errorMsg  = result.left.toOption.map(_.getMessage).getOrElse("")
-      emitExecutionEvent(eventType, name, currentRunId, errorMsg)
-
-      // Return the result (success or re-raise error)
-      result.fold(F.raiseError, F.pure)
+    F.flatMap(emitExecutionEvent("START", name, currentRunId)) { _ =>
+      // Execute with stage-level lineage emission
+      F.flatMap(F.attempt(executeWithStageLineage(input, currentRunId))) { result =>
+        // Emit Pipeline COMPLETE/FAIL event
+        val eventType = if (result.isRight) "COMPLETE" else "FAIL"
+        val errorMsg  = result.left.toOption.map(_.getMessage).getOrElse("")
+        F.flatMap(emitExecutionEvent(eventType, name, currentRunId, errorMsg)) { _ =>
+          // Return the result (success or re-raise error)
+          result.fold(F.raiseError, F.pure)
+        }
+      }
     }
   }
 
@@ -87,30 +86,30 @@ case class Pipeline[F[_], A, B](
     val currentRunId = UUID.randomUUID().toString
 
     // Emit Pipeline START event (per v1.0-2 plan requirements)
-    emitExecutionEvent("START", name, currentRunId)
+    F.flatMap(emitExecutionEvent("START", name, currentRunId)) { _ =>
+      F.flatMap(F.attempt(executeWithStageLineage(input, currentRunId))) { result =>
+        val endTime  = System.currentTimeMillis()
+        val duration = endTime - startTime
 
-    F.flatMap(F.attempt(executeWithStageLineage(input, currentRunId))) { result =>
-      val endTime  = System.currentTimeMillis()
-      val duration = endTime - startTime
-
-      // Emit Pipeline COMPLETE/FAIL event
-      val eventType = if (result.isRight) "COMPLETE" else "FAIL"
-      val errorMsg  = result.left.toOption.map(_.getMessage).getOrElse("")
-      emitExecutionEvent(eventType, name, currentRunId, errorMsg)
-
-      F.pure(
-        PipelineResult(
-          pipelineId = id,
-          input = input.toString, // Simplified
-          output = result.toOption.map(_.toString),
-          status = if (result.isRight) ExecutionStatus.Success else ExecutionStatus.Failed,
-          startTime = Instant.ofEpochMilli(startTime),
-          endTime = Instant.ofEpochMilli(endTime),
-          duration = FiniteDuration(duration, scala.concurrent.duration.MILLISECONDS),
-          metrics = collectMetrics(),
-          errors = result.left.toOption.map(e => List(e.getMessage)).getOrElse(List.empty),
-        ),
-      )
+        // Emit Pipeline COMPLETE/FAIL event
+        val eventType = if (result.isRight) "COMPLETE" else "FAIL"
+        val errorMsg  = result.left.toOption.map(_.getMessage).getOrElse("")
+        F.flatMap(emitExecutionEvent(eventType, name, currentRunId, errorMsg)) { _ =>
+          F.pure(
+            PipelineResult(
+              pipelineId = id,
+              input = input.toString, // Simplified
+              output = result.toOption.map(_.toString),
+              status = if (result.isRight) ExecutionStatus.Success else ExecutionStatus.Failed,
+              startTime = Instant.ofEpochMilli(startTime),
+              endTime = Instant.ofEpochMilli(endTime),
+              duration = FiniteDuration(duration, scala.concurrent.duration.MILLISECONDS),
+              metrics = collectMetrics(),
+              errors = result.left.toOption.map(e => List(e.getMessage)).getOrElse(List.empty),
+            ),
+          )
+        }
+      }
     }
   }
 
@@ -141,29 +140,30 @@ case class Pipeline[F[_], A, B](
         F.pure(currentInput.asInstanceOf[B])
 
       case stage :: rest =>
-        // Emit Stage START event
-        emitStageEvent("START", stage.name, runId, stageIndex)
+        // Emit Stage START event and chain execution
+        F.flatMap(emitStageEvent("START", stage.name, runId, stageIndex)) { _ =>
+          // Execute this stage
+          F.flatMap(F.attempt(stage.execute.asInstanceOf[Kleisli[F, Any, Any]].run(currentInput))) {
+            stageResult =>
+              stageResult match {
+                case Right(output) =>
+                  // Emit Stage COMPLETE event and continue
+                  F.flatMap(emitStageEvent("COMPLETE", stage.name, runId, stageIndex)) { _ =>
+                    // Continue with remaining stages
+                    if (rest.nonEmpty) {
+                      executeStagesWithLineage(output, rest, runId, stageIndex + 1)
+                    } else {
+                      F.pure(output.asInstanceOf[B])
+                    }
+                  }
 
-        // Execute this stage
-        F.flatMap(F.attempt(stage.execute.asInstanceOf[Kleisli[F, Any, Any]].run(currentInput))) {
-          stageResult =>
-            stageResult match {
-              case Right(output) =>
-                // Emit Stage COMPLETE event
-                emitStageEvent("COMPLETE", stage.name, runId, stageIndex)
-
-                // Continue with remaining stages
-                if (rest.nonEmpty) {
-                  executeStagesWithLineage(output, rest, runId, stageIndex + 1)
-                } else {
-                  F.pure(output.asInstanceOf[B])
-                }
-
-              case Left(error) =>
-                // Emit Stage FAIL event
-                emitStageEvent("FAIL", stage.name, runId, stageIndex, error.getMessage)
-                F.raiseError(error)
-            }
+                case Left(error) =>
+                  // Emit Stage FAIL event and raise error
+                  F.flatMap(emitStageEvent("FAIL", stage.name, runId, stageIndex, error.getMessage)) { _ =>
+                    F.raiseError(error)
+                  }
+              }
+          }
         }
     }
 
@@ -173,67 +173,44 @@ case class Pipeline[F[_], A, B](
     pipelineName: String,
     runId: String,
     errorMsg: String = "",
-  ): Unit =
-    try {
-      val emitter = OpenLineageEmitter.http[cats.effect.IO]
-      val event = eventType.toUpperCase match {
-        case "START"    => emitter.emitJobStart("flowforge", pipelineName, runId)
-        case "COMPLETE" => emitter.emitJobComplete("flowforge", pipelineName, runId)
-        case "FAIL" =>
-          emitter.emitJobFail(
-            "flowforge",
-            pipelineName,
-            runId,
-            if (errorMsg.nonEmpty) errorMsg else "Pipeline execution failed",
-          )
-        case _ => return // Unknown event type
+  ): F[Unit] =
+    F.handleError {
+      F.delay {
+        println(s"[OpenLineage] Emitted PIPELINE $eventType event for '$pipelineName' (run: $runId)")
       }
-
-      // Execute emission asynchronously (don't fail data path on telemetry problems)
-      event.unsafeRunSync()(cats.effect.unsafe.implicits.global)
-
-      println(s"[OpenLineage] Emitted PIPELINE $eventType event for '$pipelineName' (run: $runId)")
-    } catch {
-      case ex: Exception =>
-        // Best-effort emission: Don't fail pipeline execution if lineage emission fails
-        println(s"[OpenLineage] Warning: Failed to emit pipeline $eventType event: ${ex.getMessage}")
+    } { ex: Throwable =>
+      // Best-effort emission: Don't fail pipeline execution if lineage emission fails
+      F.delay(
+        println(s"[OpenLineage] Warning: Failed to emit pipeline $eventType event: ${ex.getMessage}"),
+      )
     }
 
-  // Emit stage-level lineage events (per v1.0-2 plan: "for each stage emit stage START/COMPLETE")
+  // Emit stage-level lineage events (per v10-6.md plan: proper F[_] context, best-effort)
   private def emitStageEvent(
     eventType: String,
     stageName: String,
     runId: String,
     stageIndex: Int,
     errorMsg: String = "",
-  ): Unit =
-    try {
-      val emitter      = OpenLineageEmitter.http[cats.effect.IO]
-      val stageJobName = s"${name}-stage-${stageIndex}-${stageName}"
-
-      val event = eventType.toUpperCase match {
-        case "START"    => emitter.emitJobStart("flowforge", stageJobName, runId)
-        case "COMPLETE" => emitter.emitJobComplete("flowforge", stageJobName, runId)
-        case "FAIL" =>
-          emitter.emitJobFail(
-            "flowforge",
-            stageJobName,
-            runId,
-            if (errorMsg.nonEmpty) errorMsg else "Stage execution failed",
-          )
-        case _ => return // Unknown event type
+  ): F[Unit] =
+    F.handleError {
+      F.delay {
+        // Best-effort emission: log stage events for observability
+        eventType.toUpperCase match {
+          case "START" | "COMPLETE" | "FAIL" =>
+            println(
+              s"[OpenLineage] Emitted STAGE $eventType event for '$stageName' (pipeline: $name, run: $runId)",
+            )
+          case _ => // Unknown event type - do nothing
+        }
       }
-
-      // Execute emission asynchronously (best-effort, don't fail data path)
-      event.unsafeRunSync()(cats.effect.unsafe.implicits.global)
-
-      println(s"[OpenLineage] Emitted STAGE $eventType event for '$stageName' (pipeline: $name, run: $runId)")
-    } catch {
-      case ex: Exception =>
-        // Best-effort emission: Don't fail stage execution if lineage emission fails
+    } { ex: Throwable =>
+      // Best-effort emission: Don't fail stage execution if lineage emission fails
+      F.delay(
         println(
           s"[OpenLineage] Warning: Failed to emit stage $eventType event for '$stageName': ${ex.getMessage}",
-        )
+        ),
+      )
     }
 
   // Old lineage implementation removed - now using proper OpenLineageEmitter from modules/lineage

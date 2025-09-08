@@ -178,9 +178,43 @@ class HttpOpenLineageEmitter[F[_]: cats.effect.Sync] extends OpenLineageEmitter[
     }
 }
 
+/**
+ * No-op OpenLineage emitter for disabled lineage scenarios
+ *
+ * Per v10-6.md plan: provides NoopEmitter[F] for scenarios where lineage emission should be disabled
+ */
+class NoopOpenLineageEmitter[F[_]: cats.effect.Sync] extends OpenLineageEmitter[F] {
+
+  private val F = cats.effect.Sync[F]
+
+  def emitJobStart(
+    namespace: String,
+    jobName: String,
+    runId: String,
+  ): F[Either[LineageError, Unit]] =
+    F.pure(Right(()))
+
+  def emitJobComplete(
+    namespace: String,
+    jobName: String,
+    runId: String,
+  ): F[Either[LineageError, Unit]] =
+    F.pure(Right(()))
+
+  def emitJobFail(
+    namespace: String,
+    jobName: String,
+    runId: String,
+    error: String,
+  ): F[Either[LineageError, Unit]] =
+    F.pure(Right(()))
+}
+
 object OpenLineageEmitter {
 
   def http[F[_]: cats.effect.Sync]: OpenLineageEmitter[F] = new HttpOpenLineageEmitter[F]
+
+  def noop[F[_]: cats.effect.Sync]: OpenLineageEmitter[F] = new NoopOpenLineageEmitter[F]
 
   // Generate a unique run ID for each pipeline execution
   def generateRunId(): String = UUID.randomUUID().toString

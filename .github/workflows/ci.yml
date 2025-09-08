@@ -56,31 +56,31 @@ jobs:
 
       - name: Run compile-fail tests  
         run: |
-          echo "🔥 Running compile-fail tests - proving FlowForge's core USP..."
+          echo "🔥 Running compile-fail tests - proving FlowForge's core USP"
           sbt "compile-fail-tests / test"
           echo "✅ Compile-fail tests passed - contract drift prevention verified!"
 
       - name: Spark smoke test
         run: |
-          echo "🚀 Running Spark local smoke test..."
+          echo "🚀 Running Spark local smoke test"
           sbt "engines-spark/testOnly *StreamingCDCSpec" 
           echo "✅ Spark smoke test passed!"
 
       - name: Flink smoke test
         run: |
-          echo "🌊 Running Flink smoke test..."
+          echo "🌊 Running Flink smoke test"
           sbt "engines-flink/testOnly *EngineAbstractionSpec"
           echo "✅ Flink smoke test passed!"
 
       - name: Test g8 template generation
         run: |
-          echo "📋 Testing g8 template generation..."
+          echo "📋 Testing g8 template generation"
           cd /tmp
           sbt new file://${{ github.workspace }}/flowforge.g8 --name="ci-test-pipeline" --organization="com.flowforge.ci"
           cd ci-test-pipeline
-          echo "🔨 Testing generated project compilation..."
+          echo "🔨 Testing generated project compilation"
           sbt compile
-          echo "🧪 Testing generated project tests..."  
+          echo "🧪 Testing generated project tests"  
           sbt test
           echo "✅ G8 template test passed - turnkey experience verified!"
 

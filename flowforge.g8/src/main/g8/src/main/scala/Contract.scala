@@ -1,4 +1,4 @@
-package $organization$.$name;format="packaged"$
+package $organization$.$name;format="word"$
 
 import com.flowforge.core.contracts.derive.Shape
 
