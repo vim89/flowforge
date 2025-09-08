@@ -1,52 +1,90 @@
-name: Claude Code Review
+# .github/workflows/claude-code-review.yml
+name: Claude code review (strict)
 
 on:
   pull_request:
-    types: [opened, synchronize]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write
       id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
-      - name: Run Claude Code Review
-        id: claude-review
+      - name: Load CLAUDE.md rules
+        id: rules
+        shell: bash
+        run: |
+          echo 'guidelines<<EOF' >> "$GITHUB_OUTPUT"
+          sed -n '1,6000p' CLAUDE.md >> "$GITHUB_OUTPUT"
+          echo 'EOF' >> "$GITHUB_OUTPUT"
+
+      - name: Run Claude (repo-wide checklist, file-by-file)
+        id: claude
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Use the repository's CLAUDE.md for more detail instructions
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
+            You are a STRICT reviewer. Enforce every rule in CLAUDE.md across the entire repo.
+            Build a YES/NO checklist for each rule per file. Include focused patch suggestions.
 
-            Use `gh pr comment` with your Bash tool to leave your review as a comment on the PR.
+            Scope:
+            - Enumerate Scala/SBT files: git ls-files '*.scala' '*.sbt'
+            - Also consider configs affecting Scala builds: git ls-files '.scalafmt.conf' 'build.sbt' 'project/*.scala' 'project/*.sbt' 'project/build.properties'
+            - Apply ALL rules from CLAUDE.md to each discovered file (not just PR diffs).
 
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://docs.anthropic.com/en/docs/claude-code/sdk#command-line for available options
-          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
+            Output:
+            - One markdown report grouped by file
+            - For each rule: ✅ PASS or ❌ FAIL with a minimal diff/patch
+            - A short "Top 10 Fixes" summary
+            - Final line MUST be exactly:
+              CLAUDE_RULES_STATUS: PASS   # or FAIL
+
+            Rules to enforce:
+            ---
+            ${{ steps.rules.outputs.guidelines }}
+            ---
+
+          # Use GA-style CLI flags; give Claude deterministic tools for repo-wide scans.
+          claude_args: >-
+            --allowedTools
+            "Read"
+            "Edit"
+            "MultiEdit"
+            "Bash(git ls-files:*)"
+            "Bash(rg:*)"
+            "Bash(find:*)"
+            "Bash(sed:*)"
+            "Bash(xargs:*)"
+            "Bash(gh pr view:*)"
+            "Bash(gh pr comment:*)"
+            --max-turns 10
+            --verbose
+
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Fail the job unless all rules passed
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pr="${{ github.event.pull_request.number }}"
+          # Aggregate all comments and look for the sentinel line.
+          body="$(gh pr view "$pr" --json comments -q '.comments[].body' || true)"
+          echo "=== Tail of PR comments ==="
+          echo "$body" | tail -n 40 || true
+          echo "$body" | grep -q 'CLAUDE_RULES_STATUS: PASS'
