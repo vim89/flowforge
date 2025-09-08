@@ -114,8 +114,7 @@ lazy val root = (project in file("."))
     connectorsGcs,
     enginesSpark,
     enginesFlink,
-    quality,
-    qualityDeequ,
+    qualityDeequ, // Removed empty quality module per v1.0-2 plan
     lineage,
     examples,
     examplesSpark,
@@ -222,15 +221,11 @@ lazy val enginesFlink = moduleProject("engines-flink")
   )
 
 // ===== QUALITY MODULES =====
-lazy val quality = moduleProject("quality")
-  .dependsOn(core, contracts)
-  .settings(
-    description := "Data quality framework",
-    libraryDependencies ++= Dependencies.forModule("quality"),
-  )
+// Removed empty quality module shell per v1.0-2 plan requirements
+// Use quality-deequ module for data quality functionality
 
 lazy val qualityDeequ = moduleProject("quality-deequ")
-  .dependsOn(quality, enginesSpark)
+  .dependsOn(core, contracts, enginesSpark)
   .settings(
     description := "Amazon Deequ integration for data quality with native Spark fallback",
     libraryDependencies ++= Dependencies.forModule("quality-deequ"),

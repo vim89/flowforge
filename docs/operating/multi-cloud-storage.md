@@ -172,7 +172,10 @@ def runAzurePipeline(): IO[Unit] = {
 ```scala
 // For SAS token authentication instead of OAuth
 val sparkConfigAzureSAS = Map(
-  // ... other config ...
+  "spark.master" -> "local[*]",
+  "spark.app.name" -> "FlowForge-Azure-SAS-Pipeline", 
+  "spark.sql.extensions" -> "io.delta.sql.DeltaSparkSessionExtension",
+  "spark.sql.catalog.spark_catalog" -> "org.apache.spark.sql.delta.catalog.DeltaCatalog",
   "spark.hadoop.fs.azure.account.key.mystorageaccount.dfs.core.windows.net" -> sys.env.getOrElse("AZURE_STORAGE_SAS_TOKEN", "")
 )
 ```
@@ -273,9 +276,14 @@ def runGCSPipeline(): IO[Unit] = {
 ```scala
 // For GKE workload identity (no service account key needed)
 val sparkConfigGCSWorkloadIdentity = Map(
-  // ... other config ...
+  "spark.master" -> "local[*]",
+  "spark.app.name" -> "FlowForge-GCS-WorkloadIdentity-Pipeline",
+  "spark.sql.extensions" -> "io.delta.sql.DeltaSparkSessionExtension", 
+  "spark.sql.catalog.spark_catalog" -> "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+  "spark.hadoop.fs.gs.impl" -> "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem",
+  "spark.hadoop.fs.AbstractFileSystem.gs.impl" -> "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS",
   "spark.hadoop.google.cloud.auth.service.account.enable" -> "false",
-  // Workload identity will be used automatically
+  // Workload identity will be used automatically in GKE environments
 )
 ```
 

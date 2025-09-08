@@ -37,7 +37,7 @@ object Dependencies {
     val azure      = "12.9.0"
 
     // Data quality
-    val deequ             = "2.0.11-spark-3.5"
+    val deequ             = "2.0.12-spark-3.5" // Per v1.0-2 plan: use latest Deequ
     val greatExpectations = "0.16.0"
 
     // Monitoring & Observability

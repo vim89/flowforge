@@ -39,7 +39,7 @@ To enable Deequ mode, add Deequ to your runtime classpath and set system propert
 
 ```bash
 # Add Deequ dependency at runtime
-sbt "set libraryDependencies += \"com.amazon.deequ\" % \"deequ\" % \"2.0.11-spark-3.5\""
+sbt "set libraryDependencies += \"com.amazon.deequ\" % \"deequ\" % \"2.0.12-spark-3.5\""
 
 # Enable Deequ mode
 -Dff.quality.mode=deequ

@@ -7,14 +7,16 @@ import com.flowforge.engines.spark.ProductionSparkDataset
 import org.apache.spark.sql.SparkSession
 
 /**
- * Quality validation with optional Deequ VerificationSuite integration.
+ * FlowForge Data Quality with Deequ 2.0.12 for Spark 3.5
  *
- * Per v1.0 plan: Native Spark checks by default with Deequ enhancement when available. Falls back gracefully
- * to native implementation when Deequ is not on classpath.
+ * Per v1.0-2 plan decision: Use **native Spark checks** as the default (no extra dependencies), with Deequ
+ * 2.0.12 Spark-3.5 as optional enhancement mode.
  *
- * Dual-mode approach:
- *   1. Native Spark checks (always available, no extra dependencies)
- *   2. Deequ VerificationSuite (optional, when Deequ 2.0.11+ available)
+ * **FlowForge v1.0 DQ Strategy:**
+ *   1. **Default**: Native Spark checks (lean builds, no extra dependencies)
+ *   2. **Optional**: Deequ VerificationSuite 2.0.12 (when available on classpath)
+ *
+ * This keeps FlowForge core lean while giving enterprise users optional Deequ power.
  */
 object DeequAdapter {
 

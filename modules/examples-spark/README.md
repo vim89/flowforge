@@ -79,9 +79,9 @@ This will:
 ### Domain Models
 
 ```scala
-case class RawUser(id: String, email: String, age: Option[Int], ...)
-case class CleanedUser(id: String, email: String, age: Int, ...)
-case class EnrichedUser(id: String, ..., ageGroup: String, region: String)
+case class RawUser(id: String, email: String, age: Option[Int], country: String, signupDate: String, isActive: Boolean)
+case class CleanedUser(id: String, email: String, age: Int, country: String, signupTimestamp: Long, isActive: Boolean)
+case class EnrichedUser(id: String, email: String, age: Int, country: String, signupTimestamp: Long, isActive: Boolean, ageGroup: String, region: String)
 ```
 
 ### Pipeline Stages

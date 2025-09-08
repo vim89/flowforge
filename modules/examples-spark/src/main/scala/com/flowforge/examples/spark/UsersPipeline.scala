@@ -308,6 +308,106 @@ object UsersPipeline {
 object UsersPipelineUtils {
 
   /**
+   * Create Spark Resource for multi-cloud storage examples
+   */
+  def createSparkResource(config: Map[String, String]): Resource[IO, SparkSession] =
+    Resource.make(
+      IO.delay {
+        val builder = SparkSession.builder()
+        config.foreach { case (key, value) => builder.config(key, value) }
+        builder.getOrCreate()
+      },
+    )(spark => IO.delay(spark.stop()))
+
+  /**
+   * Transform users with standard enrichment pipeline
+   */
+  def transformUsers[A](rawData: ProductionSparkDataset[A])
+    : IO[ProductionSparkDataset[UsersPipeline.EnrichedUser]] =
+    IO.delay {
+      val spark = rawData.sparkDataFrame.sparkSession
+      import spark.implicits._
+
+      val enriched = rawData.sparkDataFrame
+        .withColumn(
+          "ageGroup",
+          when($"age" < 25, "young")
+            .when($"age" < 45, "middle")
+            .otherwise("senior"),
+        )
+        .withColumn(
+          "region",
+          when($"country".isin("USA", "Canada"), "North America")
+            .when($"country".isin("UK", "Germany", "France"), "Europe")
+            .when($"country".isin("Australia", "New Zealand"), "Oceania")
+            .otherwise("Other"),
+        )
+        .select(
+          $"id",
+          $"email",
+          $"age",
+          $"country",
+          $"signupTimestamp",
+          $"isActive",
+          $"ageGroup",
+          $"region",
+        )
+
+      val sampleEnrichedUsers = List(
+        UsersPipeline.EnrichedUser(
+          "sample",
+          "sample@test.com",
+          25,
+          "USA",
+          1672531200L,
+          true,
+          "young",
+          "North America",
+        ),
+      )
+
+      val schema = DataSchema(
+        fields = List.empty[StructField],
+        version = SchemaVersion.unsafeFrom(1),
+        metadata = Map.empty,
+        createdAt = Instant.now(),
+      )
+      val metadata = DatasetMetadata(
+        recordCount = enriched.count(),
+        schema = schema,
+        partitions = enriched.rdd.getNumPartitions,
+        createdAt = Instant.now(),
+        source = None,
+      )
+      ProductionSparkDataset(sampleEnrichedUsers, enriched, schema, metadata)
+    }
+
+  /**
+   * Write to Delta Lake with proper error handling
+   */
+  def writeToDelta(dataset: ProductionSparkDataset[UsersPipeline.EnrichedUser], outputPath: String)
+    : IO[Unit] =
+    IO.delay {
+      dataset.sparkDataFrame.write
+        .format("delta")
+        .mode("overwrite")
+        .save(outputPath)
+    }
+
+  /**
+   * Validate data quality using FlowForge quality framework
+   */
+  def validateDataQuality[A](dataset: ProductionSparkDataset[A])
+    : IO[QualityResult[ProductionSparkDataset[A]]] =
+    IO.delay {
+      val constraints = userDataQualityConstraints()
+      val spark       = dataset.sparkDataFrame.sparkSession
+      val result      = DeequAdapter.runChecks(spark, dataset, constraints)
+      // Cast the result to the expected type due to variance
+      result.asInstanceOf[QualityResult[ProductionSparkDataset[A]]]
+    }
+
+  /**
    * Quality validation preset for user data
    */
   def userDataQualityConstraints(): List[FFConstraint] =
