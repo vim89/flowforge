@@ -724,6 +724,12 @@ object DataSource {
     driver: String,
   ): JdbcSource =
     JdbcSource(url, TableName(table), driver = driver)
+
+  def local(
+    location: String,
+    format: DataFormat,
+  ): LocalDataSource =
+    LocalDataSource(location, format)
 }
 
 /**
@@ -835,6 +841,12 @@ object DataSink {
     format: DataFormat,
   ): S3Sink =
     S3Sink(BucketName(bucket), prefix, format)
+
+  def local(
+    location: String,
+    format: DataFormat,
+  ): LocalDataSink =
+    LocalDataSink(location, format)
 }
 
 // ===============================

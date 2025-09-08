@@ -261,7 +261,7 @@ lazy val examplesSpark = moduleProject("examples-spark")
     publish / skip := true,
     // Spark examples need forked JVM for proper resource management
     Test / fork := true,
-    run / fork := true,
+    run / fork  := true,
   )
 
 // CLI for physical schema validation (Delta/Hive/Parquet) for CI usage

@@ -1,0 +1,152 @@
+name: FlowForge v1.0.0 Quality Gates
+
+on:
+  push:
+    branches: [ main, 'release/*' ]
+  pull_request:
+    branches: [ main, 'release/*' ]
+
+jobs:
+  v100-quality-gates:
+    runs-on: ubuntu-latest
+    name: v1.0.0 Release Quality Gates
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Cache SBT
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.ivy2/cache
+          ~/.sbt
+          target
+          project/target
+        key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt', 'project/build.properties') }}
+
+    # P0 Gate 1: No placeholders in main sources
+    - name: "P0 Gate: Check for placeholders in main sources"
+      run: |
+        echo "🔍 Checking for placeholders (ellipses, question marks) in main sources..."
+        
+        # Check for ellipses placeholders
+        ELLIPSES=$(find modules -name "*.scala" -path "*/src/main/*" -exec grep -l "\\.\\.\\.\\|…" {} \; 2>/dev/null || true)
+        if [ -n "$ELLIPSES" ]; then
+          echo "❌ FAIL: Found ellipses placeholders in main sources:"
+          echo "$ELLIPSES"
+          exit 1
+        fi
+        
+        # Check for question mark placeholders  
+        QUESTIONS=$(find modules -name "*.scala" -path "*/src/main/*" -exec grep -l "???" {} \; 2>/dev/null || true)
+        if [ -n "$QUESTIONS" ]; then
+          echo "❌ FAIL: Found ??? placeholders in main sources:"
+          echo "$QUESTIONS"
+          exit 1
+        fi
+        
+        echo "✅ PASS: No placeholders found in main sources"
+
+    # P0 Gate 2: No cats.effect.IO leaks in main sources (except CLIs and examples)
+    - name: "P0 Gate: Check for IO leaks in main sources"
+      run: |
+        echo "🔍 Checking for cats.effect.IO leaks in main sources..."
+        
+        # Find IO imports in main sources, excluding CLIs, examples, and effect system files
+        IO_LEAKS=$(find modules -name "*.scala" -path "*/src/main/*" \
+                   -not -path "*/examples/*" \
+                   -not -path "*/*-cli/*" \
+                   -not -name "EffectInstances.scala" \
+                   -not -name "EffectSystem.scala" \
+                   -exec grep -l "import.*cats\.effect\.IO\|: IO\[" {} \; 2>/dev/null || true)
+        
+        if [ -n "$IO_LEAKS" ]; then
+          echo "❌ FAIL: Found cats.effect.IO leaks in main sources:"
+          echo "$IO_LEAKS"
+          echo ""
+          echo "Per FlowForge v1.0.0 architecture:"
+          echo "- Core/leaf modules must stay F-polymorphic"
+          echo "- Only CLIs and examples may use concrete IO"
+          echo "- Move concrete IO usage to examples/ or *-cli/ modules"
+          exit 1
+        fi
+        
+        echo "✅ PASS: No IO leaks found in main sources"
+
+    # P0 Gate 3: Delta constraint validation
+    - name: "P0 Gate: Validate Delta constraint claims"
+      run: |
+        echo "🔍 Checking for incorrect Delta constraint claims..."
+        
+        # Check for UNIQUE constraint claims in main sources (Delta doesn't support UNIQUE)
+        UNIQUE_CLAIMS=$(find modules -name "*.scala" -path "*/src/main/*" -exec grep -l "UNIQUE.*constraint\|unique.*constraint\|ADD CONSTRAINT.*UNIQUE" {} \; 2>/dev/null || true)
+        if [ -n "$UNIQUE_CLAIMS" ]; then
+          echo "❌ FAIL: Found incorrect UNIQUE constraint claims:"
+          echo "$UNIQUE_CLAIMS"
+          echo ""
+          echo "Delta Lake only supports NOT NULL and CHECK constraints."
+          echo "UNIQUE constraints are not supported and must use Deequ checks instead."
+          exit 1
+        fi
+        
+        echo "✅ PASS: No incorrect Delta constraint claims found"
+
+    # P0 Gate 4: Verify Spark version alignment
+    - name: "P0 Gate: Verify Spark 3.5.6 usage"
+      run: |
+        echo "🔍 Checking Spark version alignment..."
+        
+        # Check Dependencies.scala for correct Spark version
+        SPARK_VERSION=$(grep -o 'val spark.*= "3\.[0-9]\.[0-9]"' project/Dependencies.scala | grep -o '3\.[0-9]\.[0-9]' || true)
+        if [ "$SPARK_VERSION" != "3.5.6" ]; then
+          echo "❌ FAIL: Incorrect Spark version in Dependencies.scala: $SPARK_VERSION"
+          echo "Expected: 3.5.6 (latest 3.5 LTS per v1.0.0 plan)"
+          exit 1
+        fi
+        
+        echo "✅ PASS: Spark 3.5.6 correctly configured"
+
+    # Build and test gates
+    - name: "Quality Gate: Full compilation"
+      run: |
+        echo "🔧 Running full compilation..."
+        sbt compile test:compile
+        echo "✅ PASS: Full compilation successful"
+
+    - name: "Quality Gate: Code formatting"
+      run: |
+        echo "🎨 Checking code formatting..."
+        sbt fmtCheck
+        echo "✅ PASS: Code formatting compliant"
+
+    - name: "Quality Gate: Core tests"
+      run: |
+        echo "🧪 Running core module tests..."
+        sbt core/test
+        echo "✅ PASS: Core tests successful"
+
+    # Summary
+    - name: "v1.0.0 Gate Summary"
+      if: success()
+      run: |
+        echo ""
+        echo "🎉 ============================================"
+        echo "✅ FlowForge v1.0.0 Quality Gates: ALL PASSED"
+        echo "============================================"
+        echo ""
+        echo "✅ No placeholders in main sources"
+        echo "✅ No IO leaks in core modules" 
+        echo "✅ Delta constraints correctly documented"
+        echo "✅ Spark 3.5.6 LTS properly configured"
+        echo "✅ Full compilation successful"
+        echo "✅ Code formatting compliant"
+        echo "✅ Core tests passing"
+        echo ""
+        echo "FlowForge is ready for v1.0.0 release! 🚀"

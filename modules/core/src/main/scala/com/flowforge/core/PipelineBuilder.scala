@@ -35,13 +35,17 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
   name: String,
   description: String = "",
   stages: List[PipelineStage[F, _, _]] = List.empty,
-  config: Option[PipelineConfig] = None) {
+  config: Option[PipelineConfig] = None,
+  lineageEmitter: Option[OpenLineageEmitter[F]] = None) {
 
   def withDescription(desc: String): PipelineBuilder[S, F, In, Out] =
     copy(description = desc)
 
   def withConfig(c: PipelineConfig): PipelineBuilder[S, F, In, Out] =
     copy(config = Some(c))
+
+  def withLineageEmitter(emitter: OpenLineageEmitter[F]): PipelineBuilder[S, F, In, Out] =
+    copy(lineageEmitter = Some(emitter))
 
   /**
    * Add typed source with explicit contract and policy. This is the ONLY way to add sources - no untyped
@@ -66,6 +70,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
       description,
       stages :+ stage,
       config,
+      lineageEmitter,
     )
   }
 
@@ -88,6 +93,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
       description,
       stages :+ stage,
       config,
+      lineageEmitter,
     )
   }
 
@@ -120,6 +126,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
       description,
       stages :+ stage,
       config,
+      lineageEmitter,
     )
   }
 
@@ -130,11 +137,12 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
   def build(
   )(implicit
     complete: S <:< BuilderState.Complete,
+    sync: cats.effect.Sync[F],
   ): Pipeline[F, In, Out] = {
 
-    // Per v1.0 plan: "call OpenLineageEmitter.emitJobStart/Complete/Fail per stage and for the pipeline"
-    // Note: Build-time lineage emission is best-effort and handled during pipeline execution
-    OpenLineageEmitter.generateRunId()
+    // Per v1.0 plan: "wire OpenLineageEmitter.emitJobStart/Complete/Fail per stage and for the pipeline"
+    val runId   = OpenLineageEmitter.generateRunId()
+    val emitter = lineageEmitter.getOrElse(OpenLineageEmitter.noop[F])
 
     // Create pipeline with lineage tracking enabled
     Pipeline(
@@ -150,6 +158,8 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
           sink = DataSink.gcs("default", "default", DataFormat.Parquet),
         ),
       ),
+      runId = Some(runId),
+      lineageEmitter = Some(emitter),
     )
   }
 

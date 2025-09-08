@@ -1,4 +1,4 @@
-package com.flowforge.quality.deequ
+package com.flowforge.examples
 
 import cats.effect.IO
 import com.flowforge.core.PipelineBuilder
@@ -126,8 +126,8 @@ object ContractToDeltaExample {
 
    Field: id (Long)
    Contract: Must be unique
-   Delta Constraint: ALTER TABLE users ADD CONSTRAINT unique_id UNIQUE (id)
-   SQL Generation: CREATE TABLE users (<columns>, CONSTRAINT unique_id UNIQUE (id))
+   Delta Constraint: NOT SUPPORTED - use Deequ uniqueness check + merge-dedupe strategy
+   SQL Generation: N/A - Delta does not support UNIQUE constraints
 
    Field: name (String)
    Contract: Must be non-null
@@ -153,7 +153,8 @@ object ContractToDeltaExample {
         s"${field.value} NOT NULL"
 
       case QualityConstraint.Unique(field, _) =>
-        s"CONSTRAINT unique_${field.value} UNIQUE (${field.value})"
+        // Delta does not support UNIQUE constraints - use Deequ checks + merge-dedupe
+        s"-- NOTE: UNIQUE not supported in Delta - use Deequ isUnique + merge strategy"
 
       case QualityConstraint.Pattern(field, regex, _) =>
         s"CONSTRAINT valid_${field.value} CHECK (${field.value} RLIKE '$regex')"

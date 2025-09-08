@@ -20,6 +20,8 @@ case class Pipeline[F[_], A, B](
   config: PipelineConfig,
   metadata: PipelineMetadata = PipelineMetadata(),
   executionPlan: Option[ExecutionPlan] = None,
+  runId: Option[String] = None,
+  lineageEmitter: Option[com.flowforge.lineage.OpenLineageEmitter[F]] = None,
 )(implicit F: EffectSystem[F]) {
 
   /**
@@ -175,15 +177,24 @@ case class Pipeline[F[_], A, B](
     runId: String,
     errorMsg: String = "",
   ): F[Unit] =
-    F.handleError {
-      F.delay {
-        println(s"[OpenLineage] Emitted PIPELINE $eventType event for '$pipelineName' (run: $runId)")
-      }
-    } { ex: Throwable =>
-      // Best-effort emission: Don't fail pipeline execution if lineage emission fails
-      F.delay(
-        println(s"[OpenLineage] Warning: Failed to emit pipeline $eventType event: ${ex.getMessage}"),
-      )
+    lineageEmitter match {
+      case Some(emitter) =>
+        F.handleError {
+          eventType.toUpperCase match {
+            case "START"    => F.map(emitter.emitJobStart("flowforge", pipelineName, runId))(_ => ())
+            case "COMPLETE" => F.map(emitter.emitJobComplete("flowforge", pipelineName, runId))(_ => ())
+            case "FAIL"     => F.map(emitter.emitJobFail("flowforge", pipelineName, runId, errorMsg))(_ => ())
+            case _          => F.unit
+          }
+        } { ex: Throwable =>
+          // Best-effort emission: Don't fail pipeline execution if lineage emission fails
+          F.delay(
+            println(s"[OpenLineage] Warning: Failed to emit pipeline $eventType event: ${ex.getMessage}"),
+          )
+        }
+      case None =>
+        // No emitter configured - use noop behavior
+        F.unit
     }
 
   // Emit stage-level lineage events (per v10-6.md plan: proper F[_] context, best-effort)
@@ -194,24 +205,29 @@ case class Pipeline[F[_], A, B](
     stageIndex: Int,
     errorMsg: String = "",
   ): F[Unit] =
-    F.handleError {
-      F.delay {
-        // Best-effort emission: log stage events for observability
-        eventType.toUpperCase match {
-          case "START" | "COMPLETE" | "FAIL" =>
+    lineageEmitter match {
+      case Some(emitter) =>
+        F.handleError {
+          eventType.toUpperCase match {
+            case "START" =>
+              F.map(emitter.emitJobStart("flowforge", s"$name.stage-$stageIndex", runId))(_ => ())
+            case "COMPLETE" =>
+              F.map(emitter.emitJobComplete("flowforge", s"$name.stage-$stageIndex", runId))(_ => ())
+            case "FAIL" =>
+              F.map(emitter.emitJobFail("flowforge", s"$name.stage-$stageIndex", runId, errorMsg))(_ => ())
+            case _ => F.unit
+          }
+        } { ex: Throwable =>
+          // Best-effort emission: Don't fail stage execution if lineage emission fails
+          F.delay(
             println(
-              s"[OpenLineage] Emitted STAGE $eventType event for '$stageName' (pipeline: $name, run: $runId)",
-            )
-          case _ => // Unknown event type - do nothing
+              s"[OpenLineage] Warning: Failed to emit stage $eventType event for '$stageName': ${ex.getMessage}",
+            ),
+          )
         }
-      }
-    } { ex: Throwable =>
-      // Best-effort emission: Don't fail stage execution if lineage emission fails
-      F.delay(
-        println(
-          s"[OpenLineage] Warning: Failed to emit stage $eventType event for '$stageName': ${ex.getMessage}",
-        ),
-      )
+      case None =>
+        // No emitter configured - use noop behavior
+        F.unit
     }
 
   // Old lineage implementation removed - now using proper OpenLineageEmitter from modules/lineage

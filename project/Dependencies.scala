@@ -24,7 +24,7 @@ object Dependencies {
     val pureconfig = "0.17.9"
 
     // Big Data engines
-    val spark    = "3.5.0"
+    val spark    = "3.5.6" // Updated to latest 3.5 LTS per v100-plan
     val delta    = "3.3.2"
     val flink    = "1.18.0"
     val kafka    = "3.6.1"
@@ -61,11 +61,11 @@ object Dependencies {
     val mockito        = "5.13.0"
 
     // Build tools & plugins
-    val scalafix  = "0.11.1"
-    val scalafmt  = "3.7.17"
-    val mdoc      = "2.5.1"
-    val unidoc    = "0.5.0"
-    val assembly  = "2.1.4"
+    val scalafix = "0.11.1"
+    val scalafmt = "3.7.17"
+    val mdoc     = "2.5.1"
+    val unidoc   = "0.5.0"
+    val assembly = "2.1.4"
     // Choose a widely available artifact for generic frameless-dataset
     val frameless = "0.15.0"
   }
@@ -255,12 +255,15 @@ object Dependencies {
         "org.apache.spark" %% "spark-sql" % Versions.spark,
       )
     case "lineage" => common
-    case "examples" => common
+    case "examples" =>
+      common ++ Engines.spark ++ Seq(
+        "io.delta" %% "delta-spark" % Versions.delta,
+      )
     case "examples-spark" =>
       common ++ Engines.spark ++ Seq(
         "io.delta" %% "delta-spark" % Versions.delta,
       )
-    case _          => common
+    case _ => common
   }
 
   // ===== DEPENDENCY OVERRIDES =====
