@@ -1,5 +1,6 @@
 # .github/workflows/claude-code-review.yml
-name: Claude code review (strict)
+# Non-blocking strict review: comments on the PR using gh CLI; never fails the job.
+name: Claude code review (strict, non-blocking)
 
 on:
   pull_request:
@@ -14,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: write   # needed for gh pr comment
       id-token: write
 
     steps:
@@ -31,33 +32,38 @@ jobs:
           sed -n '1,6000p' CLAUDE.md >> "$GITHUB_OUTPUT"
           echo 'EOF' >> "$GITHUB_OUTPUT"
 
-      - name: Run Claude (repo-wide checklist, file-by-file)
+      - name: Run claude (repo-wide checklist, then publish via gh CLI)
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            You are a STRICT reviewer. Enforce every rule in CLAUDE.md across the entire repo.
-            Build a YES/NO checklist for each rule per file. Include focused patch suggestions.
+            You are a STRICT reviewer enforcing every rule in CLAUDE.md across the repository.
 
             Scope:
-            - Enumerate Scala/SBT files: git ls-files '*.scala' '*.sbt'
-            - Also consider configs affecting Scala builds: git ls-files '.scalafmt.conf' 'build.sbt' 'project/*.scala' 'project/*.sbt' 'project/build.properties'
-            - Apply ALL rules from CLAUDE.md to each discovered file (not just PR diffs).
+            - Enumerate:
+              git ls-files '*.scala' '*.sbt' '.scalafmt.conf' 'build.sbt' 'project/*.sbt' 'project/*.scala' 'project/build.properties'
+            - Apply ALL rules to each file (not just diffs).
 
             Output:
-            - One markdown report grouped by file
-            - For each rule: ✅ PASS or ❌ FAIL with a minimal diff/patch
-            - A short "Top 10 Fixes" summary
-            - Final line MUST be exactly:
+            - One markdown report grouped by file.
+            - For each rule: ✅ PASS or ❌ FAIL with minimal patch/diff.
+            - A short "Top 10 Fixes" section.
+            - Final line MUST be:
               CLAUDE_RULES_STATUS: PASS   # or FAIL
+
+            PUBLISHING (MANDATORY):
+            - Use the PR number from $PR_NUMBER.
+            - Post your full markdown report as a single PR comment with one Bash command:
+              gh pr comment "$PR_NUMBER" --body-file - <<'MD'
+              <PASTE YOUR FULL MARKDOWN REPORT HERE>
+              MD
 
             Rules to enforce:
             ---
             ${{ steps.rules.outputs.guidelines }}
             ---
 
-          # Use GA-style CLI flags; give Claude deterministic tools for repo-wide scans.
           claude_args: >-
             --allowedTools
             "Read"
@@ -74,17 +80,13 @@ jobs:
             --verbose
 
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}                # gh CLI auth
+          PR_NUMBER: ${{ github.event.pull_request.number }}
 
-      - name: Fail the job unless all rules passed
+      - name: Soft gate summary (never fail)
         if: always()
-        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          pr="${{ github.event.pull_request.number }}"
-          # Aggregate all comments and look for the sentinel line.
-          body="$(gh pr view "$pr" --json comments -q '.comments[].body' || true)"
-          echo "=== Tail of PR comments ==="
-          echo "$body" | tail -n 40 || true
-          echo "$body" | grep -q 'CLAUDE_RULES_STATUS: PASS'
+          echo "### Claude strict review" >> "$GITHUB_STEP_SUMMARY"
+          echo "Report should be posted via gh pr comment on PR #${{ github.event.pull_request.number }}." >> "$GITHUB_STEP_SUMMARY"

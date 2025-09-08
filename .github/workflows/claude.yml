@@ -6,8 +6,6 @@ on:
     types: [created]
   pull_request_review_comment:
     types: [created]
-  issues:
-    types: [opened, assigned, edited]
   pull_request_review:
     types: [submitted]
 
@@ -17,18 +15,13 @@ concurrency:
 
 jobs:
   claude-assistant:
-    if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
-      issues: write
+      pull-requests: write   # needed for gh pr comment
+      issues: write          # fallback to issue comment when not a PR
       id-token: write
-      actions: read # allow reading CI results/status on PRs
+      actions: read
 
     steps:
       - name: Checkout repository
@@ -42,43 +35,51 @@ jobs:
         run: |
           echo 'guidelines<<EOF' >> "$GITHUB_OUTPUT"
           if [ -f CLAUDE.md ]; then
-            sed -n '1,6000p' CLAUDE.md >> "$GITHUB_OUTPUT"
+            sed -n '1,6000p' CLAUDE.md
           else
-            echo 'No CLAUDE.md present.' >> "$GITHUB_OUTPUT"
-          fi
+            echo 'No CLAUDE.md present.'
+          fi >> "$GITHUB_OUTPUT"
           echo 'EOF' >> "$GITHUB_OUTPUT"
 
-      - name: Run Claude Code Action
+      - name: Run Claude Code Action (auto-detects @claude)
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-          # Let Claude read CI status in context (optional but handy)
-          additional_permissions: |
-            actions: read
-
-          # If a comment says "full audit" OR PR has label full-audit, do a repo-wide CLAUDE.md audit.
+          # IMPORTANT: Explicitly instruct Claude to publish via gh pr comment
           prompt: |
-            You are the repository’s assistant and reviewer.
-            If triggered by an @claude mention, reply in-thread with helpful, actionable guidance.
+            You are the repository’s assistant/reviewer. When you see the phrase "full audit"
+            in the triggering comment, run a repository-wide CLAUDE.md audit and **publish the
+            results using the GitHub CLI**.
 
-            If the comment text contains "full audit" OR the PR has the label "full-audit":
-            - Perform a repository-wide audit against the standards below.
-            - Enumerate files with: git ls-files '*.scala' '*.sbt'
-            - Also include key build/config files:
-              - .scalafmt.conf, build.sbt, project/*.sbt, project/*.scala, project/build.properties
-            - For each file, check every rule and propose minimal, focused patches.
-            - Post a single markdown report summarizing results by file.
-            - Final line MUST be exactly:
+            Audit scope:
+            - Enumerate files:
+              git ls-files '*.scala' '*.sbt' '.scalafmt.conf' 'build.sbt' 'project/*.sbt' 'project/*.scala' 'project/build.properties'
+            - Apply ALL rules from CLAUDE.md to each file.
+            - Produce a single markdown report grouped by file, with ✅/❌ per rule and minimal patch suggestions.
+            - At the end of the report, include:
               CLAUDE_RULES_STATUS: PASS   # or FAIL
 
-            Repository standards (from CLAUDE.md):
+            PUBLISHING (MANDATORY):
+            - Determine the PR number from the environment:
+                use $PR_NUMBER if set; else use $ISSUE_NUMBER.
+            - If a PR number is available:
+                run exactly one Bash command to post your report:
+                gh pr comment "$PR_NUMBER" --body-file - <<'MD'
+                <PASTE YOUR FULL MARKDOWN REPORT HERE>
+                MD
+            - Else (issue context), post to the issue instead:
+                gh issue comment "$ISSUE_NUMBER" --body-file - <<'MD'
+                <PASTE YOUR FULL MARKDOWN REPORT HERE>
+                MD
+
+            Project standards (from CLAUDE.md):
             ---
             ${{ steps.rules.outputs.guidelines }}
             ---
 
-          # CLI passthrough (GA style). Use camelCase --allowedTools per Anthropic CLI.
+          # Allow Claude to enumerate files and publish via gh CLI
           claude_args: >-
             --allowedTools
             "Read"
@@ -89,8 +90,18 @@ jobs:
             "Bash(find:*)"
             "Bash(gh pr view:*)"
             "Bash(gh pr comment:*)"
+            "Bash(gh issue comment:*)"
             --max-turns 8
             --verbose
 
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}  # gh CLI auth
+          # Provide both; prompt explains which to use
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+
+      - name: Job summary (non-blocking)
+        if: always()
+        run: |
+          echo "### Claude on-mention run" >> "$GITHUB_STEP_SUMMARY"
+          echo "If you requested a 'full audit', the report should now be posted via gh CLI." >> "$GITHUB_STEP_SUMMARY"
