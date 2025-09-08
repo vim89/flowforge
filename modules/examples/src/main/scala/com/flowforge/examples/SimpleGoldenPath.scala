@@ -7,7 +7,7 @@ import com.flowforge.core.contracts.SchemaPolicy
 import com.flowforge.core.contracts.derive.Shape
 import com.flowforge.core.instances.EffectInstances._
 import com.flowforge.core.types._
-import com.flowforge.lineage.OpenLineageEmitter
+import com.flowforge.core.lineage.OpenLineageEmitter
 
 /**
  * FlowForge v1.0.0 Simple Golden Path Example

@@ -1,5 +1,6 @@
-package com.flowforge.lineage
+package com.flowforge.core.lineage
 import cats.implicits._
+import com.flowforge.core.algebra.EffectSystem
 
 import java.time.Instant
 import java.util.UUID
@@ -35,9 +36,9 @@ case class LineageError(message: String, cause: Option[Throwable] = None)
 /**
  * HTTP-based OpenLineage emitter that posts events to OpenLineage-compatible endpoints
  */
-class HttpOpenLineageEmitter[F[_]: cats.effect.Sync] extends OpenLineageEmitter[F] {
+class HttpOpenLineageEmitter[F[_]: EffectSystem] extends OpenLineageEmitter[F] {
 
-  private val F = cats.effect.Sync[F]
+  private val F = EffectSystem[F]
 
   // Configuration from environment variables (zero-config approach)
   private val openLineageUrl = sys.env.getOrElse("OPENLINEAGE_URL", "http://localhost:5000/api/v1/lineage")
@@ -183,9 +184,9 @@ class HttpOpenLineageEmitter[F[_]: cats.effect.Sync] extends OpenLineageEmitter[
  *
  * Per v10-6.md plan: provides NoopEmitter[F] for scenarios where lineage emission should be disabled
  */
-class NoopOpenLineageEmitter[F[_]: cats.effect.Sync] extends OpenLineageEmitter[F] {
+class NoopOpenLineageEmitter[F[_]: EffectSystem] extends OpenLineageEmitter[F] {
 
-  private val F = cats.effect.Sync[F]
+  private val F = EffectSystem[F]
 
   def emitJobStart(
     namespace: String,
@@ -212,15 +213,15 @@ class NoopOpenLineageEmitter[F[_]: cats.effect.Sync] extends OpenLineageEmitter[
 
 object OpenLineageEmitter {
 
-  def http[F[_]: cats.effect.Sync]: OpenLineageEmitter[F] = new HttpOpenLineageEmitter[F]
+  def http[F[_]: EffectSystem]: OpenLineageEmitter[F] = new HttpOpenLineageEmitter[F]
 
-  def noop[F[_]: cats.effect.Sync]: OpenLineageEmitter[F] = new NoopOpenLineageEmitter[F]
+  def noop[F[_]: EffectSystem]: OpenLineageEmitter[F] = new NoopOpenLineageEmitter[F]
 
   // Generate a unique run ID for each pipeline execution
   def generateRunId(): String = UUID.randomUUID().toString
 
   // Helper for pipeline-level events
-  def emitPipelineStart[F[_]: cats.effect.Sync](
+  def emitPipelineStart[F[_]: EffectSystem](
     emitter: OpenLineageEmitter[F],
     pipelineName: String,
     runId: String,
@@ -229,7 +230,7 @@ object OpenLineageEmitter {
     emitter.emitJobStart(namespace, pipelineName, runId)
   }
 
-  def emitPipelineComplete[F[_]: cats.effect.Sync](
+  def emitPipelineComplete[F[_]: EffectSystem](
     emitter: OpenLineageEmitter[F],
     pipelineName: String,
     runId: String,
@@ -238,7 +239,7 @@ object OpenLineageEmitter {
     emitter.emitJobComplete(namespace, pipelineName, runId)
   }
 
-  def emitPipelineFail[F[_]: cats.effect.Sync](
+  def emitPipelineFail[F[_]: EffectSystem](
     emitter: OpenLineageEmitter[F],
     pipelineName: String,
     runId: String,

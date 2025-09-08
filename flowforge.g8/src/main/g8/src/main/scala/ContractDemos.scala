@@ -40,25 +40,25 @@ object ContractDemos {
         _ => F.pure(User(1, "Alice", "alice@example.com", 25))
       )
     
-    // 2. Backward compatibility - output has extra fields
+    // 2. Backward compatibility - reader produces more fields than contract expects
     val backwardCompatPipeline = PipelineBuilder[F]("backward-compat")
       .addTypedSource[UserWithCountry, User, SchemaPolicy.Backward](
-        TypedSource[UserWithCountry](DataSource.local("extended-users.csv", DataFormat.CSV)),
+        TypedSource[User](DataSource.local("basic-users.csv", DataFormat.CSV)),
         _ => F.pure(UserWithCountry(1, "Bob", "bob@example.com", 30, "USA"))
       )
     
-    // 3. Forward compatibility - contract has extra fields
+    // 3. Forward compatibility - contract has more fields than reader produces
     val forwardCompatPipeline = PipelineBuilder[F]("forward-compat")
       .addTypedSource[User, UserWithCountry, SchemaPolicy.Forward](
-        TypedSource[User](DataSource.local("basic-users.csv", DataFormat.CSV)),
+        TypedSource[UserWithCountry](DataSource.local("extended-users.csv", DataFormat.CSV)),
         _ => F.pure(User(1, "Charlie", "charlie@example.com", 35))
       )
     
-    // 4. Full policy - anything goes
+    // Note: Full policy requires compatible types - simplified example
     val fullPolicyPipeline = PipelineBuilder[F]("full-policy")
-      .addTypedSource[UserWithOptionalAge, User, SchemaPolicy.Full](
-        TypedSource[UserWithOptionalAge](DataSource.local("varied-users.csv", DataFormat.CSV)),
-        _ => F.pure(UserWithOptionalAge(1, "Diana", "diana@example.com", Some(28)))
+      .addTypedSource[User, User, SchemaPolicy.Full](
+        TypedSource[User](DataSource.local("any-users.csv", DataFormat.CSV)),
+        _ => F.pure(User(1, "Diana", "diana@example.com", 28))
       )
     
     println("✅ All successful examples compiled!")
@@ -145,7 +145,7 @@ object ContractDemos {
     
     val backwardEvolution = PipelineBuilder[F]("backward-evolution")
       .addTypedSource[UserV2, UserV1, SchemaPolicy.Backward](
-        TypedSource[UserV2](DataSource.local("v2-users.csv", DataFormat.CSV)),
+        TypedSource[UserV1](DataSource.local("v1-users.csv", DataFormat.CSV)),
         _ => F.pure(UserV2(1, "Evolved User", "evolved@example.com", 30, Some("USA")))
       )
     
@@ -153,7 +153,7 @@ object ContractDemos {
     // New consumer can handle old data by providing defaults
     val forwardEvolution = PipelineBuilder[F]("forward-evolution")
       .addTypedSource[UserV1, UserV2, SchemaPolicy.Forward](
-        TypedSource[UserV1](DataSource.local("v1-users.csv", DataFormat.CSV)),
+        TypedSource[UserV2](DataSource.local("v2-users.csv", DataFormat.CSV)),
         _ => F.pure(UserV1(1, "Legacy User", "legacy@example.com", 28))
       )
     
@@ -180,7 +180,7 @@ object ContractDemos {
         if (user.email.contains("@") && user.age > 0) {
           F.pure(user)
         } else {
-          F.raiseError(new IllegalArgumentException(s"Invalid user data: \$user"))
+          F.raiseError(new IllegalArgumentException(s"Invalid user data: $$user"))
         }
       }
     

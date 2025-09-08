@@ -115,7 +115,6 @@ lazy val root = (project in file("."))
     enginesSpark,
     enginesFlink,
     qualityDeequ, // Removed empty quality module per v1.0-2 plan
-    lineage,
     examples,
     examplesSpark,
     compileFailTests,
@@ -138,7 +137,6 @@ lazy val infrastructure = moduleProject("infrastructure")
 
 // ===== CORE MODULES =====
 lazy val core = moduleProject("core")
-  .dependsOn(lineage)
   .settings(
     description := "Core abstractions and custom type system",
     libraryDependencies ++= Dependencies.forModule("core"),
@@ -297,11 +295,6 @@ lazy val contractsExtractorCli = moduleProject("contracts-extractor-cli")
   )
 
 // ===== ADDITIONAL MODULES =====
-lazy val lineage = moduleProject("lineage")
-  .settings(
-    description := "OpenLineage integration for automatic lineage emission",
-    libraryDependencies ++= Dependencies.forModule("lineage"),
-  )
 
 lazy val it = (project in file("integration-tests"))
   .dependsOn(examples, connectorsGcs, enginesSpark)

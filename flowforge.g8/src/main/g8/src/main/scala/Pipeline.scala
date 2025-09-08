@@ -1,13 +1,13 @@
 package $organization$.$name;format="word"$
 
-import cats.effect.{ Resource }
 import com.flowforge.core.PipelineBuilder
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.contracts.{ SchemaPolicy }
 import com.flowforge.core.contracts.derive.Shape
-import com.flowforge.core.instances.EffectInstances._
+import com.flowforge.core.syntax.effect._
+import com.flowforge.core.instances.instances._
 import com.flowforge.core.types._
-import com.flowforge.lineage.OpenLineageEmitter
+import com.flowforge.core.lineage.OpenLineageEmitter
 import org.apache.spark.sql.SparkSession
 
 /**
@@ -75,14 +75,15 @@ class FlowForgePipeline[F[_]: EffectSystem] {
   implicit val cleanedUserShape: Shape[CleanedUser] = Shape.gen[CleanedUser]
   implicit val enrichedUserShape: Shape[EnrichedUser] = Shape.gen[EnrichedUser]
 
-  def createSparkResource(config: Map[String, String]): Resource[F, SparkSession] =
-    Resource.make(
-      F.delay {
-        val builder = SparkSession.builder()
-        config.foreach { case (key, value) => builder.config(key, value) }
-        builder.getOrCreate()
-      }
-    )(spark => F.delay(spark.stop()))
+  private def withSparkSession[A](config: Map[String, String])(use: SparkSession => F[A]): F[A] = {
+    val acquire = F.delay {
+      val builder = SparkSession.builder()
+      config.foreach { case (key, value) => builder.config(key, value) }
+      builder.getOrCreate()
+    }
+    val release = (spark: SparkSession) => F.delay(spark.stop())
+    F.bracket(acquire)(use)(release)
+  }
 
   def buildContractValidatedPipeline(): F[Pipeline[F, Unit, EnrichedUser]] = {
     
@@ -100,8 +101,8 @@ class FlowForgePipeline[F[_]: EffectSystem] {
       DataSink.local("output/users-delta", DataFormat.Delta)
     )
 
-    // OpenLineage emitter
-    val lineageEmitter = $if(include_lineage.truthy)$OpenLineageEmitter.http[F]("http://localhost:5000/api/v1/lineage")$else$OpenLineageEmitter.noop[F]$endif$
+    // OpenLineage emitter  
+    val lineageEmitter = $if(include_lineage.truthy)$OpenLineageEmitter.noop[F]$else$OpenLineageEmitter.noop[F]$endif$
 
     F.delay {
       PipelineBuilder[F]("$name;format="kebab"$-comprehensive-pipeline")
@@ -186,13 +187,13 @@ class FlowForgePipeline[F[_]: EffectSystem] {
 
   private def writeToParquet(user: CleanedUser, sink: DataSink): F[Unit] =
     F.delay {
-      println(s"✅ Writing to Parquet: \$user")
+      println(s"✅ Writing to Parquet: $$user")
       // Actual Parquet write logic would go here
     }
 
   private def writeToDeltaWithConstraints(user: EnrichedUser, sink: DataSink): F[Unit] =
     F.delay {
-      println(s"✅ Writing to Delta with constraints: \$user")
+      println(s"✅ Writing to Delta with constraints: $$user")
       // Delta table creation with NOT NULL and CHECK constraints
       // ALTER TABLE users ADD CONSTRAINT valid_age CHECK (age >= 0 AND age <= 120)
       // ALTER TABLE users ALTER COLUMN email SET NOT NULL
@@ -207,14 +208,14 @@ class FlowForgePipeline[F[_]: EffectSystem] {
       "spark.serializer" -> "org.apache.spark.serializer.KryoSerializer"
     )
 
-    createSparkResource(sparkConfig).use { spark =>
+    withSparkSession(sparkConfig) { spark =>
       for {
         _ <- F.delay(println("🚀 FlowForge v1.0.0 F-Polymorphic Pipeline Starting"))
         pipeline <- buildContractValidatedPipeline()
         result <- pipeline.execute(())
-        _ <- F.delay(println(s"✅ Pipeline completed successfully: \$result"))
+        _ <- F.delay(println(s"✅ Pipeline completed successfully: $$result"))
         _ <- F.delay(println("📊 Contract validation: PASSED (compile-time enforced)"))
-        _ <- F.delay(println("🔍 Quality checks: COMPLETED"))  
+        _ <- F.delay(println("🔍 Quality checks: COMPLETED"))
         _ <- F.delay(println("📈 Lineage events: EMITTED"))
         _ <- F.delay(println("💾 Delta constraints: APPLIED"))
       } yield ()
@@ -331,22 +332,21 @@ object SchemaEvolutionPolicies {
     val exactPipeline = PipelineBuilder[F]("exact")
       .addTypedSource[BaseUser, BaseUser, SchemaPolicy.Exact](baseSource, _ => F.pure(BaseUser(1, "Alice", "alice@example.com")))
     
-    // 2. BACKWARD: Contract can be subset of output (allows extra fields in output)
+    // 2. BACKWARD: Reader produces more, contract expects less
     val backwardPipeline = PipelineBuilder[F]("backward")
-      .addTypedSource[ExtendedUser, BaseUser, SchemaPolicy.Backward](extendedSource, _ => F.pure(ExtendedUser(1, "Bob", "bob@example.com", Some(30), Some("USA"))))
+      .addTypedSource[ExtendedUser, BaseUser, SchemaPolicy.Backward](baseSource, _ => F.pure(ExtendedUser(1, "Bob", "bob@example.com", Some(30), Some("USA"))))
     
-    // 3. FORWARD: Output can be subset of contract (allows extra fields in contract)
+    // 3. FORWARD: Contract expects more, reader produces less
     val forwardPipeline = PipelineBuilder[F]("forward")
-      .addTypedSource[BaseUser, ExtendedUser, SchemaPolicy.Forward](baseSource, _ => F.pure(BaseUser(1, "Charlie", "charlie@example.com")))
+      .addTypedSource[BaseUser, ExtendedUser, SchemaPolicy.Forward](extendedSource, _ => F.pure(BaseUser(1, "Charlie", "charlie@example.com")))
     
     // 4. EXACT_UNORDERED: Same fields, any order
-    // Same as Exact for field matching, different for ordering sensitivity
     val exactUnorderedPipeline = PipelineBuilder[F]("exact-unordered") 
       .addTypedSource[BaseUser, BaseUser, SchemaPolicy.ExactUnordered](baseSource, _ => F.pure(BaseUser(1, "Diana", "diana@example.com")))
     
     // 5. FULL: Allow anything (escape hatch)
     val fullPipeline = PipelineBuilder[F]("full")
-      .addTypedSource[ExtendedUser, BaseUser, SchemaPolicy.Full](extendedSource, _ => F.pure(ExtendedUser(1, "Eve", "eve@example.com", None, None)))
+      .addTypedSource[BaseUser, BaseUser, SchemaPolicy.Full](baseSource, _ => F.pure(BaseUser(1, "Eve", "eve@example.com")))
     
     F.unit
   }

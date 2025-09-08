@@ -21,7 +21,7 @@ case class Pipeline[F[_], A, B](
   metadata: PipelineMetadata = PipelineMetadata(),
   executionPlan: Option[ExecutionPlan] = None,
   runId: Option[String] = None,
-  lineageEmitter: Option[com.flowforge.lineage.OpenLineageEmitter[F]] = None,
+  lineageEmitter: Option[com.flowforge.core.lineage.OpenLineageEmitter[F]] = None,
 )(implicit F: EffectSystem[F]) {
 
   /**

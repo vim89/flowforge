@@ -3,6 +3,7 @@ package com.flowforge.core
 import cats.data.Kleisli
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
+import com.flowforge.core.lineage.OpenLineageEmitter
 import com.flowforge.core.types.BuilderState.{ WithContract, WithTransform }
 import com.flowforge.core.types.{
   BuilderState,
@@ -16,7 +17,6 @@ import com.flowforge.core.types.{
   TypedSink,
   TypedSource,
 }
-import com.flowforge.lineage.OpenLineageEmitter
 
 /**
  * 100% Compile-time Contract-aware Pipeline builder
@@ -147,7 +147,6 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
   def build(
   )(implicit
     complete: S <:< BuilderState.Complete,
-    sync: cats.effect.Sync[F],
   ): Pipeline[F, In, Out] = {
 
     // Per v1.0 plan: "wire OpenLineageEmitter.emitJobStart/Complete/Fail per stage and for the pipeline"
