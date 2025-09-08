@@ -26,6 +26,7 @@
 - CLIs: `sbt validation-cli/run` and `sbt contracts-extractor-cli/run`.
 
 ## Coding Style & Naming Conventions
+>**This is critical for Claude code review CI job as well**
 
 - Scala 2.13; idiomatic FP: immutability, pure functions, explicit effects, use for-comprehensions, Monads instead of
   try-catch-finally,
