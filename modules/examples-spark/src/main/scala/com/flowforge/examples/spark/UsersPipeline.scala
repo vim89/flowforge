@@ -133,22 +133,33 @@ object UsersPipeline {
       _ <- saveResults(finalDataset)
     } yield ()
 
-  private def generateSampleData(spark: SparkSession): IO[DataFrame] =
+  private def generateSampleData(spark: SparkSession): IO[DataFrame] = {
+    import spark.implicits._ // Provides implicit Encoder[RawUser]
+
     IO.delay {
-      // Load from CSV fixture as required by v10-3.md plan
-      val fixtureResource = getClass.getResource("/fixtures/raw-users.csv")
+      // Load from CSV fixture as required by v10-4.md plan
+      val fixtureResource = this.getClass.getResource("/fixtures/raw-users.csv")
       if (fixtureResource == null) {
         throw new RuntimeException("Fixture not found: /fixtures/raw-users.csv")
       }
 
       println(s"📁 Loading fixture from: ${fixtureResource.getPath}")
 
-      // Read CSV with explicit schema for type safety
-      spark.read
+      // Read CSV and convert to typed Dataset[RawUser] (v10-4.md requirement: explicit .as[T] with Encoder[T])
+      val rawDataFrame = spark.read
         .option("header", "true")
         .option("inferSchema", "true")
         .csv(fixtureResource.getPath)
+
+      // Convert to typed Dataset with explicit .as[RawUser] - requires implicit Encoder[RawUser]
+      val typedDataset = rawDataFrame.as[RawUser]
+
+      println(s"✅ Loaded ${typedDataset.count()} records as typed Dataset[RawUser] with Encoder")
+
+      // Convert back to DataFrame for compatibility with existing pipeline
+      typedDataset.toDF()
     }
+  }
 
   /**
    * Data cleaning transformation with proper error handling

@@ -1,18 +1,36 @@
 # FlowForge Data Quality Integration
 
-FlowForge takes a **composition over invention** approach to data quality - integrating with proven libraries like Deequ rather than building from scratch.
+FlowForge v1.0 uses **native Spark checks as the default** for data quality validation, with optional Deequ integration for advanced use cases.
 
-## Philosophy: Compose, Don't Re-invent
+## Default: Native Spark Checks
 
-**Why not build our own DQ engine?**
-- Engines + proven libraries enforce at runtime better than custom solutions
-- Deequ (Amazon) has years of production hardening at scale  
-- Delta/Iceberg constraints provide table-level enforcement
-- FlowForge adds the missing piece: **compile-time contract validation**
+FlowForge v1.0 ships with built-in data quality validation using native Spark operations:
 
-## Integration with FlowForge Contracts
+- ✅ **Zero dependencies**: No external libraries required
+- ✅ **Fast performance**: Leverages Spark's native optimizations  
+- ✅ **Core constraints**: NotNull, Unique, Range, Pattern, Custom SQL compliance
+- ✅ **Direct integration**: Works seamlessly with FlowForge contracts
 
-See `modules/quality-deequ/src/main/scala/com/flowforge/quality/deequ/ContractToDeltaExample.scala` for a complete implementation example showing contract → Deequ → Delta constraint mapping.
+**Native checks cover 80%** of production data quality needs without additional complexity.
+
+## Optional: Deequ Enhancement
+
+For advanced data quality scenarios, FlowForge supports **Amazon Deequ** as an optional enhancement:
+
+- 📊 **Statistical profiling**: Data distribution analysis and anomaly detection
+- 🏭 **Production-tested**: Battle-hardened at Amazon scale
+- 🔄 **Historical comparison**: Constraint suggestion based on data profiling
+- 📈 **Rich metadata**: Detailed constraint evaluation insights
+
+**Coordinates**: `com.amazon.deequ:deequ:2.0.11-spark-3.5`
+
+See [`/docs/operating/using-deequ.md`](../operating/using-deequ.md) for setup instructions.
+
+## FlowForge's Unique Value
+
+FlowForge adds the missing piece that neither native Spark nor Deequ provide alone: **compile-time contract validation**.
+
+While Spark and Deequ catch data quality issues at runtime, FlowForge prevents schema drift and contract violations at build time.
 
 ---
 

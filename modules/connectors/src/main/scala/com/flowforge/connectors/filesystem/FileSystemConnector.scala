@@ -1110,7 +1110,7 @@ object FileSystemConnector {
   ): GCSConnector[F] =
     new GCSConnector[F](projectId, serviceAccountPath, configuration)
 
-  // def s3[...] removed in GCS-only build
+  // S3 connector methods removed - this build focuses on GCS functionality
 }
 
 /**
