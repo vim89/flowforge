@@ -1,7 +1,6 @@
 package com.flowforge.quality.deequ
 
 import cats.effect.IO
-import cats.effect.unsafe.implicits.global
 import com.flowforge.core.PipelineBuilder
 import com.flowforge.core.contracts.SchemaPolicy
 import com.flowforge.core.contracts.derive.Shape
@@ -9,7 +8,6 @@ import com.flowforge.core.instances.EffectInstances._
 import com.flowforge.core.types.TypedIO._
 import com.flowforge.core.types._
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types._
 
 /**
  * Example showing how contract rules map to both Deequ checks AND Delta constraints.
@@ -67,7 +65,7 @@ object ContractToDeltaExample {
       }
       .addTypedSink[User, SchemaPolicy.Exact](
         localParquetSink[User]("/tmp/processed_users.parquet"),
-        (user, sink) =>
+        (user, _) =>
           // This is where we'd normally write, but for demo we'll show the DQ mapping
           demonstrateQualityMappings(spark, user),
       )

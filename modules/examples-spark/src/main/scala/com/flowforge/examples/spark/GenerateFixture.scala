@@ -1,7 +1,6 @@
 package com.flowforge.examples.spark
 
 import org.apache.spark.sql.SparkSession
-import java.nio.file.Paths
 
 /**
  * Generate tiny Parquet fixture for UsersPipeline example. This creates a small sample dataset that can be

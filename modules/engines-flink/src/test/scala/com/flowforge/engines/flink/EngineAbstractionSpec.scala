@@ -1,7 +1,7 @@
 package com.flowforge.engines.flink
 
-import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 /**
  * Shared algebra test that proves both Spark and Flink engines can use the same domain transforms.

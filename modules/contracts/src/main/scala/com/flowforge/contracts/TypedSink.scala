@@ -1,7 +1,7 @@
 package com.flowforge.contracts
 
-import com.flowforge.core.types.{ DataFormat, DataSink }
 import com.flowforge.core.contracts.derive.Shape
+import com.flowforge.core.types.{ DataFormat, DataSink }
 
 /**
  * A TypedSink represents a data sink with compile-time schema information. The phantom type R encodes the

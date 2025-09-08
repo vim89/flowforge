@@ -1,11 +1,11 @@
 package com.flowforge.examples.spark
 
+import cats.effect.testing.scalatest.AsyncIOSpec
 import cats.effect.{ IO, Resource }
 import com.flowforge.examples.spark.UsersPipeline.EnrichedUser
 import org.apache.spark.sql.{ DataFrame, SparkSession }
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
-import cats.effect.testing.scalatest.AsyncIOSpec
 
 import java.nio.file.Files
 import scala.util.Try

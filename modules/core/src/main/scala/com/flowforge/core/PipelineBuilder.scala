@@ -3,7 +3,6 @@ package com.flowforge.core
 import cats.data.Kleisli
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
-import com.flowforge.lineage.OpenLineageEmitter
 import com.flowforge.core.types.{
   BuilderState,
   DataFormat,
@@ -19,6 +18,7 @@ import com.flowforge.core.types.{
   TypedSink,
   TypedSource,
 }
+import com.flowforge.lineage.OpenLineageEmitter
 
 /**
  * 100% Compile-Time Contract-Aware Pipeline Builder

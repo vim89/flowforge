@@ -1,7 +1,8 @@
 package com.flowforge.core.contracts
 
-import scala.annotation.implicitNotFound
 import com.flowforge.core.contracts.derive.Shape
+
+import scala.annotation.implicitNotFound
 
 @implicitNotFound("""
 FlowForge: Contract drift (policy: ${P})

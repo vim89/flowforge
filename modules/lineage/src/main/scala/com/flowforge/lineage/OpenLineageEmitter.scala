@@ -1,6 +1,4 @@
 package com.flowforge.lineage
-
-import cats.effect.IO
 import cats.implicits._
 
 import java.time.Instant
@@ -43,7 +41,7 @@ class HttpOpenLineageEmitter[F[_]: cats.effect.Sync] extends OpenLineageEmitter[
 
   // Configuration from environment variables (zero-config approach)
   private val openLineageUrl = sys.env.getOrElse("OPENLINEAGE_URL", "http://localhost:5000/api/v1/lineage")
-  private val namespace      = sys.env.getOrElse("OPENLINEAGE_NAMESPACE", "flowforge")
+  sys.env.getOrElse("OPENLINEAGE_NAMESPACE", "flowforge")
 
   def emitJobStart(
     namespace: String,

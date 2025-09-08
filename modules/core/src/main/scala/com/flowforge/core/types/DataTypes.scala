@@ -65,6 +65,7 @@ package com.flowforge.core.types
 
 import cats.Show
 import cats.syntax.show._
+import com.flowforge.core.contracts.derive.Shape
 import com.flowforge.core.types.DataSink.WriteMode
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.collection.NonEmpty
@@ -72,7 +73,6 @@ import eu.timepit.refined.numeric.{ NonNegative, Positive }
 import eu.timepit.refined.string.MatchesRegex
 
 import java.time.Instant
-import com.flowforge.core.contracts.derive.Shape
 
 // ===============================
 // REFINED TYPE ALIASES

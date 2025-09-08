@@ -1,7 +1,7 @@
 package com.flowforge.contracts
 
-import com.flowforge.core.types.{ DataFormat, DataSource }
 import com.flowforge.core.contracts.derive.Shape
+import com.flowforge.core.types.{ DataFormat, DataSource }
 
 /**
  * A TypedSource represents a data source with compile-time schema information. The phantom type C encodes the

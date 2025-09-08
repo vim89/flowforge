@@ -1,9 +1,9 @@
 package com.flowforge.engines.flink
 
-import org.apache.flink.streaming.api.scala._
-import org.apache.flink.streaming.api.functions.ProcessFunction
-import org.apache.flink.util.Collector
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.streaming.api.functions.ProcessFunction
+import org.apache.flink.streaming.api.scala._
+import org.apache.flink.util.Collector
 
 /**
  * Minimal Flink runner demo proving "same business logic, different runner".

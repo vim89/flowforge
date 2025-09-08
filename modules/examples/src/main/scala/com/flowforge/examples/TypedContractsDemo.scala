@@ -3,10 +3,10 @@ package com.flowforge.examples
 import cats.effect.{ IO, IOApp }
 import com.flowforge.core.PipelineBuilder
 import com.flowforge.core.contracts.SchemaPolicy
+import com.flowforge.core.contracts.derive.Shape
 import com.flowforge.core.instances.EffectInstances._
 import com.flowforge.core.types.TypedIO._
 import com.flowforge.core.types._
-import com.flowforge.core.contracts.derive.Shape
 
 /**
  * CANONICAL TYPED CONTRACTS DEMO

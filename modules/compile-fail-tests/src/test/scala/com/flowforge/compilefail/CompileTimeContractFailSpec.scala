@@ -4,10 +4,9 @@ import cats.effect.IO
 import com.flowforge.core.PipelineBuilder
 import com.flowforge.core.contracts.SchemaPolicy
 import com.flowforge.core.instances.EffectInstances._
-import com.flowforge.core.types._
 import com.flowforge.core.types.TypedIO._
-import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 /**
  * Compile-fail tests: 3 required tests

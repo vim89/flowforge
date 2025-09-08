@@ -1,7 +1,7 @@
 package com.flowforge.core
 
-import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
 import com.flowforge.core.contracts.derive.Shape
+import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
 import org.scalatest.wordspec.AnyWordSpec
 
 class PolicyValidationTest extends AnyWordSpec {

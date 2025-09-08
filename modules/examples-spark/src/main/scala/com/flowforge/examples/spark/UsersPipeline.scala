@@ -2,14 +2,15 @@ package com.flowforge.examples.spark
 
 import cats.effect.{ IO, Resource }
 import com.flowforge.core.algebra.DataAlgebra.{ DatasetMetadata, QualityResult }
-import com.flowforge.core.types.{ DataSchema, QualityConstraint => FFConstraint, StructField }
 import com.flowforge.core.types.RefinedTypes.{ FieldName, SchemaVersion }
-import java.time.Instant
+import com.flowforge.core.types.{ DataSchema, QualityConstraint => FFConstraint, StructField }
 import com.flowforge.engines.spark.ProductionSparkDataset
 import com.flowforge.quality.deequ.DeequAdapter
-import org.apache.spark.sql.{ DataFrame, SparkSession }
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.{ DataFrame, SparkSession }
+
+import java.time.Instant
 
 /**
  * Polished end-to-end Spark pipeline example demonstrating FlowForge v1.0 capabilities.

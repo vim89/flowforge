@@ -1,6 +1,7 @@
 package com.flowforge.core.contracts.derive
 
 import magnolia1._
+
 import scala.language.experimental.macros
 
 /**
