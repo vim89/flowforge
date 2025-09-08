@@ -3,15 +3,13 @@ package com.flowforge.core
 import cats.data.Kleisli
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
+import com.flowforge.core.types.BuilderState.{ WithContract, WithTransform }
 import com.flowforge.core.types.{
   BuilderState,
   DataFormat,
   DataSink,
   DataSource,
   Environment,
-  HasContract,
-  HasSource,
-  HasTransform,
   Pipeline,
   PipelineConfig,
   PipelineStage,
@@ -58,14 +56,14 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
     source: TypedSource[R],
     reader: DataSource => F[C],
   )(implicit ev: SchemaConforms[C, R, P],
-  ): PipelineBuilder[HasSource with HasContract, F, Unit, C] = {
+  ): PipelineBuilder[WithContract, F, Unit, C] = {
     val stage = PipelineStage.Source[F, C](
       name = s"contract-source-${stages.size}",
       description = s"Contract-aware source with compile-time validation",
       dataSource = source.underlying,
       execute = Kleisli(_ => reader(source.underlying)),
     )
-    PipelineBuilder[HasSource with HasContract, F, Unit, C](
+    PipelineBuilder[WithContract, F, Unit, C](
       name,
       description,
       stages :+ stage,
@@ -81,14 +79,14 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
   def addTransform[C](
     transform: Out => F[C],
   )(implicit
-    evidence: S <:< (HasSource with HasContract),
-  ): PipelineBuilder[HasSource with HasContract with HasTransform, F, In, C] = {
+    evidence: S <:< WithContract,
+  ): PipelineBuilder[WithTransform, F, In, C] = {
     val stage = PipelineStage.Transform[F, Out, C](
       name = s"contract-transform-${stages.size}",
       description = "Contract-aware transformation",
       execute = Kleisli(transform),
     )
-    PipelineBuilder[HasSource with HasContract with HasTransform, F, In, C](
+    PipelineBuilder[WithTransform, F, In, C](
       name,
       description,
       stages :+ stage,
@@ -105,8 +103,8 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
    * @param A
    * @return
    */
-  def noTransform(implicit evSC: S <:< (HasSource with HasContract), A: cats.Applicative[F])
-    : PipelineBuilder[HasSource with HasContract with HasTransform, F, In, Out] =
+  def noTransform(implicit evSC: S <:< WithContract, A: cats.Applicative[F])
+    : PipelineBuilder[WithTransform, F, In, Out] =
     addTransform((o: Out) => A.pure(o))
 
   /**
@@ -120,7 +118,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
     sink: TypedSink[R],
     writer: (Out, DataSink) => F[Unit],
   )(implicit
-    transformComplete: S <:< (HasSource with HasContract with HasTransform),
+    transformComplete: S <:< WithTransform,
     ev: SchemaConforms[Out, R, P],
   ): PipelineBuilder[BuilderState.Complete, F, In, Out] = {
     val stage = PipelineStage.Sink[F, Out](

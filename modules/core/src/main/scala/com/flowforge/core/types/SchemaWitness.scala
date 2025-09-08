@@ -24,7 +24,7 @@ import scala.annotation.implicitNotFound
  */
 @implicitNotFound("""
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║                     🚨 FlowForge Contract Drift Detected! 🚨                ║
+║                     🚨 FlowForge Contract Drift Detected! 🚨                 ║
 ║                                                                              ║
 ║  Pipeline output type '${PipelineOut}' does not match contract '${Contract}' ║
 ║  under evolution policy '${Policy}'.                                         ║
