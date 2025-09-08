@@ -21,7 +21,7 @@ import com.flowforge.core.types.{
 import com.flowforge.lineage.OpenLineageEmitter
 
 /**
- * 100% Compile-Time Contract-Aware Pipeline Builder
+ * 100% Compile-time Contract-aware Pipeline builder
  *
  * Implements the complete specification from compile-time contract documents:
  *   - Phantom types ensure all required stages present before build
@@ -29,7 +29,7 @@ import com.flowforge.lineage.OpenLineageEmitter
  *   - SchemaConforms evidence required for all typed endpoints
  *   - Incomplete pipelines are literally unbuildable (won't compile)
  *
- * USP: "Pipelines will not even build if source or target schema do not match or align"
+ * "Pipelines will not even build if source or target schema do not match or align"
  */
 case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] private (
   name: String,

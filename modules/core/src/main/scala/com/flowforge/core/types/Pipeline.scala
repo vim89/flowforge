@@ -1,12 +1,13 @@
 package com.flowforge.core.types
 
-import cats.data.{ Kleisli, NonEmptyList, ValidatedNel }
-import cats.implicits.{ catsSyntaxTuple2Semigroupal, catsSyntaxValidatedId }
+import cats.data.{ Kleisli, NonEmptyList, Validated, ValidatedNel }
+import cats.implicits.catsSyntaxTuple2Semigroupal
 import com.flowforge.core.algebra.EffectSystem
 
 import java.time.Instant
 import java.util.UUID
 import scala.concurrent.duration.FiniteDuration
+import scala.util.Try
 
 /**
  * Complete pipeline definition with metadata and configuration.
@@ -234,20 +235,12 @@ case class Pipeline[F[_], A, B](
    * Runtime validation of stage chain type compatibility FIXED: Safer validation without unsafe casting
    */
   def runtimeValidateStageChain(): Either[String, Unit] =
-    if (stages.isEmpty) {
-      Left("Pipeline cannot be empty")
-    } else if (stages.size == 1) {
-      Right(())
-    } else {
-      // Validate that we can safely compose stages
-      // This is a best-effort validation before actual execution
-      try {
-        val _ = composeStagesTypeSafe(stages)
-        Right(())
-      } catch {
-        case e: Exception => Left(s"Pipeline validation failed: ${e.getMessage}")
-      }
-    }
+    if (stages.isEmpty) Left("Pipeline cannot be empty")
+    else if (stages.size == 1) Right(())
+    else
+      Try { composeStagesTypeSafe(stages); () }.toEither.left.map(e =>
+        s"Pipeline validation failed: ${e.getMessage}",
+      )
 
   /**
    * Add a new stage to the pipeline FIXED: Type-safe stage addition with proper type witness
@@ -282,19 +275,14 @@ case class Pipeline[F[_], A, B](
   /**
    * Validate the pipeline configuration
    */
-  def validate: ValidatedNel[PipelineError, Unit] = {
-    val stageValidation  = validateStages()
-    val configValidation = validateConfig()
-
-    (stageValidation, configValidation).mapN((_, _) => ())
-  }
+  def validate: ValidatedNel[PipelineError, Unit] = (validateStages(), validateConfig()).mapN((_, _) => ())
 
   private def validateStages(): ValidatedNel[PipelineError, Unit] =
-    if (stages.isEmpty) {
-      PipelineError.EmptyPipeline(name).invalidNel
-    } else {
-      ().validNel
-    }
+    Validated.condNel(
+      stages.nonEmpty,
+      (),
+      PipelineError.EmptyPipeline(name),
+    )
 
   private def validateConfig(): ValidatedNel[PipelineError, Unit] =
     config.validate.leftMap(errors =>
