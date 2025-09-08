@@ -98,6 +98,19 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
   }
 
   /**
+   * For noTransform we can use identity transform.
+   * By our design - builder only permits transforms once source and contract are in place.
+   * This is the classic phantom-type/typestate builder pattern: the compiler forces the steps
+   * Same preconditions, zero logic, keeps the types.
+   * @param evSC
+   * @param A
+   * @return
+   */
+  def noTransform(implicit evSC: S <:< (HasSource with HasContract), A: cats.Applicative[F]): PipelineBuilder[HasSource with HasContract with HasTransform, F, In, Out] =
+    addTransform((o: Out) => A.pure(o))
+
+
+  /**
    * Add typed sink with explicit contract and policy. This is the ONLY way to add sinks - no untyped escape
    * hatches.
    *

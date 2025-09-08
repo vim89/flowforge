@@ -1,8 +1,8 @@
-# $name$ - FlowForge v1.0.0 Data Pipeline
+# $name$ - flowforge v1.0.0 Data pipeline
 
-Generated from FlowForge template with **F-polymorphic effects** and **compile-time contracts**.
+Generated from flowforge template with **F-polymorphic effects** and **compile-time contracts**.
 
-## 🚀 Quick Start (< 2 minutes)
+## 🚀 Quick start (< 2 minutes)
 
 ```bash
 # 1. Compile (this validates all contracts at compile-time!)
@@ -14,35 +14,35 @@ sbt "runMain $organization$.$name;format="word"$.UsersPipelineApp"
 
 **Expected Output:**
 ```
-🚀 FlowForge v1.0.0 F-Polymorphic Pipeline Starting
-✅ Writing to Parquet: CleanedUser(1,alice johnson,alice@example.com,28,USA,true)
+🚀 flowforge v1.0.0 F-Polymorphic pipeline starting
+✅ Writing to parquet: CleanedUser(1,alice johnson,alice@example.com,28,USA,true)
 ✅ Writing to Delta with constraints: EnrichedUser(1,alice johnson,alice@example.com,28,USA,true,middle,North America)
-✅ Pipeline completed successfully: EnrichedUser(...)
+✅ Pipeline completed successfully: EnrichedUser
 📊 Contract validation: PASSED (compile-time enforced)
 🔍 Quality checks: COMPLETED  
 📈 Lineage events: EMITTED
 💾 Delta constraints: APPLIED
 ```
 
-## ✨ What This Template Demonstrates
+## ✨ What this template demonstrates
 
-### 🔒 **Compile-Time Contracts (FlowForge's Core USP)**
+### 🔒 **Compile-time contracts (flowforge's core philosophy)**
 - Pipelines **literally won't compile** if schemas don't match
 - Zero runtime contract failures - all validation at build time
 - 5 schema evolution policies: `Exact`, `ExactUnordered`, `Backward`, `Forward`, `Full`
 
-### ⚡ **F-Polymorphic Effects**
+### ⚡ **F-polymorphic effects**
 - Works with **any effect system** (`IO`, `ZIO`, `Future`, etc.)
 - Clean separation: pure transformations + effectful I/O
 - Resource-safe operations with automatic cleanup
 
-### 🔄 **Complete Data Journey**
+### 🔄 **Complete data journey**
 - **CSV → Parquet → Delta** with full type safety
 - Runtime quality checks + Delta table constraints
 - Automatic lineage emission with OpenLineage
 - Production-ready error handling
 
-## 📋 Generated Configuration
+## 📋 Generated configuration
 
 - **Effect System**: $effect_system$ (F-polymorphic with Cats Effect instance)
 - **Execution Engine**: $execution_engine$ (Spark 3.5.6)  
@@ -50,9 +50,9 @@ sbt "runMain $organization$.$name;format="word"$.UsersPipelineApp"
 - **Quality Checks**: $if(include_dq.truthy)$✅ Deequ integration enabled$else$Native Spark checks only$endif$
 - **Lineage**: $if(include_lineage.truthy)$✅ OpenLineage events enabled$else$Noop lineage emitter$endif$
 
-## 🧪 Testing Contract Validation
+## 🧪 Testing contract validation
 
-### See Compile-Time Failures in Action
+### See compile-time failures in action
 
 Open `src/main/scala/ContractDemos.scala` and **uncomment the failure examples**:
 
@@ -73,7 +73,7 @@ Out: IncompleteUser vs Contract: RawUser
 Missing: email, age, country, isActive
 ```
 
-### Try All 5 Schema Policies
+### Try all 5 schema policies
 
 ```scala
 // 1. EXACT: Perfect match required
@@ -109,23 +109,23 @@ data/                       # Sample input data
 output/                     # Pipeline output directory
 ```
 
-### File Organization (Following CLAUDE.md Guidelines)
+### File organization
 
 - **Domain models** at top of files with their Shape derivations
 - **Related types grouped** when justified (e.g., all User variants)  
 - **One primary class per file** for navigation efficiency
 - **Companions live together** with main types
 
-## 🔍 Deep Dive: How It Works
+## 🔍 Deep dive: How it works
 
-### Contract Enforcement Flow
+### Contract enforcement flow
 
-1. **Compile Time**: Magnolia derives field metadata for all case classes
-2. **Type Checking**: `SchemaConforms[Out, Contract, Policy]` validates compatibility  
-3. **Build Time**: Invalid pipelines fail to compile with clear error messages
+1. **Compile time**: Magnolia derives field metadata for all case classes
+2. **Type checking**: `SchemaConforms[Out, Contract, Policy]` validates compatibility  
+3. **Build time**: Invalid pipelines fail to compile with clear error messages
 4. **Runtime**: Only valid, contract-compliant pipelines execute
 
-### Effect Polymorphism
+### Effect polymorphism
 
 ```scala
 // Generic over any effect type F[_]
@@ -141,7 +141,7 @@ val ioInstance = new FlowForgePipeline[cats.effect.IO]()
 val zioInstance = new FlowForgePipeline[zio.ZIO[Any, Throwable, *]]()
 ```
 
-### Schema Evolution Example
+### Schema evolution or Transformation example
 
 ```scala
 // Version 1: Original contract
@@ -155,9 +155,9 @@ val pipeline = PipelineBuilder[F]("evolution")
   .addTypedSource[UserV2, UserV1, SchemaPolicy.Backward](v2Source, reader)
 ```
 
-## 🚀 Production Deployment
+## 🚀 Production deployment
 
-### Environment Configuration
+### Environment configuration
 
 ```bash
 # OpenLineage (optional)
@@ -171,10 +171,10 @@ export SPARK_CONF="spark.master=yarn,spark.sql.adaptive.enabled=true"
 export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
 ```
 
-### Docker Deployment
+### Docker deployment
 
 ```dockerfile
-FROM openjdk:11-jre-slim
+FROM openjdk:21-jre-slim
 
 COPY target/scala-2.13/$name$-assembly-*.jar app.jar
 COPY data/ /app/data/
@@ -182,7 +182,7 @@ COPY data/ /app/data/
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
-### Quality Gates Integration
+### Quality gates integration
 
 The pipeline includes built-in quality gates:
 
@@ -194,9 +194,9 @@ sbt assembly      # ✅ Fat JAR with all dependencies
 ./deploy.sh       # ✅ Deploy to production
 ```
 
-## 🔧 Advanced Usage
+## 🔧 Advanced usage
 
-### Custom Effect Systems
+### Custom effect systems
 
 ```scala
 // Bring your own effect system
@@ -206,7 +206,7 @@ import com.flowforge.core.instances.ZIOEffectInstance._
 val zioVersionPipeline = new FlowForgePipeline[ZIO[Any, Throwable, *]]()
 ```
 
-### Multi-Cloud Storage
+### Multi-cloud storage
 
 ```scala
 // Same pipeline, different storage
@@ -219,7 +219,7 @@ val s3Sink = TypedSink[EnrichedUser](
 )
 ```
 
-### Custom Quality Rules
+### Custom quality rules
 
 ```scala
 // Add domain-specific quality checks
@@ -229,23 +229,23 @@ val s3Sink = TypedSink[EnrichedUser](
 }
 ```
 
-## 🏃‍♂️ Next Steps
+## 🏃‍♂️ Next steps
 
-1. **Explore Contract Failures**: Uncomment examples in `ContractDemos.scala`
-2. **Add Your Data**: Replace sample data with your actual datasets
-3. **Extend Transformations**: Add business logic to the pipeline stages
-4. **Production Setup**: Configure cloud storage and lineage endpoints
-5. **Quality Rules**: Add domain-specific validation logic
+1. **Explore contract failures**: Uncomment examples in `ContractDemos.scala`
+2. **Add your data**: Replace sample data with your actual datasets
+3. **Extend transformations**: Add business logic to the pipeline stages
+4. **Production setup**: Configure cloud storage and lineage endpoints
+5. **Quality rules**: Add domain-specific validation logic
 
-## 💡 Why FlowForge?
+## 💡 Why flowforge?
 
-| Problem | Traditional Approach | FlowForge Solution |
-|---------|---------------------|-------------------|
-| Schema drift breaks production | Runtime failures, data corruption | **Compile-time prevention** |  
-| Effect system lock-in | Committed to IO/ZIO/Future | **F-polymorphic flexibility** |
+| Problem | Traditional approach              | flowforge solution               |
+|---------|-----------------------------------|----------------------------------|
+| Schema drift breaks production | Runtime failures, data corruption | **Compile-time prevention**      |  
+| Effect system lock-in | Committed to IO/ZIO/Future        | **F-polymorphic flexibility**    |
 | Complex quality testing | Manual validation, runtime checks | **Automatic contract + quality** |
-| No lineage visibility | Custom instrumentation needed | **Built-in OpenLineage** |
-| Framework coupling | Tied to Spark/Flink specifics | **Engine-agnostic transforms** |
+| No lineage visibility | Custom instrumentation needed     | **Built-in OpenLineage**         |
+| Framework coupling | Tied to Spark/Flink specifics     | **Engine-agnostic transforms**   |
 
 ## 📚 Learn More
 
@@ -256,4 +256,4 @@ val s3Sink = TypedSink[EnrichedUser](
 
 ---
 
-**🎯 Remember**: With FlowForge, if it compiles, your contracts are valid. No surprises in production!
+**🎯 Remember**: With flowforge, if it compiles, your contracts are valid. No surprises in production!

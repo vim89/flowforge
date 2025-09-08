@@ -149,6 +149,13 @@ object Dependencies {
       "io.delta"         %% "delta-spark"    % Versions.delta,
     )
 
+    val sparkCompile = Seq(
+      "org.apache.spark" %% "spark-core"     % Versions.spark,
+      "org.apache.spark" %% "spark-sql"      % Versions.spark,
+      "org.apache.spark" %% "spark-catalyst" % Versions.spark,
+      "io.delta"         %% "delta-spark"    % Versions.delta,
+    )
+
     val flink = Seq(
       // NOTE: Flink Scala API only available for 2.12, documented constraint
       "org.apache.flink" % "flink-scala_2.12"           % Versions.flink % "provided",
@@ -256,11 +263,11 @@ object Dependencies {
       )
     case "lineage" => common
     case "examples" =>
-      common ++ Engines.spark ++ Seq(
+      common ++ Engines.sparkCompile ++ Seq(
         "io.delta" %% "delta-spark" % Versions.delta,
       )
     case "examples-spark" =>
-      common ++ Engines.spark ++ Seq(
+      common ++ Engines.sparkCompile ++ Seq(
         "io.delta" %% "delta-spark" % Versions.delta,
       )
     case _ => common
