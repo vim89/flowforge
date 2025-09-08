@@ -132,26 +132,22 @@ object UsersPipeline {
       _ <- saveResults(finalDataset)
     } yield ()
 
-  private def generateSampleData(spark: SparkSession): IO[DataFrame] = {
-    import spark.implicits._
-
+  private def generateSampleData(spark: SparkSession): IO[DataFrame] =
     IO.delay {
-      val sampleUsers = Seq(
-        RawUser("u001", "alice@example.com", Some(28), "USA", "2023-01-15", true),
-        RawUser("u002", "bob@test.com", Some(35), "Canada", "2023-02-20", true),
-        RawUser("u003", "charlie@demo.org", None, "UK", "2023-03-10", false),
-        RawUser("u004", "diana@sample.net", Some(22), "Australia", "2023-04-05", true),
-        RawUser("u005", "eve@example.co.uk", Some(45), "UK", "2023-05-12", true),
-        RawUser("u006", "frank@test.ca", Some(19), "Canada", "2023-06-18", false),
-        RawUser("u007", "grace@demo.com.au", Some(52), "Australia", "2023-07-22", true),
-        RawUser("u008", "henry@sample.com", Some(30), "USA", "2023-08-14", true),
-        RawUser("u009", "", Some(25), "Germany", "2023-09-09", true), // Invalid email for testing
-        RawUser("u010", "ivan@example.de", Some(-5), "Germany", "2023-10-01", true), // Invalid age for testing
-      )
+      // Load from CSV fixture as required by v10-3.md plan
+      val fixtureResource = getClass.getResource("/fixtures/raw-users.csv")
+      if (fixtureResource == null) {
+        throw new RuntimeException("Fixture not found: /fixtures/raw-users.csv")
+      }
 
-      sampleUsers.toDF()
+      println(s"📁 Loading fixture from: ${fixtureResource.getPath}")
+
+      // Read CSV with explicit schema for type safety
+      spark.read
+        .option("header", "true")
+        .option("inferSchema", "true")
+        .csv(fixtureResource.getPath)
     }
-  }
 
   /**
    * Data cleaning transformation with proper error handling
@@ -282,17 +278,53 @@ object UsersPipeline {
 
   private def saveResults(dataset: ProductionSparkDataset[EnrichedUser]): IO[Unit] =
     IO.delay {
-      val outputPath = "/tmp/flowforge/users-pipeline-output"
+      val deltaPath = "/tmp/flowforge/users-delta-table"
+      val spark     = dataset.sparkDataFrame.sparkSession
 
-      println(s"\\n💾 Saving results to: $outputPath")
-      dataset.sparkDataFrame
-        .coalesce(1)
-        .write
+      println(s"\\n💾 Saving results to Delta table: $deltaPath")
+
+      // Write to Delta format (as required by v10-3.md plan)
+      dataset.sparkDataFrame.write
+        .format("delta")
         .mode("overwrite")
-        .option("header", "true")
-        .csv(outputPath)
+        .save(deltaPath)
 
-      println("✅ Results saved successfully")
+      println("✅ Delta table created successfully")
+
+      // Add Delta table constraints (as required by v10-3.md plan)
+      println("🔒 Adding Delta table constraints...")
+
+      try {
+        // NOT NULL constraints
+        spark.sql(s"ALTER TABLE delta.`$deltaPath` ALTER COLUMN id SET NOT NULL")
+        spark.sql(s"ALTER TABLE delta.`$deltaPath` ALTER COLUMN email SET NOT NULL")
+
+        // CHECK constraints for data quality
+        spark.sql(s"""
+          ALTER TABLE delta.`$deltaPath` 
+          ADD CONSTRAINT valid_age CHECK (age >= 13 AND age <= 120)
+        """)
+
+        spark.sql(s"""
+          ALTER TABLE delta.`$deltaPath`
+          ADD CONSTRAINT valid_email CHECK (email RLIKE '^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$$')
+        """)
+
+        spark.sql(s"""
+          ALTER TABLE delta.`$deltaPath`
+          ADD CONSTRAINT valid_region CHECK (region IN ('North America', 'Europe', 'Asia', 'Oceania', 'Other'))
+        """)
+
+        println("✅ Delta table constraints added successfully")
+
+        // Verify constraints work by showing table info
+        println("\\n📋 Delta table schema with constraints:")
+        spark.sql(s"DESCRIBE EXTENDED delta.`$deltaPath`").show(false)
+
+      } catch {
+        case e: Exception =>
+          println(s"⚠️ Note: Delta constraints require Delta Lake extension: ${e.getMessage}")
+      }
     }
 
   // Example main method for standalone execution

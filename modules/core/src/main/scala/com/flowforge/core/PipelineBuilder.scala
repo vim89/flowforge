@@ -95,8 +95,8 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
    * Add typed sink with explicit contract and policy. This is the ONLY way to add sinks - no untyped escape
    * hatches.
    *
-   * SINK: current Out must conform to declared contract R under policy P Advances phantom state: ... ->
-   * Complete (HasSource with HasContract with HasTransform with HasSink)
+   * SINK: current Out must conform to declared contract R under policy P Advances phantom state: HasTransform
+   * -> Complete (HasSource with HasContract with HasTransform with HasSink)
    */
   def addTypedSink[R, P <: SchemaPolicy](
     sink: TypedSink[R],

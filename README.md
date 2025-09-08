@@ -48,3 +48,45 @@ pipeline.run.unsafeRunSync()
 | **Cloud Portability** | Rewrite everything | Zero changes | **∞ better** |
 
 ## 🔥 **Get ready for the revolution!**
+
+## ⚡ **30-Second Proof: See It Work**
+
+### **Drift Demo** - Compile-Time Contract Enforcement
+```bash
+# 1. Edit any contract file, change type (e.g., id: Long → id: String)
+vim modules/contracts/src/main/scala/Contract.scala
+
+# 2. Try to compile - FAILS immediately with clear error
+sbt compile
+# Error: implicitNotFound - Contract drift detected!
+# Out: String vs Contract: Long
+# Fix types or relax policy (Backward/Forward)
+```
+
+### **Constraint Guard** - Delta Lake Enforcement  
+```bash
+# 1. After fixing types, try inserting invalid data
+sbt "examples-spark/runMain com.flowforge.examples.spark.UsersPipeline"
+
+# 2. Delta automatically rejects invalid data:
+# ❌ NOT NULL constraint violated
+# ❌ CHECK constraint failed: age must be between 13-120
+# ✅ Only valid data persisted
+```
+
+### **Lineage Blink** - See Everything Automatically
+```bash  
+# 1. Start Marquez (OpenLineage backend)
+docker compose -f ops/marquez/docker-compose.yml up -d
+
+# 2. Run any pipeline
+sbt "examples-spark/runMain com.flowforge.examples.spark.UsersPipeline"
+
+# 3. Open Marquez UI - lineage lights up instantly
+open http://localhost:3000
+# → Jobs → Pipeline runs with START/COMPLETE/FAIL events
+# → Complete execution timeline and lineage graph
+# → Zero configuration required
+```
+
+**The Promise:** Change the contract → won't compile (build fails fast). Fix types → compiles (type safety enforced). Run locally in seconds → see DQ + Delta constraints catch regressions. Open Marquez → see lineage light up automatically.

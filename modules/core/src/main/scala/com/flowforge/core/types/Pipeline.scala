@@ -54,8 +54,26 @@ case class Pipeline[F[_], A, B](
 
   /**
    * Execute the pipeline with input data
+   *
+   * Per v10-3.md: "lineage by default" - this method now emits stage-level lineage events
    */
-  def execute(input: A): F[B] = compiled.run(input)
+  def execute(input: A): F[B] = {
+    val currentRunId = UUID.randomUUID().toString
+
+    // Emit Pipeline START event
+    emitExecutionEvent("START", name, currentRunId)
+
+    // Execute with stage-level lineage emission
+    F.flatMap(F.attempt(executeWithStageLineage(input, currentRunId))) { result =>
+      // Emit Pipeline COMPLETE/FAIL event
+      val eventType = if (result.isRight) "COMPLETE" else "FAIL"
+      val errorMsg  = result.left.toOption.map(_.getMessage).getOrElse("")
+      emitExecutionEvent(eventType, name, currentRunId, errorMsg)
+
+      // Return the result (success or re-raise error)
+      result.fold(F.raiseError, F.pure)
+    }
+  }
 
   /**
    * Execute with monitoring and error handling
