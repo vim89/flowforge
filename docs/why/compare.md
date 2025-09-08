@@ -16,10 +16,10 @@ This document provides neutral technical comparisons between FlowForge and exist
 - **FlowForge**: Engine-agnostic with pluggable runners (Spark/Flink/etc)
 - **Positioning**: Different execution models - Beam vs pluggable engines
 
-### vs Great Expectations / Soda SQL
-- **GE/Soda**: Runtime data quality validation with rich testing frameworks
-- **FlowForge**: Composes with GE/Deequ for runtime DQ, adds compile-time contract enforcement
-- **Integration**: FlowForge pipelines can emit GE expectations from contracts
+### vs Great Expectations / Deequ
+- **GE/Deequ**: Runtime data quality validation with rich testing frameworks
+- **FlowForge v1.0**: Dual-mode quality validation - native Spark checks (default) + optional Deequ VerificationSuite integration
+- **Integration**: FlowForge automatically detects Deequ on classpath and gracefully falls back to native Spark operations
 
 ### vs Delta Lake / Apache Iceberg
 - **Delta/Iceberg**: Storage formats with ACID, time travel, schema evolution
@@ -37,9 +37,9 @@ This document provides neutral technical comparisons between FlowForge and exist
 
 | Tool | Contract Time | Failure Point | Error Feedback |
 |------|---------------|---------------|----------------|
-| FlowForge | Compile-time | Build fails | IDE/compiler errors |
+| FlowForge v1.0 | Compile-time + runtime | Build fails + DQ violations | IDE/compiler errors + QualityResult |
 | Frameless | Runtime | Job execution | Runtime exceptions |
-| GE/Deequ | Runtime | Data validation | Data quality reports |
+| Deequ/GE | Runtime | Data validation | Data quality reports |
 | DBT | Runtime | SQL compilation | SQL errors |
 
 ### Effect System Integration
@@ -77,19 +77,22 @@ This document provides neutral technical comparisons between FlowForge and exist
 
 FlowForge is designed for **composition, not replacement**:
 
-### Data Quality
-- **Compose with Deequ**: FlowForge contracts → Deequ checks
-- **Compose with Great Expectations**: FlowForge pipelines → GE test suites
-- **Compose with Delta**: FlowForge policies → Delta table constraints
+### Data Quality (v1.0 Dual-Mode)
+- **Native Mode (default)**: Pure Spark DataFrame operations, zero dependencies
+- **Deequ Enhancement**: Optional VerificationSuite integration when Deequ 2.0.11-spark-3.5 available
+- **Graceful Fallback**: Automatic fallback to native checks if Deequ fails
+- **Delta Integration**: Quality constraints map to Delta table CHECK/NOT NULL constraints
 
 ### Execution Engines  
 - **Spark integration**: Pure transforms work with native Spark or Frameless
 - **Flink integration**: Same business logic, different streaming semantics
 - **Future engines**: Pluggable architecture for new execution systems
 
-### Lineage and Observability
-- **OpenLineage native**: Automatic emission to Marquez, Datahub, etc.
-- **Metrics integration**: Works with Prometheus, Grafana monitoring stacks
+### Lineage and Observability (v1.0 "By Default")
+- **OpenLineage native**: Automatic START/COMPLETE/FAIL emission for all pipeline stages
+- **Zero configuration**: Works out of the box with Marquez docker-compose setup
+- **Production ready**: Emits to Marquez, Datahub, or any OpenLineage-compatible system
+- **Metrics integration**: Built-in quality scores and execution metrics
 - **Alerting**: Contract violations trigger immediate build failures
 
 ## Migration Strategies
@@ -114,11 +117,15 @@ FlowForge is designed for **composition, not replacement**:
 
 ## Technical Maturity Assessment
 
-### FlowForge Strengths
+### FlowForge v1.0 Strengths
 - ✅ Unique compile-time contract validation
-- ✅ Clean functional programming model
-- ✅ Engine-agnostic architecture
-- ✅ Built-in lineage and quality integration
+- ✅ Clean functional programming model (CLAUDE.md compliant)
+- ✅ Engine-agnostic architecture (Spark, Flink)
+- ✅ Built-in lineage and quality integration "by default"
+- ✅ Dual-mode quality (native + optional Deequ)
+- ✅ Multi-cloud storage (S3A/ABFS/GCS via native Spark drivers)
+- ✅ Complete end-to-end examples with Delta constraints
+- ✅ Production-ready resource management with cats-effect
 
 ### FlowForge Considerations
 - ⚠️ Newer project with smaller ecosystem
@@ -133,12 +140,32 @@ FlowForge is designed for **composition, not replacement**:
 
 ## References
 
-- **Frameless**: https://typelevel.org/frameless/
-- **Scio**: https://spotify.github.io/scio/
-- **Great Expectations**: https://greatexpectations.io/
-- **Delta Lake**: https://delta.io/
-- **OpenLineage**: https://openlineage.io/
-- **Apache Iceberg**: https://iceberg.apache.org/
+### Core Technologies
+- **Frameless**: https://typelevel.org/frameless/ - Type-safe Spark Dataset API
+- **Scio**: https://spotify.github.io/scio/ - Scala API for Apache Beam
+- **Apache Spark**: https://spark.apache.org/ - Unified analytics engine
+- **Apache Flink**: https://flink.apache.org/ - Stream processing framework
+
+### Data Quality & Testing
+- **Amazon Deequ**: https://github.com/awslabs/deequ - Data quality validation for Spark
+- **Great Expectations**: https://greatexpectations.io/ - Data validation framework
+- **Delta Lake**: https://delta.io/ - ACID transactions for data lakes
+- **Apache Iceberg**: https://iceberg.apache.org/ - Table format for large datasets
+
+### Lineage & Observability  
+- **OpenLineage**: https://openlineage.io/ - Open standard for data lineage
+- **Marquez**: https://marquezproject.github.io/marquez/ - Data lineage collection system
+- **DataHub**: https://datahubproject.io/ - Metadata platform
+
+### Effect Systems & FP
+- **Cats Effect**: https://typelevel.org/cats-effect/ - Purely functional IO library
+- **ZIO**: https://zio.dev/ - Type-safe, composable effect system
+- **Cats**: https://typelevel.org/cats/ - Functional programming abstractions
+
+### Storage & Cloud
+- **Hadoop S3A**: https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/index.html - S3 connector
+- **Hadoop ABFS**: https://hadoop.apache.org/docs/stable/hadoop-azure/index.html - Azure Data Lake Gen2 connector  
+- **GCS Connector**: https://cloud.google.com/dataproc/docs/concepts/connectors/cloud-storage - Google Cloud Storage connector
 
 ---
 

@@ -8,7 +8,7 @@ This doc shows how FlowForge enforces compile-time schema gates using typed endp
 
 ## What to look at
 - Example pipeline: `modules/examples/src/main/scala/com/flowforge/examples/TypedContractPipeline.scala`
-- Sample contract SDK: `modules/contracts-sample-sdk/src/main/scala/com/flowforge/contracts/sample/SalesContracts.scala`
+- Sample contract SDK: `modules/contracts-sample-sdk/` *(removed in v1.0 - see `modules/examples-spark/` for current examples)*
 - Core evidence: `modules/core/src/main/scala/com/flowforge/core/types/SchemaEvidence.scala`
 - Typed-only builder: `modules/core/src/main/scala/com/flowforge/core/types/PipelineBuilder2.scala`
 
@@ -30,7 +30,7 @@ val builder = PipelineBuilder2[IO]("sales-typed")
 If you change the transformation to produce a type that does not match `SalesCuratedV1`’s schema (e.g., missing `eventTs`), the call to `addTypedSink` fails to compile with a clear message from `SchemaEq`.
 
 ## Evolving toward SDKs per domain
-In real teams, contracts are authored via UI and published as versioned SDK JARs. This repo includes `contracts-sample-sdk` for demonstration, but production builds should depend on SDK artifacts instead of defining schema types locally.
+In real teams, contracts are authored via UI and published as versioned SDK JARs. This repo previously included `contracts-sample-sdk` for demonstration (removed in v1.0), but production builds should depend on SDK artifacts instead of defining schema types locally.
 
 ## Next examples to add
 - Projection-safe pipelines: allow strict subset/superset policies.

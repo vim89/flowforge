@@ -5,7 +5,7 @@ import cats.implicits._
 import com.flowforge.core.PipelineBuilder
 import com.flowforge.core.contracts.SchemaPolicy
 import com.flowforge.core.instances.EffectInstances._
-import com.flowforge.core.types.TypedIO._
+import com.flowforge.core.types._
 import ContractShapes._
 
 /**
@@ -18,19 +18,21 @@ import ContractShapes._
  */
 object DataPipeline extends IOApp.Simple {
 
-  import com.flowforge.quality.deequ.DeequIntegration.{nonNull, unique}
-
   def run: IO[Unit] = {
     
-    // Create a contract-enforced pipeline matching end-to-end plan spec
+    // Create a contract-enforced pipeline using current PipelineBuilder API
     val pipeline = PipelineBuilder[IO]("users-pipeline")
+      .withDescription("Generated FlowForge pipeline with compile-time contracts")
       .addTypedSource[User, User, SchemaPolicy.Exact](
-        localParquetSource[User]("./data/users/"),
+        gcsParquetSource[User]("demo-bucket", "users/*.parquet"),
         source => IO.pure(User(1L, "Alice", "alice@example.com"))
       )
-      .quality(nonNull("email") and unique("id"))
+      .addTransform[User] { user =>
+        // Simple pass-through transform for demonstration
+        IO.pure(user)
+      }
       .addTypedSink[User, SchemaPolicy.Exact](
-        localParquetSink[User]("./data/output/"),
+        gcsParquetSink[User]("demo-bucket", "output/"),
         (user, sink) => IO.println(s"✅ Processing: \$user")
       )
       .build()
@@ -39,13 +41,13 @@ object DataPipeline extends IOApp.Simple {
       _ <- IO.println("🚀 FlowForge Pipeline - 100% Compile-Time Contracts")
       _ <- IO.println("✨ If this compiles, contracts are perfectly aligned!")
       
-      // Execute with monitoring and lineage
+      // Execute with monitoring and lineage (OpenLineage automatically emitted)
       result <- pipeline.executeWithMonitoring(())
       
       _ <- result.status match {
-        case com.flowforge.core.types.ExecutionStatus.Success =>
+        case ExecutionStatus.Success =>
           IO.println(s"🎉 Success in \${result.duration}")
-        case com.flowforge.core.types.ExecutionStatus.Failed =>
+        case ExecutionStatus.Failed =>
           IO.println(s"❌ Failed: \${result.errors.mkString(", ")}")
       }
       

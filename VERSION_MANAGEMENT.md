@@ -101,3 +101,88 @@ All releases require:
 - ✅ Compile-fail tests validation
 - ✅ Code formatting compliance
 - ✅ Artifact generation success
+
+## FlowForge 1.0 Release Candidate (RC) Checklist
+
+### RC1 Prerequisites (0.9.0-RC1)
+
+Before cutting the first Release Candidate:
+
+#### ✅ Core Functionality
+- [ ] Lineage auto-emits START/COMPLETE/FAIL events from PipelineBuilder lifecycle
+- [ ] Marquez integration documented with docker-compose quickstart
+- [ ] Dual-mode quality validation: native Spark (default) + optional Deequ enhancement
+- [ ] End-to-end Spark example runs locally in seconds with Delta constraints
+- [ ] Complete UsersPipeline.scala demonstrating all v1.0 features
+
+#### ✅ API Surface & Documentation
+- [ ] Public API documented in docs/public-api.md with "Proposed 1.0 surface" label
+- [ ] Neutral comparison documentation in docs/why/compare.md with comprehensive links
+- [ ] All internal packages properly namespaced (*.internal.* for non-public APIs)
+- [ ] Deprecated SparkPipelineBuilder marked for removal at 1.0
+- [ ] Clean module structure - unused modules removed (quality-deequ-runner, templates/)
+
+#### ✅ Quality Assurance
+- [ ] **API Diff Analysis**: No breaking changes in public surface since last RC
+- [ ] **Scripted Tests Green**: All scripted tests pass in CI consistently
+- [ ] **Examples Runnable**: All examples execute successfully in clean environment
+- [ ] Compile-fail tests validate contract enforcement at build time
+- [ ] Integration tests prove Delta Lake constraint enforcement
+- [ ] Multi-cloud storage recipes documented (S3A/ABFS/GCS via Spark drivers)
+
+#### ✅ Performance & Reliability  
+- [ ] Memory safety - no driver OOM through sampling strategies
+- [ ] Resource safety - all operations use Resource[F, _] for cleanup  
+- [ ] Effect system compatibility (Cats Effect + ZIO) validated
+- [ ] Local execution completes in seconds (not minutes)
+- [ ] Lineage emission works "out of the box" with Marquez docker-compose
+
+### 1.0.0 Final Release Checklist
+
+Ship 1.0.0 only after:
+
+#### ✅ API Stability
+- [ ] **Public API frozen** - no further changes to public surface
+- [ ] Binary compatibility guarantees documented and validated
+- [ ] All *.internal.* packages clearly marked as non-public
+- [ ] Example templates consistent with public API usage
+
+#### ✅ Production Readiness
+- [ ] **All smoke tests stable** (Spark/Flink/compile-fail) on CI
+- [ ] Performance benchmarks meet local execution targets (<30 seconds)
+- [ ] Resource cleanup verified under failure scenarios
+- [ ] Multi-cloud storage integration proven via examples
+
+#### ✅ Documentation Completeness
+- [ ] docs/public-api.md reflects final 1.0 surface (remove "Proposed" label)
+- [ ] Migration guides from 0.x to 1.0 documented
+- [ ] All examples demonstrate real-world usage patterns
+- [ ] OpenLineage integration documented with multiple backends
+
+#### ✅ Ecosystem Integration
+- [ ] Delta Lake constraints working across S3A/ABFS/GCS storage
+- [ ] Quality validation modes (native/Deequ) documented and tested
+- [ ] Effect system abstraction allows ZIO/Cats Effect interchangeability
+- [ ] Template generation produces buildable, runnable projects
+
+### 1.0 Success Criteria
+
+After 1.0 release, the promise must read cleanly:
+- **Change the contract** → won't compile (build fails fast)
+- **Fix types** → compiles (type safety enforced)  
+- **Run locally in seconds** → see DQ + Delta constraints catch regressions
+- **Open Marquez** → see lineage light up automatically
+
+### Version Progression Strategy
+
+```
+Current: 0.1.0-SNAPSHOT (mvp-0.0.1-snapshot branch)
+    ↓
+0.9.0-RC1 (first release candidate)
+    ↓
+0.9.0-RC2 (bug fixes, final polish)
+    ↓  
+1.0.0 (stable release with API guarantees)
+    ↓
+1.x.x (feature additions, maintaining binary compatibility)
+```

@@ -61,7 +61,6 @@ object Dependencies {
     val mockito        = "5.13.0"
 
     // Build tools & plugins
-    val sbtGiter8 = "0.16.2"
     val scalafix  = "0.11.1"
     val scalafmt  = "3.7.17"
     val mdoc      = "2.5.1"
@@ -87,7 +86,7 @@ object Dependencies {
       "org.typelevel" %% "kittens"     % Versions.kittens,
     )
 
-    def typeSafety(scalaVersion: String) = {
+    def typeSafety(scalaVersion: String): Seq[ModuleID] = {
       val common = Seq(
         "eu.timepit" %% "refined" % Versions.refined,
       )
@@ -251,14 +250,16 @@ object Dependencies {
     case "quality"        => Core.functional ++ Testing.unit
     case "quality-deequ" =>
       common ++ Quality.all ++ Seq(
-        // Spark SQL needed at compile time for Spark-native checks
+        // Native Spark checks by default (no extra dependencies)
+        // Optional Deequ integration when available on classpath
         "org.apache.spark" %% "spark-sql" % Versions.spark,
       )
-    case "templates" =>
-      common ++ Seq(
-        "org.foundweekends.giter8" %% "giter8-lib" % Versions.sbtGiter8,
-      )
+    case "lineage" => common
     case "examples" => common
+    case "examples-spark" =>
+      common ++ Engines.spark ++ Seq(
+        "io.delta" %% "delta-spark" % Versions.delta,
+      )
     case _          => common
   }
 

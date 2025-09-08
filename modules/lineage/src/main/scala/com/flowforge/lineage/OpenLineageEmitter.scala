@@ -1,134 +1,218 @@
 package com.flowforge.lineage
 
 import cats.effect.IO
-import io.circe.generic.auto._
-import io.circe.syntax._
-import org.http4s._
-import org.http4s.client.Client
-import org.http4s.circe._
+import cats.implicits._
 
 import java.time.Instant
 import java.util.UUID
+import scala.util.Try
 
 /**
- * Minimal OpenLineage emitter for FlowForge pipelines.
- * 
- * Implements Section 8.1 from docs/plan/End-to-End-Compile-time.md (lines 284-290):
- * - Send job/run/dataset events on each stage start/end
- * - Destination: HTTP → Marquez
+ * OpenLineage event emitter for FlowForge v1.0
+ *
+ * Provides automatic lineage emission following OpenLineage specification. Designed to work "out of the box"
+ * with Marquez and other OpenLineage-compatible systems.
  */
-
-case class OpenLineageEvent(
-  eventType: String,
-  eventTime: Instant,
-  run: RunInfo,
-  job: JobInfo,
-  inputs: List[DatasetInfo] = List.empty,
-  outputs: List[DatasetInfo] = List.empty
-)
-
-case class RunInfo(
-  runId: String,
-  facets: Map[String, Any] = Map.empty
-)
-
-case class JobInfo(
-  namespace: String,
-  name: String,
-  facets: Map[String, Any] = Map.empty
-)
-
-case class DatasetInfo(
-  namespace: String, 
-  name: String,
-  facets: Map[String, Any] = Map.empty
-)
-
-class OpenLineageEmitter(
-  marquezUrl: String,
-  client: Client[IO]
-) {
-
-  private val marquezEndpoint = s"$marquezUrl/api/v1/lineage"
-  
+trait OpenLineageEmitter[F[_]] {
   def emitJobStart(
+    namespace: String,
     jobName: String,
-    runId: String = UUID.randomUUID().toString,
-    namespace: String = "flowforge"
-  ): IO[Unit] = {
-    val event = OpenLineageEvent(
-      eventType = "START",
-      eventTime = Instant.now(),
-      run = RunInfo(runId),
-      job = JobInfo(namespace, jobName)
-    )
-    
-    sendEvent(event)
-  }
-  
+    runId: String,
+  ): F[Either[LineageError, Unit]]
   def emitJobComplete(
+    namespace: String,
     jobName: String,
     runId: String,
-    inputs: List[DatasetInfo] = List.empty,
-    outputs: List[DatasetInfo] = List.empty,
-    namespace: String = "flowforge"
-  ): IO[Unit] = {
-    val event = OpenLineageEvent(
-      eventType = "COMPLETE", 
-      eventTime = Instant.now(),
-      run = RunInfo(runId),
-      job = JobInfo(namespace, jobName),
-      inputs = inputs,
-      outputs = outputs
-    )
-    
-    sendEvent(event)
-  }
-  
+  ): F[Either[LineageError, Unit]]
   def emitJobFail(
+    namespace: String,
     jobName: String,
     runId: String,
-    namespace: String = "flowforge"
-  ): IO[Unit] = {
-    val event = OpenLineageEvent(
-      eventType = "FAIL",
-      eventTime = Instant.now(), 
-      run = RunInfo(runId),
-      job = JobInfo(namespace, jobName)
-    )
-    
-    sendEvent(event)
+    error: String,
+  ): F[Either[LineageError, Unit]]
+}
+
+case class LineageError(message: String, cause: Option[Throwable] = None)
+
+/**
+ * HTTP-based OpenLineage emitter that posts events to OpenLineage-compatible endpoints
+ */
+class HttpOpenLineageEmitter[F[_]: cats.effect.Sync] extends OpenLineageEmitter[F] {
+
+  private val F = cats.effect.Sync[F]
+
+  // Configuration from environment variables (zero-config approach)
+  private val openLineageUrl = sys.env.getOrElse("OPENLINEAGE_URL", "http://localhost:5000/api/v1/lineage")
+  private val namespace      = sys.env.getOrElse("OPENLINEAGE_NAMESPACE", "flowforge")
+
+  def emitJobStart(
+    namespace: String,
+    jobName: String,
+    runId: String,
+  ): F[Either[LineageError, Unit]] = {
+    val eventTime = Instant.now().toString
+    val event     = createStartEvent(namespace, jobName, runId, eventTime)
+    emitEvent(event)
   }
-  
-  private def sendEvent(event: OpenLineageEvent): IO[Unit] = {
-    val request = Request[IO](
-      method = Method.POST,
-      uri = Uri.unsafeFromString(marquezEndpoint)
-    ).withEntity(event.asJson)
-    
-    client.expect[String](request).flatMap { response =>
-      IO.println(s"OpenLineage event sent: ${event.eventType} for job ${event.job.name}")
-    }.handleErrorWith { error =>
-      IO.println(s"Failed to send OpenLineage event: ${error.getMessage}")
+
+  def emitJobComplete(
+    namespace: String,
+    jobName: String,
+    runId: String,
+  ): F[Either[LineageError, Unit]] = {
+    val eventTime = Instant.now().toString
+    val event     = createCompleteEvent(namespace, jobName, runId, eventTime)
+    emitEvent(event)
+  }
+
+  def emitJobFail(
+    namespace: String,
+    jobName: String,
+    runId: String,
+    error: String,
+  ): F[Either[LineageError, Unit]] = {
+    val eventTime = Instant.now().toString
+    val event     = createFailEvent(namespace, jobName, runId, eventTime, error)
+    emitEvent(event)
+  }
+
+  private def createStartEvent(
+    namespace: String,
+    jobName: String,
+    runId: String,
+    eventTime: String,
+  ): String =
+    s"""{
+      "eventType": "START",
+      "eventTime": "$eventTime",
+      "run": {
+        "runId": "$runId"
+      },
+      "job": {
+        "namespace": "$namespace",
+        "name": "$jobName"
+      },
+      "inputs": [],
+      "outputs": [],
+      "producer": "https://github.com/flowforge/flowforge"
+    }"""
+
+  private def createCompleteEvent(
+    namespace: String,
+    jobName: String,
+    runId: String,
+    eventTime: String,
+  ): String =
+    s"""{
+      "eventType": "COMPLETE", 
+      "eventTime": "$eventTime",
+      "run": {
+        "runId": "$runId"
+      },
+      "job": {
+        "namespace": "$namespace",
+        "name": "$jobName"
+      },
+      "inputs": [],
+      "outputs": [],
+      "producer": "https://github.com/flowforge/flowforge"
+    }"""
+
+  private def createFailEvent(
+    namespace: String,
+    jobName: String,
+    runId: String,
+    eventTime: String,
+    error: String,
+  ): String =
+    s"""{
+      "eventType": "FAIL",
+      "eventTime": "$eventTime", 
+      "run": {
+        "runId": "$runId"
+      },
+      "job": {
+        "namespace": "$namespace",
+        "name": "$jobName"
+      },
+      "inputs": [],
+      "outputs": [],
+      "producer": "https://github.com/flowforge/flowforge",
+      "schemaURL": "https://openlineage.io/spec/1-0-5/OpenLineage.json#/definitions/RunEvent"
+    }"""
+
+  private def emitEvent(eventJson: String): F[Either[LineageError, Unit]] =
+    F.handleError {
+      for {
+        _      <- F.delay(println(s"[OpenLineage] Emitting to $openLineageUrl: $eventJson"))
+        result <- postEventToEndpoint(openLineageUrl, eventJson)
+      } yield result
+    } { error =>
+      Left(LineageError(s"Failed to emit lineage event: ${error.getMessage}", Some(error)))
     }
-  }
+
+  private def postEventToEndpoint(endpoint: String, eventJson: String): F[Either[LineageError, Unit]] =
+    F.delay {
+      Try {
+        // Use simple HTTP client for zero-dependency approach
+        val url        = new java.net.URL(endpoint)
+        val connection = url.openConnection().asInstanceOf[java.net.HttpURLConnection]
+
+        connection.setRequestMethod("POST")
+        connection.setRequestProperty("Content-Type", "application/json")
+        connection.setRequestProperty("User-Agent", "FlowForge/1.0.0")
+        connection.setDoOutput(true)
+
+        // Write JSON payload
+        val outputStream = connection.getOutputStream
+        outputStream.write(eventJson.getBytes("UTF-8"))
+        outputStream.flush()
+        outputStream.close()
+
+        // Check response
+        val responseCode = connection.getResponseCode
+        if (responseCode >= 200 && responseCode < 300) {
+          ()
+        } else {
+          throw new RuntimeException(s"HTTP error $responseCode from OpenLineage endpoint")
+        }
+      }.toEither.left.map(error => LineageError(error.getMessage, Some(error)))
+    }
 }
 
 object OpenLineageEmitter {
-  
-  def create(marquezUrl: String = "http://localhost:5000")(implicit client: Client[IO]): OpenLineageEmitter =
-    new OpenLineageEmitter(marquezUrl, client)
-  
-  // Helper to create dataset info from common data sources
-  def gcsDataset(bucket: String, path: String): DatasetInfo =
-    DatasetInfo(
-      namespace = s"gs://$bucket",
-      name = path
-    )
-  
-  def bigQueryDataset(project: String, dataset: String, table: String): DatasetInfo =
-    DatasetInfo(
-      namespace = s"bigquery://$project.$dataset", 
-      name = table
-    )
+
+  def http[F[_]: cats.effect.Sync]: OpenLineageEmitter[F] = new HttpOpenLineageEmitter[F]
+
+  // Generate a unique run ID for each pipeline execution
+  def generateRunId(): String = UUID.randomUUID().toString
+
+  // Helper for pipeline-level events
+  def emitPipelineStart[F[_]: cats.effect.Sync](
+    emitter: OpenLineageEmitter[F],
+    pipelineName: String,
+    runId: String,
+  ): F[Either[LineageError, Unit]] = {
+    val namespace = sys.env.getOrElse("OPENLINEAGE_NAMESPACE", "flowforge")
+    emitter.emitJobStart(namespace, pipelineName, runId)
+  }
+
+  def emitPipelineComplete[F[_]: cats.effect.Sync](
+    emitter: OpenLineageEmitter[F],
+    pipelineName: String,
+    runId: String,
+  ): F[Either[LineageError, Unit]] = {
+    val namespace = sys.env.getOrElse("OPENLINEAGE_NAMESPACE", "flowforge")
+    emitter.emitJobComplete(namespace, pipelineName, runId)
+  }
+
+  def emitPipelineFail[F[_]: cats.effect.Sync](
+    emitter: OpenLineageEmitter[F],
+    pipelineName: String,
+    runId: String,
+    error: String,
+  ): F[Either[LineageError, Unit]] = {
+    val namespace = sys.env.getOrElse("OPENLINEAGE_NAMESPACE", "flowforge")
+    emitter.emitJobFail(namespace, pipelineName, runId, error)
+  }
 }

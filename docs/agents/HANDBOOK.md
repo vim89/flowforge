@@ -138,7 +138,7 @@ val b2 = PipelineBuilder2
 
 ## 11. Prototype Integration & Incremental Adoption
 - Start typed→gate one path; wrap legacy untyped with adapters; add gates (compile/build) gradually.
-- Prototypes: see `modules/contracts-sample-sdk/` and `templates/data-pipeline.g8/`.
+- Prototypes: see `modules/examples-spark/` for end-to-end pipeline examples.
 
 ### 11.1 Prototype Index (Repo Paths)
 - Simple pipeline: `modules/core/src/main/scala/com/flowforge/core/examples/SimpleWorkingPipeline.scala`

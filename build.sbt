@@ -116,8 +116,9 @@ lazy val root = (project in file("."))
     enginesFlink,
     quality,
     qualityDeequ,
-    templates,
+    lineage,
     examples,
+    examplesSpark,
     compileFailTests,
     it,
   )
@@ -138,6 +139,7 @@ lazy val infrastructure = moduleProject("infrastructure")
 
 // ===== CORE MODULES =====
 lazy val core = moduleProject("core")
+  .dependsOn(lineage)
   .settings(
     description := "Core abstractions and custom type system",
     libraryDependencies ++= Dependencies.forModule("core"),
@@ -230,7 +232,7 @@ lazy val quality = moduleProject("quality")
 lazy val qualityDeequ = moduleProject("quality-deequ")
   .dependsOn(quality, enginesSpark)
   .settings(
-    description := "Amazon Deequ integration for data quality",
+    description := "Amazon Deequ integration for data quality with native Spark fallback",
     libraryDependencies ++= Dependencies.forModule("quality-deequ"),
     // Run Spark tests in a forked JVM and open JDK internals Spark needs on modern JDKs
     Test / javaOptions ++= Seq(
@@ -246,12 +248,6 @@ lazy val qualityDeequ = moduleProject("quality-deequ")
   )
 
 // ===== SUPPORT MODULES =====
-lazy val templates = moduleProject("templates")
-  .dependsOn(core, contracts, quality)
-  .settings(
-    description := "Pipeline Giter8 templates and code generation",
-    libraryDependencies ++= Dependencies.forModule("templates"),
-  )
 
 // ===== EXAMPLE & EXPERIMENTAL MODULES =====
 lazy val examples = moduleProject("examples")
@@ -260,6 +256,17 @@ lazy val examples = moduleProject("examples")
     description := "Example implementations",
     libraryDependencies ++= Dependencies.forModule("examples"),
     publish / skip := true,
+  )
+
+lazy val examplesSpark = moduleProject("examples-spark")
+  .dependsOn(core, enginesSpark, qualityDeequ)
+  .settings(
+    description := "Polished end-to-end Spark pipeline examples for FlowForge v1.0",
+    libraryDependencies ++= Dependencies.forModule("examples-spark"),
+    publish / skip := true,
+    // Spark examples need forked JVM for proper resource management
+    Test / fork := true,
+    run / fork := true,
   )
 
 // CLI for physical schema validation (Delta/Hive/Parquet) for CI usage
@@ -295,21 +302,12 @@ lazy val contractsExtractorCli = moduleProject("contracts-extractor-cli")
   )
 
 // ===== ADDITIONAL MODULES =====
-lazy val qualityDeequRunner = moduleProject("quality-deequ-runner")
+lazy val lineage = moduleProject("lineage")
   .settings(
-    description  := "Deequ runner CLI (Scala 2.12) for FlowForge",
-    scalaVersion := Dependencies.Versions.scala212,
-    libraryDependencies ++= Seq(
-      "org.apache.spark" %% "spark-sql"     % Dependencies.Versions.spark,
-      "com.amazon.deequ"  % "deequ"         % Dependencies.Versions.deequ,
-      "com.github.scopt" %% "scopt"         % "4.1.0",
-      "io.circe"         %% "circe-core"    % Dependencies.Versions.circe,
-      "io.circe"         %% "circe-parser"  % Dependencies.Versions.circe,
-      "io.circe"         %% "circe-generic" % Dependencies.Versions.circe,
-    ),
-    Compile / mainClass := Some("com.flowforge.quality.deequ.runner.Runner"),
-    Test / skip         := true,
+    description := "OpenLineage integration for automatic lineage emission",
+    libraryDependencies ++= Dependencies.forModule("lineage"),
   )
+
 lazy val it = (project in file("integration-tests"))
   .dependsOn(examples, connectorsGcs, enginesSpark)
   .settings(

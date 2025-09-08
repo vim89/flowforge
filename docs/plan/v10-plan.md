@@ -29,7 +29,7 @@ Fix: Emit START/COMPLETE/FAIL from inside PipelineBuilder.build for each stage a
 - VERSION_MANAGEMENT.md: add RC checklist (API diff, scripted tests green, examples runnable).
 
 ### 5) Trim surface
-- Remove or finish quality-deequ-runner and any empty templates/ folders.
+- Remove or finish quality-deequ-runner and any empty templates/ folders. I'd prefer remove by moving existing to somewhere relevant module.
 - Keep SparkPipelineBuilder.scala deprecated until 1.0; remove at 1.0.
 - Remove `modules/contracts-sample-sdk` & it's traces
 
