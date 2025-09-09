@@ -1,8 +1,8 @@
 /**
  * FlowForge Enhanced Contracts DSL
  *
- * Provides idiomatic syntax extensions for building data contracts in a fluent, type-safe manner.
- * This DSL significantly reduces verbosity while maintaining compile-time safety.
+ * Provides idiomatic syntax extensions for building data contracts in a fluent, type-safe manner. This DSL
+ * significantly reduces verbosity while maintaining compile-time safety.
  */
 package com.flowforge.contracts.syntax
 
@@ -18,11 +18,11 @@ import scala.util.matching.Regex
  * Enhanced Contract Builder with fluent DSL
  */
 case class ContractBuilder(name: String) {
-  private var fields: List[FieldBuilder] = List.empty
+  private var fields: List[FieldBuilder]          = List.empty
   private var versionOpt: Option[ContractVersion] = None
-  private var slaOpt: Option[String] = None
-  private var ownerOpt: Option[String] = None
-  private var metadata: Map[String, String] = Map.empty
+  private var slaOpt: Option[String]              = None
+  private var ownerOpt: Option[String]            = None
+  private var metadata: Map[String, String]       = Map.empty
 
   def field(name: String): FieldBuilder = {
     val fieldBuilder = FieldBuilder(name, this)
@@ -40,7 +40,11 @@ case class ContractBuilder(name: String) {
     this
   }
 
-  def withVersion(major: Int, minor: Int, patch: Int): ContractBuilder = {
+  def withVersion(
+    major: Int,
+    minor: Int,
+    patch: Int,
+  ): ContractBuilder = {
     versionOpt = Some(ContractVersion(major, minor, patch))
     this
   }
@@ -50,10 +54,9 @@ case class ContractBuilder(name: String) {
     this
   }
 
-  private[syntax] def addField(fieldBuilder: FieldBuilder): ContractBuilder = {
+  private[syntax] def addField(fieldBuilder: FieldBuilder): ContractBuilder =
     // Field is already added to the list in field() method
     this
-  }
 
   def build: ContractSchema = {
     versionOpt.getOrElse(ContractVersion(1, 0, 0))
@@ -65,7 +68,7 @@ case class ContractBuilder(name: String) {
       name = NonEmptyString.unsafeFrom(name),
       fields = fields.reverse.map(_.build),
       version = SchemaVersion.unsafeFrom(1),
-      metadata = finalMetadata
+      metadata = finalMetadata,
     )
   }
 }
@@ -76,10 +79,10 @@ case class ContractBuilder(name: String) {
 case class FieldBuilder(name: String, parent: ContractBuilder) {
   private var fieldType: Option[FieldType] = None
 
-  private var isRequired: Boolean = false
-  private var isOptional: Boolean = false
+  private var isRequired: Boolean                = false
+  private var isOptional: Boolean                = false
   private var constraints: List[FieldConstraint] = List.empty
-  private var descriptionOpt: Option[String] = None
+  private var descriptionOpt: Option[String]     = None
 
   // Type specification methods
   def required: TypedFieldBuilder = {
@@ -109,15 +112,14 @@ case class FieldBuilder(name: String, parent: ContractBuilder) {
     this
   }
 
-  def build: FieldContract = {
+  def build: FieldContract =
     FieldContract(
       name = NonEmptyString.unsafeFrom(name),
       dataType = fieldType.getOrElse(FieldType.StringType), // Default to string
       nullable = isOptional,
       constraints = constraints.reverse,
-      description = descriptionOpt
+      description = descriptionOpt,
     )
-  }
 }
 
 /**
@@ -210,7 +212,8 @@ class StringFieldBuilder(fieldBuilder: FieldBuilder) extends FieldTerminator(fie
   }
 
   def uuid: StringFieldBuilder = {
-    val uuidRegex = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$".r
+    val uuidRegex =
+      "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$".r
     fieldBuilder.addConstraint(FieldConstraint.Pattern(uuidRegex))
     this
   }
@@ -252,25 +255,24 @@ class NumericFieldBuilder[T](fieldBuilder: FieldBuilder) extends FieldTerminator
  */
 case class FieldTerminator(fieldBuilder: FieldBuilder) {
 
-  def field(name: String): FieldBuilder = {
+  def field(name: String): FieldBuilder =
     fieldBuilder.parent.field(name)
-  }
 
-  def withSLA(sla: String): ContractBuilder = {
+  def withSLA(sla: String): ContractBuilder =
     fieldBuilder.parent.withSLA(sla)
-  }
 
-  def withOwner(owner: String): ContractBuilder = {
+  def withOwner(owner: String): ContractBuilder =
     fieldBuilder.parent.withOwner(owner)
-  }
 
-  def withVersion(major: Int, minor: Int, patch: Int): ContractBuilder = {
+  def withVersion(
+    major: Int,
+    minor: Int,
+    patch: Int,
+  ): ContractBuilder =
     fieldBuilder.parent.withVersion(major, minor, patch)
-  }
 
-  def build: ContractSchema = {
+  def build: ContractSchema =
     fieldBuilder.parent.build
-  }
 
   def describedAs(description: String): FieldTerminator = {
     fieldBuilder.setDescription(description)
@@ -293,11 +295,13 @@ object ContractDSL {
    */
   object Patterns {
     val EMAIL: Regex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$".r
-    val URL: Regex = "^(https?|ftp)://[^\\s/$.?#].[^\\s]*$".r
-    val UUID: Regex = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$".r
+    val URL: Regex   = "^(https?|ftp)://[^\\s/$.?#].[^\\s]*$".r
+    val UUID: Regex =
+      "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$".r
     val PHONE_US: Regex = "^\\+?1?[-.\\s]?\\(?[0-9]{3}\\)?[-.\\s]?[0-9]{3}[-.\\s]?[0-9]{4}$".r
-    val CREDIT_CARD: Regex = "^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3[0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})$".r
-    val DATE_ISO: Regex = "^\\d{4}-\\d{2}-\\d{2}$".r
+    val CREDIT_CARD: Regex =
+      "^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3[0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})$".r
+    val DATE_ISO: Regex     = "^\\d{4}-\\d{2}-\\d{2}$".r
     val DATETIME_ISO: Regex = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z?$".r
   }
 
@@ -343,7 +347,9 @@ object ContractDSL {
      */
     def productContract: ContractSchema =
       Contract("product")
-        .field("sku").required.string.matches("^[A-Z]{2}[0-9]{6}$".r).describedAs("Product SKU in format XX123456")
+        .field("sku").required.string.matches("^[A-Z]{2}[0-9]{6}$".r).describedAs(
+          "Product SKU in format XX123456",
+        )
         .field("name").required.string.minLength(5).maxLength(200)
         .field("description").optional.string.maxLength(2000)
         .field("price").required.decimal(8, 2).positive
@@ -363,19 +369,17 @@ object ContractDSL {
 object ContractSyntax {
 
   implicit class ContractOps(contract: ContractSchema) {
-    def toDataContract[A]: DataContract[A] = {
+    def toDataContract[A]: DataContract[A] =
       new DataContract[A] {
-        def validate(data: A): cats.data.ValidatedNel[ContractViolation, A] = {
+        def validate(data: A): cats.data.ValidatedNel[ContractViolation, A] =
           // Basic validation - in practice this would introspect the data structure
           data.validNel
-        }
 
-        def schema: ContractSchema = contract
+        def schema: ContractSchema   = contract
         def version: ContractVersion = ContractVersion(1, 0, 0)
         def rules: NonEmptyList[ValidationRule[A]] =
           NonEmptyList.one(ValidationRules.custom[A]("schema_valid")(_ => ().validNel))
       }
-    }
   }
 
   implicit class StringFieldOps(name: String) {
