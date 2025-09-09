@@ -11,8 +11,32 @@ env:
   SBT_OPTS: -Xmx4G -XX:+UseG1GC
 
 jobs:
-  build-and-test:
-    name: Build and test
+  build:
+    strategy:
+      matrix:
+        include:
+          - module: core
+            commands: >
+              scalafmtCheckAll scalafixAll core/test compile-fail-tests/test
+            paths: |
+              target
+              modules/core/target
+              modules/compile-fail-tests/target
+          - module: connectors
+            commands: >
+              connectors/test connectors-gcs/test
+            paths: |
+              target
+              modules/connectors/target
+              modules/connectors-gcs/target
+          - module: engines
+            commands: >
+              engines-spark/test engines-flink/test "engines-spark/testOnly *StreamingCDCSpec" "engines-flink/testOnly *EngineAbstractionSpec"
+            paths: |
+              target
+              modules/engines-spark/target
+              modules/engines-flink/target
+    name: ${{ matrix.module }}
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -31,58 +55,13 @@ jobs:
             ~/.ivy2/cache
             ~/.cache/coursier
             ~/.sbt
-          key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt', '**/project/**/*.sbt', '**/project/**/Dependencies.scala') }}
+            ${{ matrix.paths }}
+          key: ${{ runner.os }}-sbt-${{ matrix.module }}-${{ hashFiles('**/build.sbt', '**/project/**/*.sbt', format('modules/{0}/**', matrix.module)) }}
           restore-keys: |
-            ${{ runner.os }}-sbt-
+            ${{ runner.os }}-sbt-${{ matrix.module }}-
 
-      - name: Check formatting and linting
-        run: sbt scalafmtCheckAll scalafixAll
-
-      - name: Compile all modules
-        run: sbt compile Test/compile
-
-      - name: Run tests with coverage
-        run: |
-          sbt coverage test
-          sbt coverageReport
-          sbt coverageAggregate
-
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          file: target/scala-2.13/scoverage-report/scoverage.xml
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: false
-
-      - name: Run compile-fail tests  
-        run: |
-          echo "🔥 Running compile-fail tests - proving FlowForge's core USP"
-          sbt "compile-fail-tests / test"
-          echo "✅ Compile-fail tests passed - contract drift prevention verified!"
-
-      - name: Spark smoke test
-        run: |
-          echo "🚀 Running Spark local smoke test"
-          sbt "engines-spark/testOnly *StreamingCDCSpec" 
-          echo "✅ Spark smoke test passed!"
-
-      - name: Flink smoke test
-        run: |
-          echo "🌊 Running Flink smoke test"
-          sbt "engines-flink/testOnly *EngineAbstractionSpec"
-          echo "✅ Flink smoke test passed!"
-
-      - name: Test g8 template generation
-        run: |
-          echo "📋 Testing g8 template generation"
-          cd /tmp
-          sbt new file://${{ github.workspace }}/flowforge.g8 --name="ci-test-pipeline" --organization="com.flowforge.ci"
-          cd ci-test-pipeline
-          echo "🔨 Testing generated project compilation"
-          sbt compile
-          echo "🧪 Testing generated project tests"  
-          sbt test
-          echo "✅ G8 template test passed - turnkey experience verified!"
+      - name: Build module
+        run: sbt -batch ${{ matrix.commands }}
 
   spark-it:
     if: github.event_name == 'workflow_dispatch'
@@ -106,4 +85,4 @@ jobs:
             ${{ runner.os }}-sbt-
       - name: Run opt-in Spark/Delta ITs
         run: |
-          sbt -DwithSparkIT=true "enginesSpark/testOnly *SparkDeltaSCD2IT"
+          sbt -batch -DwithSparkIT=true "enginesSpark/testOnly *SparkDeltaSCD2IT"

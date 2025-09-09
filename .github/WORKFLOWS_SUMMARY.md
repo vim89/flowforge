@@ -2,6 +2,14 @@
 
 ## ✅ **FINAL STATE - Production-Ready CI/CD**
 
+### 🧪 **CI Matrix Build Status**
+
+| Module | Status |
+|--------|--------|
+| core | ![core](https://github.com/flowforge/flowforge/actions/workflows/ci.yml/badge.svg?job=core) |
+| connectors | ![connectors](https://github.com/flowforge/flowforge/actions/workflows/ci.yml/badge.svg?job=connectors) |
+| engines | ![engines](https://github.com/flowforge/flowforge/actions/workflows/ci.yml/badge.svg?job=engines) |
+
 ### 🚀 **Active Workflows (8 files)**
 
 | Workflow | Purpose | Status | Triggers |
