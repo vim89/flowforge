@@ -289,7 +289,7 @@ object ContractDriftDemo {
   }
   */
 
-  // Example 3: Extra field (will compile with Forward policy, fail with Exact)
+  // Example 3: Extra field (will compile with Backward policy, fail with Exact)
   /*
   case class ExtraFieldUser(
     id: Long, name: String, email: String, age: Option[Int],
@@ -300,9 +300,9 @@ object ContractDriftDemo {
   def partiallyValidPipeline[F[_]: EffectSystem](): F[Unit] = {
     val source = TypedSource[ExtraFieldUser](DataSource.local("input.csv", DataFormat.CSV))
 
-    // This will compile (Forward allows extra fields in source)
+    // This will compile (Backward allows source to have extra fields that contract doesn't need)
     val workingPipeline = PipelineBuilder[F]("working")
-      .addTypedSource[ExtraFieldUser, RawUser, SchemaPolicy.Forward](source, _ => ???)
+      .addTypedSource[ExtraFieldUser, RawUser, SchemaPolicy.Backward](source, _ => ???)
 
     // This will NOT compile (Exact requires perfect match)
     val failingPipeline = PipelineBuilder[F]("failing")
@@ -334,23 +334,23 @@ object SchemaEvolutionPolicies {
     val baseSource = TypedSource[BaseUser](DataSource.local("base.csv", DataFormat.CSV))
     val extendedSource = TypedSource[ExtendedUser](DataSource.local("extended.csv", DataFormat.CSV))
 
-    // 1. EXACT: Perfect match required
+    // 1. EXACT: Perfect match required - source and contract must be identical
     val exactPipeline = PipelineBuilder[F]("exact")
       .addTypedSource[BaseUser, BaseUser, SchemaPolicy.Exact](baseSource, _ => F.pure(BaseUser(1, "Alice", "alice@example.com")))
 
-    // 2. BACKWARD: Reader produces more, contract expects less
+    // 2. BACKWARD: Source has MORE fields than contract needs (contract is backward compatible)
     val backwardPipeline = PipelineBuilder[F]("backward")
-      .addTypedSource[ExtendedUser, BaseUser, SchemaPolicy.Backward](baseSource, _ => F.pure(ExtendedUser(1, "Bob", "bob@example.com", Some(30), Some("USA"))))
+      .addTypedSource[ExtendedUser, BaseUser, SchemaPolicy.Backward](extendedSource, extUser => F.pure(BaseUser(extUser.id, extUser.name, extUser.email)))
 
-    // 3. FORWARD: Contract expects more, reader produces less
+    // 3. FORWARD: Contract expects MORE fields than source provides (contract is forward compatible)
     val forwardPipeline = PipelineBuilder[F]("forward")
-      .addTypedSource[BaseUser, ExtendedUser, SchemaPolicy.Forward](extendedSource, _ => F.pure(BaseUser(1, "Charlie", "charlie@example.com")))
+      .addTypedSource[BaseUser, ExtendedUser, SchemaPolicy.Forward](baseSource, baseUser => F.pure(ExtendedUser(baseUser.id, baseUser.name, baseUser.email, None, None)))
 
-    // 4. EXACT_UNORDERED: Same fields, any order
+    // 4. EXACT_UNORDERED: Same fields, any order (field order doesn't matter)
     val exactUnorderedPipeline = PipelineBuilder[F]("exact-unordered")
       .addTypedSource[BaseUser, BaseUser, SchemaPolicy.ExactUnordered](baseSource, _ => F.pure(BaseUser(1, "Diana", "diana@example.com")))
 
-    // 5. FULL: Allow anything (escape hatch)
+    // 5. FULL: Allow anything (escape hatch - no validation)
     val fullPipeline = PipelineBuilder[F]("full")
       .addTypedSource[BaseUser, BaseUser, SchemaPolicy.Full](baseSource, _ => F.pure(BaseUser(1, "Eve", "eve@example.com")))
 

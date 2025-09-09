@@ -40,18 +40,18 @@ object ContractDemos {
         _ => F.pure(User(1, "Alice", "alice@example.com", 25))
       )
 
-    // 2. Backward compatibility - reader produces more fields than contract expects
+    // 2. Backward compatibility - source has MORE fields than contract expects
     val backwardCompatPipeline = PipelineBuilder[F]("backward-compat")
       .addTypedSource[UserWithCountry, User, SchemaPolicy.Backward](
-        TypedSource[User](DataSource.local("basic-users.csv", DataFormat.CSV)),
-        _ => F.pure(UserWithCountry(1, "Bob", "bob@example.com", 30, "USA"))
+        TypedSource[UserWithCountry](DataSource.local("extended-users.csv", DataFormat.CSV)),
+        userWithCountry => F.pure(User(userWithCountry.id, userWithCountry.name, userWithCountry.email, userWithCountry.age))
       )
 
-    // 3. Forward compatibility - contract has more fields than reader produces
+    // 3. Forward compatibility - contract expects MORE fields than source provides
     val forwardCompatPipeline = PipelineBuilder[F]("forward-compat")
       .addTypedSource[User, UserWithCountry, SchemaPolicy.Forward](
-        TypedSource[UserWithCountry](DataSource.local("extended-users.csv", DataFormat.CSV)),
-        _ => F.pure(User(1, "Charlie", "charlie@example.com", 35))
+        TypedSource[User](DataSource.local("basic-users.csv", DataFormat.CSV)),
+        user => F.pure(UserWithCountry(user.id, user.name, user.email, user.age, "Unknown"))
       )
 
     // Note: Full policy requires compatible types - simplified example
