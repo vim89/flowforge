@@ -57,7 +57,7 @@ case class ContractBuilder(name: String) {
 
   def build: ContractSchema = {
     versionOpt.getOrElse(ContractVersion(1, 0, 0))
-    val finalMetadata = metadata ++ 
+    val finalMetadata = metadata ++
       slaOpt.map("sla" -> _) ++
       ownerOpt.map("owner" -> _)
 
@@ -75,7 +75,8 @@ case class ContractBuilder(name: String) {
  */
 case class FieldBuilder(name: String, parent: ContractBuilder) {
   private var fieldType: Option[FieldType] = None
-  
+
+  private var isRequired: Boolean = false
   private var isOptional: Boolean = false
   private var constraints: List[FieldConstraint] = List.empty
   private var descriptionOpt: Option[String] = None
@@ -123,7 +124,7 @@ case class FieldBuilder(name: String, parent: ContractBuilder) {
  * Typed Field Builder that provides type-specific methods
  */
 case class TypedFieldBuilder(fieldBuilder: FieldBuilder) {
-  
+
   // Basic types
   def string: StringFieldBuilder = {
     fieldBuilder.setFieldType(FieldType.StringType)
@@ -170,7 +171,7 @@ case class TypedFieldBuilder(fieldBuilder: FieldBuilder) {
  * String-specific field builder with string constraints
  */
 class StringFieldBuilder(fieldBuilder: FieldBuilder) extends FieldTerminator(fieldBuilder) {
-  
+
   def minLength(length: Int): StringFieldBuilder = {
     fieldBuilder.addConstraint(FieldConstraint.MinLength(length))
     this
@@ -219,7 +220,7 @@ class StringFieldBuilder(fieldBuilder: FieldBuilder) extends FieldTerminator(fie
  * Numeric field builder with numeric constraints
  */
 class NumericFieldBuilder[T](fieldBuilder: FieldBuilder) extends FieldTerminator(fieldBuilder) {
-  
+
   def min(minValue: Double): NumericFieldBuilder[T] = {
     fieldBuilder.addConstraint(FieldConstraint.Range(minValue, Double.MaxValue))
     this
@@ -250,7 +251,7 @@ class NumericFieldBuilder[T](fieldBuilder: FieldBuilder) extends FieldTerminator
  * Field terminator that allows returning to contract building
  */
 case class FieldTerminator(fieldBuilder: FieldBuilder) {
-  
+
   def field(name: String): FieldBuilder = {
     fieldBuilder.parent.field(name)
   }
@@ -281,7 +282,7 @@ case class FieldTerminator(fieldBuilder: FieldBuilder) {
  * DSL entry points and syntax extensions
  */
 object ContractDSL {
-  
+
   /**
    * Create a new contract with the given name
    */
@@ -304,11 +305,11 @@ object ContractDSL {
    * Example usage demonstrations
    */
   object Examples {
-    
+
     /**
      * User contract with comprehensive field definitions
      */
-    def userContract: ContractSchema = 
+    def userContract: ContractSchema =
       Contract("user")
         .field("id").required.long.positive
         .field("email").required.string.email.maxLength(255)
@@ -360,7 +361,7 @@ object ContractDSL {
  * Implicit conversions for seamless integration
  */
 object ContractSyntax {
-  
+
   implicit class ContractOps(contract: ContractSchema) {
     def toDataContract[A]: DataContract[A] = {
       new DataContract[A] {
@@ -368,23 +369,23 @@ object ContractSyntax {
           // Basic validation - in practice this would introspect the data structure
           data.validNel
         }
-        
+
         def schema: ContractSchema = contract
         def version: ContractVersion = ContractVersion(1, 0, 0)
-        def rules: NonEmptyList[ValidationRule[A]] = 
+        def rules: NonEmptyList[ValidationRule[A]] =
           NonEmptyList.one(ValidationRules.custom[A]("schema_valid")(_ => ().validNel))
       }
     }
   }
-  
+
   implicit class StringFieldOps(name: String) {
     def requiredString: StringFieldBuilder = {
       val builder = ContractBuilder(name).field(name)
       builder.required.string
     }
-    
+
     def optionalString: StringFieldBuilder = {
-      val builder = ContractBuilder(name).field(name) 
+      val builder = ContractBuilder(name).field(name)
       builder.optional.string
     }
   }

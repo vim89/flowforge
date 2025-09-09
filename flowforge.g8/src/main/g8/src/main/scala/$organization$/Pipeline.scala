@@ -104,7 +104,7 @@ class FlowForgePipeline[F[_]: EffectSystem] {
     val lineageEmitter = $if(include_lineage.truthy)$OpenLineageEmitter.noop[F]$else$OpenLineageEmitter.noop[F]$endif$
 
     F.delay {
-      PipelineBuilder[F]("$name;format="kebab"$-comprehensive-pipeline")
+      PipelineBuilder[F]("$name$")
         .withDescription("Complete CSV→Parquet→Delta pipeline with contracts & quality")
         .withLineageEmitter(lineageEmitter)
         .addTypedSource[RawUser, RawUser, SchemaPolicy.Exact](
@@ -201,7 +201,7 @@ class FlowForgePipeline[F[_]: EffectSystem] {
   def runPipeline(): F[Unit] = {
     val sparkConfig = Map(
       "spark.master" -> "local[*]",
-      "spark.app.name" -> "FlowForge-$name;format="Camel"$",
+      "spark.app.name" -> "FlowForge-$name$",
       "spark.sql.extensions" -> "io.delta.sql.DeltaSparkSessionExtension",
       "spark.sql.catalog.spark_catalog" -> "org.apache.spark.sql.delta.catalog.DeltaCatalog",
       "spark.serializer" -> "org.apache.spark.serializer.KryoSerializer"
@@ -263,7 +263,7 @@ object PipelineApp extends cats.effect.IOApp.Simple {
     val rawUser = SimpleRawUser(1L, "Alice Johnson", "alice@example.com", Some(28), "USA", true)
 
     val pipeline = FlowForgePipeline[IO, SimpleRawUser, SimpleCleanedUser](
-      name = "$name;format=\"kebab\"$-direct-pipeline",
+      name = "$name$",
       source = DataSource.local("input.csv", DataFormat.CSV),
       sink = DataSink.local("output.parquet", DataFormat.Parquet),
       transformation = Kleisli[IO, SimpleRawUser, SimpleCleanedUser](raw => IO.pure(sampleTransformation(raw))),

@@ -9,7 +9,7 @@ Generated from flowforge template with **F-polymorphic effects** and **compile-t
 sbt compile
 
 # 2. Run the complete pipeline
-sbt "runMain $organization$;format="word"$.UsersPipelineApp"
+sbt "runMain $organization$;format=\"word\".UsersPipelineApp"
 ```
 
 **Expected Output:**
@@ -225,7 +225,7 @@ val s3Sink = TypedSink[EnrichedUser](
 // Add domain-specific quality checks
 .addTransform[CleanedUser] { user =>
   if (isValidBusinessUser(user)) F.pure(user)
-  else F.raiseError(new ValidationException(s"Business rule violation: \$user"))
+  else F.raiseError(new ValidationException(s"Business rule violation:" + user))
 }
 ```
 
