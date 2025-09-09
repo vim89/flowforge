@@ -25,6 +25,7 @@ import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.effect.Resource
 import cats.implicits._
 import com.flowforge.core.algebra.{ DataAlgebra, _ }
+import com.flowforge.core.algebra.DataAlgebra._
 import com.flowforge.core.instances.DefaultCodecs._
 import com.flowforge.core.types.PipelineTypes.{ DataContract => PipelineDataContract, QualityCheck }
 import com.flowforge.core.types.RefinedTypes.{ FieldName, SchemaVersion }
@@ -77,6 +78,9 @@ object SparkDataAlgebra {
       private val F     = EffectSystem[F]
       private val log   = com.flowforge.core.logging.CoreLogger.noOp[F]
       private val spark = sparkSession
+
+      override val capabilities: Set[Capability] =
+        Set(Capability.Read, Capability.Write, Capability.QualityChecks)
 
       // ========================================
       // EXTERNAL IO OPERATIONS (F[_] Required)

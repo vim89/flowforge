@@ -83,12 +83,14 @@ javaOptions ++= Seq(
   "-Xmx6g",
   "-Duser.timezone=UTC",
   "-Dnet.bytebuddy.experimental=true",
+  "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED",
 )
 
 // Test settings
 ThisBuild / Test / parallelExecution := false
 ThisBuild / Test / testOptions += Tests.Argument("-oDF")
 ThisBuild / Test / fork := true
+ThisBuild / Test / javaOptions += "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED"
 
 // Helper function for module projects
 def moduleProject(name: String): Project =
@@ -210,11 +212,10 @@ lazy val enginesSpark = moduleProject("engines-spark")
 // typed-spark merged into engines-spark under com.flowforge.engines.spark.typed
 
 lazy val enginesFlink = moduleProject("engines-flink")
-  .dependsOn(core, connectors)
+  .dependsOn(core, connectors, enginesSpark % "test->compile")
   .settings(
-    description := "Apache Flink execution engine (Scala 2.12 only)",
-    // DEPENDENCY CONSTRAINT: Flink Scala API only supports 2.12
-    crossScalaVersions := Seq(Dependencies.Versions.scala212),
+    description := "Apache Flink execution engine",
+    crossScalaVersions := Seq(Dependencies.Versions.scala212, Dependencies.Versions.scala213),
     libraryDependencies ++= Dependencies.forModule("engines-flink"),
   )
 

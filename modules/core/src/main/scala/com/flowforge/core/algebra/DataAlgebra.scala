@@ -32,7 +32,7 @@ import scala.concurrent.duration.FiniteDuration
  *   FlowForge Core Team
  * @since 0.1.0
  */
-trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
+trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] with DataAlgebra.WithCapabilities {
 
   // Import companion object types
   import DataAlgebra._
@@ -268,6 +268,25 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] {
 // ===============================
 
 object DataAlgebra {
+
+  /**
+   * Capabilities supported by a DataAlgebra implementation. Used to express engine feature parity across
+   * Spark and Flink.
+   */
+  sealed trait Capability extends Product with Serializable
+  object Capability {
+    case object Read          extends Capability
+    case object Write         extends Capability
+    case object QualityChecks extends Capability
+  }
+
+  /**
+   * Mix-in providing capability introspection.
+   */
+  trait WithCapabilities {
+    def capabilities: Set[Capability]
+    def supports(cap: Capability): Boolean = capabilities.contains(cap)
+  }
 
   /**
    * Generic dataset abstraction.

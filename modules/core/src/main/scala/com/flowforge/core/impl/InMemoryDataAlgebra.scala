@@ -25,6 +25,9 @@ import java.time.Instant
  */
 final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends DataAlgebra[F] {
 
+  override val capabilities: Set[Capability] =
+    Set(Capability.Read, Capability.Write, Capability.QualityChecks)
+
   // ---------- External IO (PRODUCTION-READY) ----------
   override def read[A: DataDecoder](source: DataSource): F[Dataset[A]] = source match {
     case LocalDataSource(path, format, _, schemaOpt, _) =>

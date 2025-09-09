@@ -1,7 +1,7 @@
 ```markdown
 # ADR 004 — Modules, Engines, and Templates Alignment
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2025-09-04
 
 ## Context
@@ -10,7 +10,7 @@ Build declares modules (connectors-gcs, engines-flink, quality, quality-deequ, t
 ## Decision
 - Do not alter `build.sbt` structure.
 - Mirror `templates/data-pipeline.g8` under `modules/templates` to avoid an empty module path (files only; no build logic changes).
-- Leave engines-flink/quality/quality-deequ as stubs until staffed; document status in ALIGNMENT_STATUS.md.
+- Ensure engines-flink mirrors engines-spark for read/write and quality checks; document parity with cross-engine tests.
 
 ## Consequences
 - Pros: Clearer repo hygiene; fewer onboarding surprises.
