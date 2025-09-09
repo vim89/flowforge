@@ -1,7 +1,7 @@
 package com.flowforge.core.patterns
 
 import cats.syntax.all._
-import com.flowforge.core.patterns.ValidationTypes.{ invalid, valid, ValidationResult }
+import com.flowforge.core.patterns.ValidationTypes.{ValidationResult, invalid, valid}
 import com.flowforge.core.types.ValidationError
 
 /**
