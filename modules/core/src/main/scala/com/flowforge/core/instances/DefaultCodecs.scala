@@ -2,7 +2,7 @@ package com.flowforge.core.instances
 
 import com.flowforge.core.algebra._
 import com.flowforge.core.types.{ DataFormat, _ }
-import io.circe.{ parser, Json }
+import io.circe.{Json, parser}
 
 /**
  * Practical default encoders/decoders for common shapes used in foundation flows.
