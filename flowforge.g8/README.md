@@ -18,7 +18,7 @@ sbt compile
 ```
 
 ### 3. Simulate Contract Drift
-Edit `src/main/scala/Contract.scala` and change:
+Edit `src/main/scala/ContractDemos.scala` and change:
 ```scala
 id: Long,  // Change this to: id: String,
 ```
@@ -39,9 +39,19 @@ id: Long,  // Back to original
 ```
 
 ```bash
-sbt compile  
+sbt compile
 # ✅ Should succeed again
 ```
+
+## Explore ContractDriftDemo
+
+Open `src/main/scala/Pipeline.scala` and locate the `ContractDriftDemo` object. Uncomment any of the failure examples and run:
+
+```bash
+sbt compile
+```
+
+Each uncommented case will fail to compile, showcasing FlowForge's contract enforcement at build time.
 
 ## What You Just Proved
 
@@ -54,8 +64,8 @@ sbt compile
 
 ## Next Steps
 
-1. **Customize contracts** in `Contract.scala` for your data
-2. **Add transformations** in `Pipeline.scala` 
+1. **Customize contracts** in `ContractDemos.scala` for your data
+2. **Add transformations** in `Pipeline.scala`
 3. **Configure sources/sinks** for your infrastructure
 4. **Run with confidence** - if it compiles, contracts are aligned!
 
@@ -71,9 +81,8 @@ FlowForge supports 5 schema evolution policies:
 
 ## Support
 
-- [FlowForge Documentation](./docs/)
-- [Examples](./modules/examples/)  
 - [GitHub Issues](https://github.com/flowforge/flowforge/issues)
 
 ---
 *Generated with FlowForge Giter8 Template | 100% Compile-Time Contracts*
+
