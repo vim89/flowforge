@@ -100,13 +100,36 @@ object UsersPipelineApp extends IOApp.Simple {
 
   // Complete ETL Pipeline
   def createUserProcessingPipeline() = {
+    
     EnhancedPipelineBuilder.from[IO, RawUser]("user-processing-pipeline",
-      DataSource.gcs("$organization$-raw-data", "users/raw", DataFormat.CSV))
+      $if(cloud_provider == "gcp")$
+        DataSource.gcs("$organization$-raw-data", "users/raw", DataFormat.CSV)
+      $elseif(cloud_provider == "aws")$
+        DataSource.s3("$organization$-raw-data", "users/raw", DataFormat.CSV)
+      $elseif(cloud_provider == "azure")$
+        DataSource.abfs("$organization$-raw-data", "users/raw", DataFormat.CSV)
+      $else$
+        DataSource.local("data/users/raw.csv", DataFormat.CSV)
+      $endif$
+    )
+
       .transform[CleanUser](parseAndValidateUser)
       .validate(validateCleanUser)
       .transform[EnrichedUser](enrichWithBusinessData) 
       .withQualityCheck(validateEnrichedUser)
-      .to(DataSink.gcs("$organization$-processed-data", "users/enriched", DataFormat.Parquet))
+      
+      .to(
+        $if(cloud_provider == "gcp")$
+          DataSink.gcs("$organization$-processed-data", "users/enriched", DataFormat.Parquet)
+        $elseif(cloud_provider == "aws")$
+          DataSink.s3("$organization$-processed-data", "users/enriched", DataFormat.Parquet)
+        $elseif(cloud_provider == "azure")$
+          DataSink.abfs("$organization$-processed-data", "users/enriched", DataFormat.Parquet)
+        $else$
+          DataSink.local("data/users/enriched", DataFormat.Parquet)
+        $endif$
+      )
+
     }
 
   // Application entry point
