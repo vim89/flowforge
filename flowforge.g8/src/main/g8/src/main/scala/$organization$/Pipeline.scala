@@ -2,12 +2,12 @@ package $organization$
 
 import com.flowforge.core.PipelineBuilder
 import com.flowforge.core.algebra.EffectSystem
-import com.flowforge.core.contracts.SchemaPolicy
+import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
 import com.flowforge.core.contracts.derive.Shape
 import com.flowforge.core.types._
 import com.flowforge.core.lineage.OpenLineageEmitter
 import com.flowforge.core.instances.EffectInstances._
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{ Dataset, Encoders, SparkSession }
 
 /**
  * FlowForge v1.0.0 F-Polymorphic Pipeline Template
@@ -74,6 +74,11 @@ class FlowForgePipeline[F[_]: EffectSystem] {
   implicit val cleanedUserShape: Shape[CleanedUser] = Shape.gen[CleanedUser]
   implicit val enrichedUserShape: Shape[EnrichedUser] = Shape.gen[EnrichedUser]
 
+  implicit def datasetSchemaConforms[A, R, P <: SchemaPolicy](implicit
+    ev: SchemaConforms[A, R, P]
+  ): SchemaConforms[Dataset[A], R, P] =
+    new SchemaConforms[Dataset[A], R, P] {}
+
   private def withSparkSession[A](config: Map[String, String])(use: SparkSession => F[A]): F[A] = {
     val acquire = F.delay {
       val builder = SparkSession.builder()
@@ -84,7 +89,9 @@ class FlowForgePipeline[F[_]: EffectSystem] {
     F.bracket(acquire)(use)(release)
   }
 
-  def buildContractValidatedPipeline(): F[Pipeline[F, Unit, EnrichedUser]] = {
+  def buildContractValidatedPipeline(
+    emitter: OpenLineageEmitter[F]
+  )(implicit spark: SparkSession): F[Pipeline[F, Unit, Dataset[EnrichedUser]]] = {
 
     // Create typed sources with compile-time contract validation
     val csvSource = TypedSource[RawUser](
@@ -100,128 +107,149 @@ class FlowForgePipeline[F[_]: EffectSystem] {
       DataSink.local("output/users-delta", DataFormat.Delta)
     )
 
-    // OpenLineage emitter
-    val lineageEmitter = $if(include_lineage.truthy)$OpenLineageEmitter.noop[F]$else$OpenLineageEmitter.noop[F]$endif$
-
     F.delay {
       PipelineBuilder[F]("$name$")
         .withDescription("Complete CSV→Parquet→Delta pipeline with contracts & quality")
-        .withLineageEmitter(lineageEmitter)
-        .addTypedSource[RawUser, RawUser, SchemaPolicy.Exact](
+        .withLineageEmitter(emitter)
+        .addTypedSource[Dataset[RawUser], RawUser, SchemaPolicy.Exact](
           csvSource,
           source => readCsvUsers(source)
         )
-        .addTransform[CleanedUser] { rawUser =>
+        .addTransform[Dataset[CleanedUser]](ds =>
           // Clean and validate data with contract enforcement
-          cleanUserData(rawUser)
-        }
+          cleanUserData(ds),
+        )
         .addTypedSink[CleanedUser, SchemaPolicy.Exact](
           parquetSink,
-          (cleanedUser, sink) => writeToParquet(cleanedUser, sink)
+          (cleanedDataset, sink) => writeToParquet(cleanedDataset, sink),
         )
-        .addTransform[EnrichedUser] { cleanedUser =>
+        .addTransform[Dataset[EnrichedUser]](ds =>
           // Enrich with business logic
-          enrichUserData(cleanedUser)
-        }
+          enrichUserData(ds),
+        )
         .addTypedSink[EnrichedUser, SchemaPolicy.Exact](
           deltaSink,
-          (enrichedUser, sink) => writeToDeltaWithConstraints(enrichedUser, sink)
+          (enrichedDataset, sink) => writeToDeltaWithConstraints(enrichedDataset, sink),
         )
         .build()
     }
   }
 
-  // F-polymorphic data operations
-  private def readCsvUsers(source: DataSource): F[RawUser] =
+  // F-polymorphic data operations using Spark Dataset
+  private def readCsvUsers(source: DataSource)(implicit spark: SparkSession): F[Dataset[RawUser]] =
     F.delay {
-      // Sample user - in practice this would read from actual source
-      RawUser(
-        id = 1L,
-        name = "Alice Johnson",
-        email = "alice@example.com",
-        age = Some(28),
-        country = "USA",
-        isActive = true
-      )
-    }
-
-  private def cleanUserData(rawUser: RawUser): F[CleanedUser] =
-    F.delay {
-      CleanedUser(
-        id = rawUser.id,
-        name = rawUser.name.trim,
-        email = rawUser.email.toLowerCase,
-        age = rawUser.age.getOrElse(0),
-        country = rawUser.country,
-        isActive = rawUser.isActive
-      )
-    }
-
-  private def enrichUserData(cleanedUser: CleanedUser): F[EnrichedUser] =
-    F.delay {
-      val ageGroup = cleanedUser.age match {
-        case a if a < 25 => "young"
-        case a if a < 45 => "middle"
-        case _ => "senior"
+      import spark.implicits._
+      val schema = Encoders.product[RawUser].schema
+      source match {
+        case LocalDataSource(path, _, _, _, _) =>
+          spark.read
+            .schema(schema)
+            .option("header", "true")
+            .csv(path)
+            .as[RawUser]
+        case other =>
+          throw new IllegalArgumentException(s"Unsupported source: $other")
       }
+    }
 
-      val region = cleanedUser.country match {
-        case "USA" | "Canada" => "North America"
-        case "UK" | "Germany" | "France" => "Europe"
-        case "Australia" | "New Zealand" => "Oceania"
-        case _ => "Other"
+  private def cleanUserData(rawDataset: Dataset[RawUser]): F[Dataset[CleanedUser]] =
+    F.delay {
+      import rawDataset.sparkSession.implicits._
+      val cleaned = rawDataset.map { u =>
+        CleanedUser(
+          id = u.id,
+          name = u.name.trim,
+          email = u.email.toLowerCase,
+          age = u.age.getOrElse(0),
+          country = u.country,
+          isActive = u.isActive,
+        )
       }
-
-      EnrichedUser(
-        id = cleanedUser.id,
-        name = cleanedUser.name,
-        email = cleanedUser.email,
-        age = cleanedUser.age,
-        country = cleanedUser.country,
-        isActive = cleanedUser.isActive,
-        ageGroup = ageGroup,
-        region = region
-      )
+      $if(include_dq.truthy)$
+      import com.amazon.deequ.VerificationSuite
+      import com.amazon.deequ.checks.{ Check, CheckLevel }
+      VerificationSuite()
+        .onData(cleaned.toDF())
+        .addCheck(
+          Check(CheckLevel.Error, "user_data")
+            .isComplete("id")
+            .isComplete("email")
+            .isNonNegative("age"),
+        )
+        .run()
+      $endif$
+      cleaned
     }
 
-  private def writeToParquet(user: CleanedUser, sink: DataSink): F[Unit] =
+  private def enrichUserData(cleanedDataset: Dataset[CleanedUser]): F[Dataset[EnrichedUser]] =
     F.delay {
-      println(s"✅ Writing to Parquet: " + user)
-      // Actual Parquet write logic would go here
+      import cleanedDataset.sparkSession.implicits._
+      cleanedDataset.map { u =>
+        val ageGroup = u.age match {
+          case a if a < 25 => "young"
+          case a if a < 45 => "middle"
+          case _           => "senior"
+        }
+
+        val region = u.country match {
+          case "USA" | "Canada"            => "North America"
+          case "UK" | "Germany" | "France" => "Europe"
+          case "Australia" | "New Zealand" => "Oceania"
+          case _                             => "Other"
+        }
+
+        EnrichedUser(
+          id = u.id,
+          name = u.name,
+          email = u.email,
+          age = u.age,
+          country = u.country,
+          isActive = u.isActive,
+          ageGroup = ageGroup,
+          region = region,
+        )
+      }
     }
 
-  private def writeToDeltaWithConstraints(user: EnrichedUser, sink: DataSink): F[Unit] =
+  private def writeToParquet(dataset: Dataset[CleanedUser], sink: DataSink): F[Unit] =
     F.delay {
-      println(s"✅ Writing to Delta with constraints: " + user)
-      // Delta table creation with NOT NULL and CHECK constraints
-      // ALTER TABLE users ADD CONSTRAINT valid_age CHECK (age >= 0 AND age <= 120)
-      // ALTER TABLE users ALTER COLUMN email SET NOT NULL
+      val path = sink match {
+        case LocalDataSink(location, _, _, _, _) => location
+        case other                               => throw new IllegalArgumentException(s"Unsupported sink: $other")
+      }
+      dataset.write.mode("overwrite").parquet(path)
+    }
+
+  private def writeToDeltaWithConstraints(dataset: Dataset[EnrichedUser], sink: DataSink): F[Unit] =
+    F.delay {
+      val path = sink match {
+        case LocalDataSink(location, _, _, _, _) => location
+        case other                               => throw new IllegalArgumentException(s"Unsupported sink: $other")
+      }
+      dataset.write.format("delta").mode("overwrite").save(path)
+      val spark = dataset.sparkSession
+      spark.sql(s"ALTER TABLE delta.`$path` ALTER COLUMN email SET NOT NULL")
+      spark.sql(s"""
+        |ALTER TABLE delta.`$path`
+        |ADD CONSTRAINT valid_age CHECK (age >= 0 AND age <= 120)
+        |""".stripMargin)
     }
 
   def runPipeline(): F[Unit] = {
     val sparkConfig = Map(
       "spark.master" -> "local[*]",
-      "spark.app.name" -> "FlowForge-$name$",
+      "spark.app.name" -> s"FlowForge-$name$",
       "spark.sql.extensions" -> "io.delta.sql.DeltaSparkSessionExtension",
       "spark.sql.catalog.spark_catalog" -> "org.apache.spark.sql.delta.catalog.DeltaCatalog",
-      "spark.serializer" -> "org.apache.spark.serializer.KryoSerializer"
+      "spark.serializer" -> "org.apache.spark.serializer.KryoSerializer",
     )
 
-    withSparkSession(sparkConfig) { spark =>
+    withSparkSession(sparkConfig) { implicit spark =>
+      val emitter = $if(include_lineage.truthy)$OpenLineageEmitter.http[F]$else$OpenLineageEmitter.noop[F]$endif$
       F.flatMap(F.delay(println("🚀 FlowForge v1.0.0 F-Polymorphic Pipeline Starting"))) { _ =>
-        F.flatMap(buildContractValidatedPipeline()) { pipeline =>
-          // WORKAROUND: Pipeline ends with sink (returns Unit) but is typed as Pipeline[F, Unit, EnrichedUser]
-          // Use executeWithMonitoring which handles the type mismatch better
-          F.flatMap(pipeline.executeWithMonitoring(())) { pipelineResult =>
-            F.flatMap(F.delay(println("✅ Pipeline completed successfully with status: " + pipelineResult.status))) { _ =>
-              F.flatMap(F.delay(println("📊 Contract validation: PASSED (compile-time enforced)"))) { _ =>
-                F.flatMap(F.delay(println("🔍 Quality checks: COMPLETED"))) { _ =>
-                  F.flatMap(F.delay(println("📈 Lineage events: EMITTED"))) { _ =>
-                    F.map(F.delay(println("💾 Delta constraints: APPLIED")))(_ => ())
-                  }
-                }
-              }
-            }
+        F.flatMap(buildContractValidatedPipeline(emitter)) { pipeline =>
+          F.flatMap(pipeline.executeWithMonitoring(())) { result =>
+            F.map(F.delay(println("✅ Pipeline completed successfully with status: " + result.status)))(_ => ())
           }
         }
       }
