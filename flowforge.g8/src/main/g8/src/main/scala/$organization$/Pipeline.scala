@@ -207,16 +207,21 @@ class FlowForgePipeline[F[_]: EffectSystem] {
     )
 
     withSparkSession(sparkConfig) { spark =>
-      for {
-        _ <- F.delay(println("🚀 FlowForge v1.0.0 F-Polymorphic Pipeline Starting"))
-        pipeline <- buildContractValidatedPipeline()
-        result <- pipeline.execute(())
-        _ <- F.delay(println(s"✅ Pipeline completed successfully: " + result))
-        _ <- F.delay(println("📊 Contract validation: PASSED (compile-time enforced)"))
-        _ <- F.delay(println("🔍 Quality checks: COMPLETED"))
-        _ <- F.delay(println("📈 Lineage events: EMITTED"))
-        _ <- F.delay(println("💾 Delta constraints: APPLIED"))
-      } yield ()
+      F.flatMap(F.delay(println("🚀 FlowForge v1.0.0 F-Polymorphic Pipeline Starting"))) { _ =>
+        F.flatMap(buildContractValidatedPipeline()) { pipeline =>
+          F.flatMap(pipeline.execute(())) { result =>
+            F.flatMap(F.delay(println(s"✅ Pipeline completed successfully: $result"))) { _ =>
+              F.flatMap(F.delay(println("📊 Contract validation: PASSED (compile-time enforced)"))) { _ =>
+                F.flatMap(F.delay(println("🔍 Quality checks: COMPLETED"))) { _ =>
+                  F.flatMap(F.delay(println("📈 Lineage events: EMITTED"))) { _ =>
+                    F.map(F.delay(println("💾 Delta constraints: APPLIED")))(_ => ())
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
