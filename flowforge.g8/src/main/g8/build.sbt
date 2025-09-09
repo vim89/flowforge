@@ -8,7 +8,8 @@ lazy val root = (project in file("."))
     Compile / run / fork := true,
     Compile / run / javaOptions ++= Seq(
       "-Xmx2g",
-      "-XX:+UseG1GC"
+      "-XX:+UseG1GC",
+      "--add-exports", "java.base/sun.nio.ch=ALL-UNNAMED"
     ),
     libraryDependencies ++= Seq(
       // FlowForge v1.0.0 core dependencies

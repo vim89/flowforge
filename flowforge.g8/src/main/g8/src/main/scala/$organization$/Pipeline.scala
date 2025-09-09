@@ -210,8 +210,10 @@ class FlowForgePipeline[F[_]: EffectSystem] {
     withSparkSession(sparkConfig) { spark =>
       F.flatMap(F.delay(println("🚀 FlowForge v1.0.0 F-Polymorphic Pipeline Starting"))) { _ =>
         F.flatMap(buildContractValidatedPipeline()) { pipeline =>
-          F.flatMap(pipeline.execute(())) { result =>
-            F.flatMap(F.delay(println(s"✅ Pipeline completed successfully: \$result"))) { _ =>
+          // WORKAROUND: Pipeline ends with sink (returns Unit) but is typed as Pipeline[F, Unit, EnrichedUser]  
+          // Use executeWithMonitoring which handles the type mismatch better
+          F.flatMap(pipeline.executeWithMonitoring(())) { pipelineResult =>
+            F.flatMap(F.delay(println(s"✅ Pipeline completed successfully with status: \${pipelineResult.status}"))) { _ =>
               F.flatMap(F.delay(println("📊 Contract validation: PASSED (compile-time enforced)"))) { _ =>
                 F.flatMap(F.delay(println("🔍 Quality checks: COMPLETED"))) { _ =>
                   F.flatMap(F.delay(println("📈 Lineage events: EMITTED"))) { _ =>
