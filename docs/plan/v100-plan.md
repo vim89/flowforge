@@ -213,7 +213,7 @@ That’s it. If you execute those nine steps, the tag is legit.
 
 **P1 — DX & docs**
 
-* [ ] Quickstart with 4 commands + expected outputs/screenshots.
+* [ ] Quickstart with 4 commands + expected outputs/screenshots. See [quick guide](../getting-started-quick.md) and [architecture overview](../diagrams/overview.svg).
 * [ ] `mdoc` wired to `examples/` so doc snippets compile in CI.
 * [ ] Compatibility matrix (Spark/Delta/Deequ) and limitations (no UNIQUE). ([Delta Lake][4])
 * [ ] Comparison page vs Frameless/Dagster/Kedro/Scio—what FlowForge uniquely provides (contracts → enforcement ×3). ([GitHub][9], [Dagster Docs][11], [Kedro][13], [Spotify Open Source][15])

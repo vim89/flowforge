@@ -1,4 +1,7 @@
 # flowforge
+
+See the [quick start](docs/getting-started-quick.md) and [architecture overview](docs/diagrams/overview.svg).
+
 ## 🎯 **The brutal truth about Data Engineering today**
 **Data engineering is broken.** And we're all pretending it's fine.
 
