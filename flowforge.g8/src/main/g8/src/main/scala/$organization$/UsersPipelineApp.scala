@@ -107,9 +107,7 @@ object UsersPipelineApp extends IOApp.Simple {
       .transform[EnrichedUser](enrichWithBusinessData) 
       .withQualityCheck(validateEnrichedUser)
       .to(DataSink.gcs("$organization$-processed-data", "users/enriched", DataFormat.Parquet))
-      .withSLA("hourly")
-      .withOwner("DataPlatformTeam")
-  }
+    }
 
   // Application entry point
   def run: IO[Unit] = {
