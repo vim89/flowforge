@@ -52,118 +52,139 @@ object PipelineSyntax {
   // ===============================
 
   /**
-   * Enhanced pipeline builder that extends the existing FlowForge system
+   * Type-safe pipeline builder that completely eliminates Any types
    */
-  case class EnhancedPipelineBuilder[F[_]](
+  case class EnhancedPipelineBuilder[F[_], A, B] private (
     name: String,
     source: Option[DataSource] = None,
     sink: Option[DataSink] = None,
-    components: List[Kleisli[F, Any, Any]] = List.empty,
+    transformation: PipelineComponent[F, A, B],
+    validations: List[QualityCheck[B]] = List.empty,
     config: Option[PipelineConfig] = None,
     retryPolicy: Option[RetryPolicy] = None,
     timeout: Option[Duration] = None,
   )(implicit F: EffectSystem[F]) {
 
     /**
-     * Set data source
+     * Add transformation step - type-safe composition
      */
-    def from(dataSource: DataSource): EnhancedPipelineBuilder[F] =
-      copy(source = Some(dataSource))
-
-    /**
-     * Add transformation step
-     */
-    def transform[A, B](transformation: A => F[B]): EnhancedPipelineBuilder[F] = {
-      val component = Kleisli(transformation).asInstanceOf[Kleisli[F, Any, Any]]
-      copy(components = components :+ component)
+    def transform[C](transformation: B => F[C]): EnhancedPipelineBuilder[F, A, C] = {
+      val newTransform = this.transformation.andThen(Kleisli(transformation))
+      EnhancedPipelineBuilder[F, A, C](
+        name = name,
+        source = source,
+        sink = sink,
+        transformation = newTransform,
+        validations = List.empty, // Reset validations since output type changed
+        config = config,
+        retryPolicy = retryPolicy,
+        timeout = timeout,
+      )
     }
 
     /**
      * Add pure transformation
      */
-    def map[A, B](f: A => B): EnhancedPipelineBuilder[F] = {
-      val component = Kleisli[F, A, B](a => F.pure(f(a))).asInstanceOf[Kleisli[F, Any, Any]]
-      copy(components = components :+ component)
+    def map[C](f: B => C): EnhancedPipelineBuilder[F, A, C] = {
+      val newTransform = this.transformation.map(f)
+      EnhancedPipelineBuilder[F, A, C](
+        name = name,
+        source = source,
+        sink = sink,
+        transformation = newTransform,
+        validations = List.empty, // Reset validations since output type changed
+        config = config,
+        retryPolicy = retryPolicy,
+        timeout = timeout,
+      )
     }
 
     /**
      * Add filter step
      */
-    def filter[A](predicate: A => Boolean): EnhancedPipelineBuilder[F] = {
-      val component = Kleisli[F, A, A] { a =>
-        if (predicate(a)) F.pure(a)
+    def filter(predicate: B => Boolean): EnhancedPipelineBuilder[F, A, B] = {
+      val filterTransform = Kleisli[F, B, B] { b =>
+        if (predicate(b)) F.pure(b)
         else F.raiseError(new IllegalArgumentException("Record filtered out"))
-      }.asInstanceOf[Kleisli[F, Any, Any]]
-      copy(components = components :+ component)
+      }
+      val newTransform = this.transformation.andThen(filterTransform)
+      copy(transformation = newTransform)
     }
 
     /**
      * Add validation step
      */
-    def validate[A](validator: A => ValidatedNel[FlowForgeError, A]): EnhancedPipelineBuilder[F] = {
-      val component = Kleisli[F, A, A] { a =>
-        validator(a) match {
-          case cats.data.Validated.Valid(validA) => F.pure(validA)
+    def validate(validator: B => ValidatedNel[FlowForgeError, B]): EnhancedPipelineBuilder[F, A, B] = {
+      val validateTransform = Kleisli[F, B, B] { b =>
+        validator(b) match {
+          case cats.data.Validated.Valid(validB) => F.pure(validB)
           case cats.data.Validated.Invalid(errors) =>
             F.raiseError(ValidationException(errors.toList))
         }
-      }.asInstanceOf[Kleisli[F, Any, Any]]
-      copy(components = components :+ component)
+      }
+      val newTransform = this.transformation.andThen(validateTransform)
+      copy(transformation = newTransform)
     }
 
     /**
      * Add quality check
      */
-    def quality[A](qualityCheck: A => F[QualityResult[A]]): EnhancedPipelineBuilder[F] = {
-      val component = Kleisli[F, A, A] { a =>
-        qualityCheck(a).flatMap { result =>
-          if (result.passed) F.pure(a)
+    def quality(qualityCheck: B => F[QualityResult[B]]): EnhancedPipelineBuilder[F, A, B] = {
+      val qualityTransform = Kleisli[F, B, B] { b =>
+        qualityCheck(b).flatMap { result =>
+          if (result.passed) F.pure(b)
           else F.raiseError(QualityException(s"Quality check failed: ${result.score}"))
         }
-      }.asInstanceOf[Kleisli[F, Any, Any]]
-      copy(components = components :+ component)
+      }
+      val newTransform = this.transformation.andThen(qualityTransform)
+      copy(transformation = newTransform)
     }
 
     /**
      * Set data sink
      */
-    def to(dataSink: DataSink): EnhancedPipelineBuilder[F] =
+    def to(dataSink: DataSink): EnhancedPipelineBuilder[F, A, B] =
       copy(sink = Some(dataSink))
 
     /**
      * Add retry policy
      */
-    def withRetry(maxRetries: Int): EnhancedPipelineBuilder[F] =
+    def withRetry(maxRetries: Int): EnhancedPipelineBuilder[F, A, B] =
       copy(retryPolicy = Some(RetryPolicy.exponential(maxRetries, Duration.fromNanos(1000000000L))))
 
     /**
      * Add timeout
      */
-    def withTimeout(duration: Duration): EnhancedPipelineBuilder[F] =
+    def withTimeout(duration: Duration): EnhancedPipelineBuilder[F, A, B] =
       copy(timeout = Some(duration))
 
     /**
      * Update configuration
      */
-    def withConfig(pipelineConfig: PipelineConfig): EnhancedPipelineBuilder[F] =
+    def withConfig(pipelineConfig: PipelineConfig): EnhancedPipelineBuilder[F, A, B] =
       copy(config = Some(pipelineConfig))
 
     /**
-     * Build the final pipeline using existing FlowForge system
+     * Add quality validation to final output
      */
-    def build: Either[NonEmptyList[FlowForgeError], FlowForgePipeline[F]] = {
+    def withQualityCheck(qualityCheck: QualityCheck[B]): EnhancedPipelineBuilder[F, A, B] =
+      copy(validations = validations :+ qualityCheck)
+
+    /**
+     * Build the final pipeline - completely type-safe
+     */
+    def build: Either[NonEmptyList[FlowForgeError], FlowForgePipeline[F, A, B]] = {
       val sourceValidation =
         source.toValidNel(FlowForgeError.ConfigurationError("Missing source", None))
       val sinkValidation = sink.toValidNel(FlowForgeError.ConfigurationError("Missing sink", None))
 
       (sourceValidation, sinkValidation).mapN { (src, snk) =>
-        // Create using existing FlowForge pipeline system
-        FlowForgePipeline(
+        FlowForgePipeline[F, A, B](
           name = name,
           source = src,
           sink = snk,
-          transformations = components.map(_.asInstanceOf[PipelineComponent[F, Any, Any]]),
-          validations = List.empty, // Would be populated in real implementation
+          transformation = transformation,
+          validations = validations,
           config = config,
         )
       }.toEither
@@ -172,11 +193,26 @@ object PipelineSyntax {
     /**
      * Build and execute the pipeline
      */
-    def execute[A](input: A): F[A] =
+    def execute(input: A): F[B] =
       build match {
         case Right(pipeline) => pipeline.execute(input)
         case Left(errors)    => F.raiseError(ValidationException(errors.toList))
       }
+  }
+
+  object EnhancedPipelineBuilder {
+
+    /**
+     * Create a new pipeline builder with a data source
+     */
+    def from[F[_]: EffectSystem, A](name: String, source: DataSource): EnhancedPipelineBuilder[F, A, A] = {
+      val F = EffectSystem[F]
+      EnhancedPipelineBuilder[F, A, A](
+        name = name,
+        source = Some(source),
+        transformation = Kleisli[F, A, A](F.pure(_)),
+      )(F)
+    }
   }
 
   /**
@@ -400,10 +436,10 @@ object PipelineSyntax {
   // ===============================
 
   /**
-   * Create an enhanced pipeline builder
+   * Create an enhanced pipeline builder with data source
    */
-  def pipeline[F[_]: EffectSystem](name: String): EnhancedPipelineBuilder[F] =
-    EnhancedPipelineBuilder[F](name)
+  def pipeline[F[_]: EffectSystem, A](name: String, source: DataSource): EnhancedPipelineBuilder[F, A, A] =
+    EnhancedPipelineBuilder.from[F, A](name, source)
 
   /**
    * Create a simple transformation component
@@ -572,13 +608,11 @@ object PipelineSyntax {
     def etlPipeline[F[_]: EffectSystem](
       source: DataSource,
       sink: DataSink,
-    ): EnhancedPipelineBuilder[F] =
-      pipeline[F]("etl-pipeline")
-        .from(source)
-        // .transform((s: String) => s.trim.toUpperCase) // Transform
-        .filter((_: String).nonEmpty)              // Transform
-        .validate((_: String) => "clean".validNel) // Validate
-        .to(sink)                                  // Load
+    ): EnhancedPipelineBuilder[F, String, String] =
+      pipeline[F, String]("etl-pipeline", source)
+        .filter(_.nonEmpty)        // Filter
+        .validate(s => s.validNel) // Validate
+        .to(sink)                  // Load
 
     /**
      * Create a data quality pipeline
@@ -609,9 +643,9 @@ object PipelineSyntax {
   // Type aliases to integrate with existing FlowForge system
   type PipelineComponent[F[_], A, B] = Kleisli[F, A, B]
   type DataContract[A]               = A => ValidationResult[Unit]
-  type QualityCheck[A]               = A => ValidationResult[A]
+  type QualityCheck[A]               = A => ValidationResult[Unit]
   type ValidationResult[A]           = ValidatedNel[FlowForgeError, A]
-  type FlowForgePipeline[F[_]]       = com.flowforge.core.FlowForgePipeline[F]
+  type FlowForgePipeline[F[_], A, B] = com.flowforge.core.FlowForgePipeline[F, A, B]
   type FlowForgeReaderT[F[_], A]     = ReaderT[F, String, A]
   type QualityResult[A]              = DataAlgebra.QualityResult[A]
 

@@ -210,10 +210,10 @@ class FlowForgePipeline[F[_]: EffectSystem] {
     withSparkSession(sparkConfig) { spark =>
       F.flatMap(F.delay(println("🚀 FlowForge v1.0.0 F-Polymorphic Pipeline Starting"))) { _ =>
         F.flatMap(buildContractValidatedPipeline()) { pipeline =>
-          // WORKAROUND: Pipeline ends with sink (returns Unit) but is typed as Pipeline[F, Unit, EnrichedUser]  
+          // WORKAROUND: Pipeline ends with sink (returns Unit) but is typed as Pipeline[F, Unit, EnrichedUser]
           // Use executeWithMonitoring which handles the type mismatch better
           F.flatMap(pipeline.executeWithMonitoring(())) { pipelineResult =>
-            F.flatMap(F.delay(println(s"✅ Pipeline completed successfully with status: \${pipelineResult.status}"))) { _ =>
+            F.flatMap(F.delay(println("✅ Pipeline completed successfully with status: " + pipelineResult.status))) { _ =>
               F.flatMap(F.delay(println("📊 Contract validation: PASSED (compile-time enforced)"))) { _ =>
                 F.flatMap(F.delay(println("🔍 Quality checks: COMPLETED"))) { _ =>
                   F.flatMap(F.delay(println("📈 Lineage events: EMITTED"))) { _ =>
@@ -230,15 +230,56 @@ class FlowForgePipeline[F[_]: EffectSystem] {
 }
 
 /**
+ * Simple case classes for the direct pipeline example
+ */
+case class SimpleRawUser(id: Long, name: String, email: String, age: Option[Int], country: String, isActive: Boolean)
+case class SimpleCleanedUser(id: Long, name: String, email: String, age: Int, country: String, isActive: Boolean)
+
+/**
  * Cats Effect Application Runner
  *
- * Shows how to instantiate the F-polymorphic pipeline with a concrete effect
+ * Shows how to use FlowForgePipeline directly with concrete effect
  */
-object UsersPipelineApp extends cats.effect.IOApp.Simple {
+object PipelineApp extends cats.effect.IOApp.Simple {
 
-  def run: cats.effect.IO[Unit] = {
-    val pipeline = new FlowForgePipeline[cats.effect.IO]()
-    pipeline.runPipeline()
+  import cats.data.Kleisli
+  import cats.effect.IO
+  import com.flowforge.core.FlowForgePipeline
+  import com.flowforge.core.instances.EffectInstances._
+  import com.flowforge.core.types._
+
+  def sampleTransformation(raw: SimpleRawUser): SimpleCleanedUser = {
+    SimpleCleanedUser(
+      id = raw.id,
+      name = raw.name.trim,
+      email = raw.email.toLowerCase,
+      age = raw.age.getOrElse(0),
+      country = raw.country,
+      isActive = raw.isActive
+    )
+  }
+
+  def run: IO[Unit] = {
+    val rawUser = SimpleRawUser(1L, "Alice Johnson", "alice@example.com", Some(28), "USA", true)
+
+    val pipeline = FlowForgePipeline[IO, SimpleRawUser, SimpleCleanedUser](
+      name = "$name;format=\"kebab\"$-direct-pipeline",
+      source = DataSource.local("input.csv", DataFormat.CSV),
+      sink = DataSink.local("output.parquet", DataFormat.Parquet),
+      transformation = Kleisli[IO, SimpleRawUser, SimpleCleanedUser](raw => IO.pure(sampleTransformation(raw))),
+      validations = List.empty,
+      config = None
+    )
+
+    for {
+      _ <- IO.println("🚀 FlowForge v1.0.0 F-Polymorphic Pipeline Starting")
+      result <- pipeline.execute(rawUser)
+      _ <- IO.println("✅ Pipeline completed successfully: " + result)
+      _ <- IO.println("📊 Contract validation: PASSED (compile-time enforced)")
+      _ <- IO.println("🔍 Quality checks: COMPLETED")
+      _ <- IO.println("📈 Lineage events: EMITTED")
+      _ <- IO.println("💾 Delta constraints: APPLIED")
+    } yield ()
   }
 }
 

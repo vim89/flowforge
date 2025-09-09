@@ -13,32 +13,36 @@ import com.flowforge.core.types.PipelineTypes._
 import com.flowforge.core.types._
 
 /**
- * Represents a complete FlowForge pipeline.
+ * Represents a complete FlowForge pipeline with input and output types.
+ *
+ * @tparam F
+ *   Effect type (IO, Task, etc.)
+ * @tparam A
+ *   Input data type
+ * @tparam B
+ *   Output data type
  */
-case class FlowForgePipeline[F[_]: EffectSystem](
+case class FlowForgePipeline[F[_]: EffectSystem, A, B](
   name: String,
   source: DataSource,
   sink: DataSink,
-  transformations: List[PipelineComponent[F, Any, Any]],
-  validations: List[QualityCheck[Any]],
+  transformation: PipelineComponent[F, A, B], // Single composed transformation
+  validations: List[QualityCheck[B]],
   config: Option[PipelineConfig]) {
 
   /**
    * Execute the pipeline with the given input data and return accumulated validations.
    */
-  def executeValidated[A](inputData: A): F[cats.data.ValidatedNel[FlowForgeError, A]] = {
-    val F = EffectSystem[F]
+  def executeValidated(inputData: A): F[cats.data.ValidatedNel[FlowForgeError, B]] = {
+    EffectSystem[F]
 
-    // Apply transformations sequentially within F
-    val transformedF: F[Any] =
-      transformations.foldLeft(F.pure(inputData.asInstanceOf[Any])) { (acc, transform) =>
-        acc.flatMap(data => transform.run(data))
-      }
+    // Apply single composed transformation - now completely type-safe
+    val transformedF: F[B] = transformation.run(inputData)
 
     // Validate after transformations; accumulate all validation errors
     transformedF.map { data =>
       val results = validations.map(_(data))
-      results.sequence.map(_ => data.asInstanceOf[A])
+      results.sequence.map(_ => data)
     }
   }
 
@@ -46,12 +50,16 @@ case class FlowForgePipeline[F[_]: EffectSystem](
    * Execute the pipeline and raise validation failures in the effect channel. This avoids throwing exceptions
    * and preserves functional error handling.
    */
-  def execute[A](inputData: A): F[A] = {
+  def execute(inputData: A): F[B] = {
     val F = EffectSystem[F]
     executeValidated(inputData).flatMap {
-      case cats.data.Validated.Valid(a) => F.pure(a)
-      case cats.data.Validated.Invalid(e) =>
-        F.raiseError(new RuntimeException(s"Validation failed: ${e.toList.map(_.message).mkString(", ")}"))
+      case cats.data.Validated.Valid(result) => F.pure(result)
+      case cats.data.Validated.Invalid(errors) =>
+        val pipelineError = PipelineError.StageExecutionError(
+          name,
+          s"Validation failed: ${errors.toList.map(_.message).mkString(", ")}",
+        )
+        F.raiseError(pipelineError)
     }
   }
 
