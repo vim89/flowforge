@@ -6,6 +6,7 @@ import com.flowforge.core.contracts.SchemaPolicy
 import com.flowforge.core.contracts.derive.Shape
 import com.flowforge.core.types._
 import com.flowforge.core.lineage.OpenLineageEmitter
+import com.flowforge.core.instances.EffectInstances._
 import org.apache.spark.sql.SparkSession
 
 /**
@@ -210,7 +211,7 @@ class FlowForgePipeline[F[_]: EffectSystem] {
       F.flatMap(F.delay(println("🚀 FlowForge v1.0.0 F-Polymorphic Pipeline Starting"))) { _ =>
         F.flatMap(buildContractValidatedPipeline()) { pipeline =>
           F.flatMap(pipeline.execute(())) { result =>
-            F.flatMap(F.delay(println(s"✅ Pipeline completed successfully: $result"))) { _ =>
+            F.flatMap(F.delay(println(s"✅ Pipeline completed successfully: \$result"))) { _ =>
               F.flatMap(F.delay(println("📊 Contract validation: PASSED (compile-time enforced)"))) { _ =>
                 F.flatMap(F.delay(println("🔍 Quality checks: COMPLETED"))) { _ =>
                   F.flatMap(F.delay(println("📈 Lineage events: EMITTED"))) { _ =>
