@@ -9,7 +9,7 @@ Generated from flowforge template with **F-polymorphic effects** and **compile-t
 sbt compile
 
 # 2. Run the complete pipeline
-sbt "runMain $organization$.$name;format="word"$.UsersPipelineApp"
+sbt "runMain $organization$;format="word"$.UsersPipelineApp"
 ```
 
 **Expected Output:**
