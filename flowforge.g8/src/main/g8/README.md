@@ -9,7 +9,7 @@ Generated from flowforge template with **F-polymorphic effects** and **compile-t
 sbt compile
 
 # 2. Run the complete pipeline
-sbt "runMain $organization$;format=\"word\".UsersPipelineApp"
+sbt "runMain $organization$.UsersPipelineApp"
 ```
 
 **Expected Output:**
@@ -47,8 +47,8 @@ sbt "runMain $organization$;format=\"word\".UsersPipelineApp"
 - **Effect System**: $effect_system$ (F-polymorphic with Cats Effect instance)
 - **Execution Engine**: $execution_engine$ (Spark 3.5.6)  
 - **Cloud Provider**: $cloud_provider$
-- **Quality Checks**: $if(include_dq.truthy)$✅ Deequ integration enabled$else$Native Spark checks only$endif$
-- **Lineage**: $if(include_lineage.truthy)$✅ OpenLineage events enabled$else$Noop lineage emitter$endif$
+- **Quality Checks**: $if(include_dq.truthy)$ ✅ Deequ integration enabled $else$ Native Spark checks only $endif$
+- **Lineage**: $if(include_lineage.truthy)$ ✅ OpenLineage events enabled $else$ Noop lineage emitter $endif$
 
 ## 🧪 Testing contract validation
 

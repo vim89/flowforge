@@ -8,7 +8,7 @@ import cats.implicits._
 
 /**
  * Real-world FlowForge Pipeline Application
- * 
+ *
  * Demonstrates the full power of FlowForge's type-safe, contract-driven approach
  */
 object UsersPipelineApp extends IOApp.Simple {
@@ -36,9 +36,9 @@ object UsersPipelineApp extends IOApp.Simple {
       case age if age < 60 => "Middle Aged"
       case _ => "Senior"
     }
-    
+
     val riskScore = (user.age * 0.01 + user.country.length * 0.1) % 1.0
-    
+
     EnrichedUser(user.id, user.name, user.email, user.age, user.country, segment, riskScore)
   }
 
@@ -53,7 +53,7 @@ object UsersPipelineApp extends IOApp.Simple {
     .withOwner("DataIngestionTeam")
     .build
 
-  val cleanUserContract = Contract("clean_user")  
+  val cleanUserContract = Contract("clean_user")
     .field("id").required.long.positive
     .field("name").required.string.minLength(2).maxLength(200)
     .field("email").required.string.email.maxLength(255)
@@ -83,51 +83,51 @@ object UsersPipelineApp extends IOApp.Simple {
       if (user.age > 0 && user.age < 150) ().validNel else FlowForgeError.ValidationError("Invalid age").invalidNel,
       if (user.country.length >= 2) ().validNel else FlowForgeError.ValidationError("Invalid country code").invalidNel
     )
-    
+
     validations.sequence_.map(_ => ())
   }
 
   def validateEnrichedUser(user: EnrichedUser): cats.data.ValidatedNel[FlowForgeError, Unit] = {
     val validSegments = Set("Young Adult", "Adult", "Middle Aged", "Senior")
-    
+
     val validations = List(
       if (validSegments.contains(user.segment)) ().validNel else FlowForgeError.ValidationError("Invalid segment").invalidNel,
       if (user.riskScore >= 0.0 && user.riskScore <= 1.0) ().validNel else FlowForgeError.ValidationError("Invalid risk score").invalidNel
     )
-    
+
     validations.sequence_.map(_ => ())
   }
 
   // Complete ETL Pipeline
   def createUserProcessingPipeline() = {
-    
+
     EnhancedPipelineBuilder.from[IO, RawUser]("user-processing-pipeline",
-      $if(cloud_provider == "gcp")$
-        DataSource.gcs("$organization$-raw-data", "users/raw", DataFormat.CSV)
-      $elseif(cloud_provider == "aws")$
-        DataSource.s3("$organization$-raw-data", "users/raw", DataFormat.CSV)
-      $elseif(cloud_provider == "azure")$
-        DataSource.abfs("$organization$-raw-data", "users/raw", DataFormat.CSV)
-      $else$
+      \$if(cloud_provider == "gcp")\$
+        DataSource.gcs("" + "$organization$" + "-raw-data", "users/raw", DataFormat.CSV)
+      \$elseif(cloud_provider == "aws")\$
+        DataSource.s3("" + "$organization$" + "-raw-data", "users/raw", DataFormat.CSV)
+      \$elseif(cloud_provider == "azure")\$
+        DataSource.abfs("" + "$organization$" + "-raw-data", "users/raw", DataFormat.CSV)
+      \$else\$
         DataSource.local("data/users/raw.csv", DataFormat.CSV)
-      $endif$
+      \$endif\$
     )
 
       .transform[CleanUser](parseAndValidateUser)
       .validate(validateCleanUser)
-      .transform[EnrichedUser](enrichWithBusinessData) 
+      .transform[EnrichedUser](enrichWithBusinessData)
       .withQualityCheck(validateEnrichedUser)
-      
+
       .to(
-        $if(cloud_provider == "gcp")$
-          DataSink.gcs("$organization$-processed-data", "users/enriched", DataFormat.Parquet)
-        $elseif(cloud_provider == "aws")$
-          DataSink.s3("$organization$-processed-data", "users/enriched", DataFormat.Parquet)
-        $elseif(cloud_provider == "azure")$
-          DataSink.abfs("$organization$-processed-data", "users/enriched", DataFormat.Parquet)
-        $else$
+        \$if(cloud_provider == "gcp")\$
+          DataSink.gcs("" + "$organization$" + "-processed-data", "users/enriched", DataFormat.Parquet)
+        \$elseif(cloud_provider == "aws")\$
+          DataSink.s3("" + "$organization$" + "-processed-data", "users/enriched", DataFormat.Parquet)
+        \$elseif(cloud_provider == "azure")\$
+          DataSink.abfs("" + "$organization$" + "-processed-data", "users/enriched", DataFormat.Parquet)
+        \$else\$
           DataSink.local("data/users/enriched", DataFormat.Parquet)
-        $endif$
+        \$endif\$
       )
 
     }
@@ -136,26 +136,26 @@ object UsersPipelineApp extends IOApp.Simple {
   def run: IO[Unit] = {
     for {
       _ <- IO.println("🚀 Starting FlowForge User Processing Pipeline...")
-      
+
       // Build the pipeline
       pipeline = createUserProcessingPipeline()
-      
+
       // Sample data for demonstration
       sampleRawUser = RawUser("123", "john doe", "JOHN.DOE@EXAMPLE.COM", "25", "us")
-      
+
       // Execute the pipeline
       _ <- IO.println("📊 Processing sample user: " + sampleRawUser)
       result <- pipeline.execute(sampleRawUser)
-      
+
       _ <- IO.println("✅ Pipeline completed successfully!")
       _ <- IO.println("📈 Final result: " + result)
-      
+
       // Demonstrate contract validation
       _ <- IO.println("🔍 Validating contracts...")
       _ <- IO.println("✓ Raw User Contract: " + rawUserContract.name)
-      _ <- IO.println("✓ Clean User Contract: " + cleanUserContract.name)  
+      _ <- IO.println("✓ Clean User Contract: " + cleanUserContract.name)
       _ <- IO.println("✓ Enriched User Contract: " + enrichedUserContract.name)
-      
+
     } yield ()
   }
 }

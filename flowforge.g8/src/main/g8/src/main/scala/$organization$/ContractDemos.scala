@@ -180,7 +180,7 @@ object ContractDemos {
         if (user.email.contains("@") && user.age > 0) {
           F.pure(user)
         } else {
-          F.raiseError(new IllegalArgumentException(s"Invalid user data: " + user))
+          F.raiseError(new IllegalArgumentException("Invalid user data: " + user))
         }
       }
 
