@@ -17,21 +17,21 @@ jobs:
         include:
           - module: core
             commands: >
-              scalafmtCheckAll scalafixAll core/test compile-fail-tests/test
+              scalafmtCheckAll "scalafixAll --check" core/test compile-fail-tests/test
             paths: |
               target
               modules/core/target
               modules/compile-fail-tests/target
           - module: connectors
             commands: >
-              connectors/test connectors-gcs/test
+              scalafmtCheckAll "scalafixAll --check" connectors/test connectors-gcs/test
             paths: |
               target
               modules/connectors/target
               modules/connectors-gcs/target
           - module: engines
             commands: >
-              engines-spark/test engines-flink/test "engines-spark/testOnly *StreamingCDCSpec" "engines-flink/testOnly *EngineAbstractionSpec"
+              scalafmtCheckAll "scalafixAll --check" engines-spark/test engines-flink/test "engines-spark/testOnly *StreamingCDCSpec" "engines-flink/testOnly *EngineAbstractionSpec"
             paths: |
               target
               modules/engines-spark/target
@@ -84,8 +84,8 @@ jobs:
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt', '**/project/**/*.sbt', '**/.scalafix.conf') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
-      - name: Scalafix dry-run
-        run: sbt -batch fixCheck
+      - name: Scalafix check (no rewrites)
+        run: sbt -batch "scalafmtCheckAll; scalafixAll --check"
       - name: Cast/Any CI gate
         shell: bash
         run: |
@@ -123,6 +123,38 @@ jobs:
             exit 1
           fi
           echo "✅ PASS: No unsafe asInstanceOf/Any found outside whitelist"
+
+      - name: Try/Try-catch/unsafeRunSync bans (main sources only)
+        shell: bash
+        run: |
+          echo "🔍 Enforcing ADR-022 try/Try bans and unsafeRunSync in main sources"
+          set -euo pipefail
+          FAIL=0
+          # Search only in main sources; allow tests/examples
+          MAPFILE=()
+          while IFS= read -r -d '' f; do MAPFILE+=("$f"); done < <(find modules -type f -path "*/src/main/scala/*" -name "*.scala" -print0)
+          # Whitelist specific files that may reference scala.util.Try for API surface
+          WHITELIST=(
+            "modules/core/src/main/scala/com/flowforge/core/safety/Safety.scala"
+            "modules/core/src/main/scala/com/flowforge/core/package.scala"
+          )
+          is_whitelisted() {
+            local f="$1"
+            for w in "${WHITELIST[@]}"; do [[ "$f" == "$w" ]] && return 0; done
+            return 1
+          }
+
+          if rg -n "\btry\s*\{" "${MAPFILE[@]}"; then echo "❌ try { found in main sources"; FAIL=1; fi
+          # Scan for scala.util.Try excluding whitelist
+          while IFS= read -r line; do
+            file=$(echo "$line" | awk -F: '{print $1}')
+            if is_whitelisted "$file"; then continue; fi
+            echo "❌ scala.util.Try found in $file"; FAIL=1
+          done < <(rg -n "\\bscala\\.util\\.Try\\b" "${MAPFILE[@]}" || true)
+          if rg -n "unsafeRunSync" "${MAPFILE[@]}"; then echo "❌ unsafeRunSync found in main sources"; FAIL=1; fi
+
+          if [[ "$FAIL" -ne 0 ]]; then exit 1; fi
+          echo "✅ PASS: No banned patterns in main sources"
 
   spark-it:
     if: github.event_name == 'workflow_dispatch'

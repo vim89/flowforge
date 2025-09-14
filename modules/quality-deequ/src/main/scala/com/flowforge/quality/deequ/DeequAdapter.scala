@@ -5,6 +5,7 @@ import com.flowforge.core.algebra.DataAlgebra.{ QualityViolation, ViolationSever
 import com.flowforge.core.types.{ QualityConstraint => FFConstraint }
 import com.flowforge.engines.spark.ProductionSparkDataset
 import org.apache.spark.sql.SparkSession
+import cats.syntax.either._
 
 /**
  * FlowForge Data Quality with Deequ 2.0.12 for Spark 3.5
@@ -21,7 +22,7 @@ import org.apache.spark.sql.SparkSession
 object DeequAdapter {
 
   private val deequAvailable: Boolean =
-    scala.util.Try {
+    Either.catchNonFatal {
       Class.forName("com.amazon.deequ.VerificationSuite")
       true
     }.getOrElse(false)
@@ -59,7 +60,7 @@ object DeequAdapter {
 
     // Use reflection to call Deequ VerificationSuite
     val deequResult: Either[Throwable, DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]] =
-      scala.util.Try {
+      Either.catchNonFatal {
         val verificationSuiteClass = Class.forName("com.amazon.deequ.VerificationSuite")
         val checkClass             = Class.forName("com.amazon.deequ.checks.Check")
         val checkLevelClass        = Class.forName("com.amazon.deequ.checks.CheckLevel")
@@ -82,7 +83,7 @@ object DeequAdapter {
 
         // Process Deequ result using reflection
         processDeequResultReflection(verificationResult, originalDataset)
-      }.toEither
+      }
 
     deequResult match {
       case Right(result) => result

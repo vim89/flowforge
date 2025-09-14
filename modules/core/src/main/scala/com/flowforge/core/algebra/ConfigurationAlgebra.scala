@@ -46,7 +46,6 @@ import fs2.Stream
 
 import java.util.Properties
 import scala.concurrent.duration._
-import scala.util.Try
 
 /**
  * Core configuration management algebra with effect polymorphism. Provides type-safe, functional
@@ -616,9 +615,11 @@ object ConfigurationAlgebra {
         .get(key)
         .flatMap { s =>
           val trimmed = s.trim.toLowerCase
-          if (trimmed.endsWith("ms")) Try(trimmed.stripSuffix("ms").toLong.millis).toOption
-          else if (trimmed.endsWith("s")) Try(trimmed.stripSuffix("s").toLong.seconds).toOption
-          else Try(trimmed.toLong.seconds).toOption
+          def parseLong(str: String): Option[Long] =
+            com.flowforge.core.safety.Safety.safely(str.toLong)(com.flowforge.core.safety.ErrorMapper.default).toOption
+          if (trimmed.endsWith("ms")) parseLong(trimmed.stripSuffix("ms")).map(_.millis)
+          else if (trimmed.endsWith("s")) parseLong(trimmed.stripSuffix("s")).map(_.seconds)
+          else parseLong(trimmed).map(_.seconds)
         }
         .getOrElse(default)
     val retry = RetryPolicy(

@@ -1,6 +1,7 @@
 package com.flowforge.examples
 
 import cats.effect.IO
+import cats.syntax.either._
 import com.flowforge.core.PipelineBuilder
 import com.flowforge.core.contracts.SchemaPolicy
 import com.flowforge.core.contracts.derive.Shape
@@ -37,11 +38,11 @@ object ContractToDeltaExample {
     sys.env.get("SPARK_MASTER").foreach(builder.master)
     val spark = builder.getOrCreate()
 
-    try {
-      val result = demonstrateContractToRuntimeMapping(spark)
-      println(result)
-    } finally
-      spark.stop()
+    val result = Either
+      .catchNonFatal(demonstrateContractToRuntimeMapping(spark))
+      .fold(e => s"Error: ${e.getMessage}", r => r)
+    println(result)
+    val _ = Either.catchNonFatal(spark.stop())
   }
 
   def demonstrateContractToRuntimeMapping(spark: SparkSession): String = {

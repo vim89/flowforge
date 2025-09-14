@@ -373,7 +373,7 @@ object SparkDataAlgebra {
         keys: List[String],
         config: CDCOperations.CDCConfig,
       ): Either[String, (Long, Long, Long, Long)] =
-        try {
+        Either.catchNonFatal {
           import io.delta.tables.DeltaTable
           import org.apache.spark.sql.functions._
 
@@ -403,10 +403,8 @@ object SparkDataAlgebra {
             .insertAll()
             .execute()
 
-          Right((inserted, updated, deleted, unchanged))
-        } catch {
-          case t: Throwable => Left(t.getMessage)
-        }
+          (inserted, updated, deleted, unchanged)
+        }.leftMap(_.getMessage)
 
       /**
        * SCD2 merge for Delta tables with standard columns: effective_from, effective_to, is_current. Updates
@@ -419,7 +417,7 @@ object SparkDataAlgebra {
         keys: List[String],
         config: CDCOperations.CDCConfig,
       ): Either[String, (Long, Long, Long, Long)] =
-        try {
+        Either.catchNonFatal {
           import io.delta.tables.DeltaTable
           import org.apache.spark.sql.functions._
 
@@ -441,21 +439,17 @@ object SparkDataAlgebra {
             val isEmpty = tgtRaw.limit(1).count() == 0
             if (isEmpty) {
               // SECURITY FIX: Validate path and use safe column names before SQL
-              try {
-                // Path validation to prevent injection
-                val safePath = validateAndSanitizePath(targetPath)
-                val addCols = missing.map {
-                  case c if c == scdCur => s"${sanitizeColumnName(c)} BOOLEAN"
-                  case c                => s"${sanitizeColumnName(c)} TIMESTAMP"
-                }.mkString(", ")
-                spark.sql(s"ALTER TABLE delta.`$safePath` ADD COLUMNS ($addCols)")
-                Right(())
-              } catch {
-                case t: Throwable =>
-                  Left(
-                    s"Failed to add SCD2 columns to empty target at '$targetPath': ${t.getMessage}",
-                  )
-              }
+              Either
+                .catchNonFatal {
+                  // Path validation to prevent injection
+                  val safePath = validateAndSanitizePath(targetPath)
+                  val addCols = missing.map {
+                    case c if c == scdCur => s"${sanitizeColumnName(c)} BOOLEAN"
+                    case c                => s"${sanitizeColumnName(c)} TIMESTAMP"
+                  }.mkString(", ")
+                  spark.sql(s"ALTER TABLE delta.`$safePath` ADD COLUMNS ($addCols)")
+                }
+                .leftMap(t => s"Failed to add SCD2 columns to empty target at '$targetPath': ${t.getMessage}")
             } else {
               Left(
                 s"Target table at '$targetPath' missing SCD2 columns: ${missing.mkString(", ")}. " +
@@ -522,19 +516,17 @@ object SparkDataAlgebra {
               }
 
               // SECURITY FIX: Optional optimize/ZORDER hooks with safe SQL construction
-              try
+              val _ = Either.catchNonFatal {
                 config.zOrderBy.foreach { cols =>
                   val safePath = validateAndSanitizePath(targetPath)
                   val colsSql  = cols.toList.map(col => sanitizeColumnName(col.value)).mkString(", ")
                   spark.sql(s"OPTIMIZE delta.`$safePath` ZORDER BY ($colsSql)")
                 }
-              catch { case _: Throwable => () }
+              }
 
               Right((insertedCnt, updatedCnt, deletedCnt, unchangedCnt))
           }
-        } catch {
-          case t: Throwable => Left(t.getMessage)
-        }
+        }.leftMap(_.getMessage).flatMap(identity)
 
       override def performDelta[A: DataContract](
         source: DataAlgebra.Dataset[A],
@@ -869,18 +861,18 @@ object SparkDataAlgebra {
 
             // Try to invoke DeequAdapter via reflection if present on classpath
             val deequResultsF: F[Option[List[DataAlgebra.QualityCheckResult]]] = F.delay {
-              try {
-                val cls    = Class.forName("com.flowforge.quality.deequ.DeequAdapter$")
-                val module = cls.getField("MODULE$").get(None.orNull)
-                val method = cls.getMethod(
-                  "runChecks",
-                  classOf[org.apache.spark.sql.SparkSession],
-                  classOf[DataAlgebra.Dataset[_]],
-                  classOf[List[_]],
-                )
-                val qualityResult = method.invoke(module, spark, pds, constraints)
-                val quality       = ReflectionCasting.castQualityResult[A](qualityResult)
-                val qcr: List[DataAlgebra.QualityCheckResult] =
+              Either
+                .catchNonFatal {
+                  val cls    = Class.forName("com.flowforge.quality.deequ.DeequAdapter$")
+                  val module = cls.getField("MODULE$").get(None.orNull)
+                  val method = cls.getMethod(
+                    "runChecks",
+                    classOf[org.apache.spark.sql.SparkSession],
+                    classOf[DataAlgebra.Dataset[_]],
+                    classOf[List[_]],
+                  )
+                  val qualityResult = method.invoke(module, spark, pds, constraints)
+                  val quality       = ReflectionCasting.castQualityResult[A](qualityResult)
                   if (quality.violations.isEmpty)
                     List(
                       DataAlgebra
@@ -895,24 +887,8 @@ object SparkDataAlgebra {
                     quality.violations.map { v =>
                       DataAlgebra.QualityCheckResult(v.rule, passed = false, message = v.message, score = 0.0)
                     }
-                Some(qcr)
-              } catch {
-                case _: ClassNotFoundException =>
-                  // Deequ not available, skip quality checks
-                  None
-                case _: NoSuchMethodException =>
-                  // Deequ API incompatible, skip quality checks
-                  None
-                case _: IllegalAccessException =>
-                  // Security restriction, skip quality checks
-                  None
-                case ex: Exception =>
-                  // Log and skip for other exceptions
-                  val _ = ()
-                  // we do not have infrastructure logger in this module; use core logger no-op (if provided by F)
-                  // fall back to silent skip to keep engine pure in core path
-                  None
-              }
+                }
+                .toOption
             }
 
             F.flatMap(deequResultsF) {
@@ -1094,22 +1070,13 @@ object SparkDataAlgebra {
       F.blocking {
         sessionRegistry.get(algebra) match {
           case Some(session) =>
-            try {
-              session.stop()
-              sessionRegistry.remove(algebra)
-            } catch {
-              case _: Exception =>
-                // Fallback with safer error handling
-                SparkSession.getActiveSession.foreach { activeSession =>
-                  try activeSession.stop()
-                  catch { case _: Exception => () }
-                }
-            }
+            Either.catchNonFatal(session.stop())
+            sessionRegistry.remove(algebra)
+            ()
           case None =>
             // Fallback for unknown algebra types
             SparkSession.getActiveSession.foreach { session =>
-              try session.stop()
-              catch { case _: Exception => () }
+              val _ = Either.catchNonFatal(session.stop())
             }
         }
       }

@@ -4,7 +4,6 @@ import com.flowforge.core.algebra.EffectSystem
 
 import java.time.Instant
 import java.util.UUID
-import scala.util.Try
 
 /**
  * OpenLineage event emitter for FlowForge v1.0

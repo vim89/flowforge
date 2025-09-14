@@ -445,14 +445,13 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
     effectSystem.bracket(
       effectSystem.blocking(org.apache.hadoop.fs.FileSystem.get(createHadoopConfiguration())),
     ) { fs =>
-      effectSystem.blocking {
-        val path        = new org.apache.hadoop.fs.Path(location)
-        val inputStream = fs.open(path)
-        try {
+      val path = new org.apache.hadoop.fs.Path(location)
+      effectSystem.bracket(effectSystem.blocking(fs.open(path))) { inputStream =>
+        effectSystem.blocking {
           val bytes = inputStream.readAllBytes()
           bytes.grouped(8192).toList
-        } finally inputStream.close()
-      }
+        }
+      }(is => effectSystem.blocking(is.close()).void)
     }(fs => effectSystem.blocking(fs.close()).void)
   }
 
@@ -461,16 +460,15 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
     effectSystem.bracket(
       effectSystem.blocking(org.apache.hadoop.fs.FileSystem.get(createHadoopConfiguration())),
     ) { fs =>
-      effectSystem.blocking {
-        val path         = new org.apache.hadoop.fs.Path(location)
-        val outputStream = fs.create(path, true)
-        try {
+      val path = new org.apache.hadoop.fs.Path(location)
+      effectSystem.bracket(effectSystem.blocking(fs.create(path, true))) { outputStream =>
+        effectSystem.blocking {
           val totalBytes = data.map(_.length.toLong).sum
           data.foreach(outputStream.write)
           outputStream.flush()
           WriteMetadata(path = location, bytesWritten = totalBytes)
-        } finally outputStream.close()
-      }
+        }
+      }(os => effectSystem.blocking(os.close()).void)
     }(fs => effectSystem.blocking(fs.close()).void)
   }
 
@@ -810,9 +808,7 @@ class S3Connector[F[_]: EffectSystem](
     val (bucket, key) = parseCloudUri(s3Path)
 
     effectSystem.handleError {
-      effectSystem.blocking {
-        val s3Client = createS3Client()
-        try {
+      effectSystem.bracket(effectSystem.blocking(createS3Client())) { s3Client =>
           import software.amazon.awssdk.services.s3.model.GetObjectRequest
           import java.io.ByteArrayOutputStream
 
@@ -824,9 +820,7 @@ class S3Connector[F[_]: EffectSystem](
           val bytes = buffer.toByteArray
 
           FileSystemResult.success(bytes)
-        } finally
-          s3Client.close()
-      }
+      }(c => effectSystem.blocking(c.close()).void)
     } { error =>
       FileSystemResult.failure(FileSystemError.ReadError(s3Path, error.getMessage))
     }
@@ -837,9 +831,7 @@ class S3Connector[F[_]: EffectSystem](
     val (bucket, key) = parseCloudUri(s3Path)
 
     effectSystem.handleError {
-      effectSystem.blocking {
-        val s3Client = createS3Client()
-        try {
+      effectSystem.bracket(effectSystem.blocking(createS3Client())) { s3Client =>
           import software.amazon.awssdk.services.s3.model.PutObjectRequest
           import software.amazon.awssdk.core.sync.RequestBody
 
@@ -852,9 +844,7 @@ class S3Connector[F[_]: EffectSystem](
               bytesWritten = data.length.toLong
             )
           )
-        } finally
-          s3Client.close()
-      }
+      }(c => effectSystem.blocking(c.close()).void)
     } { error =>
       FileSystemResult.failure(FileSystemError.WriteError(s3Path, error.getMessage))
     }
@@ -864,9 +854,7 @@ class S3Connector[F[_]: EffectSystem](
     val (bucket, prefix) = parseCloudUri(path)
 
     effectSystem.handleError {
-      effectSystem.blocking {
-        val s3Client = createS3Client()
-        try {
+      effectSystem.bracket(effectSystem.blocking(createS3Client())) { s3Client =>
           import software.amazon.awssdk.services.s3.model.{ ListObjectsV2Request, S3Object }
           import scala.jdk.CollectionConverters._
 
@@ -888,9 +876,7 @@ class S3Connector[F[_]: EffectSystem](
             .toList
 
           FileSystemResult.success(metadata)
-        } finally
-          s3Client.close()
-      }
+      }(c => effectSystem.blocking(c.close()).void)
     } { error =>
       FileSystemResult.failure(FileSystemError.listError(path, error.getMessage))
     }
@@ -899,17 +885,13 @@ class S3Connector[F[_]: EffectSystem](
   def exists(path: String): F[Boolean] = {
     val (bucket, key) = parseCloudUri(path)
     effectSystem.handleError {
-      effectSystem.blocking {
-        val s3Client = createS3Client()
-        try {
+      effectSystem.bracket(effectSystem.blocking(createS3Client())) { s3Client =>
+        effectSystem.blocking {
           import software.amazon.awssdk.services.s3.model.HeadObjectRequest
           s3Client.headObject(HeadObjectRequest.builder().bucket(bucket).key(key).build())
           true
-        } catch {
-          case _: Exception => false
-        } finally
-          s3Client.close()
-      }
+        }
+      }(c => effectSystem.blocking(c.close()).void)
     }(_ => false)
   }
 
@@ -919,9 +901,7 @@ class S3Connector[F[_]: EffectSystem](
     val dirKey        = if (key.endsWith("/")) key else s"$key/"
 
     effectSystem.handleError {
-      effectSystem.blocking {
-        val s3Client = createS3Client()
-        try {
+      effectSystem.bracket(effectSystem.blocking(createS3Client())) { s3Client =>
           import software.amazon.awssdk.services.s3.model.PutObjectRequest
           import software.amazon.awssdk.core.sync.RequestBody
 
@@ -929,9 +909,7 @@ class S3Connector[F[_]: EffectSystem](
           s3Client.putObject(putObjectRequest, RequestBody.empty())
 
           FileSystemResult.success(())
-        } finally
-          s3Client.close()
-      }
+      }(c => effectSystem.blocking(c.close()).void)
     } { error =>
       FileSystemResult.failure(FileSystemError.createDirectoryError(path, error.getMessage))
     }
@@ -941,9 +919,7 @@ class S3Connector[F[_]: EffectSystem](
     val (bucket, key) = parseCloudUri(path)
 
     effectSystem.handleError {
-      effectSystem.blocking {
-        val s3Client = createS3Client()
-        try {
+      effectSystem.bracket(effectSystem.blocking(createS3Client())) { s3Client =>
           if (recursive) {
             import software.amazon.awssdk.services.s3.model.{
               ListObjectsV2Request,
@@ -966,9 +942,7 @@ class S3Connector[F[_]: EffectSystem](
           }
 
           FileSystemResult.success(())
-        } finally
-          s3Client.close()
-      }
+      }(c => effectSystem.blocking(c.close()).void)
     } { error =>
       FileSystemResult.failure(FileSystemError.deleteError(path, error.getMessage))
     }
@@ -978,9 +952,7 @@ class S3Connector[F[_]: EffectSystem](
     val (bucket, key) = parseCloudUri(path)
 
     effectSystem.handleError {
-      effectSystem.blocking {
-        val s3Client = createS3Client()
-        try {
+      effectSystem.bracket(effectSystem.blocking(createS3Client())) { s3Client =>
           import software.amazon.awssdk.services.s3.model.HeadObjectRequest
 
           val headObjectRequest = HeadObjectRequest.builder().bucket(bucket).key(key).build()
@@ -994,9 +966,7 @@ class S3Connector[F[_]: EffectSystem](
             format = inferFormatFromPath(key)
           )
           FileSystemResult.success(metadata)
-        } finally
-          s3Client.close()
-      }
+      }(c => effectSystem.blocking(c.close()).void)
     } { error =>
       FileSystemResult.failure(FileSystemError.metadataError(path, error.getMessage))
     }
@@ -1006,14 +976,12 @@ class S3Connector[F[_]: EffectSystem](
     val s3Path        = extractS3Path(source)
     val (bucket, key) = parseCloudUri(s3Path)
 
-    effectSystem.blocking {
-      val s3Client = createS3Client()
-      try {
-        import software.amazon.awssdk.services.s3.model.GetObjectRequest
-        import java.io.ByteArrayOutputStream
+      effectSystem.bracket(effectSystem.blocking(createS3Client())) { s3Client =>
+          import software.amazon.awssdk.services.s3.model.GetObjectRequest
+          import java.io.ByteArrayOutputStream
 
-        val getObjectRequest    = GetObjectRequest.builder().bucket(bucket).key(key).build()
-        val responseInputStream = s3Client.getObject(getObjectRequest)
+          val getObjectRequest    = GetObjectRequest.builder().bucket(bucket).key(key).build()
+          val responseInputStream = s3Client.getObject(getObjectRequest)
 
         val buffer = new ByteArrayOutputStream()
         responseInputStream.transferTo(buffer)
@@ -1021,8 +989,7 @@ class S3Connector[F[_]: EffectSystem](
 
         // Split into 8KB chunks for streaming
         bytes.grouped(8192).toList
-      } finally
-        s3Client.close()
+      }(c => effectSystem.blocking(c.close()).void)
     }
   }
 
@@ -1030,9 +997,7 @@ class S3Connector[F[_]: EffectSystem](
     val s3Path        = extractS3SinkPath(sink)
     val (bucket, key) = parseCloudUri(s3Path)
 
-    effectSystem.blocking {
-      val s3Client = createS3Client()
-      try {
+    effectSystem.bracket(effectSystem.blocking(createS3Client())) { s3Client =>
         import software.amazon.awssdk.services.s3.model.PutObjectRequest
         import software.amazon.awssdk.core.sync.RequestBody
 
@@ -1044,9 +1009,7 @@ class S3Connector[F[_]: EffectSystem](
           path = s3Path,
           bytesWritten = allBytes.length.toLong
         )
-      } finally
-        s3Client.close()
-    }
+    }(c => effectSystem.blocking(c.close()).void)
   }
 
   // Helper method to infer data format from file path

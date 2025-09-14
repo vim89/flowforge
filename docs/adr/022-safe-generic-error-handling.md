@@ -1,138 +1,201 @@
-> Here’s a concise, FlowForge‑aligned plan to introduce safe, generic error handling utilities (inspired by trySafely/safely) and migrate away from try/catch/finally
-everywhere.
+# ADR 022 — Safe, Generic Error Handling Utilities (Result/Validated + Effect Abstraction)
 
-Objectives
+- Status: Accepted
+- Date: 2025-09-14
 
-- Unify “safe execution” across pure and effectful code without try/catch.
-- Standardize on Either/ValidatedNel/Resource with typed domain errors.
-- Make adoption incremental and low‑risk, with zero behavior changes at call sites unless explicitly requested.
+## Context
 
-Design Principles
+FlowForge already defines a rich, typed error ADT (`FlowForgeError` and subtypes in `modules/core/.../types/ErrorTypes.scala`) and a
+unified effect abstraction (`EffectSystem[F]`). However, code paths still mix styles:
 
-- Purely functional: no side effects in helpers; use Cats conversions (Either.catchNonFatal, Validated), not try/catch.
-- Typed error channels: convert Throwable → domain ADT (e.g., FlowForgeError, ConnectorError, ConfigError).
-- Two tracks by use case:
-    - Either[FlowForgeError, A] for single operation results.
-    - ValidatedNel[FlowForgeError, A] for aggregating multiple independent checks.
-- Effect abstraction: effectful helpers use EffectSystem[F] so users remain engine‑agnostic (Cats Effect, ZIO).
+- Direct `try { ... } catch { ... }` blocks in several modules (Spark, connectors, config) for exceptional paths.
+- Ad‑hoc conversions between `Try`, `Either`, and `ValidatedNel` with uneven domain mapping from `Throwable`.
+- Resource lifecycle handled via `ResourceSafety` in infrastructure, but callers sometimes do manual `try/finally`.
 
-Proposed API (new package com.flowforge.core.safety)
+We want a single, idiomatic, FP‑first way to: (1) run potentially unsafe code safely; (2) map throwables to our domain
+errors; (3) aggregate multiple independent validation errors; and (4) do all of this polymorphically over `F[_]` without
+leaking exceptions.
 
-- Core type aliases
-    - type Result[+A] = Either[FlowForgeError, A]
-    - type VResult[+A] = ValidatedNel[FlowForgeError, A]
-- Error mapper
-    - trait ErrorMapper { def apply(t: Throwable): FlowForgeError }
-    - Instances per layer: DefaultErrorMapper, SparkErrorMapper, ConnectorErrorMapper, etc.
-- Pure helpers (no F)
-    - def safely[A](thunk: => A)(implicit em: ErrorMapper): Result[A]
-        - impl: Either.catchNonFatal(thunk).leftMap(em(_))
-    - def safelyV[A](thunk: => A)(implicit em: ErrorMapper): VResult[A]
-        - impl: Validated.fromEither(safely(thunk)).toValidatedNel
-    - Lifts: fromTry, fromOption(err), fromEither, sequenceV(xs: List[Result[A]]): VResult[List[A]]
-    - Transformations: mapError(f: FlowForgeError => FlowForgeError), leftOrRaise (bridge to exceptions only in test scaffolding)
-- Effectful helpers (with EffectSystem[F])
-    - object in { def apply[F[_]: EffectSystem]: In[F] }
-    - trait In[F[_]] {
-        - def attempt[A](fa: F[A])(implicit em: ErrorMapper): F[Result[A]]
-        - def attemptV[A](fa: F[A])(implicit em: ErrorMapper): F[VResult[A]]
-        - def guarantee[A](fa: F[A])(finalizer: F[Unit]): F[A] (thin alias to ResourceSafety/ensuring)
-        - def bracket[A,B](acq: F[A])(use: A => F[B])(rel: A => F[Unit]): F[B] (forward to ResourceSafety)
-    - Bridging ops: def orFail[A](fa: F[Result[A]]): F[A], def logLeft[A](fa: F[Result[A]])(implicit L: CoreLogger[F]): F[Result[A]]
-- Syntax (optional, ergonomic)
-    - result.mapError(...), result.toValidatedNel, vresult.toEither, fa.withErrorMapper(em), fa.safely (extension methods)
+This ADR standardizes the approach and provides small utilities that are easy to adopt incrementally.
 
-Where to place code
+## Decision
 
-- Pure + effect helpers in modules/core under com.flowforge.core.safety.Safety to avoid dependency cycles.
-- Keep cloud/filesystem specifics (if any) out of core; use mappers in relevant modules (e.g., connectors‑gcs).
+Introduce a tiny, universal “safety” surface in `core`:
 
-How this maps to the references
+- New package: `com.flowforge.core.safety`
+  - `Safety` — pure and effectful helpers for safe execution.
+  - `ErrorMapper` — pluggable mapping from `Throwable` → `FlowForgeError` tuned per layer.
 
-- trySafely and safely map to safely/safelyV + in[F].attempt/attemptV.
-- We avoid try/catch by construction; we use Cats primitives and our EffectSystem for effectful paths.
+Decisions aligned with existing architecture:
 
-Usage examples (representative)
+- Typed error channels everywhere: results use `Either[FlowForgeError, A]` or `ValidatedNel[FlowForgeError, A]`.
+- Effectful safety is expressed via `EffectSystem[F]`, not concrete Cats/ZIO types, preserving engine neutrality.
+- Resources remain under `ResourceSafety` (already present in infrastructure). `Safety` provides thin bridges to avoid
+  manual `try/finally` at call sites.
+- No behavior changes at call sites by default; adoption is incremental and review‑driven.
 
-- Pure compute
-    - val r: Result[Int] = Safety.safely(em.someRiskyParse(s))(DefaultErrorMapper)
-    - val v: VResult[Unit] = Safety.safelyV(validateField(x)).void
-- Effectful I/O (Spark/Cloud)
-    - val R = Safety.in[F]
-    - for { res <- R.attempt(F.blocking(storage.get(bucket, key))) ; _ <- R.orFail(res) } yield ()
-    - Or accumulate: R.attemptV(F.blocking(readPart(p1)))
-- Aggregating validations
-    - List(check1, check2, check3).traverse(_.validate(a)).void already yields ValidatedNel; keep that, but use safelyV for individual unsafe steps inside each check
-      if needed.
+## Non‑Goals
 
-Best‑practice rules (to add to AGENTS.md/ADR)
+- Do not replace the existing error ADTs or collapse categories; the mapper composes with them.
+- Do not introduce runtime exceptions, except in tests/IOApps where bridging may be necessary.
+- Do not add heavy dependencies or alternative effect systems.
 
-- Never write try/catch/finally in source modules. Use Safety helpers, Cats Either.catchNonFatal, or EffectSystem.handleErrorWith.
-- Only use ValidatedNel when rules are independent and you want all errors at once (e.g., configuration and DQ). Prefer Either for single, dependent computations.
-- Convert Throwable to domain errors using an ErrorMapper scoped to the layer; do not leak raw Throwables past the boundary.
-- For resources: always use Resource[F, _] or Safety.in[F].bracket/guarantee (we already have ResourceSafety).
+## Detailed Design
 
-Migration plan
+Package: `modules/core/src/main/scala/com/flowforge/core/safety/`
 
-1. Introduce API
+Type aliases (ergonomics, local to `Safety`):
 
-- Add Safety.scala, ErrorMapper.scala in modules/core/src/main/scala/com/flowforge/core/safety/.
-- Provide default mappers: DefaultErrorMapper and focused mappers in submodules (connectors, engines).
+- `type Result[+A]  = Either[FlowForgeError, A]`
+- `type ValidatedResult[+A] = ValidatedNel[FlowForgeError, A]`
 
-2. Soft adopt in new/changed code
+Error mapping:
 
-- Encourage Safety.safely/in[F].attempt in reviews. Document examples.
+- `trait ErrorMapper { def apply(t: Throwable): FlowForgeError }`
+- Provide `DefaultErrorMapper` that delegates to existing helpers, e.g. `FlowForgeError.fromThrowable(t)` and applies
+  sensible category‑aware mapping:
+  - `IllegalArgumentException`, parsing/type errors → `ValidationError`.
+  - IO/FS/network/service errors → `SystemError.ServiceUnavailable` (or more specific when available).
+  - `TimeoutException` → `SystemError.OperationTimeout` with derived elapsed/timeout if present.
+  - Fallback → `SystemError.ServiceUnavailable` with `cause = Some(t)`.
+- Modules can supply focused mappers (e.g., connectors map `SQLException`/`IOException` to connector‑specific wrappers).
 
-3. Targeted refactors
+Pure helpers (no `F`):
 
-- Connectors: replace repetitive F.handleError { ... } boilerplate with in[F].attempt(...).map(_.leftMap(toConnectorError)) or with module‑specific mapper.
-- Infrastructure: wrap config parsing and file ops with safelyV for aggregated errors.
-- Engines: where we call Spark APIs in blocking, use in[F].attempt(F.blocking(...)); convert to proper domain error on left.
+- `def safely[A](thunk: => A)(implicit em: ErrorMapper): Result[A]`
+  - Impl: `Either.catchNonFatal(thunk).leftMap(em(_))`
+- `def safelyV[A](thunk: => A)(implicit em: ErrorMapper): ValidatedResult[A]`
+  - Impl: `Validated.fromEither(safely(thunk)).toValidatedNel`
+- Conversions: `fromTry`, `fromOption(err)`, `fromEither`, `sequenceV(xs: List[Result[A]]): ValidatedResult[List[A]]`.
+- Transformations: `mapError(f)`, `toValidatedNel`, and a test‑only `leftOrRaise` bridge.
 
-4. Guardrails
+Effectful helpers (with `EffectSystem[F]`):
 
-- Add scalafix rule (DisableSyntax.try) repo‑wide, and a lint to fail CI on try { (except tests/migrations).
-- Ban unsafeRunSync in modules (allowed in IOApp only). We already fixed maintenance‑cli.
+- `object Safety { def in[F[_]: EffectSystem]: In[F] }`
+- `trait In[F[_]]`:
+  - `def attempt[A](fa: F[A])(implicit em: ErrorMapper): F[Result[A]]`
+  - `def attemptV[A](fa: F[A])(implicit em: ErrorMapper): F[ValidatedResult[A]]`
+  - `def orFail[A](fa: F[Result[A]])(implicit F: EffectSystem[F]): F[A]` — bridge where an `A` is required.
+  - `def guarantee[A](fa: F[A])(finalizer: F[Unit]): F[A]` — delegates to `EffectSystem.guarantee`.
+  - `def bracket[A,B](acq: F[A])(use: A => F[B])(rel: A => F[Unit]): F[B]` — delegates to `EffectSystem.bracket`.
+- Optional syntax: `fa.safely`, `result.mapError`, `result.toValidatedNel`, `fa.withErrorMapper(em)`, and
+  `fa.logLeft(implicit L: CoreLogger[F])`.
 
-5. Tests & docs
+Notes on namespacing:
 
-- Unit tests for Safety and ErrorMapper.
-- Short playbook in docs/agents/HANDBOOK.md + note in ADR‑020: “Monadic safety over exceptions; when to use Either vs ValidatedNel; typed error mapping.”
+- `ResourceSafety` lives today under `com.flowforge.safety` (infrastructure). `Safety` is placed in
+  `com.flowforge.core.safety` to avoid cycles and keep pure/effect helpers close to `EffectSystem` and `FlowForgeError`.
 
-Open choices (I can implement either way)
+## Rationale
 
-- With or without Result/VResult aliases:
-    - Aliases improve ergonomics across modules; optional if you prefer explicit Either/Validated.
-- ErrorMapper granularity:
-    - Single default mapper per module vs. fine‑grained mappers per subsystem (GCS/S3/JDBC). I recommend per‑module with a simple default fallback.
+- Aligns with ADR‑012 (effect abstraction) and the repo’s FP style: pure functions, explicit effects, and typed errors.
+- Reduces boilerplate and eliminates `try/catch/finally` from main sources.
+- Unifies `Either` vs `ValidatedNel` usage: `Either` for dependent computations; `ValidatedNel` for aggregating
+  independent checks (config, DQ).
+- Keeps mappers local to modules/layers so error semantics remain domain‑accurate.
 
-Concrete API sketch (concise)
+## Consequences
+
+Pros:
+
+- Consistent, typed error handling across modules; fewer ad‑hoc conversions.
+- Easier testing and property checks; simpler negative‑path specs.
+- Safer resource usage via `bracket/guarantee` helpers that compose with existing `ResourceSafety`.
+
+Cons:
+
+- Requires adding a small amount of plumbing (mappers) per module.
+- Some refactors to replace `try`/`Try{}` and scattered `handleError` blocks.
+
+Performance:
+
+- `Either.catchNonFatal` and effect `attempt` are constant‑factor overheads; negligible compared to I/O/Spark.
+- Aggregation with `ValidatedNel` is allocation‑friendly and used only for validations.
+
+## Migration Plan
+
+1) Introduce API (core)
+
+- Add `Safety.scala`, `ErrorMapper.scala` in `modules/core/src/main/scala/com/flowforge/core/safety/`.
+- Provide `DefaultErrorMapper` delegating to `FlowForgeError.fromThrowable` plus the category tweaks above.
+
+2) Soft adopt in new/changed code
+
+- Encourage `Safety.safely` / `Safety.in[F].attempt` during reviews. Add examples to Handbook.
+
+3) Targeted refactors (module by module)
+
+- Connectors: replace repetitive `F.handleError`/`Try{}` with `in[F].attempt(...).map(_.leftMap(toConnectorError))` or
+  module mapper.
+- Infrastructure: config parsing/file ops to use `safelyV` for aggregated errors.
+- Engines‑Spark: wrap blocking calls with `F.blocking` + `in[F].attempt` and map to domain error ADTs.
+
+4) Guardrails
+
+- Scalafix: keep `DisableSyntax.noThrows = true` (already present) and add CI grep to ban `try {` in main sources
+  (allow in tests/examples/migrations). Example step:
+  - `rg -n "\btry\s*\{" --glob 'modules/**/src/main/scala/**/*.scala' && echo 'Found try blocks' && exit 1 || true`
+- Add CI check to fail on `unsafeRunSync` in main sources (allow in tests/examples/IOApp):
+  - `rg -n "unsafeRunSync" --glob 'modules/**/src/main/scala/**/*.scala' && exit 1 || true`
+
+5) Tests & docs
+
+- Add unit specs: `SafetySpec` (pure) and `SafetyEffectSpec` (effectful) under `core`.
+- Update `docs/agents/HANDBOOK.md` quick‑reference and ADR‑020 checklist with the Either vs Validated rule of thumb.
+
+## Usage Examples
+
+Pure compute
+
+- `val r: Result[Int]  = Safety.safely(riskyParse(s))(DefaultErrorMapper)`
+- `val v: ValidatedResult[Unit] = Safety.safelyV(validateField(x)).void`
+
+Effectful I/O (Spark/Cloud)
+
+- `val R = Safety.in[F]`
+- `for { res <- R.attempt(F.blocking(storage.get(bucket, key))); _ <- R.orFail(res) } yield ()`
+- Or aggregate: `R.attemptV(F.blocking(readPart(p1)))`
+
+Aggregating validations
+
+- Keep DSLs that already return `ValidatedNel`; use `safelyV` only for unsafe sub‑steps inside each rule.
+
+## Alternatives Considered
+
+- Rely solely on `EffectSystem[F].attempt` + ad‑hoc mapping at call sites — rejected; increases duplication and
+  encourages inconsistency.
+- Introduce a global `Throwable => FlowForgeError` implicit — rejected; different layers need different semantics.
+- Add more exception types and throw/catch internally — rejected; breaks purity and testability.
+
+## Appendix — Concise API Sketch
 
 - Safety.scala
-- object Safety {
-    - type Result[+A] = Either[FlowForgeError, A]
-    - type VResult[+A] = ValidatedNel[FlowForgeError, A]
-    - def safely[A](thunk: => A)(implicit em: ErrorMapper): Result[A] = Either.catchNonFatal(thunk).leftMap(em(_))
-    - def safelyV[A](thunk: => A)(implicit em: ErrorMapper): VResult[A] = Validated.fromEither(safely(thunk)).toValidatedNel
-    - def fromTry[A](t: Try[A])(implicit em: ErrorMapper): Result[A] = t.toEither.leftMap(em(_))
-    - def fromOption[A](oa: Option[A], ifEmpty: => FlowForgeError): Result[A] = oa.toRight(ifEmpty)
-    - def sequenceV[A](xs: List[Result[A]]): VResult[List[A]] = xs.traverse(_.toValidatedNel)
-    - def in[F[_]: EffectSystem]: In[F] = new In[F] { ... }
-- trait In[F[_]] {
-    - def attempt[A](fa: F[A])(implicit em: ErrorMapper): F[Result[A]] = EffectSystem[F].handleErrorWith(EffectSystem[F].map(fa)(Right(_): Result[A]))(t =>
-      EffectSystem[F].pure(Left(em(t))))
-    - def attemptV[A](fa: F[A])(implicit em: ErrorMapper): F[VResult[A]] = EffectSystem[F].map(attempt(fa))(_.toValidatedNel)
-    - def orFail[A](fr: F[Result[A]])(implicit F: EffectSystem[F]): F[A] = F.flatMap(fr)(_.fold(F.raiseError, F.pure))
-    - def guarantee[A](fa: F[A])(finalizer: F[Unit]): F[A] = ResourceSafety.ensuring(fa)(finalizer)
-    - def bracket[A,B](acq: F[A])(use: A => F[B])(rel: A => F[Unit]): F[B] = ResourceSafety.bracket(acq)(use)(rel)
+  - `object Safety {`
+  - `  type Result[+A]  = Either[FlowForgeError, A]`
+  - `  type ValidatedResult[+A] = ValidatedNel[FlowForgeError, A]`
+  - `  def safely[A](thunk: => A)(implicit em: ErrorMapper): Result[A] = Either.catchNonFatal(thunk).leftMap(em(_))`
+  - `  def safelyV[A](thunk: => A)(implicit em: ErrorMapper): ValidatedResult[A] = Validated.fromEither(safely(thunk)).toValidatedNel`
+  - `  def fromTry[A](t: Try[A])(implicit em: ErrorMapper): Result[A] = t.toEither.leftMap(em(_))`
+  - `  def fromOption[A](oa: Option[A], ifEmpty: => FlowForgeError): Result[A] = oa.toRight(ifEmpty)`
+  - `  def sequenceV[A](xs: List[Result[A]]): ValidatedResult[List[A]] = xs.traverse(_.toValidatedNel)`
+  - `  def in[F[_]: EffectSystem]: In[F] = new In[F] { ... }`
+  - `}`
+  - `trait In[F[_]] {`
+  - `  def attempt[A](fa: F[A])(implicit em: ErrorMapper): F[Result[A]] =` 
+  - `    EffectSystem[F].handleErrorWith(EffectSystem[F].map(fa)(Right(_): Result[A]))(t => EffectSystem[F].pure(Left(em(t))))`
+  - `  def attemptV[A](fa: F[A])(implicit em: ErrorMapper): F[ValidatedResult[A]] = EffectSystem[F].map(attempt(fa))(_.toValidatedNel)`
+  - `  def orFail[A](fr: F[Result[A]])(implicit F: EffectSystem[F]): F[A] = F.flatMap(fr)(_.fold(F.raiseError, F.pure))`
+  - `  def guarantee[A](fa: F[A])(finalizer: F[Unit]): F[A] = EffectSystem[F].guarantee(fa)(finalizer)`
+  - `  def bracket[A,B](acq: F[A])(use: A => F[B])(rel: A => F[Unit]): F[B] = EffectSystem[F].bracket(acq)(use)(rel)`
+  - `}`
+
 - ErrorMapper.scala
-- trait ErrorMapper { def apply(t: Throwable): FlowForgeError }
-- object DefaultErrorMapper extends ErrorMapper { def apply(t: Throwable) = FlowForgeError.Unexpected(t.getMessage) }
-- Module‑specific mappers extend/compose as needed.
+  - `trait ErrorMapper { def apply(t: Throwable): FlowForgeError }`
+  - `object DefaultErrorMapper extends ErrorMapper {`
+  - `  def apply(t: Throwable): FlowForgeError = FlowForgeError.fromThrowable(t)`
+  - `}`
 
-If this plan looks good, I’ll:
+## Status & Rollout
 
-- Add Safety + ErrorMapper to modules/core.
-- Provide one focused adoption (e.g., connectors-gcs read/write).
-- Add scalafix rule to disallow try and a CI grep guard for unsafeRunSync.
-- Update Agents Handbook and ADR‑020 with the rule of thumb for Either vs ValidatedNel and mapping Throwables to domain errors.
+- Status: Accepted for implementation in `core` first, then adopted in connectors/engines/infrastructure.
+- Rollout owner: Core maintainers; module owners contribute mappers and local refactors.

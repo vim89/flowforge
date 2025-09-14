@@ -77,7 +77,7 @@ import com.flowforge.core.types.{ BuilderState, _ }
 import java.time.{ Duration, Instant }
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
+import com.flowforge.core.safety.Safety
 
 /**
  * The core package object provides the main API for FlowForge core functionality.
@@ -222,8 +222,10 @@ package object core {
     /**
      * Create an effect from a Try.
      */
-    def fromTry[F[_]: EffectSystem, A](tried: Try[A]): F[A] =
+    // scalafix:off noScalaUtilTry
+    def fromTry[F[_]: EffectSystem, A](tried: scala.util.Try[A]): F[A] =
       EffectSystem[F].fromTry(tried)
+    // scalafix:on noScalaUtilTry
 
     /**
      * Create an effect from an Either.
@@ -444,7 +446,7 @@ package object core {
      */
     def getInt(key: String): ConfigValidation[Int] =
       getRequired(key).andThen { value =>
-        Try(value.toInt).fold(
+        Safety.safely(value.toInt)(com.flowforge.core.safety.ErrorMapper.default).leftMap(_ => ()).fold(
           _ => ConfigError.InvalidFormat(key, value, "integer").invalidNel,
           int => int.validNel,
         )
@@ -467,7 +469,10 @@ package object core {
      */
     def getDuration(key: String): ConfigValidation[FiniteDuration] =
       getRequired(key).andThen { value =>
-        Try(Duration.parse(value)).fold(
+        Safety
+          .safely(Duration.parse(value))(com.flowforge.core.safety.ErrorMapper.default)
+          .leftMap(_ => ())
+          .fold(
           _ => ConfigError.InvalidFormat(key, value, "ISO-8601 duration").invalidNel,
           d => FiniteDuration(d.toMillis, "millis").validNel,
         )

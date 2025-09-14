@@ -170,7 +170,8 @@ object UsersPipeline {
       val spark = dataset.sparkDataFrame.sparkSession
       import spark.implicits._
 
-      scala.util.Try {
+      import cats.syntax.either._
+      Either.catchNonFatal {
         // Apply cleaning transformations using pure functions
         val cleaned = dataset.sparkDataFrame
           .filter($"email".isNotNull && $"email" =!= "")          // Remove invalid emails
@@ -187,7 +188,7 @@ object UsersPipeline {
 
         val sampleCleanedUsers = List(CleanedUser("sample", "sample@test.com", 25, "USA", 1672531200L, true))
         createDataset(cleaned, sampleCleanedUsers)
-      }.toEither.left.map(_.getMessage)
+      }.leftMap(_.getMessage)
     }
 
   /**
@@ -241,7 +242,8 @@ object UsersPipeline {
       val spark = dataset.sparkDataFrame.sparkSession
       import spark.implicits._
 
-      scala.util.Try {
+      import cats.syntax.either._
+      Either.catchNonFatal {
         val enriched = dataset.sparkDataFrame
           .withColumn(
             "ageGroup",
@@ -271,7 +273,7 @@ object UsersPipeline {
           EnrichedUser("sample", "sample@test.com", 25, "USA", 1672531200L, true, "young", "North America"),
         )
         createDataset(enriched, sampleEnrichedUsers)
-      }.toEither.left.map(_.getMessage)
+      }.leftMap(_.getMessage)
     }
 
   private def displayResults(dataset: ProductionSparkDataset[EnrichedUser]): IO[Unit] =
@@ -306,7 +308,8 @@ object UsersPipeline {
       // Add Delta table constraints (as required by v10-3.md plan)
       println("🔒 Adding Delta table constraints")
 
-      try {
+      import cats.syntax.either._
+      val _ = Either.catchNonFatal {
         // NOT NULL constraints
         spark.sql(s"ALTER TABLE delta.`$deltaPath` ALTER COLUMN id SET NOT NULL")
         spark.sql(s"ALTER TABLE delta.`$deltaPath` ALTER COLUMN email SET NOT NULL")
@@ -333,10 +336,7 @@ object UsersPipeline {
         println("\\n📋 Delta table schema with constraints:")
         spark.sql(s"DESCRIBE EXTENDED delta.`$deltaPath`").show(false)
 
-      } catch {
-        case e: Exception =>
-          println(s"⚠️ Note: Delta constraints require Delta Lake extension: ${e.getMessage}")
-      }
+      }.leftMap { e => println(s"⚠️ Note: Delta constraints require Delta Lake extension: ${e.getMessage}") }
     }
 
   // Example main method for standalone execution

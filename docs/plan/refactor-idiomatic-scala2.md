@@ -103,6 +103,38 @@ Acceptance: unit tests green; parity spec green.
 - CI: keep leakage check; add “refactor-lint” job running scalafix dry‑run.
  - Add a gate that fails on `asInstanceOf`/`Any` usage outside whitelisted files (KleisliCasting, macro internals).
 
+### Error Handling and Resource Safety (ADR‑022)
+
+- Replace try/catch/finally with typed, functional patterns:
+  - Pure code: `Safety.safely[A](thunk): Result[A]` and `Safety.safelyV[A](thunk): ValidatedResult[A]`.
+  - Effectful code: `EffectSystem[F].handleErrorWith`, `Safety.in[F].attempt/attemptV`, and `EffectSystem[F].bracket/guarantee` for resource cleanup.
+  - Throwable → domain mapping via `ErrorMapper` (module‑specific or `DefaultErrorMapper`).
+- Reflection/edge operations: wrap with `Either.catchNonFatal { ... }` and convert to options or domain errors as appropriate.
+- IO streams, network clients, Spark/Hadoop handles: always use `EffectSystem.bracket` for acquisition/use/release; never `try { … } finally { close() }`.
+
+#### Migration checklist (grep‑first)
+
+- Ban raw exceptions usage in main sources (tests/examples/migrations allowed):
+  - `rg -n "\\btry\\s*\\{" --glob 'modules/**/src/main/scala/**/*.scala'`
+  - `rg -n "\\bscala\\.util\\.Try\\b" --glob 'modules/**/src/main/scala/**/*.scala'`
+  - `rg -n "unsafeRunSync" --glob 'modules/**/src/main/scala/**/*.scala'`
+- Replace with:
+  - Pure: `Safety.safely / safelyV`
+  - Effectful: `Safety.in[F].attempt`, `EffectSystem.bracket/guarantee`, `Either.catchNonFatal`
+- Ensure errors map to `FlowForgeError` via `ErrorMapper` at boundaries.
+
+#### Code patterns
+
+- Before (imperative):
+  - `try { val is = fs.open(p); val bytes = is.readAllBytes(); is.close(); bytes }`
+- After (functional):
+  - `F.bracket(F.blocking(fs.open(p)))(is => F.blocking(is.readAllBytes()))(is => F.blocking(is.close()).void)`
+
+- Before (reflection):
+  - `try { val cls = Class.forName(name); cls.getMethod(...).invoke(...)} catch { ... }`
+- After:
+  - `Either.catchNonFatal { val cls = Class.forName(name); ... }.toOption`
+
 Acceptance: CI remains green; developer docs discoverable.
 
 ## 8) Module-by-Module To‑Do Matrix (excerpt)

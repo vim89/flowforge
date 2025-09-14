@@ -1,6 +1,7 @@
 package com.flowforge.examples.spark
 
 import org.apache.spark.sql.SparkSession
+import cats.syntax.either._
 
 /**
  * Generate tiny Parquet fixture for UsersPipeline example. This creates a small sample dataset that can be
@@ -25,7 +26,7 @@ object GenerateFixture {
 
     import spark.implicits._
 
-    try {
+    val _ = Either.catchNonFatal {
       // Create tiny dataset - just enough to demonstrate functionality
       val rawUsers = Seq(
         RawUser("u001", "alice@example.com", Some(28), "USA", "2023-01-15", true),
@@ -66,8 +67,8 @@ object GenerateFixture {
       println(s"File size: ~${estimateSize(rawUsers.size)} bytes")
       println("Ready for <10s UsersPipeline example!")
 
-    } finally
-      spark.stop()
+    }
+    val _2 = Either.catchNonFatal(spark.stop())
   }
 
   private def estimateSize(records: Int): Int =

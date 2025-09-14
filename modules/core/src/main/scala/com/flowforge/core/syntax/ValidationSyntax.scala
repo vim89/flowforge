@@ -136,16 +136,13 @@ object ValidationSyntax {
     /**
      * Validate URL format
      */
-    def isUrl: ValidationResult[String] =
-      try {
-        new URI(str) // URI throws IllegalArgumentException/URISyntaxException for bad input
-        str.validNel
-      } catch {
-        case _: java.net.URISyntaxException =>
-          FlowForgeError.ValidationError(s"Invalid URL format: $str", None).invalidNel
-        case _: IllegalArgumentException =>
-          FlowForgeError.ValidationError(s"Invalid URL format: $str", None).invalidNel
-      }
+    def isUrl: ValidationResult[String] = {
+      val res = Either.catchNonFatal(new URI(str))
+      res.fold(
+        _ => FlowForgeError.ValidationError(s"Invalid URL format: $str", None).invalidNel,
+        _ => str.validNel,
+      )
+    }
   }
 
   /**
