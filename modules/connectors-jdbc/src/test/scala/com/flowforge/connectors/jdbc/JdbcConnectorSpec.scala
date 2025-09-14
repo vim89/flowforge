@@ -54,7 +54,7 @@ class JdbcConnectorSpec extends AnyFunSuite with Matchers {
 
       val conn2 = java.sql.DriverManager.getConnection(url)
       try {
-        val rs  = conn2.createStatement().executeQuery("select count(*) from users_copy")
+        val rs = conn2.createStatement().executeQuery("select count(*) from users_copy")
         rs.next()
         rs.getInt(1) shouldBe 2
         rs.close()

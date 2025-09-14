@@ -17,11 +17,11 @@ object GenerateFixture {
     isActive: Boolean)
 
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession
+    val builder = SparkSession
       .builder()
       .appName("FlowForge-Fixture-Generator")
-      .master("local[*]")
-      .getOrCreate()
+    sys.env.get("SPARK_MASTER").foreach(builder.master)
+    val spark = builder.getOrCreate()
 
     import spark.implicits._
 

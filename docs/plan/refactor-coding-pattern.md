@@ -3,6 +3,9 @@ Most of the code in flowforge is not Scala idiomatic, I see lot of java-like cod
 Below are some insights and instructions I have put but you plan accordingly which one to use where - for that you must do aggressive code review of entire flowforge - all modules
 
 ## Instructions -
+
+### Refactor Without changing functionality or functional-requirements or non-functional-requirements, function-signatures, return Types etc. refactor the code to pure Scala idiomatic => Specifically Scala 2 (We are using Scala 2.13.16)
+
 1. Without changing functionality or functional-requirements or non-functional-requirements, function-signatures, return Types etc. refactor the code to pure Scala idiomatic => Specifically Scala 2 (We are using Scala 2.13.16)
 2. Follow idiomatic functional programming, immutability, pure functions, explicit effects, use for-comprehensions.. example: Monads instead of try-catch-finally
 3. Keep Spark transforms pure (return `Dataset[...]`), move external IO/orchestration to `F[_]` via `EffectSystem`.

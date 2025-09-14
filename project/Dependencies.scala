@@ -276,8 +276,8 @@ object Dependencies {
       )
     case "maintenance-cli" =>
       common ++ Seq(
-        "com.github.scopt" %% "scopt"     % "4.1.0",
-        "org.apache.spark" %% "spark-sql" % Versions.spark,
+        "com.github.scopt" %% "scopt"       % "4.1.0",
+        "org.apache.spark" %% "spark-sql"   % Versions.spark,
         "io.delta"         %% "delta-spark" % Versions.delta,
       )
     case _ => common

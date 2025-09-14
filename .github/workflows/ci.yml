@@ -63,6 +63,67 @@ jobs:
       - name: Build module
         run: sbt -batch ${{ matrix.commands }}
 
+  refactor-lint:
+    name: Refactor Lint & Unsafe Cast Gate
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Cache Ivy and Coursier
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.ivy2/cache
+            ~/.cache/coursier
+            ~/.sbt
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt', '**/project/**/*.sbt', '**/.scalafix.conf') }}
+          restore-keys: |
+            ${{ runner.os }}-sbt-
+      - name: Scalafix dry-run
+        run: sbt -batch fixCheck
+      - name: Cast/Any CI gate
+        shell: bash
+        run: |
+          echo "🔍 Enforcing no asInstanceOf/Any in main sources (with whitelist)"
+          # Whitelist files where reflective casts are intentionally localized
+          WHITELIST=(
+            "modules/engines-spark/src/main/scala/com/flowforge/engines/spark/SparkDataAlgebra.scala"
+            "modules/core/src/main/scala/com/flowforge/core/contracts/internal/SchemaConformsMacros.scala"
+          )
+
+          is_whitelisted() {
+            local f="$1"
+            for w in "${WHITELIST[@]}"; do
+              if [[ "$f" == "$w" ]]; then return 0; fi
+            done
+            return 1
+          }
+
+          FAILURES=()
+          while IFS= read -r -d '' file; do
+            if is_whitelisted "$file"; then continue; fi
+            if rg -n "\\basInstanceOf\\b" "$file" >/dev/null; then
+              FAILURES+=("$file: asInstanceOf usage")
+            fi
+            # Explicit Any in type positions (heuristic, avoids matching 'any' words)
+            if rg -n "(:|\bval\b|\bdef\b|\btype\b)[^\n]*\bAny\b" "$file" >/dev/null; then
+              FAILURES+=("$file: explicit Any type")
+            fi
+          done < <(find modules -type f -path "*/src/main/*" -name "*.scala" -print0)
+
+          if ((${#FAILURES[@]} > 0)); then
+            echo "❌ FAIL: Unsafe patterns detected outside whitelist:" >&2
+            printf '%s
+' "${FAILURES[@]}" >&2
+            exit 1
+          fi
+          echo "✅ PASS: No unsafe asInstanceOf/Any found outside whitelist"
+
   spark-it:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-22.04

@@ -355,10 +355,10 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
 
   def listFiles(path: String): F[FileSystemResult[List[FileMetadata]]] =
     effectSystem.handleError {
-      effectSystem.blocking {
-        val conf = createHadoopConfiguration()
-        val fs   = org.apache.hadoop.fs.FileSystem.get(conf)
-        try {
+      val conf    = createHadoopConfiguration()
+      val acquire = effectSystem.blocking(org.apache.hadoop.fs.FileSystem.get(conf))
+      effectSystem.bracket(acquire) { fs =>
+        effectSystem.blocking {
           val hadoopPath = new org.apache.hadoop.fs.Path(path)
           if (!fs.exists(hadoopPath) || !fs.isDirectory(hadoopPath)) {
             FileSystemResult.failure(FileSystemError.directoryNotFound(path))
@@ -375,77 +375,57 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
             }.toList
             FileSystemResult.success(metadata)
           }
-        } finally
-          fs.close()
-      }
-    } { error =>
-      FileSystemResult.failure(FileSystemError.listError(path, error.getMessage))
-    }
+        }
+      }(fs => effectSystem.blocking(fs.close()).void)
+    }(error => FileSystemResult.failure(FileSystemError.listError(path, error.getMessage)))
 
   def exists(path: String): F[Boolean] =
     effectSystem.handleError {
-      effectSystem.blocking {
-        val conf = createHadoopConfiguration()
-        val fs   = org.apache.hadoop.fs.FileSystem.get(conf)
-        try
-          fs.exists(new org.apache.hadoop.fs.Path(path))
-        finally
-          fs.close()
-      }
+      val conf    = createHadoopConfiguration()
+      val acquire = effectSystem.blocking(org.apache.hadoop.fs.FileSystem.get(conf))
+      effectSystem.bracket(acquire) { fs =>
+        effectSystem.blocking(fs.exists(new org.apache.hadoop.fs.Path(path)))
+      }(fs => effectSystem.blocking(fs.close()).void)
     }(_ => false)
 
   def createDirectory(path: String): F[FileSystemResult[Unit]] =
     effectSystem.handleError {
-      effectSystem.blocking {
-        val conf = createHadoopConfiguration()
-        val fs   = org.apache.hadoop.fs.FileSystem.get(conf)
-        try {
+      val conf    = createHadoopConfiguration()
+      val acquire = effectSystem.blocking(org.apache.hadoop.fs.FileSystem.get(conf))
+      effectSystem.bracket(acquire) { fs =>
+        effectSystem.blocking {
           val hadoopPath = new org.apache.hadoop.fs.Path(path)
           val success    = fs.mkdirs(hadoopPath)
-          if (success) {
-            FileSystemResult.success(())
-          } else {
-            FileSystemResult.failure(
-              FileSystemError.createDirectoryError(path, "Failed to create directory"),
-            )
-          }
-        } finally
-          fs.close()
-      }
-    } { error =>
-      FileSystemResult.failure(FileSystemError.createDirectoryError(path, error.getMessage))
-    }
+          if (success) FileSystemResult.success(())
+          else
+            FileSystemResult.failure(FileSystemError.createDirectoryError(path, "Failed to create directory"))
+        }
+      }(fs => effectSystem.blocking(fs.close()).void)
+    }(error => FileSystemResult.failure(FileSystemError.createDirectoryError(path, error.getMessage)))
 
   def delete(path: String, recursive: Boolean = false): F[FileSystemResult[Unit]] =
     effectSystem.handleError {
-      effectSystem.blocking {
-        val conf = createHadoopConfiguration()
-        val fs   = org.apache.hadoop.fs.FileSystem.get(conf)
-        try {
+      val conf    = createHadoopConfiguration()
+      val acquire = effectSystem.blocking(org.apache.hadoop.fs.FileSystem.get(conf))
+      effectSystem.bracket(acquire) { fs =>
+        effectSystem.blocking {
           val hadoopPath = new org.apache.hadoop.fs.Path(path)
           val success    = fs.delete(hadoopPath, recursive)
-          if (success) {
-            FileSystemResult.success(())
-          } else {
-            FileSystemResult.failure(FileSystemError.deleteError(path, "Failed to delete"))
-          }
-        } finally
-          fs.close()
-      }
-    } { error =>
-      FileSystemResult.failure(FileSystemError.deleteError(path, error.getMessage))
-    }
+          if (success) FileSystemResult.success(())
+          else FileSystemResult.failure(FileSystemError.deleteError(path, "Failed to delete"))
+        }
+      }(fs => effectSystem.blocking(fs.close()).void)
+    }(error => FileSystemResult.failure(FileSystemError.deleteError(path, error.getMessage)))
 
   def getMetadata(path: String): F[FileSystemResult[FileMetadata]] =
     effectSystem.handleError {
-      effectSystem.blocking {
-        val conf = createHadoopConfiguration()
-        val fs   = org.apache.hadoop.fs.FileSystem.get(conf)
-        try {
+      val conf    = createHadoopConfiguration()
+      val acquire = effectSystem.blocking(org.apache.hadoop.fs.FileSystem.get(conf))
+      effectSystem.bracket(acquire) { fs =>
+        effectSystem.blocking {
           val hadoopPath = new org.apache.hadoop.fs.Path(path)
-          if (!fs.exists(hadoopPath)) {
-            FileSystemResult.failure(FileSystemError.fileNotFound(path))
-          } else {
+          if (!fs.exists(hadoopPath)) FileSystemResult.failure(FileSystemError.fileNotFound(path))
+          else {
             val status = fs.getFileStatus(hadoopPath)
             val metadata = FileMetadata(
               name = status.getPath.getName,
@@ -456,53 +436,42 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
             )
             FileSystemResult.success(metadata)
           }
-        } finally
-          fs.close()
-      }
-    } { error =>
-      FileSystemResult.failure(FileSystemError.metadataError(path, error.getMessage))
-    }
+        }
+      }(fs => effectSystem.blocking(fs.close()).void)
+    }(error => FileSystemResult.failure(FileSystemError.metadataError(path, error.getMessage)))
 
   def streamRead(source: DataSource): F[List[Array[Byte]]] = {
     val location = extractLocation(source)
-    effectSystem.blocking {
-      val conf = createHadoopConfiguration()
-      val fs   = org.apache.hadoop.fs.FileSystem.get(conf)
-      try {
+    effectSystem.bracket(
+      effectSystem.blocking(org.apache.hadoop.fs.FileSystem.get(createHadoopConfiguration())),
+    ) { fs =>
+      effectSystem.blocking {
         val path        = new org.apache.hadoop.fs.Path(location)
         val inputStream = fs.open(path)
         try {
           val bytes = inputStream.readAllBytes()
-          // Split into 8KB chunks for streaming
           bytes.grouped(8192).toList
-        } finally
-          inputStream.close()
-      } finally
-        fs.close()
-    }
+        } finally inputStream.close()
+      }
+    }(fs => effectSystem.blocking(fs.close()).void)
   }
 
   def streamWrite(sink: DataSink, data: List[Array[Byte]]): F[WriteMetadata] = {
     val location = extractSinkLocation(sink)
-    effectSystem.blocking {
-      val conf = createHadoopConfiguration()
-      val fs   = org.apache.hadoop.fs.FileSystem.get(conf)
-      try {
+    effectSystem.bracket(
+      effectSystem.blocking(org.apache.hadoop.fs.FileSystem.get(createHadoopConfiguration())),
+    ) { fs =>
+      effectSystem.blocking {
         val path         = new org.apache.hadoop.fs.Path(location)
         val outputStream = fs.create(path, true)
         try {
           val totalBytes = data.map(_.length.toLong).sum
           data.foreach(outputStream.write)
           outputStream.flush()
-          WriteMetadata(
-            path = location,
-            bytesWritten = totalBytes,
-          )
-        } finally
-          outputStream.close()
-      } finally
-        fs.close()
-    }
+          WriteMetadata(path = location, bytesWritten = totalBytes)
+        } finally outputStream.close()
+      }
+    }(fs => effectSystem.blocking(fs.close()).void)
   }
 
   // Helper method to infer data format from file path

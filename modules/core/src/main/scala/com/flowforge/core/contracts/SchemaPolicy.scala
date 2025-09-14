@@ -4,24 +4,24 @@ sealed trait SchemaPolicy
 
 object SchemaPolicy {
   // Sealed traits for type-level usage in macros
-  sealed trait Exact          extends SchemaPolicy
-  sealed trait ExactUnordered extends SchemaPolicy
-  sealed trait ExactOrdered    extends SchemaPolicy
+  sealed trait Exact            extends SchemaPolicy
+  sealed trait ExactUnordered   extends SchemaPolicy
+  sealed trait ExactOrdered     extends SchemaPolicy
   sealed trait ExactUnorderedCI extends SchemaPolicy
   sealed trait ExactOrderedCI   extends SchemaPolicy
   sealed trait ExactByPosition  extends SchemaPolicy
-  sealed trait Backward       extends SchemaPolicy
-  sealed trait Forward        extends SchemaPolicy
-  sealed trait Full           extends SchemaPolicy
+  sealed trait Backward         extends SchemaPolicy
+  sealed trait Forward          extends SchemaPolicy
+  sealed trait Full             extends SchemaPolicy
 
   // Case objects for runtime usage - implement the traits
-  case object Exact          extends SchemaPolicy.Exact
-  case object ExactUnordered extends SchemaPolicy.ExactUnordered
-  case object ExactOrdered    extends SchemaPolicy.ExactOrdered
+  case object Exact            extends SchemaPolicy.Exact
+  case object ExactUnordered   extends SchemaPolicy.ExactUnordered
+  case object ExactOrdered     extends SchemaPolicy.ExactOrdered
   case object ExactUnorderedCI extends SchemaPolicy.ExactUnorderedCI
   case object ExactOrderedCI   extends SchemaPolicy.ExactOrderedCI
   case object ExactByPosition  extends SchemaPolicy.ExactByPosition
-  case object Backward       extends SchemaPolicy.Backward
-  case object Forward        extends SchemaPolicy.Forward
-  case object Full           extends SchemaPolicy.Full
+  case object Backward         extends SchemaPolicy.Backward
+  case object Forward          extends SchemaPolicy.Forward
+  case object Full             extends SchemaPolicy.Full
 }

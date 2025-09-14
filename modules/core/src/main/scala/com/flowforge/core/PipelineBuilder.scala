@@ -5,7 +5,17 @@ import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
 import com.flowforge.core.lineage.OpenLineageEmitter
 import com.flowforge.core.types.BuilderState.{ WithContract, WithTransform }
-import com.flowforge.core.types.{ BuilderState, DataFormat, DataSink, DataSource, Environment, PipelineConfig, PipelineStage, TypedSink, TypedSource }
+import com.flowforge.core.types.{
+  BuilderState,
+  DataFormat,
+  DataSink,
+  DataSource,
+  Environment,
+  PipelineConfig,
+  PipelineStage,
+  TypedSink,
+  TypedSource,
+}
 import com.flowforge.framework.{ Pipeline => FFPipeline, PipelineMetadata }
 
 /**
@@ -152,7 +162,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
     }
 
     val kleisliAny: Kleisli[F, Any, Any] =
-      stages.foldLeft(Kleisli.ask[F, Any]) { (acc, st) => acc.andThen(KC.kAny(st.execute)) }
+      stages.foldLeft(Kleisli.ask[F, Any])((acc, st) => acc.andThen(KC.kAny(st.execute)))
     val kleisli: Kleisli[F, In, Out] = KC.kTyped[In, Out](kleisliAny)
 
     val md = PipelineMetadata(
@@ -160,7 +170,10 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
       stages = stages.map(_.name),
       transformations = stages.collect { case _: PipelineStage.Transform[_, _, _] => 1 }.sum,
       qualityChecks = 0,
-      tags = Map("builder" -> "contract-aware", "lineage" -> (if (lineageEmitter.isDefined) "configured" else "none"))
+      tags = Map(
+        "builder" -> "contract-aware",
+        "lineage" -> (if (lineageEmitter.isDefined) "configured" else "none"),
+      ),
     )
 
     FFPipeline(kleisli, md)

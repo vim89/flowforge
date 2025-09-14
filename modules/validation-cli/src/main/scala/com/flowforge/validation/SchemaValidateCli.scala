@@ -81,7 +81,7 @@ object SchemaValidateCli extends IOApp {
       EffectSystem[IO].blocking {
         val builder =
           SparkSession.builder().appName("ff-validate-schema").config("spark.ui.enabled", "false")
-        master.foreach(builder.master)
+        master.orElse(sys.env.get("SPARK_MASTER")).foreach(builder.master)
         builder.getOrCreate()
       }
     }(s => EffectSystem[IO].blocking(s.stop()).void)

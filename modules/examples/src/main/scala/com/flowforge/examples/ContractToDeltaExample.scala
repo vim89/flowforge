@@ -29,13 +29,13 @@ object ContractToDeltaExample {
   implicit val userShape: Shape[User] = Shape.gen[User]
 
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession
+    val builder = SparkSession
       .builder()
       .appName("ContractToDeltaExample")
-      .master("local[*]")
       .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
       .config("spark.sql.catalog.spark_catalog", "org.apache.delta.catalog.DeltaCatalog")
-      .getOrCreate()
+    sys.env.get("SPARK_MASTER").foreach(builder.master)
+    val spark = builder.getOrCreate()
 
     try {
       val result = demonstrateContractToRuntimeMapping(spark)

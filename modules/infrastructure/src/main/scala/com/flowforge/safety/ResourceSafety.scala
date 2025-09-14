@@ -1,6 +1,7 @@
 package com.flowforge.safety
 
 import cats.effect.Resource
+import cats.syntax.all._
 
 /**
  * Resource safety framework for automatic resource management.
@@ -46,8 +47,16 @@ object ResourceSafety {
   ): F[B] =
     F.flatMap(acquire) { a =>
       F.handleErrorWith(
-        F.flatMap(use(a))(b => F.map(release(a))(_ => b)),
-      )(e => F.flatMap(release(a))(_ => F.raiseError(e)))
+        for {
+          b <- use(a)
+          _ <- release(a)
+        } yield b,
+      ) { e =>
+        for {
+          _ <- release(a)
+          r <- F.raiseError[B](e)
+        } yield r
+      }
     }
 
   def resource[F[_], A](

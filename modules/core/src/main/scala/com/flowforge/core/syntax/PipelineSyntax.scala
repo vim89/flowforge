@@ -260,25 +260,27 @@ object PipelineSyntax {
     /**
      * Add logging to component
      */
-    def logged(name: String): PipelineComponent[F, A, B] =
+    def logged(name: String)(implicit L: com.flowforge.core.logging.CoreLogger[F])
+      : PipelineComponent[F, A, B] =
       Kleisli[F, A, B] { a =>
         for {
-          _      <- F.delay(println(s"Starting component: $name"))
+          _      <- L.info(s"Starting component: $name")
           result <- component.run(a)
-          _      <- F.delay(println(s"Completed component: $name"))
+          _      <- L.info(s"Completed component: $name")
         } yield result
       }
 
     /**
      * Add metrics collection
      */
-    def withMetrics(metricName: String): PipelineComponent[F, A, B] =
+    def withMetrics(metricName: String)(implicit L: com.flowforge.core.logging.CoreLogger[F])
+      : PipelineComponent[F, A, B] =
       Kleisli[F, A, B] { a =>
         for {
           start  <- F.delay(System.currentTimeMillis())
           result <- component.run(a)
           end    <- F.delay(System.currentTimeMillis())
-          _      <- F.delay(println(s"METRIC: $metricName duration = ${end - start}ms"))
+          _      <- L.info(s"METRIC: $metricName duration = ${end - start}ms")
         } yield result
       }
   }
@@ -402,22 +404,24 @@ object PipelineSyntax {
     /**
      * Add logging to the operation
      */
-    def logged(message: String): FlowForgeReaderT[F, A] =
+    def logged(message: String)(implicit L: com.flowforge.core.logging.CoreLogger[F])
+      : FlowForgeReaderT[F, A] =
       for {
-        _      <- ReaderT.liftF(F.delay(println(s"LOG: $message - START")))
+        _      <- ReaderT.liftF(L.info(s"$message - START"))
         result <- readerOp
-        _      <- ReaderT.liftF(F.delay(println(s"LOG: $message - END")))
+        _      <- ReaderT.liftF(L.info(s"$message - END"))
       } yield result
 
     /**
      * Add metrics to the operation
      */
-    def timed(metricName: String): FlowForgeReaderT[F, A] =
+    def timed(metricName: String)(implicit L: com.flowforge.core.logging.CoreLogger[F])
+      : FlowForgeReaderT[F, A] =
       for {
         start  <- ReaderT.liftF(F.delay(System.currentTimeMillis()))
         result <- readerOp
         end    <- ReaderT.liftF(F.delay(System.currentTimeMillis()))
-        _      <- ReaderT.liftF(F.delay(println(s"METRIC: $metricName duration = ${end - start}ms")))
+        _      <- ReaderT.liftF(L.info(s"$metricName duration = ${end - start}ms"))
       } yield result
 
     /**
@@ -488,12 +492,13 @@ object PipelineSyntax {
   /**
    * Create a logging component
    */
-  def log[F[_]: EffectSystem, A](message: String): PipelineComponent[F, A, A] =
+  def log[F[_]: EffectSystem, A](message: String)(implicit L: com.flowforge.core.logging.CoreLogger[F])
+    : PipelineComponent[F, A, A] =
     Kleisli[F, A, A] { a =>
-      implicitly[EffectSystem[F]].delay {
-        println(s"LOG: $message")
-        a
-      }
+      val F = implicitly[EffectSystem[F]]
+      for {
+        _ <- L.info(message)
+      } yield a
     }
 
   /**
@@ -502,13 +507,13 @@ object PipelineSyntax {
   def metric[F[_]: EffectSystem, A](
     name: String,
     extractor: A => Double,
+  )(implicit L: com.flowforge.core.logging.CoreLogger[F],
   ): PipelineComponent[F, A, A] =
     Kleisli[F, A, A] { a =>
-      implicitly[EffectSystem[F]].delay {
-        val value = extractor(a)
-        println(s"METRIC: $name = $value")
-        a
-      }
+      val F = implicitly[EffectSystem[F]]
+      for {
+        _ <- L.info(s"$name = ${extractor(a)}")
+      } yield a
     }
 
   // ===============================

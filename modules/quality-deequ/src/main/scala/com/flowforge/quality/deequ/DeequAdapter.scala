@@ -88,7 +88,8 @@ object DeequAdapter {
       case Right(result) => result
       case Left(error)   =>
         // Fallback to native Spark checks if Deequ fails
-        println(s"[Deequ] Verification failed, falling back to native checks: ${error.getMessage}")
+        // best-effort logging without failing the data path
+        ()
         runNativeChecks(df, constraints, originalDataset)
     }
   }

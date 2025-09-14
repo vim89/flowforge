@@ -14,8 +14,8 @@ import java.time.Instant
 import scala.concurrent.duration._
 
 final case class Pipeline[F[_], A, B](run: Kleisli[F, A, B], metadata: PipelineMetadata) {
-  def name: String = metadata.name
-  def stages: List[String] = metadata.stages
+  def name: String                                     = metadata.name
+  def stages: List[String]                             = metadata.stages
   def execute(a: A)(implicit F: EffectSystem[F]): F[B] = run(a)
 
   def executeWithMonitoring(a: A)(implicit F: EffectSystem[F]): F[PipelineResult[B]] = {

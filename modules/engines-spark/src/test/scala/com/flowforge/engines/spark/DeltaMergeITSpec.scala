@@ -32,7 +32,7 @@ class DeltaMergeITSpec extends AnyFunSuite with Matchers {
       } catch { case _: Throwable => 0 }
     assume(major(jv) > 0 && major(jv) <= 21, s"Skipping Spark IT due to unsupported JDK version: $jv")
 
-    val spark = SparkSession.builder().appName("ff-it").master("local[*]").getOrCreate()
+    val spark = SparkSession.builder().appName("ff-it").master("local[2]").getOrCreate()
     try {
       import spark.implicits._
       val tmpDir = Files.createTempDirectory("ff-it").toFile

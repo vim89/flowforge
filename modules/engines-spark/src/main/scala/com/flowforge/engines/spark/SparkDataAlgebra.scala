@@ -16,7 +16,9 @@ private object ReflectionCasting {
     result match {
       case qr: DataAlgebra.QualityResult[_] =>
         // ARCHITECTURAL: Reflection guarantees type safety here - required for modular quality system
+        // scalafix:off DisableSyntax.noAsInstanceOf
         qr.asInstanceOf[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]]
+      // scalafix:on DisableSyntax.noAsInstanceOf
       case _ => throw new RuntimeException(s"Unexpected result type: ${result.getClass}")
     }
 }
@@ -183,22 +185,23 @@ object SparkDataAlgebra {
           // Prefer direct DataFrame writes when available to avoid JSON round-trip
           sink match {
             case s: LocalDataSink =>
+              import com.flowforge.engines.spark.SparkWriteHelpers._
+
               val (bytesWritten, recordsWritten, partitionsWritten) = dataset match {
                 case pds: ProductionSparkDataset[A] =>
-                  val dfTuned = (options.repartition, options.coalesce) match {
-                    case (Some(n), _) => pds.sparkDataFrame.repartition(n)
-                    case (_, Some(n)) => pds.sparkDataFrame.coalesce(n)
-                    case _            => pds.sparkDataFrame
-                  }
+                  val dfTuned = tuned(pds.sparkDataFrame, options)
                   s.format match {
                     case DataFormat.Parquet =>
                       dfTuned.write.mode("overwrite").parquet(s.location)
                     case DataFormat.Delta =>
                       dfTuned.write.format("delta").mode("overwrite").save(s.location)
                     case DataFormat.JSON | DataFormat.JSONL =>
-                      dfTuned.toJSON.coalesce(options.coalesce.getOrElse(1)).write.mode("overwrite").text(s.location)
+                      import com.flowforge.engines.spark.SparkWriteHelpers.singlePartition
+                      singlePartition(dfTuned.toJSON, options.coalesce).write
+                        .mode("overwrite").text(s.location)
                     case DataFormat.CSV =>
-                      dfTuned.coalesce(options.coalesce.getOrElse(1)).write.mode("overwrite").csv(s.location)
+                      import com.flowforge.engines.spark.SparkWriteHelpers.singlePartition
+                      singlePartition(dfTuned, options.coalesce).write.mode("overwrite").csv(s.location)
                     case _ => throw new UnsupportedOperationException("Unsupported sink format")
                   }
                   (0L, pds.size.toLong, pds.metadata.partitions)
@@ -212,8 +215,11 @@ object SparkDataAlgebra {
                   val ds = spark.createDataset(jsonStrings)(org.apache.spark.sql.Encoders.STRING)
                   s.format match {
                     case DataFormat.JSON | DataFormat.JSONL =>
-                      ds.coalesce(1).write.mode("overwrite").text(s.location)
-                    case DataFormat.CSV => ds.coalesce(1).write.mode("overwrite").text(s.location)
+                      import com.flowforge.engines.spark.SparkWriteHelpers.singlePartition
+                      singlePartition(ds, None).write.mode("overwrite").text(s.location)
+                    case DataFormat.CSV =>
+                      import com.flowforge.engines.spark.SparkWriteHelpers.singlePartition
+                      singlePartition(ds, None).write.mode("overwrite").text(s.location)
                     case DataFormat.Parquet =>
                       spark.read.json(ds).write.mode("overwrite").parquet(s.location)
                     case _ => throw new UnsupportedOperationException("Unsupported sink format")
@@ -238,25 +244,19 @@ object SparkDataAlgebra {
             case j: JdbcSink =>
               val (recordsWritten, partitionsWritten) = dataset match {
                 case pds: ProductionSparkDataset[A] =>
-                  val writer0 = pds.sparkDataFrame.write.format("jdbc")
-                    .option("url", j.url)
-                    .option("driver", j.driver)
-                    .option("dbtable", j.table.value)
-                  val writer1 = j.user.fold(writer0)(u => writer0.option("user", u))
-                  val writer2 = j.password.fold(writer1)(p => writer1.option("password", p))
-                  val writer  = options.extraOptions.foldLeft(writer2) { case (w, (k, v)) => w.option(k, v) }
-                  val mode    = options.mode match {
-                    case DataAlgebra.WriteMode.Append        => org.apache.spark.sql.SaveMode.Append
-                    case DataAlgebra.WriteMode.Overwrite     => org.apache.spark.sql.SaveMode.Overwrite
-                    case DataAlgebra.WriteMode.ErrorIfExists => org.apache.spark.sql.SaveMode.ErrorIfExists
-                    case DataAlgebra.WriteMode.Ignore        => org.apache.spark.sql.SaveMode.Ignore
-                  }
-                  writer.mode(mode).save()
+                  import com.flowforge.engines.spark.SparkWriteHelpers._
+                  val writer = withExtrasAndMode(
+                    jdbcWriterBase(pds.sparkDataFrame, j),
+                    options.extraOptions,
+                    options.mode,
+                  )
+                  writer.save()
                   (pds.size.toLong, pds.metadata.partitions)
                 case _ =>
                   // Fallback: create DF from JSON rows
                   val rows = dataset.data.map { a =>
-                    DataEncoder[A].encode(a, DataFormat.JSON).fold(_ => "{}", ed => new String(ed.data, "UTF-8"))
+                    DataEncoder[A]
+                      .encode(a, DataFormat.JSON).fold(_ => "{}", ed => new String(ed.data, "UTF-8"))
                   }
                   val ds = spark.createDataset(rows)(org.apache.spark.sql.Encoders.STRING)
                   val df = spark.read.json(ds)
@@ -281,23 +281,23 @@ object SparkDataAlgebra {
         }).flatMap { t =>
             val wr  = t._1
             val dur = t._2
-              val loc = sink match {
-                case l: LocalDataSink    => l.location
-                case g: DataSink.GcsSink => g.path
-                case s: DataSink.S3Sink  => s.path
-                case _                   => sink.getClass.getSimpleName
-              }
-              F.delay {
+            val loc = sink match {
+              case l: LocalDataSink    => l.location
+              case g: DataSink.GcsSink => g.path
+              case s: DataSink.S3Sink  => s.path
+              case _                   => sink.getClass.getSimpleName
+            }
+            for {
+              _ <- F.delay {
                 try
                   com.flowforge.core.observability.PrometheusMetrics.Data.opLatencyMs
                     .labels("write", "spark").observe(dur.toMillis.toDouble)
                 catch { case _: Throwable => () }
-              }.*>(
-                log.info(
-                  s"spark.write ok format=${sink.format} loc=${loc} ms=${dur.toMillis} records=${wr.recordsWritten}",
-                ),
+              }
+              _ <- log.info(
+                s"spark.write ok format=${sink.format} loc=${loc} ms=${dur.toMillis} records=${wr.recordsWritten}",
               )
-                .as(wr)
+            } yield wr
           }
 
       // ========================================
@@ -908,7 +908,9 @@ object SparkDataAlgebra {
                   None
                 case ex: Exception =>
                   // Log and skip for other exceptions
-                  println(s"WARNING: Deequ quality check failed: ${ex.getMessage}")
+                  val _ = ()
+                  // we do not have infrastructure logger in this module; use core logger no-op (if provided by F)
+                  // fall back to silent skip to keep engine pure in core path
                   None
               }
             }

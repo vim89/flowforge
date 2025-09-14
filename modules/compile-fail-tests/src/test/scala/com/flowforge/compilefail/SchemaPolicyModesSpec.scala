@@ -5,8 +5,8 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 /**
- * Negative/positive compile-time tests for extended schema policies imported from the Scala 3 PoC
- * and adapted for Scala 2 macros.
+ * Negative/positive compile-time tests for extended schema policies imported from the Scala 3 PoC and adapted
+ * for Scala 2 macros.
  */
 class SchemaPolicyModesSpec extends AnyWordSpec with Matchers {
 
@@ -28,19 +28,17 @@ class SchemaPolicyModesSpec extends AnyWordSpec with Matchers {
   }
 
   "ExactUnordered" should {
-    "succeed when fields are reordered" in {
+    "succeed when fields are reordered" in
       assertCompiles("""
         implicitly[SchemaConforms[B, A, SchemaPolicy.ExactUnordered]]
       """)
-    }
   }
 
   "ExactByPosition" should {
-    "succeed when types match by position regardless of names" in {
+    "succeed when types match by position regardless of names" in
       assertCompiles("""
         implicitly[SchemaConforms[C, D, SchemaPolicy.ExactByPosition]]
       """)
-    }
     "fail when a type differs at a position" in {
       val _ = 42
       assertTypeError("""
@@ -49,4 +47,3 @@ class SchemaPolicyModesSpec extends AnyWordSpec with Matchers {
     }
   }
 }
-

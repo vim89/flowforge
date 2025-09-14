@@ -1,6 +1,7 @@
 package com.flowforge.engines.spark
 
 import cats.data.Kleisli
+import cats.implicits._
 import cats.effect.Resource
 import com.flowforge.core.algebra.DataAlgebra.WriteOptions
 import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
@@ -130,7 +131,11 @@ class SparkTypedBuilder[F[_]: EffectSystem, In, Out] private[spark] (
       name = s"spark-quality-${stages.size}",
       description = "Spark distributed quality validation",
       contract = contract,
-      execute = Kleisli(data => F.map(dataAlgebra.validate(data, contract))(_.data)),
+      execute = Kleisli { data =>
+        for {
+          res <- dataAlgebra.validate(data, contract)
+        } yield res.data
+      },
     )
     new SparkTypedBuilder[F, In, Out](name, sparkSession, dataAlgebra, stages :+ stage)
   }
@@ -148,8 +153,9 @@ class SparkTypedBuilder[F[_]: EffectSystem, In, Out] private[spark] (
       description = s"Write to ${sink.format} using Spark",
       sink = sink,
       execute = Kleisli { data =>
-        val F = EffectSystem[F]
-        F.map(dataAlgebra.write(data, sink, options)(encoder))(_ => ())
+        for {
+          _ <- dataAlgebra.write(data, sink, options)(encoder)
+        } yield ()
       },
     )
     new SparkTypedBuilder[F, In, Unit](name, sparkSession, dataAlgebra, stages :+ stage)
@@ -311,7 +317,9 @@ object SparkPipelineBuilder {
         val builder = SparkSession
           .builder()
           .appName(appName)
-          .master("local[*]") // Default to local mode
+        // Do NOT hardcode master. Respect spark-submit/cluster configs.
+        // Optional override from provided config or SPARK_MASTER env (dev convenience only)
+        config.get("spark.master").orElse(sys.env.get("SPARK_MASTER")).foreach(builder.master)
 
         config.foreach {
           case (key, value) =>

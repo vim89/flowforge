@@ -94,7 +94,7 @@ object ContractsExtractorCli extends IOApp {
           .builder()
           .appName("ff-contract-extractor")
           .config("spark.ui.enabled", "false")
-        master.foreach(builder.master)
+        master.orElse(sys.env.get("SPARK_MASTER")).foreach(builder.master)
         builder.getOrCreate()
       }
     }(s => EffectSystem[IO].blocking(s.stop()).void)

@@ -35,51 +35,62 @@ class DeltaConstraintsIT extends AsyncFlatSpec with AsyncIOSpec with Matchers {
   "Delta table with NOT NULL constraints" should "enforce schema validation" in
     createSparkResource().use { spark =>
       if (!shouldRun)
-        IO { org.scalatest.Assertions.assume(shouldRun, "Skipping Spark IT: set -DwithSparkIT=true or WITH_SPARK_IT=true"); succeed }
-      else (
-      for {
-        tablePath    <- IO.delay(Files.createTempDirectory("delta-not-null-test").toString)
-        _            <- createUsersTableWithConstraints(spark, tablePath)
-        validResult  <- insertValidUserData(spark, tablePath)
-        _            <- IO.delay(validResult should be(true))
-        invalidResult <- insertInvalidUserData(spark, tablePath)
-        _            <- IO.delay(invalidResult should be(false))
-        count        <- IO.delay(spark.read.format("delta").load(tablePath).count())
-        _            <- IO.delay(count should be(2))
-      } yield succeed)
+        IO {
+          org.scalatest.Assertions
+            .assume(shouldRun, "Skipping Spark IT: set -DwithSparkIT=true or WITH_SPARK_IT=true"); succeed
+        }
+      else
+        for {
+          tablePath     <- IO.delay(Files.createTempDirectory("delta-not-null-test").toString)
+          _             <- createUsersTableWithConstraints(spark, tablePath)
+          validResult   <- insertValidUserData(spark, tablePath)
+          _             <- IO.delay(validResult should be(true))
+          invalidResult <- insertInvalidUserData(spark, tablePath)
+          _             <- IO.delay(invalidResult should be(false))
+          count         <- IO.delay(spark.read.format("delta").load(tablePath).count())
+          _             <- IO.delay(count should be(2))
+        } yield succeed
     }
 
   "Delta table with CHECK constraints" should "validate business rules" in
     createSparkResource().use { spark =>
       if (!shouldRun)
-        IO { org.scalatest.Assertions.assume(shouldRun, "Skipping Spark IT: set -DwithSparkIT=true or WITH_SPARK_IT=true"); succeed }
-      else (
-      for {
-        tablePath   <- IO.delay(Files.createTempDirectory("delta-check-test").toString)
-        _           <- createUsersTableWithCheckConstraints(spark, tablePath)
-        validResult <- insertValidAgeData(spark, tablePath)
-        _           <- IO.delay(validResult should be(true))
-        invalidResult <- insertInvalidAgeData(spark, tablePath)
-        _           <- IO.delay(invalidResult should be(false))
-        users       <- IO.delay { import spark.implicits._; spark.read.format("delta").load(tablePath).as[EnrichedUser].collect() }
-        _           <- IO.delay { users.foreach(u => { u.age should be >= 13; u.age should be <= 120 }) }
-      } yield succeed)
+        IO {
+          org.scalatest.Assertions
+            .assume(shouldRun, "Skipping Spark IT: set -DwithSparkIT=true or WITH_SPARK_IT=true"); succeed
+        }
+      else
+        for {
+          tablePath     <- IO.delay(Files.createTempDirectory("delta-check-test").toString)
+          _             <- createUsersTableWithCheckConstraints(spark, tablePath)
+          validResult   <- insertValidAgeData(spark, tablePath)
+          _             <- IO.delay(validResult should be(true))
+          invalidResult <- insertInvalidAgeData(spark, tablePath)
+          _             <- IO.delay(invalidResult should be(false))
+          users <- IO.delay {
+            import spark.implicits._; spark.read.format("delta").load(tablePath).as[EnrichedUser].collect()
+          }
+          _ <- IO.delay(users.foreach { u => u.age should be >= 13; u.age should be <= 120 })
+        } yield succeed
     }
 
   "FlowForge pipeline with Delta sink" should "integrate with table constraints" in
     createSparkResource().use { spark =>
       if (!shouldRun)
-        IO { org.scalatest.Assertions.assume(shouldRun, "Skipping Spark IT: set -DwithSparkIT=true or WITH_SPARK_IT=true"); succeed }
-      else (
-      for {
-        tablePath  <- IO.delay(Files.createTempDirectory("delta-pipeline-test").toString)
-        _          <- createComprehensiveUsersTable(spark, tablePath)
-        sampleData <- generateFlowForgeSampleData(spark)
-        _          <- writeWithDeltaConstraints(spark, sampleData, tablePath)
-        finalCount <- IO.delay(spark.read.format("delta").load(tablePath).count())
-        _          <- IO.delay(finalCount should be > 0L)
-        _          <- validateAllConstraints(spark, tablePath)
-      } yield succeed)
+        IO {
+          org.scalatest.Assertions
+            .assume(shouldRun, "Skipping Spark IT: set -DwithSparkIT=true or WITH_SPARK_IT=true"); succeed
+        }
+      else
+        for {
+          tablePath  <- IO.delay(Files.createTempDirectory("delta-pipeline-test").toString)
+          _          <- createComprehensiveUsersTable(spark, tablePath)
+          sampleData <- generateFlowForgeSampleData(spark)
+          _          <- writeWithDeltaConstraints(spark, sampleData, tablePath)
+          finalCount <- IO.delay(spark.read.format("delta").load(tablePath).count())
+          _          <- IO.delay(finalCount should be > 0L)
+          _          <- validateAllConstraints(spark, tablePath)
+        } yield succeed
     }
 
   private def createUsersTableWithConstraints(spark: SparkSession, tablePath: String): IO[Unit] = IO.delay {
@@ -90,13 +101,16 @@ class DeltaConstraintsIT extends AsyncFlatSpec with AsyncIOSpec with Matchers {
     spark.sql(s"ALTER TABLE delta.`$tablePath` ALTER COLUMN email SET NOT NULL")
   }
 
-  private def createUsersTableWithCheckConstraints(spark: SparkSession, tablePath: String): IO[Unit] = IO.delay {
-    import spark.implicits._
-    val emptyUsers = spark.emptyDataset[EnrichedUser].toDF()
-    emptyUsers.write.format("delta").mode("overwrite").save(tablePath)
-    spark.sql(s"ALTER TABLE delta.`$tablePath` ADD CONSTRAINT valid_age CHECK (age >= 13 AND age <= 120)")
-    spark.sql(s"ALTER TABLE delta.`$tablePath` ADD CONSTRAINT valid_email CHECK (email RLIKE '^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$$')")
-  }
+  private def createUsersTableWithCheckConstraints(spark: SparkSession, tablePath: String): IO[Unit] =
+    IO.delay {
+      import spark.implicits._
+      val emptyUsers = spark.emptyDataset[EnrichedUser].toDF()
+      emptyUsers.write.format("delta").mode("overwrite").save(tablePath)
+      spark.sql(s"ALTER TABLE delta.`$tablePath` ADD CONSTRAINT valid_age CHECK (age >= 13 AND age <= 120)")
+      spark.sql(
+        s"ALTER TABLE delta.`$tablePath` ADD CONSTRAINT valid_email CHECK (email RLIKE '^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$$')",
+      )
+    }
 
   private def createComprehensiveUsersTable(spark: SparkSession, tablePath: String): IO[Unit] = IO.delay {
     import spark.implicits._
@@ -105,8 +119,12 @@ class DeltaConstraintsIT extends AsyncFlatSpec with AsyncIOSpec with Matchers {
     spark.sql(s"ALTER TABLE delta.`$tablePath` ALTER COLUMN id SET NOT NULL")
     spark.sql(s"ALTER TABLE delta.`$tablePath` ALTER COLUMN email SET NOT NULL")
     spark.sql(s"ALTER TABLE delta.`$tablePath` ADD CONSTRAINT valid_age CHECK (age >= 13 AND age <= 120)")
-    spark.sql(s"ALTER TABLE delta.`$tablePath` ADD CONSTRAINT valid_email CHECK (email RLIKE '^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$$')")
-    spark.sql(s"ALTER TABLE delta.`$tablePath` ADD CONSTRAINT valid_region CHECK (region IN ('North America','Europe','Asia','Oceania','Other'))")
+    spark.sql(
+      s"ALTER TABLE delta.`$tablePath` ADD CONSTRAINT valid_email CHECK (email RLIKE '^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$$')",
+    )
+    spark.sql(
+      s"ALTER TABLE delta.`$tablePath` ADD CONSTRAINT valid_region CHECK (region IN ('North America','Europe','Asia','Oceania','Other'))",
+    )
   }
 
   private def insertValidUserData(spark: SparkSession, tablePath: String): IO[Boolean] = IO.delay {
@@ -160,7 +178,11 @@ class DeltaConstraintsIT extends AsyncFlatSpec with AsyncIOSpec with Matchers {
     ).toDF()
   }
 
-  private def writeWithDeltaConstraints(spark: SparkSession, df: DataFrame, tablePath: String): IO[Unit] = IO.delay {
+  private def writeWithDeltaConstraints(
+    spark: SparkSession,
+    df: DataFrame,
+    tablePath: String,
+  ): IO[Unit] = IO.delay {
     df.write.format("delta").mode("append").save(tablePath)
   }
 
@@ -174,4 +196,3 @@ class DeltaConstraintsIT extends AsyncFlatSpec with AsyncIOSpec with Matchers {
     }
   }
 }
-

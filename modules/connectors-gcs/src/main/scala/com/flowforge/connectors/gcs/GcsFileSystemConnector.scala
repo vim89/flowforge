@@ -15,29 +15,40 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
 
   private val F = EffectSystem[F]
 
+  // micro path helpers for stricter dedupe; behavior unchanged
+  private object PathHelpers {
+    case class GsUri(bucket: String, key: String)
+
+    def parseGsUri(path: String): Either[ConnectorError, GsUri] =
+      if (path.startsWith("gs://")) {
+        val rest   = path.stripPrefix("gs://")
+        val idx    = rest.indexOf('/')
+        val bucket = if (idx >= 0) rest.substring(0, idx) else rest
+        val key    = if (idx >= 0) rest.substring(idx + 1) else ""
+        if (bucket.nonEmpty) Right(GsUri(bucket, key))
+        else Left(FileSystemError.metadataError(path, "Invalid GCS URI: missing bucket"))
+      } else Left(FileSystemError.metadataError(path, "Invalid GCS URI: must start with gs://"))
+
+    def normalizeDirKey(key: String): String = if (key.endsWith("/")) key else s"$key/"
+
+    def toPath(ds: DataSource): String = ds match {
+      case g: DataSource.GcsSource => g.path
+      case l: LocalDataSource      => l.location
+      case other                   => s"unsupported://${other.getClass.getSimpleName}"
+    }
+
+    def toPath(sink: DataSink): String = sink match {
+      case g: DataSink.GcsSink => g.path
+      case l: LocalDataSink    => l.location
+      case other               => s"unsupported://${other.getClass.getSimpleName}"
+    }
+  }
+
   private case class GsUri(bucket: String, key: String)
-
   private def parseGsUri(path: String): Either[ConnectorError, GsUri] =
-    if (path.startsWith("gs://")) {
-      val rest   = path.stripPrefix("gs://")
-      val idx    = rest.indexOf('/')
-      val bucket = if (idx >= 0) rest.substring(0, idx) else rest
-      val key    = if (idx >= 0) rest.substring(idx + 1) else ""
-      if (bucket.nonEmpty) Right(GsUri(bucket, key))
-      else Left(FileSystemError.metadataError(path, "Invalid GCS URI: missing bucket"))
-    } else Left(FileSystemError.metadataError(path, "Invalid GCS URI: must start with gs://"))
-
-  private def toPath(ds: DataSource): String = ds match {
-    case g: DataSource.GcsSource => g.path
-    case l: LocalDataSource      => l.location
-    case other                   => s"unsupported://${other.getClass.getSimpleName}"
-  }
-
-  private def toPath(sink: DataSink): String = sink match {
-    case g: DataSink.GcsSink => g.path
-    case l: LocalDataSink    => l.location
-    case other               => s"unsupported://${other.getClass.getSimpleName}"
-  }
+    PathHelpers.parseGsUri(path).map(u => GsUri(u.bucket, u.key))
+  private def toPath(ds: DataSource): String = PathHelpers.toPath(ds)
+  private def toPath(sink: DataSink): String = PathHelpers.toPath(sink)
 
   def read(source: DataSource): F[FileSystemResult[Array[Byte]]] = source match {
     case g: DataSource.GcsSource =>
@@ -119,7 +130,7 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
     parseGsUri(path) match {
       case Left(err) => F.pure(FileSystemResult.failure(err))
       case Right(GsUri(b, key)) =>
-        val dirKey = if (key.endsWith("/")) key else s"$key/"
+        val dirKey = PathHelpers.normalizeDirKey(key)
         F.handleError {
           F.blocking {
             val info = com.google.cloud.storage.BlobInfo.newBuilder(b, dirKey).build()

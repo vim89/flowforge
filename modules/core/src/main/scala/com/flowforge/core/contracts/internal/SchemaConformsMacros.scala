@@ -58,8 +58,10 @@ object SchemaConformsMacros {
     // Compute default diffs (name-sensitive, unordered)
     val outMapByName      = outFields.map(f => f._1 -> f).toMap
     val contractMapByName = contractFields.map(f => f._1 -> f).toMap
-    val missing0 = contractFields.collect { case (n, t, hasDef, isOpt) if !outMapByName.contains(n) => (n, t, hasDef, isOpt) }
-    val extra0   = outFields.collect { case (n, t, _, _) if !contractMapByName.contains(n)           => (n, t) }
+    val missing0 = contractFields.collect {
+      case (n, t, hasDef, isOpt) if !outMapByName.contains(n) => (n, t, hasDef, isOpt)
+    }
+    val extra0 = outFields.collect { case (n, t, _, _) if !contractMapByName.contains(n) => (n, t) }
     val mismatchedNameTyped = contractFields.collect {
       case (n, t, _, _) if outMapByName.get(n).exists(_._2 != t) => (n, t, outMapByName(n)._2)
     }
@@ -70,10 +72,16 @@ object SchemaConformsMacros {
         (missing0, extra0, mismatchedNameTyped)
 
       case p if p =:= weakTypeOf[SchemaPolicy.ExactUnorderedCI] =>
-        val outMapCI      = outFields.map { case (n, t, d, o) => normName(true)(n) -> (n, t, d, o) }.toMap
-        val contractMapCI = contractFields.map { case (n, t, d, o) => normName(true)(n) -> (n, t, d, o) }.toMap
-        val missing = contractFields.collect { case (n, t, d, o) if !outMapCI.contains(normName(true)(n)) => (n, t, d, o) }
-        val extra   = outFields.collect { case (n, t, _, _) if !contractMapCI.contains(normName(true)(n)) => (n, t) }
+        val outMapCI = outFields.map { case (n, t, d, o) => normName(true)(n) -> (n, t, d, o) }.toMap
+        val contractMapCI = contractFields.map {
+          case (n, t, d, o) => normName(true)(n) -> (n, t, d, o)
+        }.toMap
+        val missing = contractFields.collect {
+          case (n, t, d, o) if !outMapCI.contains(normName(true)(n)) => (n, t, d, o)
+        }
+        val extra = outFields.collect {
+          case (n, t, _, _) if !contractMapCI.contains(normName(true)(n)) => (n, t)
+        }
         val mis = contractFields.collect {
           case (n, t, _, _) =>
             outMapCI.get(normName(true)(n)) match {
@@ -83,26 +91,51 @@ object SchemaConformsMacros {
         }.flatten
         (missing, extra, mis)
 
-      case p if p =:= weakTypeOf[SchemaPolicy.ExactOrdered] || p =:= weakTypeOf[SchemaPolicy.ExactOrderedCI] =>
-        val ci = p =:= weakTypeOf[SchemaPolicy.ExactOrderedCI]
+      case p
+          if p =:= weakTypeOf[SchemaPolicy.ExactOrdered] || p =:= weakTypeOf[SchemaPolicy.ExactOrderedCI] =>
+        val ci            = p =:= weakTypeOf[SchemaPolicy.ExactOrderedCI]
         val namesOut      = outFields.map(_._1).map(normName(ci))
         val namesContract = contractFields.map(_._1).map(normName(ci))
         val orderOk       = namesOut == namesContract
-        val typeMis = outFields.zipAll(contractFields, ("<none>", "<none>", false, false), ("<none>", "<none>", false, false)).collect {
-          case ((no, to, _, _), (nc, tc, _, _)) if normName(ci)(no) == normName(ci)(nc) && to != tc => (nc, tc, to)
-        }
+        val typeMis = outFields
+          .zipAll(
+            contractFields,
+            ("<none>", "<none>", false, false),
+            ("<none>", "<none>", false, false),
+          ).collect {
+            case ((no, to, _, _), (nc, tc, _, _)) if normName(ci)(no) == normName(ci)(nc) && to != tc =>
+              (nc, tc, to)
+          }
         val missing = if (namesOut.size < namesContract.size) contractFields.drop(namesOut.size) else Nil
-        val extra   = if (namesOut.size > namesContract.size) outFields.drop(namesContract.size).map { case (n, t, _, _) => (n, t) } else Nil
-        val mis     = if (!orderOk) (List(("__order__", namesContract.mkString("[", ",", "]"), namesOut.mkString("[", ",", "]"))) ++ typeMis) else typeMis
+        val extra =
+          if (namesOut.size > namesContract.size)
+            outFields.drop(namesContract.size).map { case (n, t, _, _) => (n, t) }
+          else Nil
+        val mis =
+          if (!orderOk)
+            List(
+              ("__order__", namesContract.mkString("[", ",", "]"), namesOut.mkString("[", ",", "]")),
+            ) ++ typeMis
+          else typeMis
         (missing, extra, mis)
 
       case p if p =:= weakTypeOf[SchemaPolicy.ExactByPosition] =>
-        val lenOk    = outFields.length == contractFields.length
-        val typeMisP = outFields.zipAll(contractFields, ("<none>", "<none>", false, false), ("<none>", "<none>", false, false)).zipWithIndex.collect {
-          case (((_, to, _, _), (_, tc, _, _)), idx) if to != tc => (s"@pos$idx", tc, to)
-        }
-        val missing = if (!lenOk && contractFields.length > outFields.length) contractFields.drop(outFields.length) else Nil
-        val extra   = if (!lenOk && outFields.length > contractFields.length) outFields.drop(contractFields.length).map { case (n, t, _, _) => (n, t) } else Nil
+        val lenOk = outFields.length == contractFields.length
+        val typeMisP = outFields
+          .zipAll(
+            contractFields,
+            ("<none>", "<none>", false, false),
+            ("<none>", "<none>", false, false),
+          ).zipWithIndex.collect {
+            case (((_, to, _, _), (_, tc, _, _)), idx) if to != tc => (s"@pos$idx", tc, to)
+          }
+        val missing =
+          if (!lenOk && contractFields.length > outFields.length) contractFields.drop(outFields.length)
+          else Nil
+        val extra =
+          if (!lenOk && outFields.length > contractFields.length)
+            outFields.drop(contractFields.length).map { case (n, t, _, _) => (n, t) }
+          else Nil
         (missing, extra, typeMisP)
 
       case p if p =:= weakTypeOf[SchemaPolicy.Backward] =>

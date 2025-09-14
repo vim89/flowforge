@@ -17,4 +17,3 @@ class AffectedPartitionsSpec extends AnyFunSuite with Matchers {
     parts should contain inOrderOnly ("2024-01", "2024-02", "2024-03")
   }
 }
-

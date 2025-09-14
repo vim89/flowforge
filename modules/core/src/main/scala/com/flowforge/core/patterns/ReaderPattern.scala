@@ -618,15 +618,13 @@ object ReaderPattern {
 
     def mockLogger[F[_]: EffectSystem]: Logger[F] = new Logger[F] {
       def debug(message: String): F[Unit] =
-        implicitly[EffectSystem[F]].delay(println(s"DEBUG: $message"))
+        implicitly[EffectSystem[F]].unit
       def info(message: String): F[Unit] =
-        implicitly[EffectSystem[F]].delay(println(s"INFO: $message"))
+        implicitly[EffectSystem[F]].unit
       def warn(message: String): F[Unit] =
-        implicitly[EffectSystem[F]].delay(println(s"WARN: $message"))
+        implicitly[EffectSystem[F]].unit
       def error(message: String, throwable: Option[Throwable]): F[Unit] =
-        implicitly[EffectSystem[F]].delay(
-          println(s"ERROR: $message ${throwable.map(_.getMessage).getOrElse("")}"),
-        )
+        implicitly[EffectSystem[F]].unit
       def withContext(context: Map[String, String]): Logger[F] = this
     }
 
@@ -635,20 +633,17 @@ object ReaderPattern {
         name: String,
         value: Long,
         tags: Map[String, String],
-      ): F[Unit] =
-        implicitly[EffectSystem[F]].delay(println(s"COUNTER: $name = $value $tags"))
+      ): F[Unit] = implicitly[EffectSystem[F]].unit
       def gauge(
         name: String,
         value: Double,
         tags: Map[String, String],
-      ): F[Unit] =
-        implicitly[EffectSystem[F]].delay(println(s"GAUGE: $name = $value $tags"))
+      ): F[Unit] = implicitly[EffectSystem[F]].unit
       def histogram(
         name: String,
         value: Double,
         tags: Map[String, String],
-      ): F[Unit] =
-        implicitly[EffectSystem[F]].delay(println(s"HISTOGRAM: $name = $value $tags"))
+      ): F[Unit] = implicitly[EffectSystem[F]].unit
       def timer[A](name: String, tags: Map[String, String])(operation: F[A]): F[A] = operation
     }
 

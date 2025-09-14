@@ -107,6 +107,7 @@ lazy val root = (project in file("."))
     infrastructure,
     // CLIs
     validationCli,
+    maintenanceCli,
     contractsExtractorCli,
     contractsSdk,
     // Core modules
@@ -222,7 +223,7 @@ lazy val enginesSpark = moduleProject("engines-spark")
 lazy val enginesFlink = moduleProject("engines-flink")
   .dependsOn(core, connectors, enginesSpark % "test->compile")
   .settings(
-    description := "Apache Flink execution engine",
+    description        := "Apache Flink execution engine",
     crossScalaVersions := Seq(Dependencies.Versions.scala212, Dependencies.Versions.scala213),
     libraryDependencies ++= Dependencies.forModule("engines-flink"),
   )

@@ -85,14 +85,13 @@ class TypeSafetyRegressionSpec extends AnyWordSpec with Matchers {
       """)
     }
 
-    "Builder supports chained type-safe transformations" in {
+    "Builder supports chained type-safe transformations" in
       // This compiles: String -> User -> Product via properly typed transforms
       assertCompiles("""
         val builder = EnhancedPipelineBuilder.from[IO, String]("test", DataSource.gcs("bucket", "path", DataFormat.Parquet))
           .transform[User](s => IO.pure(User(1L, s, s + "@example.com")))
           .transform[Product](user => IO.pure(Product(user.name, user.email, 0.0)))
       """)
-    }
 
     "FAIL TEST #5: Attempt to use Any type explicitly should not be possible" in {
       // This demonstrates that Any cannot be used with the type-safe pipeline

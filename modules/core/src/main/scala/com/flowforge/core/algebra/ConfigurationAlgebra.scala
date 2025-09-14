@@ -830,7 +830,9 @@ object ConfigurationAlgebra {
           )
           .invalidNel,
     )
-    validations.sequence.map(_ => ())
+    for {
+      _ <- validations.sequence
+    } yield ()
   }
   private def validateEngines(config: EngineConfig): ValidatedNel[ConfigError, Unit] = {
     val sparkV = config.spark.map { s =>
@@ -856,7 +858,9 @@ object ConfigurationAlgebra {
             .OutOfRange("engines.spark.executorCores", s.executorCores.toString, "1", "")
             .invalidNel,
       )
-      checks.sequence.map(_ => ())
+      for {
+        _ <- checks.sequence
+      } yield ()
     }.getOrElse(().validNel)
     val flinkV = config.flink.map { f =>
       if (f.parallelism >= 1) ().validNel

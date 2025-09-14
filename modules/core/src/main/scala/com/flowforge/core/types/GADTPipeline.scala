@@ -158,7 +158,9 @@ object GADTStage {
         schema = schema,
         metadata = DatasetMetadata(1L, schema, 1, java.time.Instant.now(), None),
       )
-      da.write(ds, sink, WriteOptions.default).map(_ => ())
+      for {
+        _ <- da.write(ds, sink, WriteOptions.default)
+      } yield ()
     }
   }
 

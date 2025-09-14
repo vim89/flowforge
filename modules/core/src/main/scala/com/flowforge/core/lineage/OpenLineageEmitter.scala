@@ -36,7 +36,8 @@ case class LineageError(message: String, cause: Option[Throwable] = None)
 /**
  * HTTP-based OpenLineage emitter that posts events to OpenLineage-compatible endpoints
  */
-class HttpOpenLineageEmitter[F[_]: EffectSystem] extends OpenLineageEmitter[F] {
+class HttpOpenLineageEmitter[F[_]: EffectSystem](implicit L: com.flowforge.core.logging.CoreLogger[F])
+    extends OpenLineageEmitter[F] {
 
   private val F = EffectSystem[F]
 
@@ -143,7 +144,7 @@ class HttpOpenLineageEmitter[F[_]: EffectSystem] extends OpenLineageEmitter[F] {
   private def emitEvent(eventJson: String): F[Either[LineageError, Unit]] =
     F.handleError {
       for {
-        _      <- F.delay(println(s"[OpenLineage] Emitting to $openLineageUrl: $eventJson"))
+        _      <- L.info(s"[OpenLineage] Emitting to $openLineageUrl")
         result <- postEventToEndpoint(openLineageUrl, eventJson)
       } yield result
     } { error =>
@@ -151,8 +152,8 @@ class HttpOpenLineageEmitter[F[_]: EffectSystem] extends OpenLineageEmitter[F] {
     }
 
   private def postEventToEndpoint(endpoint: String, eventJson: String): F[Either[LineageError, Unit]] =
-    F.delay {
-      Try {
+    F.attempt(
+      F.blocking {
         // Use simple HTTP client for zero-dependency approach
         val url        = new java.net.URL(endpoint)
         val connection = url.openConnection().asInstanceOf[java.net.HttpURLConnection]
@@ -162,21 +163,16 @@ class HttpOpenLineageEmitter[F[_]: EffectSystem] extends OpenLineageEmitter[F] {
         connection.setRequestProperty("User-Agent", "FlowForge/1.0.0")
         connection.setDoOutput(true)
 
-        // Write JSON payload
         val outputStream = connection.getOutputStream
         outputStream.write(eventJson.getBytes("UTF-8"))
         outputStream.flush()
         outputStream.close()
 
-        // Check response
         val responseCode = connection.getResponseCode
-        if (responseCode >= 200 && responseCode < 300) {
-          ()
-        } else {
-          throw new RuntimeException(s"HTTP error $responseCode from OpenLineage endpoint")
-        }
-      }.toEither.left.map(error => LineageError(error.getMessage, Some(error)))
-    }
+        if (responseCode >= 200 && responseCode < 300) ()
+        else throw new RuntimeException(s"HTTP error $responseCode from OpenLineage endpoint")
+      },
+    ).map(_.left.map(err => LineageError(err.getMessage, Some(err))))
 }
 
 /**
