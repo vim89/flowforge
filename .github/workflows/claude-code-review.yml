@@ -1,10 +1,18 @@
-# .github/workflows/claude-code-review.yml
-# Non-blocking strict review: comments on the PR using gh CLI; never fails the job.
-name: Claude code review (strict, non-blocking)
+name: Claude code review (non-blocking)
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '**/*.scala'
+      - '**/*.sbt'
+      - '.scalafix.conf'
+      - '.scalafmt.conf'
+      - 'project/**'
+      - '.github/workflows/**'
+      - 'AGENTS.md'
+      - 'docs/adr/**'
+      - 'docs/plan/**'
 
 concurrency:
   group: claude-review-${{ github.event.pull_request.number }}
@@ -12,12 +20,12 @@ concurrency:
 
 jobs:
   claude-review:
-    if: false
+    if: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write   # needed for gh pr comment
-      id-token: write
+      pull-requests: write
+    continue-on-error: true
 
     steps:
       - name: Checkout repository
@@ -25,69 +33,110 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Load CLAUDE.md rules
-        id: rules
+      - name: Get PR diff summary
+        id: diff
+        run: |
+          echo 'patch<<EOF' >> $GITHUB_OUTPUT
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          git --no-pager diff --unified=0 --minimal --patch origin/${{ github.event.pull_request.base.ref }}...HEAD | sed -n '1,6000p'
+          echo 'EOF' >> $GITHUB_OUTPUT
+
+      - name: Generate FlowForge review context
+        id: ctx
         shell: bash
         run: |
-          echo 'guidelines<<EOF' >> "$GITHUB_OUTPUT"
-          sed -n '1,6000p' CLAUDE.md >> "$GITHUB_OUTPUT"
-          echo 'EOF' >> "$GITHUB_OUTPUT"
+          echo 'context<<EOF' >> $GITHUB_OUTPUT
+          bash scripts/ff-claude-context.sh | sed -n '1,4000p'
+          echo 'EOF' >> $GITHUB_OUTPUT
 
-      - name: Run claude (repo-wide checklist, then publish via gh CLI)
+      - name: Run Claude Code Action (FlowForge review)
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            You are a STRICT reviewer enforcing every rule in CLAUDE.md across the repository.
+            You are the FlowForge strict code reviewer. Review the DIFF and
+            produce a concise list of findings with severity labels (HIGH/MED/LOW),
+            followed by minimal patch suggestions. Use this FlowForge checklist:
 
-            Scope:
-            - Enumerate:
-              git ls-files '*.scala' '*.sbt' '.scalafmt.conf' 'build.sbt' 'project/*.sbt' 'project/*.scala' 'project/build.properties'
-            - Apply ALL rules to each file (not just diffs).
+            1) ADR‑022 Safety & Errors
+               - No try/catch/Try in main sources; use Safety/EffectSystem.
+               - Result/ValidatedResult naming; ErrorMapper mapping present.
+               - bracket/guarantee for resource cleanup; no manual finally.
+            2) Idiomatic Scala (docs/plan/refactor-idiomatic-scala2.md)
+               - Pure transforms; effectful IO via EffectSystem.
+               - No concrete IO in main modules; avoid println; no null.
+               - No asInstanceOf/Any; exhaustive matches; for‑comprehensions.
+            3) Spark/Delta best practices
+               - Avoid collect on large data; prefer Dataset/DataFrame ops.
+               - Use F.blocking for IO; avoid driver‑side loops; partitioning sane.
+               - Delta constraints: only NOT NULL and CHECK; no UNIQUE claims.
+            4) CI/lint conformance
+               - Scalafmt/scalafix friendly; no wildcard imports; organized imports.
 
             Output:
-            - One markdown report grouped by file.
-            - For each rule: ✅ PASS or ❌ FAIL with minimal patch/diff.
-            - A short "Top 10 Fixes" section.
-            - Final line MUST be:
-              CLAUDE_RULES_STATUS: PASS   # or FAIL
-
-            PUBLISHING (MANDATORY):
-            - Use the PR number from $PR_NUMBER.
-            - Post your full markdown report as a single PR comment with one Bash command:
-              gh pr comment "$PR_NUMBER" --body-file - <<'MD'
-              <PASTE YOUR FULL MARKDOWN REPORT HERE>
-              MD
-
-            Rules to enforce:
+            - Findings: bullet list with (SEVERITY) and 1–2 line rationale.
+            - Quick patches: fenced unified diffs with minimal edits (<= ~30 lines each).
+            - Module plan: for modules touched in DIFF, list 2–4 next actions (e.g., replace Try with Safety, add bracket for streams, remove collect in hot path, swap println→logger).
+            - Cross‑ref ADR names (e.g., ADR‑022) and docs (e.g., refactor-idiomatic-scala2.md) by name.
+            
+            DIFF TO REVIEW:
             ---
-            ${{ steps.rules.outputs.guidelines }}
+            ${{ steps.diff.outputs.patch }}
             ---
 
+            CONTEXT (repository map, pattern scans, ADRs heads):
+            ---
+            ${{ steps.ctx.outputs.context }}
+            ---
           claude_args: >-
-            --allowedTools
-            "Read"
-            "Edit"
-            "MultiEdit"
-            "Bash(git ls-files:*)"
-            "Bash(rg:*)"
-            "Bash(find:*)"
-            "Bash(sed:*)"
-            "Bash(xargs:*)"
-            "Bash(gh pr view:*)"
-            "Bash(gh pr comment:*)"
-            --max-turns 10
+            --allowedTools "Read" "Bash(rg:*)"
+            --max-turns 4
             --verbose
 
-        env:
-          GH_TOKEN: ${{ github.token }}                # gh CLI auth
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-
-      - name: Soft gate summary (never fail)
-        if: always()
+      - name: Post review (inline when available)
+        if: ${{ steps.claude.outputs.response != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "### Claude strict review" >> "$GITHUB_STEP_SUMMARY"
-          echo "Report should be posted via gh pr comment on PR #${{ github.event.pull_request.number }}." >> "$GITHUB_STEP_SUMMARY"
+          echo "Preparing review body and inline comments"
+          RESP_FILE=$(mktemp)
+          echo "${{ steps.claude.outputs.response }}" > "$RESP_FILE"
+
+          REVIEW_EVENT=COMMENT
+          if grep -q "(HIGH)" "$RESP_FILE"; then REVIEW_EVENT=REQUEST_CHANGES; fi
+
+          # Parse simple inline comments of the form: INLINE: path:line: message
+          INLINE_FILE=$(mktemp)
+          awk '/^INLINE: /{sub(/^INLINE: /, ""); print}' "$RESP_FILE" > "$INLINE_FILE"
+
+          if [ -s "$INLINE_FILE" ]; then
+            echo "Found inline comments; creating review via GitHub Reviews API"
+            COMMENTS_JSON=$(mktemp)
+            PR_SHA="${{ github.event.pull_request.head.sha }}"
+            echo '[' > "$COMMENTS_JSON"
+            FIRST=1
+            while IFS= read -r line; do
+              path=$(echo "$line" | awk -F: '{print $1}')
+              lineno=$(echo "$line" | awk -F: '{print $2}')
+              msg=$(echo "$line" | cut -d: -f3- | sed 's/^ //')
+              [ -z "$path" ] && continue
+              [ -z "$lineno" ] && lineno=1
+              if [ $FIRST -eq 0 ]; then echo ',' >> "$COMMENTS_JSON"; fi
+              FIRST=0
+              printf '{"path":"%s","line":%s,"side":"RIGHT","body":%s}' \
+                "$path" "$lineno" "$(printf '%s' "$msg" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')" >> "$COMMENTS_JSON"
+            done < "$INLINE_FILE"
+            echo ']' >> "$COMMENTS_JSON"
+
+            gh api \
+              repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews \
+              -f event=$REVIEW_EVENT \
+              -f body="FlowForge AI review ($REVIEW_EVENT)" \
+              -f commit_id="$PR_SHA" \
+              -F comments=@"$COMMENTS_JSON" \
+              -H "Accept: application/vnd.github+json"
+          else
+            echo "Posting single review with $REVIEW_EVENT"
+            gh pr review ${{ github.event.pull_request.number }} --body-file "$RESP_FILE" --event $REVIEW_EVENT
+          fi

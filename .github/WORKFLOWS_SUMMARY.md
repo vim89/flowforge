@@ -10,7 +10,7 @@
 | connectors | ![connectors](https://github.com/flowforge/flowforge/actions/workflows/ci.yml/badge.svg?job=connectors) |
 | engines | ![engines](https://github.com/flowforge/flowforge/actions/workflows/ci.yml/badge.svg?job=engines) |
 
-### 🚀 **Active Workflows (8 files)**
+### 🚀 **Active Workflows (6 files)**
 
 | Workflow | Purpose | Status | Triggers |
 |----------|---------|--------|----------|
@@ -18,18 +18,16 @@
 | **release.yml** | ✅ Release automation | WORKING | Tags (v*), manual dispatch |
 | **docs-lint.yml** | ✅ Documentation quality | WORKING | Push/PR |
 | **link-check.yml** | ✅ Link validation | WORKING | Push/PR |
-| **claude.yml** | ✅ Claude AI integration | PRESERVED | As requested |
-| **claude-code-review.yml** | ✅ Claude code review | PRESERVED | As requested |
+| **claude.yml** | On-mention assistant | WORKING | On @claude mention in comments |
+| **claude-code-review.yml** | Non‑blocking PR review | WORKING | PR open/sync |
 
-### 🗑️ **Removed Workflows (5 complex/broken files)**
+### 🗑️ **Removed/Archived Workflows**
 
 | Removed | Reason | Issues |
 |---------|--------|--------|
-| **maintenance.yml** (525 lines) | Required 8+ GitHub secrets | Overly complex, needs GitHub App |
-| **contracts-submit.yml** (154 lines) | Complex contract workflow | Cloud provider dependencies |
-| **contracts-publish-sdk.yml** (102 lines) | SDK publishing | Not aligned with current system |
-| **contract-request.yml** (99 lines) | Contract requests | Complex workflow, unclear purpose |
-| **schema-validate.yml** (37 lines) | Schema validation | Covered by CI now |
+| **claude.yml** | Third-party assistant; secrets not configured | Obsolete |
+| **claude-code-review.yml** | Non-blocking review; unused | Obsolete |
+| **v100-gates.yml** | Duplicated gates with ci.yml | Merged into ci.yml |
 
 ## 🎯 **Key Improvements Implemented**
 
