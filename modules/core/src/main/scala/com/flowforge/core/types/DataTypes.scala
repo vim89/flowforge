@@ -930,7 +930,27 @@ object QualityConstraint {
     val name        = s"compliance_${ruleName}"
     val description = s"Rows must satisfy: $predicateSql"
   }
+
+  def jdbcSink(
+    url: String,
+    table: String,
+    driver: String,
+    mode: WriteMode = WriteMode.Append,
+  ): JdbcSink = JdbcSink(url, TableName(table), driver = driver, writeMode = mode)
 }
+
+/** JDBC sink for writing via Spark JDBC or direct JDBC clients. */
+case class JdbcSink(
+  url: String,
+  table: TableName,
+  driver: String,
+  format: DataFormat = DataFormat.Parquet,
+  compression: CompressionType = CompressionType.None,
+  writeMode: DataSink.WriteMode = DataSink.WriteMode.Append,
+  user: Option[String] = None,
+  password: Option[String] = None,
+  createTableIfNotExists: Boolean = true)
+    extends DataSink
 
 /**
  * Quality constraint severity levels.

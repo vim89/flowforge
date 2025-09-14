@@ -111,6 +111,19 @@ object SparkDataAlgebra {
               ProductionSparkDataset.fromDataFrame[A](df, spark)
             }
 
+          case jdbc: DataSource.JdbcSource =>
+            F.blocking {
+              val reader = spark.read
+                .format("jdbc")
+                .option("url", jdbc.url)
+                .option("driver", jdbc.driver)
+                .option("dbtable", jdbc.query.getOrElse(jdbc.table.value))
+              val withUser = jdbc.user.fold(reader)(u => reader.option("user", u))
+              val withPwd  = jdbc.password.fold(withUser)(p => withUser.option("password", p))
+              val df       = withPwd.load()
+              ProductionSparkDataset.fromDataFrame[A](df, spark)
+            }
+
           case _ =>
             F.raiseError(
               new UnsupportedOperationException(
@@ -172,15 +185,20 @@ object SparkDataAlgebra {
             case s: LocalDataSink =>
               val (bytesWritten, recordsWritten, partitionsWritten) = dataset match {
                 case pds: ProductionSparkDataset[A] =>
+                  val dfTuned = (options.repartition, options.coalesce) match {
+                    case (Some(n), _) => pds.sparkDataFrame.repartition(n)
+                    case (_, Some(n)) => pds.sparkDataFrame.coalesce(n)
+                    case _            => pds.sparkDataFrame
+                  }
                   s.format match {
                     case DataFormat.Parquet =>
-                      pds.sparkDataFrame.write.mode("overwrite").parquet(s.location)
+                      dfTuned.write.mode("overwrite").parquet(s.location)
                     case DataFormat.Delta =>
-                      pds.sparkDataFrame.write.format("delta").mode("overwrite").save(s.location)
+                      dfTuned.write.format("delta").mode("overwrite").save(s.location)
                     case DataFormat.JSON | DataFormat.JSONL =>
-                      pds.sparkDataFrame.toJSON.coalesce(1).write.mode("overwrite").text(s.location)
+                      dfTuned.toJSON.coalesce(options.coalesce.getOrElse(1)).write.mode("overwrite").text(s.location)
                     case DataFormat.CSV =>
-                      pds.sparkDataFrame.coalesce(1).write.mode("overwrite").csv(s.location)
+                      dfTuned.coalesce(options.coalesce.getOrElse(1)).write.mode("overwrite").csv(s.location)
                     case _ => throw new UnsupportedOperationException("Unsupported sink format")
                   }
                   (0L, pds.size.toLong, pds.metadata.partitions)
@@ -217,10 +235,52 @@ object SparkDataAlgebra {
               catch { case _: Throwable => () }
               wr
 
+            case j: JdbcSink =>
+              val (recordsWritten, partitionsWritten) = dataset match {
+                case pds: ProductionSparkDataset[A] =>
+                  val writer0 = pds.sparkDataFrame.write.format("jdbc")
+                    .option("url", j.url)
+                    .option("driver", j.driver)
+                    .option("dbtable", j.table.value)
+                  val writer1 = j.user.fold(writer0)(u => writer0.option("user", u))
+                  val writer2 = j.password.fold(writer1)(p => writer1.option("password", p))
+                  val writer  = options.extraOptions.foldLeft(writer2) { case (w, (k, v)) => w.option(k, v) }
+                  val mode    = options.mode match {
+                    case DataAlgebra.WriteMode.Append        => org.apache.spark.sql.SaveMode.Append
+                    case DataAlgebra.WriteMode.Overwrite     => org.apache.spark.sql.SaveMode.Overwrite
+                    case DataAlgebra.WriteMode.ErrorIfExists => org.apache.spark.sql.SaveMode.ErrorIfExists
+                    case DataAlgebra.WriteMode.Ignore        => org.apache.spark.sql.SaveMode.Ignore
+                  }
+                  writer.mode(mode).save()
+                  (pds.size.toLong, pds.metadata.partitions)
+                case _ =>
+                  // Fallback: create DF from JSON rows
+                  val rows = dataset.data.map { a =>
+                    DataEncoder[A].encode(a, DataFormat.JSON).fold(_ => "{}", ed => new String(ed.data, "UTF-8"))
+                  }
+                  val ds = spark.createDataset(rows)(org.apache.spark.sql.Encoders.STRING)
+                  val df = spark.read.json(ds)
+                  df.write
+                    .format("jdbc")
+                    .option("url", j.url)
+                    .option("driver", j.driver)
+                    .option("dbtable", j.table.value)
+                    .mode("append")
+                    .save()
+                  (dataset.data.size.toLong, 1)
+              }
+              DataAlgebra.WriteResult(
+                recordsWritten = recordsWritten,
+                partitionsWritten = partitionsWritten,
+                bytesWritten = 0L,
+                success = true,
+              )
+
             case _ => throw new UnsupportedOperationException("Unsupported sink type for this path")
           }
-        }).flatMap {
-            case (wr, dur) =>
+        }).flatMap { t =>
+            val wr  = t._1
+            val dur = t._2
               val loc = sink match {
                 case l: LocalDataSink    => l.location
                 case g: DataSink.GcsSink => g.path

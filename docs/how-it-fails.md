@@ -18,6 +18,10 @@ All validation happens at **compile time** with zero runtime overhead.
 |--------|---------------|--------------|-----------------|-------------|----------|
 | **`Exact`** | ❌ Reject | ❌ Reject | ❌ Reject | ❌ Must match | Strict compatibility |
 | **`ExactUnordered`** | ❌ Reject | ❌ Reject | ❌ Reject | ✅ Flexible | Field order flexible |
+| **`ExactOrdered`** | ❌ Reject | ❌ Reject | ❌ Reject | ✅ Enforced | Names and order must match |
+| **`ExactUnorderedCI`** | ❌ Reject | ❌ Reject | ❌ Reject | ✅ Flexible | Case-insensitive names |
+| **`ExactOrderedCI`** | ❌ Reject | ❌ Reject | ❌ Reject | ✅ Enforced | Case-insensitive names + order |
+| **`ExactByPosition`** | ❌ Reject | ❌ Reject | ❌ Reject | ✅ By position | Types must match by index |
 | **`Backward`** | ⚠️ Allow if Optional/Default | ✅ Allow | ❌ Reject | ✅ Flexible | Schema evolution |
 | **`Forward`** | ✅ Allow | ❌ Reject | ❌ Reject | ✅ Flexible | Flexible compatibility |
 | **`Full`** | ✅ Allow | ✅ Allow | ✅ Allow | ✅ Flexible | Development/testing |
@@ -97,6 +101,15 @@ case class UserReordered(name: String, id: Long, email: String) // Different ord
 
 val valid: SchemaConforms[UserReordered, User, SchemaPolicy.ExactUnordered] = implicitly // ✅ Works!
 ```
+
+---
+
+### Additional Policies (Scala 2 backports from Scala 3 PoC)
+
+- `SchemaPolicy.ExactOrdered`: Requires same field names and order; reordering fails.
+- `SchemaPolicy.ExactUnorderedCI`: Ignores field name case; otherwise identical to `Exact`.
+- `SchemaPolicy.ExactOrderedCI`: Case-insensitive names with enforced order.
+- `SchemaPolicy.ExactByPosition`: Ignores names; requires types match at each position. Useful when integrating sources with unstable naming but stable positions.
 
 ---
 

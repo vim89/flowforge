@@ -114,11 +114,11 @@ lazy val root = (project in file("."))
     contracts,
     connectors,
     connectorsGcs,
+    connectorsJdbc,
     enginesSpark,
     enginesFlink,
     qualityDeequ, // Removed empty quality module per v1.0-2 plan
     examples,
-    examplesSpark,
     compileFailTests,
     it,
   )
@@ -200,6 +200,14 @@ lazy val connectorsGcs = moduleProject("connectors-gcs")
     libraryDependencies ++= Dependencies.forModule("connectors-gcs"),
   )
 
+lazy val connectorsJdbc = moduleProject("connectors-jdbc")
+  .dependsOn(core, connectors, enginesSpark % "test->compile")
+  .settings(
+    description := "JDBC connectors and helpers (Spark JDBC + effect-safe helpers)",
+    libraryDependencies ++= Dependencies.forModule("connectors-jdbc"),
+    Test / fork := true,
+  )
+
 // ===== ENGINE MODULES =====
 
 lazy val enginesSpark = moduleProject("engines-spark")
@@ -252,16 +260,7 @@ lazy val examples = moduleProject("examples")
     publish / skip := true,
   )
 
-lazy val examplesSpark = moduleProject("examples-spark")
-  .dependsOn(core, enginesSpark, qualityDeequ)
-  .settings(
-    description := "Polished end-to-end Spark pipeline examples for FlowForge v1.0",
-    libraryDependencies ++= Dependencies.forModule("examples-spark"),
-    publish / skip := true,
-    // Spark examples need forked JVM for proper resource management
-    Test / fork := true,
-    run / fork  := true,
-  )
+// examples-spark merged into examples; module removed to avoid duplication
 
 // CLI for physical schema validation (Delta/Hive/Parquet) for CI usage
 lazy val validationCli = moduleProject("validation-cli")
@@ -292,6 +291,16 @@ lazy val contractsExtractorCli = moduleProject("contracts-extractor-cli")
       "org.apache.spark" %% "spark-sql"     % Dependencies.Versions.spark,
     ),
     Compile / mainClass := Some("com.flowforge.contracts.extractor.ContractsExtractorCli"),
+    publish / skip      := true,
+  )
+
+// Maintenance CLI for non-SLA operations (VACUUM, compact)
+lazy val maintenanceCli = moduleProject("maintenance-cli")
+  .dependsOn(core, enginesSpark)
+  .settings(
+    description := "FlowForge Maintenance CLI (Delta VACUUM, compaction)",
+    libraryDependencies ++= Dependencies.forModule("maintenance-cli"),
+    Compile / mainClass := Some("com.flowforge.maintenance.MaintenanceCli"),
     publish / skip      := true,
   )
 

@@ -8,7 +8,48 @@ import com.flowforge.core.algebra.EffectSystem
  * Real, minimal pipeline and combinators built on Kleisli and EffectSystem. Focuses on practical,
  * production-friendly composition without placeholders.
  */
+import com.flowforge.core.algebra.EffectSystem
+import com.flowforge.core.types.{ ExecutionStatus, PipelineMetrics, PipelineResult }
+import java.time.Instant
+import scala.concurrent.duration._
+
 final case class Pipeline[F[_], A, B](run: Kleisli[F, A, B], metadata: PipelineMetadata) {
+  def name: String = metadata.name
+  def stages: List[String] = metadata.stages
+  def execute(a: A)(implicit F: EffectSystem[F]): F[B] = run(a)
+
+  def executeWithMonitoring(a: A)(implicit F: EffectSystem[F]): F[PipelineResult[B]] = {
+    val start = System.currentTimeMillis()
+    F.attempt(run(a)).flatMap {
+      case Right(out) =>
+        val end = System.currentTimeMillis()
+        val pr = PipelineResult[B](
+          pipelineId = name,
+          input = a.toString,
+          output = Some(out.toString),
+          status = ExecutionStatus.Success,
+          startTime = Instant.ofEpochMilli(start),
+          endTime = Instant.ofEpochMilli(end),
+          duration = (end - start).millis,
+          metrics = PipelineMetrics(pipelineName = name, processingTime = (end - start).millis),
+        )
+        F.pure(pr)
+      case Left(e) =>
+        val end = System.currentTimeMillis()
+        val pr = PipelineResult[B](
+          pipelineId = name,
+          input = a.toString,
+          output = None,
+          status = ExecutionStatus.Failed,
+          startTime = Instant.ofEpochMilli(start),
+          endTime = Instant.ofEpochMilli(end),
+          duration = (end - start).millis,
+          metrics = PipelineMetrics(pipelineName = name, processingTime = (end - start).millis),
+          errors = List(e.getMessage),
+        )
+        F.pure(pr)
+    }
+  }
   def map[C](f: B => C)(implicit F: EffectSystem[F]): Pipeline[F, A, C] =
     Pipeline(
       Kleisli(a => F.map(run(a))(f)),

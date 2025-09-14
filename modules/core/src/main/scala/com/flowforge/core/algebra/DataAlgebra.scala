@@ -325,7 +325,12 @@ object DataAlgebra {
     mode: WriteMode = WriteMode.Append,
     format: DataFormat = DataFormat.Parquet,
     partitionBy: List[FieldName] = List.empty,
-    compression: Option[String] = None)
+    compression: Option[String] = None,
+    // Spark tuning knobs (ignored by non-Spark engines)
+    repartition: Option[Int] = None,
+    coalesce: Option[Int] = None,
+    shufflePartitions: Option[Int] = None,
+    extraOptions: Map[String, String] = Map.empty)
 
   object WriteOptions {
     val default: WriteOptions = WriteOptions()

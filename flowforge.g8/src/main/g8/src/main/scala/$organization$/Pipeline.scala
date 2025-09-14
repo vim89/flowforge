@@ -17,8 +17,8 @@ import org.apache.spark.sql.{ Dataset, Encoders, SparkSession }
  * - Execution Engine: $execution_engine$ (Spark 3.5.6)
  * - Data Format: CSV → Parquet → Delta with constraints
  * - Cloud Provider: $cloud_provider$
- * - Quality Checks: \$if(include_dq.truthy)\$ Deequ integration enabled \$else\$ Native Spark checks only \$endif\$
- * - Lineage: \$if(include_lineage.truthy)\$ OpenLineage events enabled \$else\$ Noop lineage emitter \$endif\$
+ * - Quality Checks: $if(include_dq.truthy)$ Deequ integration enabled $else$ Native Spark checks only $endif$
+ * - Lineage: $if(include_lineage.truthy)$ OpenLineage events enabled $else$ Noop lineage emitter $endif$
  *
  * ✨ KEY FEATURES DEMONSTRATED:
  * - F-polymorphic design (works with any effect system)
@@ -165,7 +165,7 @@ class FlowForgePipeline[F[_]: EffectSystem] {
           isActive = u.isActive,
         )
       }
-      \$if(include_dq.truthy)\$
+      $if(include_dq.truthy)$
       import com.amazon.deequ.VerificationSuite
       import com.amazon.deequ.checks.{ Check, CheckLevel }
       VerificationSuite()
@@ -177,7 +177,7 @@ class FlowForgePipeline[F[_]: EffectSystem] {
             .isNonNegative("age"),
         )
         .run()
-      \$endif\$
+      $endif$
       cleaned
     }
 
@@ -244,7 +244,7 @@ class FlowForgePipeline[F[_]: EffectSystem] {
     )
 
     withSparkSession(sparkConfig) { implicit spark =>
-      val emitter = \$if(include_lineage.truthy)\$ OpenLineageEmitter.http[F] \$else\$ OpenLineageEmitter.noop[F] \$endif\$
+      val emitter = $if(include_lineage.truthy)$ OpenLineageEmitter.http[F] $else$ OpenLineageEmitter.noop[F] $endif$
       F.flatMap(F.delay(println("🚀 FlowForge v1.0.0 F-Polymorphic Pipeline Starting"))) { _ =>
         F.flatMap(buildContractValidatedPipeline(emitter)) { pipeline =>
           F.flatMap(pipeline.executeWithMonitoring(())) { result =>

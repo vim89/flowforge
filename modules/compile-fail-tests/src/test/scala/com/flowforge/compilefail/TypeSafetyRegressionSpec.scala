@@ -85,14 +85,12 @@ class TypeSafetyRegressionSpec extends AnyWordSpec with Matchers {
       """)
     }
 
-    "FAIL TEST #4: Builder with mismatched transformation types" in {
-      // This should fail because we transform String to User but then try to transform User to Product
-      val _ = 42 // Prevent formatter from removing braces
-
-      assertTypeError("""
+    "Builder supports chained type-safe transformations" in {
+      // This compiles: String -> User -> Product via properly typed transforms
+      assertCompiles("""
         val builder = EnhancedPipelineBuilder.from[IO, String]("test", DataSource.gcs("bucket", "path", DataFormat.Parquet))
           .transform[User](s => IO.pure(User(1L, s, s + "@example.com")))
-          .transform[Product](user => IO.pure(Product(user.name, user.email, 0.0))) // Should fail: user is not in scope
+          .transform[Product](user => IO.pure(Product(user.name, user.email, 0.0)))
       """)
     }
 

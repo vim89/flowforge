@@ -270,6 +270,16 @@ object Dependencies {
       common ++ Engines.sparkCompile ++ Seq(
         "io.delta" %% "delta-spark" % Versions.delta,
       )
+    case "connectors-jdbc" =>
+      common ++ Engines.sparkCompile ++ Seq(
+        "com.h2database" % "h2" % "2.2.224" % Test,
+      )
+    case "maintenance-cli" =>
+      common ++ Seq(
+        "com.github.scopt" %% "scopt"     % "4.1.0",
+        "org.apache.spark" %% "spark-sql" % Versions.spark,
+        "io.delta"         %% "delta-spark" % Versions.delta,
+      )
     case _ => common
   }
 

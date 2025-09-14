@@ -5,18 +5,8 @@ import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
 import com.flowforge.core.lineage.OpenLineageEmitter
 import com.flowforge.core.types.BuilderState.{ WithContract, WithTransform }
-import com.flowforge.core.types.{
-  BuilderState,
-  DataFormat,
-  DataSink,
-  DataSource,
-  Environment,
-  Pipeline,
-  PipelineConfig,
-  PipelineStage,
-  TypedSink,
-  TypedSource,
-}
+import com.flowforge.core.types.{ BuilderState, DataFormat, DataSink, DataSource, Environment, PipelineConfig, PipelineStage, TypedSink, TypedSource }
+import com.flowforge.framework.{ Pipeline => FFPipeline, PipelineMetadata }
 
 /**
  * 100% Compile-time Contract-aware Pipeline builder
@@ -147,29 +137,33 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
   def build(
   )(implicit
     complete: S <:< BuilderState.Complete,
-  ): Pipeline[F, In, Out] = {
+  ): FFPipeline[F, In, Out] = {
 
     // Per v1.0 plan: "wire OpenLineageEmitter.emitJobStart/Complete/Fail per stage and for the pipeline"
     val runId   = OpenLineageEmitter.generateRunId()
     val emitter = lineageEmitter.getOrElse(OpenLineageEmitter.noop[F])
 
-    // Create pipeline with lineage tracking enabled
-    Pipeline(
+    // Compose stages into a single Kleisli[F, In, Out]
+    object KC {
+      def kAny(k: Kleisli[F, _, _]): Kleisli[F, Any, Any] =
+        k.asInstanceOf[Kleisli[F, Any, Any]]
+      def kTyped[A, B](k: Kleisli[F, Any, Any]): Kleisli[F, A, B] =
+        k.asInstanceOf[Kleisli[F, A, B]]
+    }
+
+    val kleisliAny: Kleisli[F, Any, Any] =
+      stages.foldLeft(Kleisli.ask[F, Any]) { (acc, st) => acc.andThen(KC.kAny(st.execute)) }
+    val kleisli: Kleisli[F, In, Out] = KC.kTyped[In, Out](kleisliAny)
+
+    val md = PipelineMetadata(
       name = name,
-      description = description,
-      stages = stages,
-      config = config.getOrElse(
-        PipelineConfig(
-          name = eu.timepit.refined.api.Refined.unsafeApply(if (name.nonEmpty) name else "default"),
-          version = "1.0.0",
-          environment = Environment.Development,
-          source = DataSource.gcs("default", "default", DataFormat.Parquet),
-          sink = DataSink.gcs("default", "default", DataFormat.Parquet),
-        ),
-      ),
-      runId = Some(runId),
-      lineageEmitter = Some(emitter),
+      stages = stages.map(_.name),
+      transformations = stages.collect { case _: PipelineStage.Transform[_, _, _] => 1 }.sum,
+      qualityChecks = 0,
+      tags = Map("builder" -> "contract-aware", "lineage" -> (if (lineageEmitter.isDefined) "configured" else "none"))
     )
+
+    FFPipeline(kleisli, md)
   }
 
 }

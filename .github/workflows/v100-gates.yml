@@ -150,3 +150,13 @@ jobs:
         echo "✅ Core tests passing"
         echo ""
         echo "FlowForge is ready for v1.0.0 release! 🚀"
+    - name: "P0 Gate: Effect system leakage check"
+      run: |
+        echo "🔍 Ensuring no module main sources import both Cats-Effect and ZIO"
+        LEAKS=$(git ls-files 'modules/**/src/main/scala/**/*.scala' | xargs grep -l -E 'import\s+cats\.effect|import\s+dev\.zio' | xargs -I{} sh -c "if grep -q 'import\\s+cats\\.effect' {} && grep -q 'import\\s+dev\\.zio' {}; then echo {}; fi")
+        if [ -n "$LEAKS" ]; then
+          echo "❌ FAIL: Found files importing both cats-effect and zio in main sources:"
+          echo "$LEAKS"
+          exit 1
+        fi
+        echo "✅ PASS: No cats-effect/zio leakage in main sources"

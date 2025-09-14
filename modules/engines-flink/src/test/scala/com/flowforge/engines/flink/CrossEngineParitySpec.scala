@@ -69,7 +69,7 @@ class CrossEngineParitySpec extends AnyFunSuite with Matchers {
     val inMemoryDA = new com.flowforge.core.impl.InMemoryDataAlgebra[IO]()
     val flinkDA    = new FlinkDataAlgebra[IO]()
 
-    val memOut   = Files.createTempDirectory("mem-out").toString
+    val memOut   = Files.createTempFile("mem-out", ".csv").toString
     val flinkOut = Files.createTempFile("flink-out", ".csv").toString
 
     val memRes = (for {

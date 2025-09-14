@@ -217,6 +217,9 @@ object OpenLineageEmitter {
 
   def noop[F[_]: EffectSystem]: OpenLineageEmitter[F] = new NoopOpenLineageEmitter[F]
 
+  def asyncHttp[F[_]: EffectSystem](capacity: Int = 1024): OpenLineageEmitter[F] =
+    new AsyncOpenLineageEmitter[F](http[F], capacity)
+
   // Generate a unique run ID for each pipeline execution
   def generateRunId(): String = UUID.randomUUID().toString
 
