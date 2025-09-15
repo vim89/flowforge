@@ -7,6 +7,7 @@ import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.logging.CoreLogger
 import com.flowforge.core.types.FlowForgeError
 
+import scala.annotation.tailrec
 import scala.util.Try
 
 /**
@@ -78,7 +79,8 @@ object Safety {
   // ==================
   implicit final class ResultOps[A](private val r: Result[A]) extends AnyVal {
     def mapError(f: FlowForgeError => FlowForgeError): Result[A] = r.leftMap(f)
-    def toValidatedNel: ValidatedResult[A]                       = r.toValidatedNel
+    @tailrec
+    def toValidatedNel: ValidatedResult[A] = r.toValidatedNel
   }
 
   implicit final class ValidatedResultOps[A](private val v: ValidatedResult[A]) extends AnyVal {

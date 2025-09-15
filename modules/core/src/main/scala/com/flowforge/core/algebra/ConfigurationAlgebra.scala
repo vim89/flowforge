@@ -838,7 +838,7 @@ object ConfigurationAlgebra {
   }
   private def validateEngines(config: EngineConfig): ValidatedNel[ConfigError, Unit] = {
     val sparkV = config.spark.map { s =>
-      val memFmt = "^\\d+(m|g)$".r
+      val memFmt = "^\\d+([mg])$".r
       val checks = List(
         if (s.appName.nonEmpty) ().validNel
         else ConfigError.MissingRequired("engines.spark.appName").invalidNel,
@@ -976,7 +976,7 @@ object ConfigurationMigration {
           case Some(cfgMap) =>
             Sync[F].flatMap(Sync[F].delay(ConfigDecoder[T].decode(cfgMap))) {
               case cats.data.Validated.Valid(cfg) => Sync[F].delay(ConfigValidator[T].validate(cfg))
-              case invalid => Sync[F].pure(invalid.asInstanceOf[ValidatedNel[ConfigError, T]])
+              case invalid                        => Sync[F].pure(invalid)
             }
           case None => Sync[F].pure(ConfigError.MissingRequired(ccmConfigName).invalidNel)
         }
@@ -1005,7 +1005,7 @@ object ConfigurationMigration {
           .map(v => (v, v.toString))
           .mapAccumulate(Option.empty[String]) {
             case (prev, (v, sig)) =>
-              val emit = prev.forall(_ != sig)
+              val emit = !prev.contains(sig)
               (Some(sig), if (emit) Some(v) else None)
           }
           .map(_._2)

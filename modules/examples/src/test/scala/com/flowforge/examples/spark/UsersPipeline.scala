@@ -106,8 +106,10 @@ object UsersPipeline {
     for {
       // Generate sample data
       rawData <- generateSampleData(spark)
-      sampleRawUsers = List(RawUser("sample", "sample@test.com", Some(25), "USA", "2023-01-01", true))
-      rawDataset     = createDataset(rawData, sampleRawUsers)
+      sampleRawUsers = List(
+        RawUser("sample", "sample@test.com", Some(25), "USA", "2023-01-01", isActive = true),
+      )
+      rawDataset = createDataset(rawData, sampleRawUsers)
       _ <- IO.println(s"📊 Generated ${rawData.count()} raw user records")
 
       // Execute pipeline stages
@@ -186,7 +188,8 @@ object UsersPipeline {
             $"isActive",
           )
 
-        val sampleCleanedUsers = List(CleanedUser("sample", "sample@test.com", 25, "USA", 1672531200L, true))
+        val sampleCleanedUsers =
+          List(CleanedUser("sample", "sample@test.com", 25, "USA", 1672531200L, isActive = true))
         createDataset(cleaned, sampleCleanedUsers)
       }.leftMap(_.getMessage)
     }
@@ -270,7 +273,16 @@ object UsersPipeline {
           )
 
         val sampleEnrichedUsers = List(
-          EnrichedUser("sample", "sample@test.com", 25, "USA", 1672531200L, true, "young", "North America"),
+          EnrichedUser(
+            "sample",
+            "sample@test.com",
+            25,
+            "USA",
+            1672531200L,
+            isActive = true,
+            "young",
+            "North America",
+          ),
         )
         createDataset(enriched, sampleEnrichedUsers)
       }.leftMap(_.getMessage)
@@ -404,7 +416,7 @@ object UsersPipelineUtils {
           25,
           "USA",
           1672531200L,
-          true,
+          isActive = true,
           "young",
           "North America",
         ),

@@ -74,45 +74,37 @@ object ConfigurationManagement {
   }
 
   // Basic decoders
-  implicit val stringDecoder: ConfigDecoder[String] = new ConfigDecoder[String] {
-    def decode(config: Config, path: String): ValidatedNel[ConfigError, String] =
-      Safety
-        .safely(config.getString(path))(ErrorMapper.default)
-        .leftMap(_ => ConfigError.MissingKey(path))
-        .toValidatedNel
-  }
+  implicit val stringDecoder: ConfigDecoder[String] = (config: Config, path: String) =>
+    Safety
+      .safely(config.getString(path))(ErrorMapper.default)
+      .leftMap(_ => ConfigError.MissingKey(path))
+      .toValidatedNel
 
-  implicit val intDecoder: ConfigDecoder[Int] = new ConfigDecoder[Int] {
-    def decode(config: Config, path: String): ValidatedNel[ConfigError, Int] =
-      Safety
-        .safely(config.getInt(path))(ErrorMapper.default)
-        .leftMap(_ => ConfigError.MissingKey(path))
-        .toValidatedNel
-  }
+  implicit val intDecoder: ConfigDecoder[Int] = (config: Config, path: String) =>
+    Safety
+      .safely(config.getInt(path))(ErrorMapper.default)
+      .leftMap(_ => ConfigError.MissingKey(path))
+      .toValidatedNel
 
-  implicit val booleanDecoder: ConfigDecoder[Boolean] = new ConfigDecoder[Boolean] {
-    def decode(config: Config, path: String): ValidatedNel[ConfigError, Boolean] =
-      Safety
-        .safely(config.getBoolean(path))(ErrorMapper.default)
-        .leftMap(_ => ConfigError.MissingKey(path))
-        .toValidatedNel
-  }
+  implicit val booleanDecoder: ConfigDecoder[Boolean] = (config: Config, path: String) =>
+    Safety
+      .safely(config.getBoolean(path))(ErrorMapper.default)
+      .leftMap(_ => ConfigError.MissingKey(path))
+      .toValidatedNel
 
   // Temporary simple FlowForgeConfig decoder - TODO: implement proper decoding
   implicit val flowForgeConfigDecoder: ConfigDecoder[FlowForgeConfig] =
-    new ConfigDecoder[FlowForgeConfig] {
-      def decode(cfg: Config, path: String): ValidatedNel[ConfigError, FlowForgeConfig] = {
-        // Flatten Typesafe config to a flat Map[String,String] (dot paths) and delegate to core decoder
-        import scala.jdk.CollectionConverters._
-        val entries = cfg.entrySet().asScala.toList
-        val flat: Map[String, String] = entries.flatMap { e =>
-          val key = e.getKey
-          Safety.safely(cfg.getString(key))(ErrorMapper.default).toOption.map(v => key -> v)
-        }.toMap
-        val coreDecoder = ConfigurationAlgebra.flowForgeConfigDecoder
-        coreDecoder
-          .decode(flat)
-          .leftMap(_.map(err => ConfigError.ParseError(path, err.toString)))
-      }
+    (cfg: Config, path: String) => {
+      // Flatten Typesafe config to a flat Map[String,String] (dot paths) and delegate to core decoder
+      import scala.jdk.CollectionConverters._
+      val entries = cfg.entrySet().asScala.toList
+      val flat: Map[String, String] = entries.flatMap { e =>
+        val key = e.getKey
+        Safety.safely(cfg.getString(key))(ErrorMapper.default).toOption.map(v => key -> v)
+      }.toMap
+      val coreDecoder = ConfigurationAlgebra.flowForgeConfigDecoder
+      coreDecoder
+        .decode(flat)
+        .leftMap(_.map(err => ConfigError.ParseError(path, err.toString)))
     }
 }

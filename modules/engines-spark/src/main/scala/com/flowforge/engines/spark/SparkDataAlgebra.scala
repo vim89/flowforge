@@ -159,7 +159,7 @@ object SparkDataAlgebra {
                   com.flowforge.core.observability.PrometheusMetrics.Data.opLatencyMs
                     .labels("read", "spark").observe(dur.toMillis.toDouble)
                 catch { case _: Throwable => () }
-              }.*>(log.info(s"spark.read ok format=${source.format} loc=${loc} ms=${dur.toMillis}"))
+              }.*>(log.info(s"spark.read ok format=${source.format} loc=$loc ms=${dur.toMillis}"))
                 .as(ds)
           }
       }
@@ -295,7 +295,7 @@ object SparkDataAlgebra {
                 catch { case _: Throwable => () }
               }
               _ <- log.info(
-                s"spark.write ok format=${sink.format} loc=${loc} ms=${dur.toMillis} records=${wr.recordsWritten}",
+                s"spark.write ok format=${sink.format} loc=$loc ms=${dur.toMillis} records=${wr.recordsWritten}",
               )
             } yield wr
           }
@@ -949,7 +949,6 @@ object SparkDataAlgebra {
             operation = "repairRefresh",
             success = true,
             affectedPartitions = List.empty,
-            recordsProcessed = 0L,
             processingTime = 0.seconds,
             errors = List.empty,
           ),
@@ -980,7 +979,6 @@ object SparkDataAlgebra {
             operation = s"delete($location)",
             success = !dryRun,
             affectedPartitions = List.empty,
-            recordsProcessed = 0L,
             processingTime = 0.seconds,
             errors = List.empty,
           ),
@@ -996,7 +994,6 @@ object SparkDataAlgebra {
             operation = "analyze",
             success = true,
             affectedPartitions = partitions.map(_.toList).getOrElse(List.empty),
-            recordsProcessed = 0L,
             processingTime = 0.seconds,
             errors = List.empty,
           ),
@@ -1013,7 +1010,6 @@ object SparkDataAlgebra {
             operation = s"vacuum($retentionHours h, dryRun=$dryRun)",
             success = true,
             affectedPartitions = List.empty,
-            recordsProcessed = 0L,
             processingTime = 0.seconds,
             errors = List.empty,
           ),

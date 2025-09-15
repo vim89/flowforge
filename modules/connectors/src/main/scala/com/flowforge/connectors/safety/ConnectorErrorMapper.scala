@@ -12,22 +12,20 @@ import com.flowforge.core.types.SystemError
  * importing `ConnectorErrorMapper._` in connector edges where Safety.in[F] is applied.
  */
 object ConnectorErrorMapper {
-  implicit val connectorMapper: ErrorMapper = new ErrorMapper {
-    def apply(t: Throwable): FlowForgeError = t match {
-      case e: java.nio.file.NoSuchFileException =>
-        ValidationError(s"File not found: ${e.getMessage}", None, context = Map("cause" -> "NoSuchFile"))
-          .withCause(e)
-      case e: java.io.FileNotFoundException =>
-        ValidationError(s"File not found: ${e.getMessage}", None, context = Map("cause" -> "FileNotFound"))
-          .withCause(e)
-      case e: java.io.IOException =>
-        SystemError.ServiceUnavailable(serviceName = "filesystem", message = e.getMessage, cause = Some(e))
-      case e: java.sql.SQLException =>
-        ConfigurationError(
-          s"JDBC error: ${e.getMessage}",
-          context = Map("sqlState" -> String.valueOf(e.getSQLState)),
-        ).withCause(e)
-      case other => ErrorMapper.default(other)
-    }
+  implicit val connectorMapper: ErrorMapper = {
+    case e: java.nio.file.NoSuchFileException =>
+      ValidationError(s"File not found: ${e.getMessage}", None, context = Map("cause" -> "NoSuchFile"))
+        .withCause(e)
+    case e: java.io.FileNotFoundException =>
+      ValidationError(s"File not found: ${e.getMessage}", None, context = Map("cause" -> "FileNotFound"))
+        .withCause(e)
+    case e: java.io.IOException =>
+      SystemError.ServiceUnavailable(serviceName = "filesystem", message = e.getMessage, cause = Some(e))
+    case e: java.sql.SQLException =>
+      ConfigurationError(
+        s"JDBC error: ${e.getMessage}",
+        context = Map("sqlState" -> String.valueOf(e.getSQLState)),
+      ).withCause(e)
+    case other => ErrorMapper.default(other)
   }
 }
