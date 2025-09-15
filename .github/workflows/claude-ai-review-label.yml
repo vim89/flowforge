@@ -1,8 +1,8 @@
-name: Claude AI Review (label trigger)
+name: Claude AI review (label trigger)
 
 on:
   pull_request_target:
-    types: [labeled]
+    types: [ labeled ]
 
 permissions:
   contents: read
@@ -10,8 +10,6 @@ permissions:
 
 jobs:
   ai-label-review:
-    if: >-
-      ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && github.event.label.name == 'ai-review' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -29,7 +27,7 @@ jobs:
           git --no-pager diff --unified=0 --minimal --patch origin/${{ github.event.pull_request.base.ref }}...HEAD | sed -n '1,6000p'
           echo 'EOF' >> $GITHUB_OUTPUT
 
-      - name: Generate FlowForge review context
+      - name: Generate flowforge review context
         id: ctx
         shell: bash
         run: |
@@ -37,7 +35,8 @@ jobs:
           bash scripts/ff-claude-context.sh | sed -n '1,4000p'
           echo 'EOF' >> $GITHUB_OUTPUT
 
-      - name: Run Claude Code Action (FlowForge review)
+      - name: Run claude code action (flowforge review)
+        if: secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && github.event.label.name == 'ai-review'
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
@@ -60,8 +59,8 @@ jobs:
             --max-turns 4
             --verbose
 
-      - name: Post review via GitHub Reviews API (with inline support)
-        if: ${{ steps.claude.outputs.response != '' }}
+      - name: Post review via GitHub reviews API (with inline support)
+        if: secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && github.event.label.name == 'ai-review' && steps.claude.outputs.response != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

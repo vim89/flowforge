@@ -64,7 +64,7 @@ jobs:
         run: sbt -batch ${{ matrix.commands }}
 
   refactor-lint:
-    name: Refactor Lint & Unsafe Cast Gate
+    name: Refactor lint & Unsafe cast gate
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -118,8 +118,7 @@ jobs:
 
           if ((${#FAILURES[@]} > 0)); then
             echo "❌ FAIL: Unsafe patterns detected outside whitelist:" >&2
-            printf '%s
-' "${FAILURES[@]}" >&2
+            printf '%s\n' "${FAILURES[@]}" >&2
             exit 1
           fi
           echo "✅ PASS: No unsafe asInstanceOf/Any found outside whitelist"

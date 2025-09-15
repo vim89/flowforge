@@ -2,7 +2,7 @@ name: Claude code review (non-blocking)
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [ opened, synchronize, reopened, ready_for_review ]
     paths:
       - '**/*.scala'
       - '**/*.sbt'
@@ -20,7 +20,6 @@ concurrency:
 
 jobs:
   claude-review:
-    if: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -49,7 +48,8 @@ jobs:
           bash scripts/ff-claude-context.sh | sed -n '1,4000p'
           echo 'EOF' >> $GITHUB_OUTPUT
 
-      - name: Run Claude Code Action (FlowForge review)
+      - name: Run claude code action (flowforge review)
+        if: secrets.CLAUDE_CODE_OAUTH_TOKEN != ''
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
@@ -79,7 +79,7 @@ jobs:
             - Quick patches: fenced unified diffs with minimal edits (<= ~30 lines each).
             - Module plan: for modules touched in DIFF, list 2–4 next actions (e.g., replace Try with Safety, add bracket for streams, remove collect in hot path, swap println→logger).
             - Cross‑ref ADR names (e.g., ADR‑022) and docs (e.g., refactor-idiomatic-scala2.md) by name.
-            
+
             DIFF TO REVIEW:
             ---
             ${{ steps.diff.outputs.patch }}
@@ -95,7 +95,7 @@ jobs:
             --verbose
 
       - name: Post review (inline when available)
-        if: ${{ steps.claude.outputs.response != '' }}
+        if: secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && steps.claude.outputs.response != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
