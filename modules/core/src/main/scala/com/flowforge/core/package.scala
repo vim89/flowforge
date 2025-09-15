@@ -446,10 +446,11 @@ package object core {
      */
     def getInt(key: String): ConfigValidation[Int] =
       getRequired(key).andThen { value =>
-        Safety.safely(value.toInt)(com.flowforge.core.safety.ErrorMapper.default).leftMap(_ => ()).fold(
-          _ => ConfigError.InvalidFormat(key, value, "integer").invalidNel,
-          int => int.validNel,
-        )
+        Safety
+          .safely(value.toInt)(com.flowforge.core.safety.ErrorMapper.default).leftMap(_ => ()).fold(
+            _ => ConfigError.InvalidFormat(key, value, "integer").invalidNel,
+            int => int.validNel,
+          )
       }
 
     /**
@@ -473,9 +474,9 @@ package object core {
           .safely(Duration.parse(value))(com.flowforge.core.safety.ErrorMapper.default)
           .leftMap(_ => ())
           .fold(
-          _ => ConfigError.InvalidFormat(key, value, "ISO-8601 duration").invalidNel,
-          d => FiniteDuration(d.toMillis, "millis").validNel,
-        )
+            _ => ConfigError.InvalidFormat(key, value, "ISO-8601 duration").invalidNel,
+            d => FiniteDuration(d.toMillis, "millis").validNel,
+          )
       }
   }
 

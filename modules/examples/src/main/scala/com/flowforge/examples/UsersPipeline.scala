@@ -336,7 +336,7 @@ object UsersPipeline {
         println("\\n📋 Delta table schema with constraints:")
         spark.sql(s"DESCRIBE EXTENDED delta.`$deltaPath`").show(false)
 
-      }.leftMap { e => println(s"⚠️ Note: Delta constraints require Delta Lake extension: ${e.getMessage}") }
+      }.leftMap(e => println(s"⚠️ Note: Delta constraints require Delta Lake extension: ${e.getMessage}"))
     }
 
   // Example main method for standalone execution

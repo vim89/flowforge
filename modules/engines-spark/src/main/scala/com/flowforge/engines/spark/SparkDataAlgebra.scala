@@ -439,16 +439,15 @@ object SparkDataAlgebra {
             val isEmpty = tgtRaw.limit(1).count() == 0
             if (isEmpty) {
               // SECURITY FIX: Validate path and use safe column names before SQL
-              Either
-                .catchNonFatal {
-                  // Path validation to prevent injection
-                  val safePath = validateAndSanitizePath(targetPath)
-                  val addCols = missing.map {
-                    case c if c == scdCur => s"${sanitizeColumnName(c)} BOOLEAN"
-                    case c                => s"${sanitizeColumnName(c)} TIMESTAMP"
-                  }.mkString(", ")
-                  spark.sql(s"ALTER TABLE delta.`$safePath` ADD COLUMNS ($addCols)")
-                }
+              Either.catchNonFatal {
+                // Path validation to prevent injection
+                val safePath = validateAndSanitizePath(targetPath)
+                val addCols = missing.map {
+                  case c if c == scdCur => s"${sanitizeColumnName(c)} BOOLEAN"
+                  case c                => s"${sanitizeColumnName(c)} TIMESTAMP"
+                }.mkString(", ")
+                spark.sql(s"ALTER TABLE delta.`$safePath` ADD COLUMNS ($addCols)")
+              }
                 .leftMap(t => s"Failed to add SCD2 columns to empty target at '$targetPath': ${t.getMessage}")
             } else {
               Left(
@@ -861,34 +860,32 @@ object SparkDataAlgebra {
 
             // Try to invoke DeequAdapter via reflection if present on classpath
             val deequResultsF: F[Option[List[DataAlgebra.QualityCheckResult]]] = F.delay {
-              Either
-                .catchNonFatal {
-                  val cls    = Class.forName("com.flowforge.quality.deequ.DeequAdapter$")
-                  val module = cls.getField("MODULE$").get(None.orNull)
-                  val method = cls.getMethod(
-                    "runChecks",
-                    classOf[org.apache.spark.sql.SparkSession],
-                    classOf[DataAlgebra.Dataset[_]],
-                    classOf[List[_]],
+              Either.catchNonFatal {
+                val cls    = Class.forName("com.flowforge.quality.deequ.DeequAdapter$")
+                val module = cls.getField("MODULE$").get(None.orNull)
+                val method = cls.getMethod(
+                  "runChecks",
+                  classOf[org.apache.spark.sql.SparkSession],
+                  classOf[DataAlgebra.Dataset[_]],
+                  classOf[List[_]],
+                )
+                val qualityResult = method.invoke(module, spark, pds, constraints)
+                val quality       = ReflectionCasting.castQualityResult[A](qualityResult)
+                if (quality.violations.isEmpty)
+                  List(
+                    DataAlgebra
+                      .QualityCheckResult(
+                        "deequ_auto",
+                        passed = true,
+                        message = "ok",
+                        score = quality.score,
+                      ),
                   )
-                  val qualityResult = method.invoke(module, spark, pds, constraints)
-                  val quality       = ReflectionCasting.castQualityResult[A](qualityResult)
-                  if (quality.violations.isEmpty)
-                    List(
-                      DataAlgebra
-                        .QualityCheckResult(
-                          "deequ_auto",
-                          passed = true,
-                          message = "ok",
-                          score = quality.score,
-                        ),
-                    )
-                  else
-                    quality.violations.map { v =>
-                      DataAlgebra.QualityCheckResult(v.rule, passed = false, message = v.message, score = 0.0)
-                    }
-                }
-                .toOption
+                else
+                  quality.violations.map { v =>
+                    DataAlgebra.QualityCheckResult(v.rule, passed = false, message = v.message, score = 0.0)
+                  }
+              }.toOption
             }
 
             F.flatMap(deequResultsF) {

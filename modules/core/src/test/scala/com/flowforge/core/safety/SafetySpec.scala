@@ -8,15 +8,15 @@ import org.scalatest.matchers.should.Matchers
 class SafetySpec extends AnyFunSuite with Matchers {
 
   test("safely returns Right on success") {
-    val res = Safety.safely { 1 + 1 }(DefaultErrorMapper)
+    val res = Safety.safely(1 + 1)(DefaultErrorMapper)
     res shouldBe Right(2)
   }
 
   test("safely maps exceptions to FlowForgeError via ErrorMapper") {
     val res = Safety.safely[Int](throw new IllegalArgumentException("bad arg"))(DefaultErrorMapper)
     res.left.getOrElse(fail("expected Left")) match {
-      case v: FlowForgeError.ValidationError => v.message.toLowerCase should include ("bad arg")
-      case other                            => fail(s"unexpected error mapping: $other")
+      case v: FlowForgeError.ValidationError => v.message.toLowerCase should include("bad arg")
+      case other                             => fail(s"unexpected error mapping: $other")
     }
   }
 
@@ -36,4 +36,3 @@ class SafetySpec extends AnyFunSuite with Matchers {
     errs.toList.map(_.message).toSet shouldBe Set("e1", "e2")
   }
 }
-

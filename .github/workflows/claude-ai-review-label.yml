@@ -36,7 +36,7 @@ jobs:
           echo 'EOF' >> $GITHUB_OUTPUT
 
       - name: Run claude code action (flowforge review)
-        if: secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && github.event.label.name == 'ai-review'
+        if: github.event.label.name == 'ai-review'
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
@@ -60,7 +60,7 @@ jobs:
             --verbose
 
       - name: Post review via GitHub reviews API (with inline support)
-        if: secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && github.event.label.name == 'ai-review' && steps.claude.outputs.response != ''
+        if: github.event.label.name == 'ai-review' && steps.claude.outputs.response != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

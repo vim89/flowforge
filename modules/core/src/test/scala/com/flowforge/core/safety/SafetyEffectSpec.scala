@@ -17,8 +17,9 @@ class SafetyEffectSpec extends AnyFunSuite with Matchers {
   }
 
   test("in.attempt maps failure through ErrorMapper to Left") {
-    val R   = Safety.in[IO]
-    val res = R.attempt[Int](IO.raiseError(new IllegalArgumentException("boom")))(DefaultErrorMapper).unsafeRunSync()
+    val R = Safety.in[IO]
+    val res =
+      R.attempt[Int](IO.raiseError(new IllegalArgumentException("boom")))(DefaultErrorMapper).unsafeRunSync()
     res.isLeft shouldBe true
   }
 

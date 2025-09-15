@@ -10,11 +10,11 @@ import com.flowforge.core.types.FlowForgeError
 import scala.util.Try
 
 /**
-  * Universal safety helpers for pure and effectful code paths.
-  *
-  * - Pure helpers avoid try/catch and return typed error channels.
-  * - Effectful helpers use EffectSystem[F] so callers stay engine-agnostic.
-  */
+ * Universal safety helpers for pure and effectful code paths.
+ *
+ *   - Pure helpers avoid try/catch and return typed error channels.
+ *   - Effectful helpers use EffectSystem[F] so callers stay engine-agnostic.
+ */
 object Safety {
 
   type Result[+A]          = Either[FlowForgeError, A]
@@ -78,7 +78,7 @@ object Safety {
   // ==================
   implicit final class ResultOps[A](private val r: Result[A]) extends AnyVal {
     def mapError(f: FlowForgeError => FlowForgeError): Result[A] = r.leftMap(f)
-    def toValidatedNel: ValidatedResult[A]                        = r.toValidatedNel
+    def toValidatedNel: ValidatedResult[A]                       = r.toValidatedNel
   }
 
   implicit final class ValidatedResultOps[A](private val v: ValidatedResult[A]) extends AnyVal {

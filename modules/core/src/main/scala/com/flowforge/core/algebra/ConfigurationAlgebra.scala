@@ -616,7 +616,8 @@ object ConfigurationAlgebra {
         .flatMap { s =>
           val trimmed = s.trim.toLowerCase
           def parseLong(str: String): Option[Long] =
-            com.flowforge.core.safety.Safety.safely(str.toLong)(com.flowforge.core.safety.ErrorMapper.default).toOption
+            com.flowforge.core.safety.Safety
+              .safely(str.toLong)(com.flowforge.core.safety.ErrorMapper.default).toOption
           if (trimmed.endsWith("ms")) parseLong(trimmed.stripSuffix("ms")).map(_.millis)
           else if (trimmed.endsWith("s")) parseLong(trimmed.stripSuffix("s")).map(_.seconds)
           else parseLong(trimmed).map(_.seconds)

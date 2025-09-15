@@ -4,12 +4,12 @@ import com.flowforge.core.types.FlowForgeError
 import com.flowforge.core.types.FlowForgeError.ValidationError
 
 /**
-  * Pluggable mapping from Throwable to FlowForgeError.
-  *
-  * Module owners can provide more specific instances (e.g., mapping JDBC/IO exceptions to
-  * connector-specific domain errors). The default keeps semantics stable by delegating to
-  * FlowForgeError.fromThrowable and upgrading obvious argument errors to ValidationError.
-  */
+ * Pluggable mapping from Throwable to FlowForgeError.
+ *
+ * Module owners can provide more specific instances (e.g., mapping JDBC/IO exceptions to connector-specific
+ * domain errors). The default keeps semantics stable by delegating to FlowForgeError.fromThrowable and
+ * upgrading obvious argument errors to ValidationError.
+ */
 trait ErrorMapper {
   def apply(t: Throwable): FlowForgeError
 }
@@ -26,4 +26,3 @@ object DefaultErrorMapper extends ErrorMapper {
       FlowForgeError.fromThrowable(other)
   }
 }
-

@@ -26,7 +26,6 @@ jobs:
 
       - name: Run Claude Code Action (FlowForge context)
         if: >-
-          secrets.CLAUDE_CODE_OAUTH_TOKEN != '' &&
           ((github.event_name == 'issue_comment' &&
             (contains(github.event.comment.body, '/ff-check') || contains(github.event.comment.body, 'CHECK CONTEXT') || contains(github.event.comment.body, '@claude')))
            ||
@@ -62,4 +61,4 @@ jobs:
         if: always()
         run: |
           echo "### Claude on-mention run" >> "$GITHUB_STEP_SUMMARY"
-          echo "Triggered by @claude mention. Secrets present: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Triggered by @claude mention." >> "$GITHUB_STEP_SUMMARY"

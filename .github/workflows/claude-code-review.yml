@@ -49,7 +49,7 @@ jobs:
           echo 'EOF' >> $GITHUB_OUTPUT
 
       - name: Run claude code action (flowforge review)
-        if: secrets.CLAUDE_CODE_OAUTH_TOKEN != ''
+        if: true
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
@@ -95,7 +95,7 @@ jobs:
             --verbose
 
       - name: Post review (inline when available)
-        if: secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && steps.claude.outputs.response != ''
+        if: steps.claude.outputs.response != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
