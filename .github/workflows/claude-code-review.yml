@@ -17,6 +17,8 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  issues: write
+  actions: read
   id-token: write # Required for OIDC token generation
 
 concurrency:
@@ -26,9 +28,6 @@ concurrency:
 jobs:
   claude-review:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
     continue-on-error: true
 
     steps:

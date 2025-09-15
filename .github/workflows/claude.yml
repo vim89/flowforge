@@ -9,6 +9,8 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  issues: write
+  actions: read
   id-token: write # Required for OIDC token generation
 
 concurrency:
@@ -18,10 +20,6 @@ concurrency:
 jobs:
   claude-assistant:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write
 
     steps:
       - name: Checkout repository
