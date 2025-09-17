@@ -1,15 +1,15 @@
-# FlowForge Onboarding Guide
+# flowforge nnboarding guide
 
 Welcome to FlowForge! This guide will help you get productive quickly with our functional data engineering platform.
 
-## Prerequisites
+## Pre-requisites
 
 - Scala 2.13+ knowledge
 - Familiarity with functional programming concepts (Option, Either, IO)
 - Basic understanding of data pipelines
 - SBT build tool experience
 
-## Learning Path
+## Learning path
 
 ### Day 1: Fundamentals
 1. **Setup Development Environment**
@@ -22,13 +22,13 @@ Welcome to FlowForge! This guide will help you get productive quickly with our f
    sbt new vim89/flowforge.g8
    ```
 
-2. **Core Concepts**
+2. **Core concepts**
    - Type-safe pipeline composition
    - Effect systems (Cats Effect/ZIO)
    - Data contracts and validation
    - Resource management
 
-3. **First Pipeline**
+3. **First pipeline**
    ```scala
    // Start with this simple example
    val pipeline = pipeline[IO, String]("hello-world", csvSource)
@@ -37,7 +37,7 @@ Welcome to FlowForge! This guide will help you get productive quickly with our f
      .to(consoleSink)
    ```
 
-### Day 2: Contracts & Validation
+### Day 2: Data Contracts & validation
 1. **Data Contracts DSL**
    ```scala
    val userContract = Contract("user")
@@ -57,21 +57,21 @@ Welcome to FlowForge! This guide will help you get productive quickly with our f
    - PipelineError ADT hierarchy
    - Recovery strategies
 
-### Day 3: Advanced Patterns
+### Day 3: Advanced patterns
 1. **Multi-Stage Pipelines**
 2. **Parallel Processing**
 3. **Resource Management**
 4. **Monitoring & Lineage**
 
-### Day 4: Production Deployment
+### Day 4: Production deployment
 1. **Configuration Management**
 2. **Testing Strategies**
 3. **Monitoring Setup**
 4. **CI/CD Integration**
 
-## Common Patterns
+## Common patterns
 
-### ETL Pipeline
+### ETL pipeline
 ```scala
 val etlPipeline = pipeline[IO, RawData]("etl-pipeline", source)
   .transform(extract)
@@ -80,7 +80,7 @@ val etlPipeline = pipeline[IO, RawData]("etl-pipeline", source)
   .to(warehouse)
 ```
 
-### Stream Processing
+### Stream processing
 ```scala
 val streamPipeline = pipeline[IO, Event]("stream-pipeline", kafkaSource)
   .map(enrichWithContext)
@@ -88,7 +88,7 @@ val streamPipeline = pipeline[IO, Event]("stream-pipeline", kafkaSource)
   .to(eventStore)
 ```
 
-### Data Quality
+### Data quality
 ```scala
 val qualityPipeline = pipeline[IO, Dataset]("quality-pipeline", source)
   .withQualityCheck(schemaValidation)
@@ -97,7 +97,7 @@ val qualityPipeline = pipeline[IO, Dataset]("quality-pipeline", source)
   .to(cleanDataSink)
 ```
 
-## Development Workflow
+## Development workflow
 
 1. **Define Contracts**: Start with data contracts
 2. **Build Pipeline**: Use type-safe builders
@@ -116,4 +116,4 @@ val qualityPipeline = pipeline[IO, Dataset]("quality-pipeline", source)
 
 - Slack: #flowforge-support
 - Issues: GitHub Issues
-- Email: flowforge-team@company.com
+- Email: vitthalmirji@gmail.com

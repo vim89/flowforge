@@ -1,4 +1,4 @@
-# FlowForge
+# flowforge
 
 ![Build](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/ci.yml?branch=main&label=build)
 [![Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?label=coverage)](https://app.codecov.io/gh/vim89/flowforge)
@@ -22,7 +22,7 @@ Highlights
 
 Quick links: docs/getting-started-quick.md, docs/getting-started.md, docs/start-here.md
 
-## Why FlowForge
+## Why flowforge
 
 Most frameworks surface schema issues at runtime. FlowForge catches them during `sbt compile` using typed contracts and policies. Pure transformations keep tests fast and deterministic, while effect‑safe connectors make IO boundaries deliberate and maintainable.
 

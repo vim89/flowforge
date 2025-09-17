@@ -1,6 +1,6 @@
-# Repository Guidelines
+# Repository guidelines
 
-## Project Structure & Module Organization
+## Project structure & Module organization
 
 - Multi‑module SBT repo: sources in `modules/*`, tests under `src/test/scala` mirroring packages.
 - Key modules: `core` (algebras, types, builders), `contracts` (typed contracts), `engines-spark`, `connectors`,
@@ -8,14 +8,14 @@
 - Docs: ADRs `docs/adr/*` (decisions), Plans/Evidence in `docs/plan` and `docs/evidence`, Agents Handbook in
   `docs/contributing`.
 
-## Build, Test, and Development Commands
+## Build, test, and development commands
 
 - `sbt compile` — compile all modules; `sbt test` — run all tests (non‑parallel).
 - Formatting: `sbt fmt` / `sbt fmtCheck`; Linting: `sbt fix` / `sbt fixCheck`.
 - Focused runs: `sbt core/test`, `sbt engines-spark/compile`.
 - CLIs: `sbt validation-cli/run` and `sbt contracts-extractor-cli/run`.
 
-## Coding Style & Naming Conventions
+## Coding style & naming conventions
 
 - Scala 2.13; idiomatic FP: immutability, pure functions, explicit effects, use for-comprehensions, Monads instead of
   try-catch-finally,
@@ -142,7 +142,7 @@
       ADTs are also non-intrusive - we don't have to touch the actual class definition - instead we can attach the
       behavior from outside.
 
-### 🏛 SOLID Principles Implementation
+### 🏛 SOLID principles implementation
 
 Use all SOLID principles where applicable
 
@@ -152,13 +152,13 @@ Use all SOLID principles where applicable
 - I - Interface Segregation Principle
 - D - Dependency Inversion Principle - Depend on abstractions, not concretions
 
-### 🏗 Design Patterns
+### 🏗 Design patterns
 
 - Creational Patterns: Use all creational patterns where applicable
 - Structural Patterns: Use all structural patterns where applicable
 - Behavioral Patterns: Use all behavioral patterns where applicable
 
-### Prototype Integration Principles
+### Prototype integration principles
 
 #### Existing prototype implementation references
 - Utilities - Data Engineering Reusable functions SDK: https://github.com/vim89/reference-utilities/tree/main/src/main/scala/com/vim/de/utils
@@ -189,7 +189,7 @@ trait LegacyCompatibility[F[_] : Sync] extends ConfigurationAlgebra[F] {
 }
 ```
 
-### Advanced Type-Level Programming Patterns
+### Advanced Type-Level programming patterns
 - Phantom State Machines: Use phantom types to encode valid state transitions at compile time
 - Dependent Types with Refinement: Combine refined types with phantom types for maximum safety
 - Type-Level Validation: Configuration and template validation should happen at compile time
@@ -201,14 +201,14 @@ trait LegacyCompatibility[F[_] : Sync] extends ConfigurationAlgebra[F] {
 - Cloud Connector Safety: Multi-cloud operations require automatic connection cleanup
 - Stream Resource Management: fs2.Stream operations must properly handle resource lifecycle
 
-### Template Generation Philosophy
+### Template generation philosophy
 - Functional Template Generation: Templates use effect systems, not imperative file operations
 - Phantom-Type Builders: Template construction prevents invalid states at compile time
 - Validation Before Generation: Use ValidatedNel to collect all template errors before failing
 - Resource-Safe Generation: File operations must use Resource[F, _] with proper cleanup
 - Template Focus: Concentrate on 80/20 use cases instead of trying to handle every edge case
 
-## Testing Guidelines
+## Testing guidelines
 - Frameworks: ScalaTest (+ property/law tests), optional ZIO Test; scoverage target ≥ 80% on changed code.
 - Conventions: name specs `*Spec.scala`; place fixtures under the same package path in `src/test/scala`.
 - Strategy: test algebras/instances first; integration/engine tests opt‑in and minimal.
@@ -221,7 +221,7 @@ trait LegacyCompatibility[F[_] : Sync] extends ConfigurationAlgebra[F] {
 - Multi-type grouping: When types are closely related, grouping is permitted—but only when justified. The file should then use meaningful lowerCamelCase names. 
 - Developer ergonomics: Having one type per file helps with navigation, findability, and code review. It avoids confusion and reduces search friction.
 
-## Commit & Pull Request Guidelines
+## Commit & Pull Request guidelines
 
 - Commits: imperative subject (≤72 chars) + concise body (what/why); reference ADRs (e.g., ADR‑012 for effect rules).
 - PR checklist: `sbt fmt` + `sbt compile; test:compile` green; link checker passing; description, test plan, and
@@ -229,7 +229,7 @@ trait LegacyCompatibility[F[_] : Sync] extends ConfigurationAlgebra[F] {
 - Scope: keep PRs focused; avoid mixing refactors with feature changes.
 
 
-## Contributor Workflow
+## Contributor workflow
 
 This project values clear plans, small scoped pull requests, and reliable build hygiene.
 

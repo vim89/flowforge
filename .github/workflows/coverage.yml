@@ -32,15 +32,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-sbt-coverage-
 
-      - name: Run coverage
+      - name: Run coverage with thresholds
         run: |
-          sbt -batch clean coverage test coverageReport coverageAggregate
+          sbt -batch \
+            "set ThisBuild / coverageMinimum := 75" \
+            "set ThisBuild / coverageFailOnMinimum := true" \
+            clean coverage test coverageReport coverageAggregate
 
       - name: Upload coverage to Codecov
+        if: ${{ !env.ACT }}
         uses: codecov/codecov-action@v4
         with:
           files: ./target/scala-2.13/scoverage-report/scoverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
           verbose: true
-

@@ -1,4 +1,4 @@
-# FlowForge — Start Here
+# flowforge - start here
 
 This is the quickest way to experience FlowForge’s unique value: contracts‑first pipelines that fail at compile time on schema drift, with batteries‑included Spark execution, Delta + DQ, lineage by default, and optional Flink.
 
@@ -41,7 +41,7 @@ sbt examples/run
 
 You should see FlowForge emitting START/COMPLETE/FAIL events. A screenshot is included in docs/diagrams (placeholder) showing a simple run in Marquez.
 
-## 3. Data Quality
+## 3. Data quality
 
 Deequ is optional. If present on the classpath, FlowForge enhances native checks automatically. See `docs/quality/README.md` and `docs/operating/using-deequ.md`.
 
@@ -54,7 +54,7 @@ sbt maintenance-cli/run -- vacuum --path /tmp/delta/table --retention 168
 sbt maintenance-cli/run -- compact --path /tmp/delta/table --targetFiles 4
 ```
 
-## 5. Next Steps
+## 5. Next steps
 
 - JDBC ingestion: Use `DataSource.JdbcSource` and `DataSink.jdbcSink`.
 - CDC/SCD: See SparkDeltaSCD1IT/SparkDeltaSCD2IT (opt‑in with `-DwithSparkIT=true`).

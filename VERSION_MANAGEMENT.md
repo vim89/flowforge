@@ -1,26 +1,26 @@
-# FlowForge Version Management Strategy
+# flowforge version management strategy
 
-## Current Version Strategy
+## Current version strategy
 
 ### Development Version
 - **Current**: `0.1.0-SNAPSHOT` (development branch `mvp-0.0.1-snapshot`)
 - **Next Release**: `0.1.0` (first official release)
 - **Target**: `1.0.0` (stable release with 100% compile-time contracts)
 
-### Version Format
+### Version format
 Following **Semantic Versioning 2.0.0**:
 - `MAJOR.MINOR.PATCH[-QUALIFIER]`
 - Pre-release: `-SNAPSHOT`, `-alpha`, `-beta`, `-rc1`
 
-### Release Process
+### Release process
 
-#### 1. Pre-Release (Current State)
+#### 1. Pre-release (Current State)
 ```bash
 # Development continues on mvp-0.0.1-snapshot branch
 # Version in build.sbt: "0.1.0-SNAPSHOT"
 ```
 
-#### 2. First Release (0.1.0)
+#### 2. First release (0.1.0)
 ```bash
 # Manual workflow dispatch
 gh workflow run release.yml --field version=0.1.0 --field prerelease=false
@@ -30,42 +30,42 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-#### 3. Future Releases
+#### 3. Future releases
 - `0.2.0` - Additional features, enhancements
 - `0.3.0` - More contract features, integrations  
 - `1.0.0` - Stable API, production-ready
 
-### Automated Release Workflow
+### Automated release workflow
 
 The `.github/workflows/release.yml` handles:
 
-1. **Version Validation**
+1. **Version validation**
    - Checks semantic version format
    - Prevents duplicate releases
    - Supports both tag and manual triggers
 
-2. **Pre-Release Testing** 
+2. **Pre-release testing** 
    - Full test suite with coverage
    - Compile-fail tests validation
    - Code formatting checks
 
-3. **Artifact Building**
+3. **Artifact building**
    - CLI JAR assembly (`validation-cli`, `contracts-extractor-cli`)
    - Version updates in build.sbt
    - Artifact upload to GitHub releases
 
-4. **Release Creation**
+4. **Release creation**
    - Auto-generated release notes
    - Binary artifact attachments
    - Codecov integration
 
-### Branch Strategy
+### Branch strategy
 
 - **`mvp-0.0.1-snapshot`** - Current development (pre-0.1.0)
 - **`main`** - Stable releases (post-0.1.0)
 - **Feature branches** - `feature/xyz` (merge to development branch)
 
-### Creating Your First Release (0.1.0)
+### Creating your first release (0.1.0)
 
 ```bash
 # Option 1: Manual workflow trigger
@@ -86,14 +86,14 @@ This will:
 - ✅ Generate release notes highlighting 100% compile-time contracts
 - ✅ Upload coverage reports
 
-### Post-0.1.0 Development
+### Post-0.1.0 development
 
 After first release:
 - Merge `mvp-0.0.1-snapshot` → `main` 
 - Continue development on `main` with `-SNAPSHOT` versions
 - Use proper semantic versioning for all future releases
 
-### Coverage & Quality Gates
+### Coverage & quality gates
 
 All releases require:
 - ✅ All tests passing
@@ -102,27 +102,27 @@ All releases require:
 - ✅ Code formatting compliance
 - ✅ Artifact generation success
 
-## FlowForge 1.0 Release Candidate (RC) Checklist
+## flowforge 1.0 release candidate (RC) checklist
 
-### RC1 Prerequisites (0.9.0-RC1)
+### RC1 Pre-requisites (0.9.0-RC1)
 
 Before cutting the first Release Candidate:
 
-#### ✅ Core Functionality
+#### ✅ Core functionality
 - [ ] Lineage auto-emits START/COMPLETE/FAIL events from PipelineBuilder lifecycle
 - [ ] Marquez integration documented with docker-compose quickstart
 - [ ] Dual-mode quality validation: native Spark (default) + optional Deequ enhancement
 - [ ] End-to-end Spark example runs locally in seconds with Delta constraints
 - [ ] Complete UsersPipeline.scala demonstrating all v1.0 features
 
-#### ✅ API Surface & Documentation
+#### ✅ API surface & documentation
 - [ ] Public API documented in docs/public-api.md with "Proposed 1.0 surface" label
 - [ ] Neutral comparison documentation in docs/why/compare.md with comprehensive links
 - [ ] All internal packages properly namespaced (*.internal.* for non-public APIs)
 - [ ] Deprecated SparkPipelineBuilder marked for removal at 1.0
 - [ ] Clean module structure - unused modules removed (quality-deequ-runner, templates/)
 
-#### ✅ Quality Assurance
+#### ✅ Quality assurance
 - [ ] **API Diff Analysis**: No breaking changes in public surface since last RC
 - [ ] **Scripted Tests Green**: All scripted tests pass in CI consistently
 - [ ] **Examples Runnable**: All examples execute successfully in clean environment
@@ -130,42 +130,42 @@ Before cutting the first Release Candidate:
 - [ ] Integration tests prove Delta Lake constraint enforcement
 - [ ] Multi-cloud storage recipes documented (S3A/ABFS/GCS via Spark drivers)
 
-#### ✅ Performance & Reliability  
+#### ✅ Performance & reliability  
 - [ ] Memory safety - no driver OOM through sampling strategies
 - [ ] Resource safety - all operations use Resource[F, _] for cleanup  
 - [ ] Effect system compatibility (Cats Effect + ZIO) validated
 - [ ] Local execution completes in seconds (not minutes)
 - [ ] Lineage emission works "out of the box" with Marquez docker-compose
 
-### 1.0.0 Final Release Checklist
+### 1.0.0 Final release checklist
 
 Ship 1.0.0 only after:
 
-#### ✅ API Stability
+#### ✅ API stability
 - [ ] **Public API frozen** - no further changes to public surface
 - [ ] Binary compatibility guarantees documented and validated
 - [ ] All *.internal.* packages clearly marked as non-public
 - [ ] Example templates consistent with public API usage
 
-#### ✅ Production Readiness
+#### ✅ Production readiness
 - [ ] **All smoke tests stable** (Spark/Flink/compile-fail) on CI
 - [ ] Performance benchmarks meet local execution targets (<30 seconds)
 - [ ] Resource cleanup verified under failure scenarios
 - [ ] Multi-cloud storage integration proven via examples
 
-#### ✅ Documentation Completeness
+#### ✅ Documentation completeness
 - [ ] docs/public-api.md reflects final 1.0 surface (remove "Proposed" label)
 - [ ] Migration guides from 0.x to 1.0 documented
 - [ ] All examples demonstrate real-world usage patterns
 - [ ] OpenLineage integration documented with multiple backends
 
-#### ✅ Ecosystem Integration
+#### ✅ Ecosystem integration
 - [ ] Delta Lake constraints working across S3A/ABFS/GCS storage
 - [ ] Quality validation modes (native/Deequ) documented and tested
 - [ ] Effect system abstraction allows ZIO/Cats Effect interchangeability
 - [ ] Template generation produces buildable, runnable projects
 
-### 1.0 Success Criteria
+### 1.0 Success criteria
 
 After 1.0 release, the promise must read cleanly:
 - **Change the contract** → won't compile (build fails fast)
@@ -173,7 +173,7 @@ After 1.0 release, the promise must read cleanly:
 - **Run locally in seconds** → see DQ + Delta constraints catch regressions
 - **Open Marquez** → see lineage light up automatically
 
-### Version Progression Strategy
+### Version progression strategy
 
 ```
 Current: 0.1.0-SNAPSHOT (mvp-0.0.1-snapshot branch)

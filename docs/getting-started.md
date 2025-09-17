@@ -1,16 +1,16 @@
-# Getting Started with FlowForge
+# Getting started with flowforge
 
-FlowForge is a revolutionary data engineering pipeline archetype built with Scala's modern functional ecosystem, providing compile-time data contracts and fiber-safe data pipelines.
+flowforge is a revolutionary data engineering pipeline archetype built with Scala's modern functional ecosystem, providing compile-time data contracts and fiber-safe data pipelines.
 
-## Quick Start
+## Quick start
 
-### 1. Generate a New Pipeline Project
+### 1. Generate a new pipeline project
 
 ```bash
 sbt new vim89/flowforge.g8
 ```
 
-### 2. Basic Pipeline Example
+### 2. Basic pipeline example
 
 ```scala
 import cats.effect.IO
@@ -34,7 +34,7 @@ val pipeline = EnhancedPipelineBuilder.from[IO, User]("user-pipeline", source)
   .build
 ```
 
-### 3. Key Features
+### 3. Key features
 
 - **100% Type-Safe**: Compile-time guarantees eliminate runtime errors
 - **Functional-First**: Pure functions, immutability, and effect management
@@ -42,7 +42,7 @@ val pipeline = EnhancedPipelineBuilder.from[IO, User]("user-pipeline", source)
 - **Multi-Engine**: Switch between Spark, Flink, and Kafka seamlessly
 - **Production-Ready**: Built-in monitoring, lineage, and error handling
 
-### 4. Project Structure
+### 4. Project structure
 
 ```
 src/main/scala/
@@ -52,20 +52,20 @@ src/main/scala/
 └── Main.scala         # Application entry point
 ```
 
-### 5. Next Steps
+### 5. Next steps
 
 1. Read the [Architecture Overview](architecture.md)
 2. Explore [Contract System](contracts.md) 
 3. Learn [Pipeline Patterns](patterns.md)
 4. See [Production Deployment](deployment.md)
 
-## Key Concepts
+## Key concepts
 
-### Type-Safe Pipelines
+### Type-safe pipelines
 FlowForge ensures your pipelines are type-safe from source to sink, catching schema mismatches at compile time.
 
-### Effect Management
+### Effect management
 Uses Cats Effect or ZIO for fiber-safe concurrency and resource management.
 
-### Contract-First Design
+### Data-Contract-first design
 Define data contracts that are enforced throughout your pipeline execution.

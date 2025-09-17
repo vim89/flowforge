@@ -215,8 +215,16 @@ object OpenLineageEmitter {
   def asyncHttp[F[_]: EffectSystem](capacity: Int = 1024): OpenLineageEmitter[F] =
     new AsyncOpenLineageEmitter[F](http[F], capacity)
 
-  // Generate a unique run ID for each pipeline execution
-  def generateRunId(): String = UUID.randomUUID().toString
+  // Generate a run ID for each pipeline execution. Deterministic when OPENLINEAGE_RUN_ID is set; otherwise UUID.
+  def generateRunId(pipelineName: String = "pipeline"): String =
+    sys.env
+      .get("OPENLINEAGE_RUN_ID")
+      .orElse(sys.props.get("openlineage.run.id"))
+      .getOrElse {
+        val ts  = Instant.now().toEpochMilli
+        val raw = s"$pipelineName-$ts"
+        java.util.UUID.nameUUIDFromBytes(raw.getBytes("UTF-8")).toString
+      }
 
   // Helper for pipeline-level events
   def emitPipelineStart[F[_]: EffectSystem](

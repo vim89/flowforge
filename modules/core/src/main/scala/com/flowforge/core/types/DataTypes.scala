@@ -919,6 +919,51 @@ object QualityConstraint {
   }
 
   /**
+   * Minimum proportion of distinct (unique) values in a column. For example, 1.0 enforces full uniqueness;
+   * 0.95 allows up to 5% duplicates.
+   */
+  case class Distinctness(
+    field: FieldName,
+    minRatio: Double,
+    severity: QualitySeverity = QualitySeverity.Warning)
+      extends QualityConstraint {
+    val name        = s"distinctness_${field.show}"
+    val description = s"Field ${field.show} must have distinctness >= ${minRatio}"
+  }
+
+  /**
+   * The proportion of null values must be below or equal to the provided threshold (0.0 - 1.0).
+   */
+  case class NullRateBelow(
+    field: FieldName,
+    maxNullRatio: Double,
+    severity: QualitySeverity = QualitySeverity.Warning)
+      extends QualityConstraint {
+    val name        = s"null_rate_below_${field.show}"
+    val description = s"Field ${field.show} null rate must be <= ${maxNullRatio}"
+  }
+
+  /** Convenience min-only numeric constraint. */
+  case class Min(
+    field: FieldName,
+    min: Double,
+    severity: QualitySeverity = QualitySeverity.Warning)
+      extends QualityConstraint {
+    val name        = s"min_${field.show}"
+    val description = s"Field ${field.show} must be >= $min"
+  }
+
+  /** Convenience max-only numeric constraint. */
+  case class Max(
+    field: FieldName,
+    max: Double,
+    severity: QualitySeverity = QualitySeverity.Warning)
+      extends QualityConstraint {
+    val name        = s"max_${field.show}"
+    val description = s"Field ${field.show} must be <= $max"
+  }
+
+  /**
    * Compliance constraint using a SQL-like boolean expression evaluated on the dataset. Example: predicateSql =
    * "amount > 0 AND id IS NOT NULL"
    */

@@ -1,20 +1,20 @@
-# FlowForge - Scala 3 Migration Guide
+# FlowForge - Scala 3 migration guide
 
-**Migration strategy for FlowForge's compile-time contracts from Scala 2.13 to Scala 3.**
+**Migration strategy for flowforge's compile-time contracts from Scala 2.13 to Scala 3.**
 
 This document implements Section 9 from `docs/plan/End-to-End-Compile-time.md` (lines 302-314), providing a clear migration path while maintaining API compatibility.
 
-## 🎯 Migration Strategy Overview
+## 🎯 Migration strategy overview
 
-FlowForge is designed with **API-first compatibility** - the public API remains unchanged while swapping derivation backends:
+flowforge is designed with **API-first compatibility** - the public API remains unchanged while swapping derivation backends:
 
 - **Short-term**: Scala 2.13 with Magnolia macros (current)
 - **Mid-term**: Cross-build Scala 2.13 + Scala 3 with backend selection
 - **Long-term**: Scala 3 native with inline + Mirrors
 
-## 📊 Implementation Tracks
+## 📊 Implementation tracks
 
-### Track 1: Current (Scala 2.13)
+### Track 1: current (Scala 2.13)
 ```scala
 // Magnolia-based derivation
 implicit def gen[T]: Shape[T] = macro Magnolia.gen[T]
@@ -26,7 +26,7 @@ implicit def materialize[Out, Contract, P <: SchemaPolicy](
   macro internal.SchemaConformsMacros.materializeImpl[Out, Contract, P]
 ```
 
-### Track 2: Cross-Build (Scala 2.13 + 3.x)
+### Track 2: cross-build (Scala 2.13 + 3.x)
 ```scala
 // Public API stays identical
 trait SchemaConforms[Out, Contract, P <: SchemaPolicy]
@@ -36,7 +36,7 @@ trait SchemaConforms[Out, Contract, P <: SchemaPolicy]
 // - src/main/scala-3/: Mirrors + inline macros
 ```
 
-### Track 3: Scala 3 Native  
+### Track 3: scala 3 native  
 ```scala
 // Inline-based derivation with Mirrors
 inline given shape[T](using Mirror.Of[T]): Shape[T] = 
@@ -50,9 +50,9 @@ inline def materialize[Out, Contract, P <: SchemaPolicy]: SchemaConforms[Out, Co
 
 ---
 
-## 🏗️ Cross-Build Configuration
+## 🏗️ Cross-build configuration
 
-### SBT Setup
+### SBT setup
 ```scala
 ThisBuild / crossScalaVersions := Seq("2.13.16", "3.3.3")
 
@@ -80,7 +80,7 @@ libraryDependencies ++= {
 }
 ```
 
-### Shared API Layer
+### Shared API layer
 ```scala
 // src/main/scala/ - Common to both versions
 package com.flowforge.core.contracts
@@ -102,9 +102,9 @@ object SchemaPolicy {
 
 ---
 
-## 📂 Source Directory Structure
+## 📂 Source directory structure
 
-### Scala 2 Implementation (src/main/scala-2/)
+### Scala 2 implementation (src/main/scala-2/)
 ```scala
 // scala-2/internal/SchemaConformsMacros.scala
 object SchemaConformsMacros {
@@ -127,7 +127,7 @@ object Shape {
 }
 ```
 
-### Scala 3 Implementation (src/main/scala-3/)
+### Scala 3 implementation (src/main/scala-3/)
 ```scala
 // scala-3/internal/SchemaConformsInline.scala
 import scala.compiletime.*
@@ -175,9 +175,9 @@ object Shape {
 
 ---
 
-## ⚠️ Migration Guidelines
+## ⚠️ Migration guidelines
 
-### API Compatibility Rules
+### API compatibility rules
 
 **✅ Safe Changes (Maintain these patterns):**
 ```scala
@@ -203,14 +203,14 @@ implicitly[SchemaConforms[A, B, P]] // Must still work
 "Different error format" // Users expect consistent messaging
 ```
 
-### Macro Migration Best Practices
+### Macro migration best practices
 
 1. **Preserve Error Messages**: Same format, same helpfulness
 2. **Maintain Performance**: Compile-time validation, zero runtime cost  
 3. **Keep API Stable**: No user code changes required
 4. **Test Compatibility**: Cross-version test suite
 
-### Symbol Compatibility
+### Symbol compatibility
 
 **Avoid Scala 2 specific patterns:**
 ```scala
@@ -232,9 +232,9 @@ inline def deriveAt[T](using Mirror.Of[T]) = ...
 
 ---
 
-## 🧪 Testing Strategy
+## 🧪 Testing strategy
 
-### Cross-Version Tests
+### cross-version tests
 ```scala
 // contracts-tests/src/test/scala/CrossVersionCompatSpec.scala
 class CrossVersionCompatSpec extends AnyWordSpec {
@@ -256,7 +256,7 @@ class CrossVersionCompatSpec extends AnyWordSpec {
 }
 ```
 
-### Build Matrix
+### Build matrix
 ```yaml
 # .github/workflows/cross-build.yml
 strategy:
@@ -270,51 +270,51 @@ steps:
 
 ---
 
-## 📅 Migration Timeline
+## 📅 Migration timeline
 
-### Phase 1: Preparation (Current)
+### Phase 1: Preparation (current)
 - ✅ Keep public API free of Scala 2-only features
 - ✅ Document migration guidelines  
 - ✅ Establish cross-version testing
 
-### Phase 2: Cross-Build Setup
+### Phase 2: Cross-Build setup
 - [ ] Add Scala 3 to cross-build settings
 - [ ] Create version-specific source directories
 - [ ] Implement Scala 3 derivation backend
 - [ ] Ensure feature parity between versions
 
-### Phase 3: Scala 3 Native
+### Phase 3: Scala 3 native
 - [ ] Default to Scala 3 for new projects
 - [ ] Maintain Scala 2 compatibility for existing users
 - [ ] Optimize for Scala 3 specific features
 
-### Phase 4: Scala 2 Deprecation (Future)
+### Phase 4: Scala 2 deprecation (future)
 - [ ] Announce deprecation timeline
 - [ ] Support migration tooling
 - [ ] Scala 3 only releases
 
 ---
 
-## 🎁 Scala 3 Benefits
+## 🎁 Scala 3 benefits
 
-### Compile-Time Improvements
+### Compile-time improvements
 - **Faster compilation**: Inline functions vs macro expansion
 - **Better error messages**: `compiletime.error` with rich context
 - **Type inference**: Improved inference reduces boilerplate
 
-### Developer Experience  
+### Developer experience  
 - **Simpler syntax**: Less ceremonious macro definitions
 - **Better IDE support**: Native Scala 3 tooling
 - **Future-proof**: Alignment with Scala's long-term direction
 
-### Advanced Features (Future)
+### Advanced features (future)
 - **Union types**: More flexible contract definitions
 - **Match types**: Pattern matching at type level
 - **Metaprogramming**: Cleaner code generation
 
 ---
 
-## ✅ Readiness Checklist
+## ✅ Readiness checklist
 
 **API Design:**
 - ✅ No Scala 2-only features in public API
@@ -333,8 +333,8 @@ steps:
 
 ---
 
-*FlowForge is ready for Scala 3 migration while maintaining complete backward compatibility.*
+*flowforge is ready for Scala 3 migration while maintaining complete backward compatibility.*
 
 ---
 
-**Generated:** 2025-09-07 | FlowForge Scala 3 Migration Guide | Future-Ready Architecture
+flowforge Scala 3 migration guide | Future-ready Architecture

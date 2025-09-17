@@ -1,16 +1,16 @@
-# FlowForge Documentation Map (2025-09-04)
+# flowforge documentation map
 
 This index organizes all existing documents into clear sections and points to the authoritative sources for current truth.
 
 - Authority order: EVIDENCE → PLAN → ADRs → Design → Reference → Backups/Archive.
 - Reality banner: Claim-heavy references now link back to EVIDENCE for ground truth.
 
-## Plans & Evidence
+## Plans & evidence
 - Current reality: `docs/plans/templates/EVIDENCE.md`
 - Current plan: `docs/plans/templates/PLAN.md`
 - ADR template: `docs/adr/000-template.md`
 
-## Design (Canonical ADRs)
+## Design (canonical ADRs)
 - Alignment/status: `docs/adr/016-ground-reality-governance.md`
 - Contracts (operating model): `docs/adr/010-contracts-authoring-operating-model.md`
 - Contracts build gates: `docs/adr/011-contracts-compile-build-gates.md`

@@ -5,7 +5,7 @@
 
 # Default target
 help:
-	@echo "$name$ - FlowForge Pipeline"
+	@echo "FlowForge Pipeline"
 	@echo "================================="
 	@echo "Available commands:"
 	@echo ""

@@ -1,18 +1,18 @@
-# FlowForge - How Contract Validation Fails
+# flowforge - How Data contract validation fails
 
 **A complete guide to understanding FlowForge's compile-time contract validation error messages.**  See diagrams in `docs/diagrams/compile-time-contracts/` for the derivation and evidence flow referenced here. As of Scala 2.13 strong alignment, errors are produced by deep structural comparison of normalized `SchemaAST` for producer vs. contract, with path-aware diffs.
 
 This document shows exactly how each schema policy behaves with examples and **verbatim error diffs** as specified in the End-to-End Compile-time plan.
 
-## 🎯 Core Principle
+## 🎯 Core principle
 
-FlowForge's USP: **"Data pipelines will not even build if source or target schema do not match or align!"**
+flowforge's USP: **"Data pipelines will not even build if source or target schema do not match or align!"**
 
 All validation happens at **compile time** with zero runtime overhead.
 
 ---
 
-## 📊 Policy Behavior Matrix
+## 📊 Policy behavior matrix
 
 | Policy | Missing Fields | Extra Fields | Type Mismatches | Field Order | Use Case |
 |--------|---------------|--------------|-----------------|-------------|----------|
@@ -28,13 +28,13 @@ All validation happens at **compile time** with zero runtime overhead.
 
 ---
 
-## 🔴 Error Examples by Policy Type
+## 🔴 Error examples by policy type
 
 ### `SchemaPolicy.Exact`
 
 **Requirement**: Perfect field match (name, type, order)
 
-#### Missing Field Error
+#### Missing field error
 ```scala
 case class User(id: Long, name: String, email: String)
 case class UserPartial(id: Long, name: String)
@@ -42,7 +42,7 @@ case class UserPartial(id: Long, name: String)
 val invalid: SchemaConforms[UserPartial, User, SchemaPolicy.Exact] = implicitly
 ```
 
-**Compile Error:**
+**Compile error:**
 ```
 FlowForge: Contract drift (policy: SchemaPolicy.Exact).
 Out: UserPartial vs Contract: User
@@ -52,7 +52,7 @@ Mismatched:
 See docs/how-it-fails.md#Exact
 ```
 
-#### Extra Field Error
+#### Extra field error
 ```scala  
 case class User(id: Long, name: String, email: String)
 case class UserExtended(id: Long, name: String, email: String, age: Int)
@@ -60,7 +60,7 @@ case class UserExtended(id: Long, name: String, email: String, age: Int)
 val invalid: SchemaConforms[UserExtended, User, SchemaPolicy.Exact] = implicitly
 ```
 
-**Compile Error:**
+**Compile error:**
 ```
 FlowForge: Contract drift (policy: SchemaPolicy.Exact).
 Out: UserExtended vs Contract: User
@@ -70,7 +70,7 @@ Mismatched:
 See docs/how-it-fails.md#Exact
 ```
 
-#### Type Mismatch Error
+#### Type mismatch error
 ```scala
 case class User(id: Long, name: String, email: String)  
 case class UserWrongType(id: String, name: String, email: String)
@@ -78,7 +78,7 @@ case class UserWrongType(id: String, name: String, email: String)
 val invalid: SchemaConforms[UserWrongType, User, SchemaPolicy.Exact] = implicitly
 ```
 
-**Compile Error:**
+**Compile error:**
 ```
 FlowForge: Contract drift (policy: SchemaPolicy.Exact).
 Out: UserWrongType vs Contract: User
@@ -94,7 +94,7 @@ See docs/how-it-fails.md#Exact
 
 **Requirement**: Perfect field match but flexible order
 
-#### Success Case - Order Flexible
+#### Success case - Order flexible
 ```scala
 case class User(id: Long, name: String, email: String)
 case class UserReordered(name: String, id: Long, email: String) // Different order OK
@@ -104,7 +104,7 @@ val valid: SchemaConforms[UserReordered, User, SchemaPolicy.ExactUnordered] = im
 
 ---
 
-### Additional Policies (Scala 2 backports from Scala 3 PoC)
+### Additional policies (Scala 2 backports from Scala 3 PoC)
 
 - `SchemaPolicy.ExactOrdered`: Requires same field names and order; reordering fails.
 - `SchemaPolicy.ExactUnorderedCI`: Ignores field name case; otherwise identical to `Exact`.
@@ -117,7 +117,7 @@ val valid: SchemaConforms[UserReordered, User, SchemaPolicy.ExactUnordered] = im
 
 **Requirement**: Contract fields must be in output; extra output fields allowed; missing allowed only if Optional or have defaults
 
-#### Success - Extra Fields Allowed
+#### Success - Extra fields allowed
 ```scala
 case class User(id: Long, name: String, email: String)
 case class UserExtended(id: Long, name: String, email: String, age: Int)
@@ -125,7 +125,7 @@ case class UserExtended(id: Long, name: String, email: String, age: Int)
 val valid: SchemaConforms[UserExtended, User, SchemaPolicy.Backward] = implicitly // ✅ Works!
 ```
 
-#### Failure - Missing Required Field
+#### Failure - Missing required field
 ```scala
 case class User(id: Long, name: String, email: String) // email is required
 case class UserPartial(id: Long, name: String)
@@ -133,7 +133,7 @@ case class UserPartial(id: Long, name: String)
 val invalid: SchemaConforms[UserPartial, User, SchemaPolicy.Backward] = implicitly
 ```
 
-**Compile Error:**
+**Compile error:**
 ```
 FlowForge: Contract drift (policy: SchemaPolicy.Backward).
 Out: UserPartial vs Contract: User
@@ -149,7 +149,7 @@ See docs/how-it-fails.md#Backward
 
 **Requirement**: Output fields must be in contract; missing contract fields allowed
 
-#### Success - Missing Contract Fields OK
+#### Success - Missing contract fields OK
 ```scala
 case class UserFull(id: Long, name: String, email: String, age: Int)
 case class User(id: Long, name: String, email: String)  
@@ -157,7 +157,7 @@ case class User(id: Long, name: String, email: String)
 val valid: SchemaConforms[User, UserFull, SchemaPolicy.Forward] = implicitly // ✅ Works!
 ```
 
-#### Failure - Extra Output Fields Not Allowed
+#### Failure - Extra output fields not allowed
 ```scala
 case class User(id: Long, name: String, email: String)
 case class UserExtended(id: Long, name: String, email: String, age: Int)
@@ -165,7 +165,7 @@ case class UserExtended(id: Long, name: String, email: String, age: Int)
 val invalid: SchemaConforms[UserExtended, User, SchemaPolicy.Forward] = implicitly
 ```
 
-**Compile Error:**
+**Compile error:**
 ```
 FlowForge: Contract drift (policy: SchemaPolicy.Forward).
 Out: UserExtended vs Contract: User
@@ -190,4 +190,4 @@ val valid: SchemaConforms[CompletelyDifferent, User, SchemaPolicy.Full] = implic
 
 ---
 
-*Generated: 2025-09-07 | FlowForge Contract Validation Guide | Complete Reference*
+*flowforge Contract validation guide | Complete reference*

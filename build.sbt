@@ -1,4 +1,5 @@
 import sbt.util
+import scoverage.ScoverageKeys._
 
 import scala.collection.Seq
 // ===== GLOBAL BUILD SETTINGS =====

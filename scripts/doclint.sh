@@ -4,7 +4,8 @@ set -euo pipefail
 # Simple doc lint: list public declarations lacking Scaladoc in main sources
 # This is advisory (non-fatal); CI can parse the output.
 
-ROOTS=(modules/core modules/contracts modules/connectors modules/engines-spark modules/quality-deequ)
+# Focus fail gate on core and contracts for v1.0; others are advisory
+ROOTS=(modules/core modules/contracts)
 MISS=0
 echo "🔎 Doc lint: scanning for missing Scaladoc on public declarations"
 for r in "${ROOTS[@]}"; do
@@ -33,5 +34,8 @@ for r in "${ROOTS[@]}"; do
 done
 
 echo "Doclint: $MISS items missing Scaladoc"
+if (( MISS > 0 )); then
+  echo "❌ Doclint failed for: ${ROOTS[*]}"
+  exit 1
+fi
 exit 0
-
