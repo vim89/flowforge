@@ -129,8 +129,8 @@ package object core {
   type MetricsWriter[A]    = Writer[List[String], A]
   type PipelineState[S, A] = State[S, A]
 
-  // Resource types
-  type SafeResource[F[_], R]        = Resource[F, R]
+  // Resource types (effect-agnostic)
+  type SafeResource[F[_], R]        = com.flowforge.core.algebra.FFResource[F, R]
   type ResourceAcquisition[F[_], R] = F[R]
   type ResourceRelease[F[_], R]     = R => F[Unit]
 

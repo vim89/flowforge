@@ -38,6 +38,12 @@ lazy val jdbcDeps = Seq(
   "com.h2database" % "h2" % "2.2.224"
 )
 
+// ZIO (to demonstrate alternative effect system)
+lazy val zioDeps = Seq(
+  "dev.zio" %% "zio"              % "2.1.20",
+  "dev.zio" %% "zio-interop-cats" % "23.1.0.2"
+)
+
 // Test
 lazy val testDeps = Seq(
   "org.scalatest" %% "scalatest" % "3.2.19" % Test
@@ -54,5 +60,5 @@ lazy val root = (project in file("."))
       "-Dnet.bytebuddy.experimental=true",
       "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED",
     ),
-    libraryDependencies ++= ffDeps ++ sparkDeps ++ loggingDeps ++ jdbcDeps ++ testDeps,
+    libraryDependencies ++= ffDeps ++ sparkDeps ++ loggingDeps ++ jdbcDeps ++ zioDeps ++ testDeps,
   )

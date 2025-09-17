@@ -1,7 +1,6 @@
 package com.flowforge.framework
 
-import cats.effect.{ Resource, Sync }
-import com.flowforge.core.algebra.EffectSystem
+import com.flowforge.core.algebra.{ EffectSystem, FFResource }
 
 /**
  * Helpers to run pipelines with or without managed resources.
@@ -15,9 +14,9 @@ object PipelineExecution {
     pipeline.run(input)
 
   /** Execute a pipeline using a managed resource scope (e.g., SparkSession). */
-  def executeWithResources[F[_]: EffectSystem: Sync, A, B](
+  def executeWithResources[F[_]: EffectSystem, A, B](
     pipeline: Pipeline[F, A, B],
-    resources: Resource[F, Unit],
+    resources: FFResource[F, Unit],
   )(
     input: A,
   ): F[B] =
