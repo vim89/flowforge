@@ -244,7 +244,7 @@ def createDataAlgebra[F[_]: EffectSystem]: DataAlgebra[F] = {
 ### ✅ Phase 0 Success Criteria (COMPLETED & VERIFIED)
 - ✅ **Zero compilation errors** across all Scala versions ✅ VERIFIED
 - ✅ **Zero unsafe operations** (no asInstanceOf in critical paths) ✅ VERIFIED
-- ✅ **100% dependency compliance** with CLAUDE.md requirements ✅ VERIFIED
+- ✅ **100% dependency compliance** with CONTRIBUTING.md requirements ✅ VERIFIED
 - ✅ **Working test infrastructure** with property-based testing ✅ VERIFIED
 - ✅ **Complete effect system** with IO/ZIO interoperability ✅ VERIFIED
 - ✅ **Type safety score: 95%** (world-class implementation) ✅ VERIFIED

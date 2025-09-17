@@ -141,7 +141,7 @@ Performance:
 5) Tests & docs
 
 - Add unit specs: `SafetySpec` (pure) and `SafetyEffectSpec` (effectful) under `core`.
-- Update `docs/agents/HANDBOOK.md` quick‑reference and ADR‑020 checklist with the Either vs Validated rule of thumb.
+- Update `docs/contributing/HANDBOOK.md` quick‑reference and ADR‑020 checklist with the Either vs Validated rule of thumb.
 
 ## Usage Examples
 

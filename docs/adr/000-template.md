@@ -6,7 +6,7 @@
 
 ## Context
 - Problem statement and scope.
-- Constraints and invariants (see AGENTS.md §Build & Repo Invariants, Effect Rules).
+- Constraints and invariants (see CONTRIBUTING.md §Build & Repo Invariants, Effect Rules).
 - Prior behavior and observed gaps (reference EVIDENCE.md section/lines).
 
 ## Decision
@@ -32,7 +32,7 @@
 ## References
 - Evidence: choose from `docs/evidence/*`
 - Plan: choose from `docs/plan/*`
-- House Rules: `AGENTS.md`
+- House Rules: `CONTRIBUTING.md`
 - Source: link any relevant `docs/archive/**` design notes
 - Related: <issues/PRs/design docs>
 ```

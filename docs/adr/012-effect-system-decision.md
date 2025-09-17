@@ -19,7 +19,7 @@ EffectSystem[F[_]] provides unified abstractions; docs argue for pure Spark tran
 - Signature audit in engines-spark to keep transforms pure; IO-only for reads/writes/Delta/CDC/table ops.
 
 ## References
-- Source: `docs/archive/design/EffectSystemResearch.md`, `AGENTS.md`
+- Source: `docs/archive/design/EffectSystemResearch.md`, `CONTRIBUTING.md`
 - Evidence: `docs/evidence/effect-per-module-and-purity.md`
 - Plan: `docs/plan/effect-per-module-and-purity.md`
 

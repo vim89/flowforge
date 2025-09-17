@@ -1,10 +1,9 @@
 # Agents Coverage Crosswalk
 
-> This file maps content from `docs/archive/backups/AGENTS.backup.2025-09-04.md` to the current canonical locations.
+> This file maps contributor guidance to current canonical locations.
 
 ## Sources
-- Backup: `docs/archive/backups/AGENTS.backup.2025-09-04.md`
-- Canonical: Handbook `docs/agents/HANDBOOK.md`, ADRs under `docs/adr/*`.
+- Canonical: Handbook `docs/contributing/HANDBOOK.md`, ADRs under `docs/adr/*`.
 
 ## Crosswalk (Selected Headings → Canonical)
 - Teaser / Brutal truth / Targets vs Today → Handbook §1; ADR‑018; ADR‑016

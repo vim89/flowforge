@@ -23,7 +23,7 @@ We enforce that Spark transformations remain pure (return `Dataset[A]`-like valu
 - Evidence: `docs/evidence/effect-per-module-and-purity.md` (§2)
 - Evidence: `docs/evidence/engines-spark.md` (§6)
 - Plan: `docs/plan/effect-per-module-and-purity.md`
-- House Rules: `AGENTS.md` (Effect System Implementation Rules)
+- House Rules: `CONTRIBUTING.md` (Effect System Implementation Rules)
 
 ## End Goal (Big Picture)
 - All Spark transformations remain pure across engines; IO boundaries are explicit and uniformly instrumented.

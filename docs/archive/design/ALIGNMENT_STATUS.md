@@ -12,9 +12,9 @@
 | **Findings.md** | "Production ready 70/100" | Production ready 25-30/100 | ⚠️ **MISALIGNED** | ✅ **CORRECTED** - Realistic assessment added |
 | **design.md** | "Complete implementations" | Significant gaps in concrete methods | ⚠️ **MISALIGNED** | 🔄 **IN PROGRESS** |
 | **IMPLEMENTATION_TODO.md** | "4 key methods missing" | 50+ methods need implementation | ⚠️ **MISALIGNED** | ✅ **CORRECTED** - Realistic scope documented |
-| **CLAUDE.md** | Effect system guidelines | Missing Effect System research application | ⚠️ **MISALIGNED** | ✅ **CORRECTED** - Added implementation rules |
+| **CONTRIBUTING.md** | Effect system guidelines | Missing Effect System research application | ⚠️ **MISALIGNED** | ✅ **CORRECTED** - Added implementation rules |
 | **README.md** | "30-second, zero errors" | Architectural scaffold; typed path only | ✅ **ALIGNED** | ✅ Updated with reality-first note |
-| **AGENTS.md** | "typed-only enforced" | Typed gates exist; not enforced | ✅ **ALIGNED** | ✅ Wording corrected |
+| **CONTRIBUTING.md** | "typed-only enforced" | Typed gates exist; not enforced | ✅ **ALIGNED** | ✅ Wording corrected |
 
 ## 🔧 Critical Architectural Inconsistencies
 
@@ -22,7 +22,7 @@
 - **Issue**: Current code uses F[_] for pure Spark operations (violates research findings)
 - **Research Finding**: Effects only needed for non-Spark operations (external IO)
 - **Status**: 🔄 **ARCHITECTURAL VIOLATION** - Needs refactoring
-- **Action**: Added implementation guidelines to CLAUDE.md
+- **Action**: Added implementation guidelines to CONTRIBUTING.md
 
 ### 2. Missing Infrastructure Layer ⚠️ **CRITICAL**
 - **Issue**: Entire Infrastructure Layer documented but not implemented
@@ -58,7 +58,7 @@
 | Mark obsolete sections in Findings.md | ✅ **DONE** | Corrected production readiness assessment |
 | Mark obsolete sections in design.md | 🔄 **PENDING** | Need to address architecture overstatements |
 | Update IMPLEMENTATION_TODO.md | ✅ **DONE** | Corrected 4 methods → 50+ implementations |
-| Apply Effect System research to CLAUDE.md | ✅ **DONE** | Added mandatory implementation guidelines |
+| Apply Effect System research to CONTRIBUTING.md | ✅ **DONE** | Added mandatory implementation guidelines |
 
 ### Phase 2: Infrastructure Layer Creation 🔄 **25% COMPLETE**
 

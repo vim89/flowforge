@@ -174,5 +174,5 @@ Wiring (if you choose local codegen):
   - Schema Registry plugin (if org uses Confluent)
   - zio-schema (for schema diffs/messages)
 
-Rationale: Keep core minimal and stable; use well-recognized tools for codegen and optional typing layers. This satisfies AGENTS.md principles without over-engineering.
+Rationale: Keep core minimal and stable; use well-recognized tools for codegen and optional typing layers. This satisfies CONTRIBUTING.md principles without over-engineering.
 > Archived (2025-09-04): Superseded by ADR-011 Contracts Compile-Time & Build-Time Gates. See `docs/adr/011-contracts-compile-build-gates.md` and Evidence.

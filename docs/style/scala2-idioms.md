@@ -1,6 +1,6 @@
 # Scala 2.13 Idioms in FlowForge
 
-This document summarizes the core coding conventions used across FlowForge (Scala 2.13 line). These are guardrails, not dogma, and are aligned with ADRs and AGENTS.md.
+This document summarizes the core coding conventions used across FlowForge (Scala 2.13 line). These are guardrails, not dogma, and are aligned with ADRs and CONTRIBUTING.md.
 
 - Effects at edges only: pure transforms modelled as functions; external I/O wrapped in `EffectSystem[F]`.
 - For-comprehensions over long `F` chains for readability.

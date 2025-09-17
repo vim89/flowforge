@@ -14,7 +14,7 @@ import com.flowforge.core.types._
  * This example demonstrates FlowForge's unique USP: "Pipelines will not even build if source or target schema
  * do not match or align."
  *
- * Following CLAUDE.md principles:
+ * Following CONTRIBUTING.md principles:
  *   - Pure functional pipeline composition
  *   - Phantom types for compile-time safety
  *   - Immutable data structures

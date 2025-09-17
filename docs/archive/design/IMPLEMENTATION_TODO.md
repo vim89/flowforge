@@ -156,7 +156,7 @@ class SparkDataAlgebra[F[_]: EffectSystem](
 
 ### Session TODOs — 2025-09-03 (Typed Pipeline Enforcement)
 - [ ] Add a minimal example in `examples/` using the typed pipeline (TypedIO + TypedContract + contractTyped + addTypedSource/addTypedSink). Include a compile-only example and a small test that typechecks.
-- [ ] Complete idiomatic sweep across all modules per AGENTS.md (replace try/catch/finally with `Try`/`Either`/`bracket`, prefer `Validated` over ad-hoc error flows, ensure FP patterns are followed consistently).
+- [ ] Complete idiomatic sweep across all modules per CONTRIBUTING.md (replace try/catch/finally with `Try`/`Either`/`bracket`, prefer `Validated` over ad-hoc error flows, ensure FP patterns are followed consistently).
 - [ ] Deprecate untyped flows in docs/examples: update README, template docs, and any examples to show only typed APIs; add migration notes.
 
 ### Operating Guardrails

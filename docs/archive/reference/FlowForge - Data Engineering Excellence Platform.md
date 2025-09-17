@@ -386,7 +386,7 @@ object Dependencies {
 
 ```bash
 #!/bin/bash
-# scripts/setup-dev.sh
+# scripts/archive/dev-setup.sh
 
 set -e
 
@@ -420,7 +420,7 @@ echo "✅ Development environment ready!"
 
 ```bash
 #!/bin/bash
-# scripts/release.sh
+# scripts/archive/release.sh
 
 VERSION=${1:-"0.1.0"}
 
@@ -1624,7 +1624,7 @@ curl -sSL https://get.flowforge.dev | bash
 # Or manually
 git clone https://github.com/flowforge/flowforge.git
 cd flowforge
-./scripts/setup-dev.sh
+./scripts/archive/dev-setup.sh
 
 ```
 
@@ -1939,7 +1939,7 @@ object HealthChecks {
 ### **Development Scripts**
 
 ```bash
-# scripts/dev-commands.sh
+# scripts/archive/dev-commands.sh
 
 # Format all code
 alias ff-format="sbt scalafmtAll"

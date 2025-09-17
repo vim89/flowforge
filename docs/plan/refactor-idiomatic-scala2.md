@@ -2,7 +2,7 @@
 
 Status: proposal (ready to execute)
 Scope: all modules; no functional or signature changes; behavior preserved.
-Goals: eliminate Java‑like patterns, align with FP idioms, readability, maintainability, and safety per AGENTS.md and docs/plan/refactor-coding-pattern.md.
+Goals: eliminate Java‑like patterns, align with FP idioms, readability, maintainability, and safety per CONTRIBUTING.md and docs/plan/refactor-coding-pattern.md.
 
 ## 0) Ground Rules
 - No public API changes: function names, signatures, return types preserved.
@@ -99,7 +99,7 @@ Acceptance: examples still compile quickly; ITs unchanged.
 Acceptance: unit tests green; parity spec green.
 
 ## 7) Documentation & CI (Wave G)
-- Add `docs/style/scala2-idioms.md` summary; link from AGENTS.md.
+- Add `docs/style/scala2-idioms.md` summary; link from CONTRIBUTING.md.
 - CI: keep leakage check; add “refactor-lint” job running scalafix dry‑run.
  - Add a gate that fails on `asInstanceOf`/`Any` usage outside whitelisted files (KleisliCasting, macro internals).
 

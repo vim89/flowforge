@@ -26,7 +26,7 @@
 
 ## 3) Prior Art & Sources
 - ADR-004 — Modules, Engines, and Templates Alignment.
-- AGENTS.md — Template generation philosophy.
+- CONTRIBUTING.md — Template generation philosophy.
 
 ## 4) Options & Trade-offs
 | Option | Pros | Cons | Why |

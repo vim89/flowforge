@@ -119,7 +119,7 @@ FlowForge is designed for **composition, not replacement**:
 
 ### FlowForge v1.0 Strengths
 - ✅ Unique compile-time contract validation
-- ✅ Clean functional programming model (CLAUDE.md compliant)
+- ✅ Clean functional programming model (CONTRIBUTING.md compliant)
 - ✅ Engine-agnostic architecture (Spark, Flink)
 - ✅ Built-in lineage and quality integration "by default"
 - ✅ Dual-mode quality (native + optional Deequ)

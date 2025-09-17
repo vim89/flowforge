@@ -36,7 +36,6 @@ This index organizes all existing documents into clear sections and points to th
 - Typed contract pipelines: `docs/examples/TYPED_CONTRACT_PIPELINES.md`
 
 ## Prompts / Operations
-- Codex prompts: `docs/codex-prompts/implement-once.md`, `docs/codex-prompts/readonly-plan.md`
 - Previous chats: `docs/previous-chats/previous-conv1.txt`
 - Backups: `docs/backups/AGENTS.2025-09-03.md`
 
@@ -46,4 +45,4 @@ This index organizes all existing documents into clear sections and points to th
 ## Notes
 - For big decisions, create an ADR from `docs/adr/000-template.md` and link it in EVIDENCE and PLAN.
 - For any claim-heavy doc, add/update a “Reality” banner referencing `docs/plans/templates/EVIDENCE.md`.
-- Agents docs: `docs/agents/HANDBOOK.md`, `docs/agents/COVERAGE.md`
+- Agents docs: `docs/contributing/HANDBOOK.md`, `docs/contributing/COVERAGE.md`

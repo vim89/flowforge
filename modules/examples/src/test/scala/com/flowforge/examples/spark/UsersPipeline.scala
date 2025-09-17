@@ -20,7 +20,7 @@ import java.time.Instant
  *   - Data quality validation with dual-mode support (native/Deequ)
  *   - Lineage tracking (when configured with OpenLineage)
  *   - Delta Lake integration with constraints
- *   - Error handling with Either monads (CLAUDE.md compliance)
+ *   - Error handling with Either monads (CONTRIBUTING.md compliance)
  *   - Resource-safe Spark operations
  */
 object UsersPipeline {
