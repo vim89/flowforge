@@ -1,0 +1,39 @@
+# Scala / SBT
+target/
+project/project/
+project/target/
+*.class
+*.log
+.bsp/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Metals
+.metals/
+.bloop/
+
+# Temp files
+*.tmp
+*.swp
+*~
+
+# Logs
+logs/
+*.log
+/.claude/
+/.idea/
+/.ivy2/
+/.sbt-boot/
+/.sbt-global/
+/.coursier/
+/.bsp/
+/.home/
