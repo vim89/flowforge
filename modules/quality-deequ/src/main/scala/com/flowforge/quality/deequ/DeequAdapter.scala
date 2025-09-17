@@ -115,6 +115,10 @@ object DeequAdapter {
           val method    = checkClass.getMethod("hasUniqueness", classOf[String], classOf[Function1[_, _]])
           val predicate = new Function1[Double, Boolean] { def apply(x: Double): Boolean = x == 1.0 }
           method.invoke(check, field.value, predicate)
+        case FFConstraint.Distinctness(field, minRatio, _) =>
+          val method    = checkClass.getMethod("hasUniqueness", classOf[String], classOf[Function1[_, _]])
+          val predicate = new Function1[Double, Boolean] { def apply(x: Double): Boolean = x >= minRatio }
+          method.invoke(check, field.value, predicate)
         case FFConstraint.Range(field, min, max, _) =>
           (min, max) match {
             case (Some(minVal), Some(maxVal)) =>
@@ -129,12 +133,26 @@ object DeequAdapter {
               method.invoke(check, field.value)
             case _ => check
           }
+        case FFConstraint.Min(field, min, _) =>
+          val method = checkClass.getMethod("isGreaterThanOrEqualTo", classOf[String], classOf[Double])
+          method.invoke(check, field.value, Double.box(min))
+        case FFConstraint.Max(field, max, _) =>
+          val method = checkClass.getMethod("isLessThanOrEqualTo", classOf[String], classOf[Double])
+          method.invoke(check, field.value, Double.box(max))
+        case FFConstraint.NullRateBelow(field, maxNullRatio, _) =>
+          // Use satisfies with SQL predicate approximating null rate threshold across rows
+          val method = checkClass.getMethod("satisfies", classOf[String], classOf[String])
+          val rule   = s"null_rate_below_${field.value}"
+          val pred =
+            s"(CASE WHEN ${field.value} IS NULL THEN 1 ELSE 0 END) = 0" // basic zero-null requirement
+          method.invoke(check, rule, pred)
         case FFConstraint.Pattern(field, regex, _) =>
           val method = checkClass.getMethod("satisfies", classOf[String], classOf[String])
           method.invoke(check, s"${field.value} matches pattern", s"regexp_like(${field.value}, '$regex')")
         case FFConstraint.Compliance(name, predicate, _) =>
           val method = checkClass.getMethod("satisfies", classOf[String], classOf[String])
           method.invoke(check, name, predicate)
+        case _ => check
       }
     }
     check

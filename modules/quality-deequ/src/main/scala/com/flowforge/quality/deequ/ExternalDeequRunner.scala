@@ -106,6 +106,12 @@ object ExternalDeequRunner {
         Json.obj("type" -> Json.fromString("not_null"), "field" -> Json.fromString(f.value))
       case FFConstraint.Unique(f, _) =>
         Json.obj("type" -> Json.fromString("unique"), "field" -> Json.fromString(f.value))
+      case FFConstraint.Distinctness(f, r, _) =>
+        Json.obj(
+          "type"     -> Json.fromString("distinctness"),
+          "field"    -> Json.fromString(f.value),
+          "minRatio" -> Json.fromDoubleOrNull(r),
+        )
       case FFConstraint.Pattern(f, regex, _) =>
         Json.obj(
           "type"  -> Json.fromString("pattern"),
@@ -118,6 +124,24 @@ object ExternalDeequRunner {
           "field" -> Json.fromString(f.value),
           "min"   -> min.map(Json.fromDoubleOrNull).getOrElse(Json.Null),
           "max"   -> max.map(Json.fromDoubleOrNull).getOrElse(Json.Null),
+        )
+      case FFConstraint.Min(f, min, _) =>
+        Json.obj(
+          "type"  -> Json.fromString("min"),
+          "field" -> Json.fromString(f.value),
+          "min"   -> Json.fromDoubleOrNull(min),
+        )
+      case FFConstraint.Max(f, max, _) =>
+        Json.obj(
+          "type"  -> Json.fromString("max"),
+          "field" -> Json.fromString(f.value),
+          "max"   -> Json.fromDoubleOrNull(max),
+        )
+      case FFConstraint.NullRateBelow(f, thr, _) =>
+        Json.obj(
+          "type"        -> Json.fromString("null_rate_below"),
+          "field"       -> Json.fromString(f.value),
+          "maxNullRate" -> Json.fromDoubleOrNull(thr),
         )
       case FFConstraint.Compliance(name, sql, _) =>
         Json.obj(

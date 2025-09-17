@@ -17,14 +17,11 @@ sbt compile
 # ✅ Should succeed - all contracts align
 ```
 
-### 3. Optional: Enable flowforge track and lineage
-- Set `flowforgeVersion` in `build.sbt` to a published version (or run `sbt publishLocal` from the flowforge repo and use that SNAPSHOT).
-- Uncomment the flowforge `libraryDependencies` in `build.sbt`.
-- Replace the placeholder in `src/main/scala/com/flowforge/sample/DemoPipeline.scala` with your pipeline code.
-
-Run the demo:
+### 3. Enable flowforge & run the real pipeline
+- Set `flowforgeVersion` in `build.sbt` to a published version, or from the flowforge repo run `sbt publishLocal` and use that local SNAPSHOT.
+- Run the pipeline:
 ```bash
-sbt run
+sbt "runMain com.flowforge.app.PipelineApp"
 ```
 
 Local lineage (optional):
@@ -33,13 +30,20 @@ docker compose -f ops/marquez/docker-compose.yml up -d
 # open http://localhost:3000
 ```
 
-### 4. Advanced demos
-- CSV → Parquet with contracts: see `src/main/scala/com/flowforge/sample/advanced/SparkCsvToParquet.scala` (placeholder; add flowforge deps to enable)
-- Optional Deequ mapping: see `src/main/scala/com/flowforge/sample/advanced/DeequDemo.scala` (placeholder; add Deequ + set `-Dff.quality.mode=deequ`)
-- Compile‑fail demo: `src/test/scala/com/flowforge/sample/advanced/CompileFailSpec.scala` is a placeholder you can adapt to prove compile‑time drift checks
+### 4. What’s included
+- Real runnable Spark pipeline: `com.flowforge.app.PipelineApp` (CSV → DQ → Parquet + JDBC audit)
+- DataQuality demo using FlowForge native checks (and Deequ if available): `DataQualitySpec`
+- Compile‑fail tests for policies using `assertTypeError`: `PolicyCompileFailSpec`
+- JDBC audit logging (H2) to demonstrate effectful side effects around pipeline
+- EffectSystem demo: `EffectsDemo` + `EffectsDemoSpec` shows parallelism (parTraverse) and resource safety (bracket)
 
 ### 5. GitHub actions CI
-This template ships with a starter CI at `.github/workflows/ci.yml` that runs scalafmt checks, compile, test, and package on push/PR.
+This template ships with a starter CI at `.github/workflows/ci.yml`.
+- `lint` job always runs (format checks).
+- `build` job runs when repo variable `RUN_FULL=true` (set Repo → Settings → Variables). Use this once your flowforge artifacts are resolvable.
+
+### 6. Switch to Deequ (optional)
+Set `-Dff.quality.mode=deequ` to use Deequ for DQ; otherwise native Spark checks are used.
 
 ### Notes
 - Template avoids `$` in source files to prevent giter8 escaping problems.

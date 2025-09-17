@@ -7,7 +7,7 @@ on:
     branches: [ main, master ]
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,12 +32,30 @@ jobs:
       - name: sbt format check
         run: sbt -v scalafmtSbtCheck scalafmtCheckAll
 
+  build:
+    runs-on: ubuntu-latest
+    if: ${{ env.RUN_FULL == 'true' }}
+    env:
+      RUN_FULL: ${{ vars.RUN_FULL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: sbt
+      - name: Cache Ivy2
+        uses: actions/cache@v4
+        with:
+          path: ~/.ivy2/cache
+          key: ${{ runner.os }}-ivy2-${{ hashFiles('**/build.sbt') }}
+          restore-keys: |
+            ${{ runner.os }}-ivy2-
       - name: Compile
         run: sbt -v compile
-
       - name: Test
         run: sbt -v test
-
       - name: Package
         run: sbt -v package
-
