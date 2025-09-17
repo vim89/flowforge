@@ -229,37 +229,23 @@ trait LegacyCompatibility[F[_] : Sync] extends ConfigurationAlgebra[F] {
 - Scope: keep PRs focused; avoid mixing refactors with feature changes.
 
 
-## ChatGPT Agents specially for you for Keeping ChatGPT Agents Agile and Aligned
+## Contributor Workflow
 
-When prompted with `CHECK CONTEXT` or At the start of every session, ChatGPT Agents *must* refresh context:
+This project values clear plans, small scoped pull requests, and reliable build hygiene.
 
-### Session Workflow (Fast Loop)
+- Initialize:
+  - Review key docs: `docs/adr`, `docs/plan`, `docs/archive/*/*`, `docs/contributing`, `build.sbt`.
+  - Skim recent commits to understand current context.
+- Develop:
+  - Keep changes focused; reference ADRs (see `docs/adr/INDEX.md`).
+  - Follow formatting/linting and run `sbt fmtCheck` and `sbt compile` locally.
+- Validate:
+  - Prefer module‑scoped tests (e.g., `sbt core/test`).
+  - Target ≥80% coverage on changed code when practical.
+- Submit PR:
+  - Include a concise summary, ADR references, and a brief test plan.
+  - Keep the scope tight and avoid mixed refactors.
 
-- Initialize: 
-  - Scan, read & study / learn from all project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*` `CONTRIBUTING.md`, `docs/contributing`, `build.sbt`
-    References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/contributing/HANDBOOK.md`
-  - Perform comprehensive code review of entire flowforge project source code.
-- Understand situation & get up to the speed: 
-  - Provide ground reality - Code review results/outcome vs documentation alignment, gaps, major risks.
-  - Learn from previous git commits (as many historical commits as required) to understand what was implemented.
-  - Update the documents ADRs, Evidences & Plan accordingly.
-- Validate: `sbt fullCheck` locally (fmt, compile).
-- PR: link ADRs; include test plan and any CLI logs; keep scope tight.
-- References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/contributing/HANDBOOK.md`.
-
-### Agent‑Specific Guardrails (Read First)
-- Scan, read & study / learn from all project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*`, `CONTRIBUTING.md`, `docs/contributing`, `build.sbt`
-- References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/contributing/HANDBOOK.md`; Agents Coverage: `docs/contributing/COVERAGE.md`
-- Use the 30‑point checklist (ADR‑020) during design/review; minimize shuffles, compute affected partitions first,
-- Ensure idempotency and DLQ where relevant.
-
-### Session Goal:
-After context check, I provide: `SESSION GOAL: <Your concise task objective>`
-ChatGPT Agents you must respond with a clear, bullet-point plan for that session, like example below:
-- Plan for session: Advice which Plan, ADR to address 100% in this session by breaking into tasks.
-- Implement: Follow/ all rules given in ADRs, `CONTRIBUTING.md` and implement the best possible solution which should be production-ready, value-add and real-world. Strictly no scaffolding and toy implementations or placeholders.
-- Update Documents: Evidences, Plans, ADRs, README, Design & most importantly **End‑of‑Session STATE SNAPSHOT**
-
-## References:
+## References
 - ADR Index `docs/adr/INDEX.md`
-- Agents Handbook `docs/contributing/HANDBOOK.md`.
+- Contributor Guide `docs/contributing/HANDBOOK.md`

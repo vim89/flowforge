@@ -125,7 +125,7 @@ FlowForge has **successfully achieved** 100% compile-time contract validation wi
 2. **✅ Clear error messages** show exactly what fields are missing/mismatched  
 3. **✅ All four policies work correctly** - tested and verified
 4. **✅ Zero runtime overhead** - pure compile-time validation
-5. **✅ Production-ready implementation** - follows all CLAUDE.md guidelines
+5. **✅ Production-ready implementation** - follows all CONTRIBUTING.md guidelines
 
 **FINAL STATUS: 🏅 100% COMPLETE** - FlowForge now delivers the promised USP: *"Pipelines will not even build if source or target schema do not match or align."*
 

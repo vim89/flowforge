@@ -232,7 +232,7 @@ Limitations (next steps):
 
 ⏺ 🚨 FlowForge Ground Reality Assessment: Codebase vs Documentation
 
-After comprehensive audit of all 55+ .scala files across 18 modules against all documentation in docs/**/ and CLAUDE.md, here are the brutal findings:
+After comprehensive audit of all 55+ .scala files across 18 modules against all documentation in docs/**/ and CONTRIBUTING.md, here are the brutal findings:
 
 ✅ WHAT ACTUALLY WORKS
 
@@ -270,7 +270,7 @@ val bytes = Files.readAllBytes(Paths.get(path))
 
 3. Core Missing: Template System
 
-- ❌ No Giter8 integration despite CLAUDE.md promise of "30-second setup"
+- ❌ No Giter8 integration despite CONTRIBUTING.md promise of "30-second setup"
 - ❌ No project generation - core FlowForge value proposition missing
 
 📊 PRODUCTION READINESS BY MODULE
@@ -284,11 +284,11 @@ val bytes = Files.readAllBytes(Paths.get(path))
 | contracts     | 🟡 INTERFACE   | 40%              | Runtime validation missing      |
 | templates     | ❌ MISSING      | 0%              | No implementation exists        |
 
-🎯 CONTRIBUTING.md/CLAUDE.md PROMISE vs REALITY
+🎯 CONTRIBUTING.md/CONTRIBUTING.md PROMISE vs REALITY
 
 Major Promise Violations:
 
-| CONTRIBUTING.md/CLAUDE.md Promise  | Reality             | Gap           |
+| CONTRIBUTING.md/CONTRIBUTING.md Promise  | Reality             | Gap           |
 |------------------------------|---------------------|---------------|
 | "30-second setup"            | No template system  | ❌ IMPOSSIBLE |
 | "Production-ready pipelines" | Toy implementations | ❌ MAJOR      |
@@ -349,7 +349,7 @@ Quantified Reality:
 - Compilation Success: 100% ✅
 - Architectural Completeness: 95% ✅
 - Production Logic: 25-40% 🔴
-- CLAUDE.md Promise Delivery: 60% 🟡
+- CONTRIBUTING.md Promise Delivery: 60% 🟡
 
 Recommendation: FlowForge needs honest positioning - it's a sophisticated FP research platform approaching production readiness, not a production-ready framework
 yet. The foundation is exceptional; the implementation gaps are fixable with focused effort.

@@ -61,7 +61,7 @@ Added comprehensive `TODO: PRODUCTION` annotations to major scaffolding:
 
 This issue directly conflicts with FlowForge's core promises:
 
-### **CLAUDE.md Promises vs Reality:**
+### **CONTRIBUTING.md Promises vs Reality:**
 | **Promise** | **Reality** | **Gap** |
 |------------|-------------|---------|
 | "Production-ready data pipelines" | Scaffolding with placeholders | ❌ MAJOR |

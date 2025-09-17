@@ -76,7 +76,7 @@ com.flowforge.core.types.QualityConstraint:
 ### Effect System Support
 - **Effect-Safe**: Works with any `F[_]: EffectSystem` (IO, Task, etc.)
 - **Resource Management**: All operations use `Resource[F, _]` for automatic cleanup
-- **Error Handling**: Either monads throughout (CLAUDE.md compliance)
+- **Error Handling**: Either monads throughout (CONTRIBUTING.md compliance)
 
 ### Production Features
 - **Memory Safety**: No driver OOM through sampling strategies

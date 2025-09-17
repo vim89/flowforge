@@ -13,7 +13,7 @@
 - **Effect boundaries touched**: <where F[_] (or ZIO) is/should be>
 
 ## 3) Prior Art & Sources (links, doc quotes)
-- Project docs: for example CONTRIBUTING.md §§…, CLAUDE.md, Findings, Roadmap, design notes
+- Project docs: for example CONTRIBUTING.md §§…, CONTRIBUTING.md, Findings, Roadmap, design notes
 - Official docs: Spark/Flink/ZIO/Cats/BigQuery/Kafka (link exact pages)
 - Community references (only if high-signal): <links>
 

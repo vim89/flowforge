@@ -136,7 +136,7 @@ When schema drift occurs, developers see:
 - Automatic PR creation with validation results
 - Integration with contracts-sdk for type generation
 
-## Following CLAUDE.md Principles
+## Following CONTRIBUTING.md Principles
 
 ### ✅ Idiomatic Scala Code
 - Pure functional approach with immutable data structures

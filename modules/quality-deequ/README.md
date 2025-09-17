@@ -82,7 +82,7 @@ Uses reflection to call Deequ VerificationSuite when available:
 
 ## Error Handling
 
-The module follows CLAUDE.md functional programming principles:
+The module follows CONTRIBUTING.md functional programming principles:
 - Uses `Either[Throwable, Result]` for error handling
 - No try-catch-finally blocks
 - Automatic fallback from Deequ to native mode

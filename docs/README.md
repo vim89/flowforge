@@ -36,7 +36,6 @@ This index organizes all existing documents into clear sections and points to th
 - Typed contract pipelines: `docs/examples/TYPED_CONTRACT_PIPELINES.md`
 
 ## Prompts / Operations
-- Codex prompts: `docs/codex-prompts/implement-once.md`, `docs/codex-prompts/readonly-plan.md`
 - Previous chats: `docs/previous-chats/previous-conv1.txt`
 - Backups: `docs/backups/AGENTS.2025-09-03.md`
 

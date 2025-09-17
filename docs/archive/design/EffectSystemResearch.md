@@ -1884,7 +1884,7 @@ Would you like me to now expand this “orchestration skeleton” into a full 30
 # Yes
 
 Perfect. Here’s a full 30-point checklist with mapping to the pipeline code.
-I’ll keep it as a markdown table so you can literally drop this into docs (or CLAUDE.md if you want it as a reviewer’s map).
+I’ll keep it as a markdown table so you can literally drop this into docs (or CONTRIBUTING.md if you want it as a reviewer’s map).
 
 ⸻
 

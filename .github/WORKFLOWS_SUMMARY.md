@@ -18,15 +18,11 @@
 | **release.yml** | ✅ Release automation | WORKING | Tags (v*), manual dispatch |
 | **docs-lint.yml** | ✅ Documentation quality | WORKING | Push/PR |
 | **link-check.yml** | ✅ Link validation | WORKING | Push/PR |
-| **claude.yml** | On-mention assistant | WORKING | On @claude mention in comments |
-| **claude-code-review.yml** | Non‑blocking PR review | WORKING | PR open/sync |
 
 ### 🗑️ **Removed/Archived Workflows**
 
 | Removed | Reason | Issues |
 |---------|--------|--------|
-| **claude.yml** | Third-party assistant; secrets not configured | Obsolete |
-| **claude-code-review.yml** | Non-blocking review; unused | Obsolete |
 | **v100-gates.yml** | Duplicated gates with ci.yml | Merged into ci.yml |
 
 ## 🎯 **Key Improvements Implemented**

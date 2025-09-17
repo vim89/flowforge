@@ -3,7 +3,6 @@
 > This file maps content from `docs/archive/backups/AGENTS.backup.2025-09-04.md` to the current canonical locations.
 
 ## Sources
-- Backup: `docs/archive/backups/AGENTS.backup.2025-09-04.md`
 - Canonical: Handbook `docs/contributing/HANDBOOK.md`, ADRs under `docs/adr/*`.
 
 ## Crosswalk (Selected Headings → Canonical)
