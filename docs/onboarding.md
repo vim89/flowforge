@@ -108,7 +108,7 @@ val qualityPipeline = pipeline[IO, Dataset]("quality-pipeline", source)
 ## Resources
 
 - [API Documentation](api/index.html)
-- [Example Projects](examples/)
+- [Example Projects](modules/examples/)
 - [Troubleshooting Guide](troubleshooting.md)
 - [Contributing Guidelines](CONTRIBUTING.md)
 
