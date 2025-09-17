@@ -1,0 +1,5 @@
+{
+  "executablePath": "/Users/vim/.cache/puppeteer/chrome-headless-shell/mac_arm-140.0.7339.82/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+  "args": ["--no-sandbox", "--disable-gpu"]
+}
+

@@ -81,6 +81,7 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
             gcsParquetSource[User]("bucket", "complete-users/*.parquet"),
             _ => IO.pure(UserMissingEmail(1, "John"))
           )
+        implicitly[com.flowforge.core.contracts.SchemaConforms[UserMissingEmail, User, SchemaPolicy.Exact]]
       """)
     }
 

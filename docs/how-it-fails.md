@@ -1,6 +1,6 @@
 # FlowForge - How Contract Validation Fails
 
-**A complete guide to understanding FlowForge's compile-time contract validation error messages.**
+**A complete guide to understanding FlowForge's compile-time contract validation error messages.**  See diagrams in `docs/diagrams/compile-time-contracts/` for the derivation and evidence flow referenced here. As of Scala 2.13 strong alignment, errors are produced by deep structural comparison of normalized `SchemaAST` for producer vs. contract, with path-aware diffs.
 
 This document shows exactly how each schema policy behaves with examples and **verbatim error diffs** as specified in the End-to-End Compile-time plan.
 

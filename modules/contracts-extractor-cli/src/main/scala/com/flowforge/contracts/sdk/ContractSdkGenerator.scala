@@ -73,25 +73,20 @@ object ContractSdkGenerator {
   private def generateTypedEndpoints(contract: ContractMeta): IO[String] = IO {
     s"""package ${contract.namespace}
        |
-       |import com.flowforge.contracts.TypedSource
-       |import com.flowforge.contracts.TypedSink
-       |import com.flowforge.core.types.SchemaEvidence.SchemaEq
-       |import shapeless.LabelledGeneric
+       |import com.flowforge.contracts.{ TypedSink, TypedSource }
+       |import com.flowforge.core.contracts.derive.Shape
+       |import com.flowforge.core.types.{ DataSink, DataSource }
        |
+       |/**
+       | * Convenience helpers to construct typed endpoints for compile-time contracts.
+       | * Physical locations are supplied by the caller via DataSource/DataSink.
+       | */
        |object ${contract.entity}Contracts {
-       |  type ${contract.entity}Repr = LabelledGeneric.Aux[${contract.entity}, _]
-       |  
-       |  implicit val ${contract.entity.toLowerCase}Generic: LabelledGeneric.Aux[${contract.entity}, ${contract.entity}Repr] = 
-       |    LabelledGeneric[${contract.entity}]
-       |  
-       |  implicit val ${contract.entity.toLowerCase}SchemaEq: SchemaEq[${contract.entity}, ${contract.entity}Repr] = 
-       |    SchemaEq.fromLabelledGeneric
-       |  
-       |  val ${contract.entity}Source: TypedSource[${contract.entity}Repr] = 
-       |    TypedSource("${contract.domain}.${contract.entity.toLowerCase()}")
-       |  
-       |  val ${contract.entity}Sink: TypedSink[${contract.entity}Repr] = 
-       |    TypedSink("${contract.domain}.${contract.entity.toLowerCase()}")
+       |  def typedSource(ds: DataSource)(implicit sh: Shape[${contract.entity}]): TypedSource[${contract.entity}] =
+       |    TypedSource[${contract.entity}](ds)
+       |
+       |  def typedSink(ds: DataSink)(implicit sh: Shape[${contract.entity}]): TypedSink[${contract.entity}] =
+       |    TypedSink[${contract.entity}](ds)
        |}
        |""".stripMargin
   }

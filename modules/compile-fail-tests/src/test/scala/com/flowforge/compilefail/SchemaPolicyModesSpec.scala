@@ -42,7 +42,7 @@ class SchemaPolicyModesSpec extends AnyWordSpec with Matchers {
     "fail when a type differs at a position" in {
       val _ = 42
       assertTypeError("""
-        implicitly[SchemaConforms[(Long, String), D, SchemaPolicy.ExactByPosition]]
+        implicitly[SchemaConforms[(String, Long), D, SchemaPolicy.ExactByPosition]]
       """)
     }
   }

@@ -1,0 +1,60 @@
+classDiagram
+    direction LR
+
+    class DerivationBackend {
+      +schemaConforms(...): SchemaConforms
+    }
+
+    class Scala2MagnoliaBackend {
+      +schemaConforms(...): SchemaConforms
+    }
+
+    class Derivation {
+      +backend: DerivationBackend
+    }
+
+    Scala2MagnoliaBackend ..|> DerivationBackend
+    Derivation o--> DerivationBackend : delegates
+
+    class Shape {
+      +fields: List
+    }
+
+    class SchemaConforms
+
+    class SchemaPolicy
+    class Exact
+    class Backward
+    class Forward
+    class Full
+
+    SchemaPolicy <|-- Exact
+    SchemaPolicy <|-- Backward
+    SchemaPolicy <|-- Forward
+    SchemaPolicy <|-- Full
+
+    class SchemaAST
+    class Record
+    class Field
+    class Primitive
+    class OptionT
+    class ArrayT
+    class MapT
+
+    SchemaAST <|-- Record
+    SchemaAST <|-- Primitive
+    SchemaAST <|-- OptionT
+    SchemaAST <|-- ArrayT
+    SchemaAST <|-- MapT
+    Record *-- Field
+
+    class TypedSource
+    class TypedSink
+
+    TypedSource ..> SchemaConforms : requires
+    TypedSink ..> SchemaConforms : requires
+
+    Scala2MagnoliaBackend ..> Shape : uses
+    Scala2MagnoliaBackend ..> SchemaAST : builds
+    Scala2MagnoliaBackend ..> SchemaConforms : emits
+
