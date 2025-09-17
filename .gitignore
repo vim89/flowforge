@@ -37,3 +37,7 @@ logs/
 /.coursier/
 /.bsp/
 /.home/
+examples/
+flowforge-docs/
+benchmarks/
+integration-tests/
