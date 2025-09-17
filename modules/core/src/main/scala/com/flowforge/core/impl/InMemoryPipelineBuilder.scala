@@ -1,7 +1,6 @@
 package com.flowforge.core.impl
 
 import cats.data.Kleisli
-import cats.effect.Sync
 import com.flowforge.core.algebra.{ DataAlgebra, DataEncoder, EffectSystem }
 import com.flowforge.core.types._
 import com.flowforge.framework.{ Pipeline, PipelineMetadata }
@@ -16,7 +15,7 @@ import com.flowforge.framework.{ Pipeline, PipelineMetadata }
  *   - Lightweight alternative to distributed engines
  *   - Full compatibility with production DataAlgebra interface
  */
-class InMemoryPipelineBuilder[F[_]: EffectSystem: Sync] private (
+class InMemoryPipelineBuilder[F[_]: EffectSystem] private (
   private val dataAlgebra: InMemoryDataAlgebra[F]) {
 
   /**
@@ -27,7 +26,7 @@ class InMemoryPipelineBuilder[F[_]: EffectSystem: Sync] private (
       name = name,
       dataAlgebra = dataAlgebra,
       stages = List.empty,
-    )(EffectSystem[F], Sync[F])
+    )(EffectSystem[F])
 
   /**
    * Create a streaming pipeline builder for large datasets
@@ -37,7 +36,7 @@ class InMemoryPipelineBuilder[F[_]: EffectSystem: Sync] private (
       name = name,
       dataAlgebra = dataAlgebra,
       stages = List.empty,
-    )(EffectSystem[F], Sync[F])
+    )(EffectSystem[F])
 }
 
 /**
@@ -50,14 +49,13 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
   private val description: String = "",
   private val config: Option[PipelineConfig] = None,
 )(implicit
-  ef: EffectSystem[F],
-  sync: Sync[F]) {
+  ef: EffectSystem[F]) {
 
   def withDescription(desc: String): InMemoryTypedBuilder[F, In, Out] =
-    new InMemoryTypedBuilder(name, dataAlgebra, stages, desc, config)(ef, sync)
+    new InMemoryTypedBuilder(name, dataAlgebra, stages, desc, config)(ef)
 
   def withConfig(cfg: PipelineConfig): InMemoryTypedBuilder[F, In, Out] =
-    new InMemoryTypedBuilder(name, dataAlgebra, stages, description, Some(cfg))(ef, sync)
+    new InMemoryTypedBuilder(name, dataAlgebra, stages, description, Some(cfg))(ef)
 
   /**
    * Add a streaming data source with fs2.Stream processing
@@ -72,7 +70,7 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
       source = source,
       execute = Kleisli(_ => dataAlgebra.read(source)(decoder)),
     )
-    new InMemoryTypedBuilder[F, Unit, C](name, dataAlgebra, stages :+ stage)(ef, sync)
+    new InMemoryTypedBuilder[F, Unit, C](name, dataAlgebra, stages :+ stage)(ef)
   }
 
   /**
@@ -84,7 +82,7 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
       description = "Memory-safe transformation with fs2",
       execute = Kleisli(transform),
     )
-    new InMemoryTypedBuilder[F, In, C](name, dataAlgebra, stages :+ stage)(ef, sync)
+    new InMemoryTypedBuilder[F, In, C](name, dataAlgebra, stages :+ stage)(ef)
   }
 
   /**
@@ -98,7 +96,7 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
       description = "Batch transformation",
       execute = Kleisli(data => ef.pure(transform(data))),
     )
-    new InMemoryTypedBuilder[F, In, C](name, dataAlgebra, stages :+ stage)(ef, sync)
+    new InMemoryTypedBuilder[F, In, C](name, dataAlgebra, stages :+ stage)(ef)
   }
 
   /**
@@ -114,7 +112,7 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
       execute =
         Kleisli(data => ef.flatMap(dataAlgebra.validate(data, contract))(result => ef.pure(result.data))),
     )
-    new InMemoryTypedBuilder[F, In, Out](name, dataAlgebra, stages :+ stage)(ef, sync)
+    new InMemoryTypedBuilder[F, In, Out](name, dataAlgebra, stages :+ stage)(ef)
   }
 
   /**
@@ -131,7 +129,7 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
       sink = sink,
       execute = Kleisli(data => ef.flatMap(dataAlgebra.write(data, sink, options)(encoder))(_ => ef.pure(()))),
     )
-    new InMemoryTypedBuilder[F, In, Unit](name, dataAlgebra, stages :+ stage)(ef, sync)
+    new InMemoryTypedBuilder[F, In, Unit](name, dataAlgebra, stages :+ stage)(ef)
   }
 
   /**
@@ -168,8 +166,7 @@ class InMemoryStreamBuilder[F[_]] private[impl] (
   private val dataAlgebra: InMemoryDataAlgebra[F],
   private val stages: List[InMemoryStage[F, _, _]],
 )(implicit
-  ef: EffectSystem[F],
-  sync: Sync[F]) {
+  ef: EffectSystem[F]) {
 
   def addStreamingOperation[A, B](
     stageName: String,
@@ -182,7 +179,7 @@ class InMemoryStreamBuilder[F[_]] private[impl] (
         ef.pure(operation(stream))
       },
     )
-    new InMemoryStreamBuilder[F](name, dataAlgebra, stages :+ stage)(ef, sync)
+    new InMemoryStreamBuilder[F](name, dataAlgebra, stages :+ stage)(ef)
   }
 
   def buildStreaming(): Pipeline[F, fs2.Stream[F, Any], fs2.Stream[F, Any]] = {
@@ -274,7 +271,7 @@ object InMemoryPipelineBuilder {
   /**
    * Create a new in-memory pipeline builder
    */
-  def create[F[_]: EffectSystem: Sync]: InMemoryPipelineBuilder[F] = {
+  def create[F[_]: EffectSystem]: InMemoryPipelineBuilder[F] = {
     val dataAlgebra = new InMemoryDataAlgebra[F]()
     new InMemoryPipelineBuilder[F](dataAlgebra)
   }
@@ -282,7 +279,7 @@ object InMemoryPipelineBuilder {
   /**
    * Create with custom data algebra instance
    */
-  def withDataAlgebra[F[_]: EffectSystem: Sync](
+  def withDataAlgebra[F[_]: EffectSystem](
     dataAlgebra: InMemoryDataAlgebra[F],
   ): InMemoryPipelineBuilder[F] =
     new InMemoryPipelineBuilder[F](dataAlgebra)

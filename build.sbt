@@ -255,7 +255,7 @@ lazy val qualityDeequ = moduleProject("quality-deequ")
 
 // ===== EXAMPLE & EXPERIMENTAL MODULES =====
 lazy val examples = moduleProject("examples")
-  .dependsOn(core, contracts, contractsSdk, enginesSpark, qualityDeequ)
+  .dependsOn(core, contracts, contractsSdk, enginesSpark, enginesFlink, qualityDeequ)
   .settings(
     description := "Example implementations",
     libraryDependencies ++= Dependencies.forModule("examples"),

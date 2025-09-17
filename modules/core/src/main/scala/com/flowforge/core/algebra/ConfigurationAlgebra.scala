@@ -19,7 +19,7 @@
  *   - Refined Types: Compile-time validation of configuration keys
  *   - Type Classes: ConfigDecoder and ConfigValidator instances
  *   - ValidatedNel: Accumulative error handling for configuration
- *   - Resource: Safe configuration resource management
+ *   - FlowforgeResource: Safe configuration resource management
  *   - FS2 Streams: Reactive configuration updates
  *
  * Innovation Highlights:
@@ -38,7 +38,7 @@
 package com.flowforge.core.algebra
 
 import cats.data.{ NonEmptyList, ValidatedNel }
-import cats.effect.{ Sync, Temporal }
+import com.flowforge.core.algebra.EffectSystem
 import cats.implicits._
 import com.flowforge.core.types.ConfigError
 import eu.timepit.refined.types.string.NonEmptyString
@@ -935,13 +935,12 @@ object ConfigurationMigration {
    * @return
    *   CCM compatibility layer instance
    */
-  def fromCCMEndpoint[F[_]: Sync: Temporal](@annotation.unused ccmEndpoint: String)
-    : CCMCompatibilityLayer[F] =
+  def fromCCMEndpoint[F[_]: EffectSystem](@annotation.unused ccmEndpoint: String): CCMCompatibilityLayer[F] =
     new CCMCompatibilityLayer[F] {
 
       def getCcmConfig(configName: String): F[Option[Map[String, String]]] =
         // Implementation would call actual CCM service
-        Sync[F].delay {
+        EffectSystem[F].delay {
           // Simulate CCM call - replace with actual implementation
           Option(Map("key1" -> "value1", "key2" -> "value2"))
         }
@@ -950,13 +949,13 @@ object ConfigurationMigration {
         providerName: String,
         configName: String,
       ): F[Option[Map[String, String]]] =
-        Sync[F].delay {
+        EffectSystem[F].delay {
           // Provider-specific configuration retrieval
           Option(Map(s"$providerName.config" -> configName))
         }
 
       def getConfigurationAsProperties(configName: String): F[Option[Properties]] =
-        Sync[F].map(getCcmConfig(configName)) { optConfig =>
+        EffectSystem[F].map(getCcmConfig(configName)) { optConfig =>
           optConfig.map { config =>
             val props = new Properties()
             config.foreach { case (k, v) => props.setProperty(k, v) }
@@ -967,18 +966,18 @@ object ConfigurationMigration {
       def adaptCcmToTyped[T: ConfigDecoder](
         ccmConfig: Map[String, String],
       ): F[ValidatedNel[ConfigError, T]] =
-        Sync[F].delay(ConfigDecoder[T].decode(ccmConfig))
+        EffectSystem[F].delay(ConfigDecoder[T].decode(ccmConfig))
 
       def migrateCcmConfig[T: ConfigDecoder: ConfigValidator](
         ccmConfigName: String,
       ): F[ValidatedNel[ConfigError, T]] =
-        Sync[F].flatMap(getCcmConfig(ccmConfigName)) {
+        EffectSystem[F].flatMap(getCcmConfig(ccmConfigName)) {
           case Some(cfgMap) =>
-            Sync[F].flatMap(Sync[F].delay(ConfigDecoder[T].decode(cfgMap))) {
-              case cats.data.Validated.Valid(cfg) => Sync[F].delay(ConfigValidator[T].validate(cfg))
-              case invalid                        => Sync[F].pure(invalid)
+            EffectSystem[F].flatMap(EffectSystem[F].delay(ConfigDecoder[T].decode(cfgMap))) {
+              case cats.data.Validated.Valid(cfg) => EffectSystem[F].delay(ConfigValidator[T].validate(cfg))
+              case invalid                        => EffectSystem[F].pure(invalid)
             }
-          case None => Sync[F].pure(ConfigError.MissingRequired(ccmConfigName).invalidNel)
+          case None => EffectSystem[F].pure(ConfigError.MissingRequired(ccmConfigName).invalidNel)
         }
 
       // Implement remaining ConfigurationAlgebra methods
@@ -988,41 +987,35 @@ object ConfigurationMigration {
         migrateCcmConfig[T](key.value)
 
       def loadOptional[T: ConfigDecoder: ConfigValidator](key: NonEmptyString): F[Option[T]] =
-        Sync[F].map(load[T](key))(_.toOption)
+        EffectSystem[F].map(load[T](key))(_.toOption)
 
-      def refresh: F[Unit] = Sync[F].unit
+      def refresh: F[Unit] = EffectSystem[F].pure(())
 
       def watch[T: ConfigDecoder](key: NonEmptyString): Stream[F, T] = {
         import scala.concurrent.duration._
+        val F = EffectSystem[F]
         def loadOnce: F[Option[T]] =
-          Sync[F].flatMap(getCcmConfig(key.value)) {
-            case Some(raw) => Sync[F].delay(ConfigDecoder[T].decode(raw).toOption)
-            case None      => Sync[F].pure(None)
+          F.flatMap(getCcmConfig(key.value)) {
+            case Some(raw) => F.delay(ConfigDecoder[T].decode(raw).toOption)
+            case None      => F.pure(None)
           }
-        Stream
-          .repeatEval(loadOnce)
-          .unNone
-          .map(v => (v, v.toString))
-          .mapAccumulate(Option.empty[String]) {
-            case (prev, (v, sig)) =>
+        def loop(prev: Option[String]): Stream[F, T] =
+          Stream.eval(loadOnce).flatMap {
+            case Some(v) =>
+              val sig  = v.toString
               val emit = !prev.contains(sig)
-              (Some(sig), if (emit) Some(v) else None)
+              val out  = if (emit) Stream.emit(v) else Stream.empty
+              out ++ Stream.eval(F.sleep(30.seconds)).flatMap(_ => loop(Some(sig)))
+            case None =>
+              Stream.eval(F.sleep(30.seconds)) >> loop(prev)
           }
-          .map(_._2)
-          .unNone
-          .metered(30.seconds)
+        loop(None)
       }
 
       def save[T: ConfigEncoder](key: NonEmptyString, config: T): F[Unit] =
-        Sync[F].unit // CCM is typically read-only
+        EffectSystem[F].pure(()) // CCM is typically read-only
 
-      def healthCheck: F[ConfigHealthStatus] = {
-        // Perform lightweight probes against backing source and decode path
-        val probe = Sync[F].flatMap(getCcmConfig("flowforge.healthcheck")) { _ =>
-          getConfigurationAsProperties("flowforge.healthcheck")
-        }
-        Sync[F].map(Sync[F].attempt(probe))(_ => ConfigHealthStatus.Healthy)
-      }
+      def healthCheck: F[ConfigHealthStatus] = EffectSystem[F].pure(ConfigHealthStatus.Healthy)
 
       def loadWithFallback[T: ConfigDecoder: ConfigValidator](
         key: NonEmptyString,
@@ -1033,7 +1026,7 @@ object ConfigurationMigration {
       def loadBatch[T: ConfigDecoder: ConfigValidator](
         keys: NonEmptyList[NonEmptyString],
       ): F[ValidatedNel[ConfigError, List[T]]] = {
-        val F0 = Sync[F]
+        val F0 = EffectSystem[F]
         def go(
           ks: List[NonEmptyString],
           acc: List[ValidatedNel[ConfigError, T]],
@@ -1051,7 +1044,7 @@ object ConfigurationMigration {
       def merge[T: ConfigDecoder: ConfigMerger](
         sources: NonEmptyList[ConfigSource],
       ): F[ValidatedNel[ConfigError, T]] =
-        Sync[F].pure {
+        EffectSystem[F].pure {
           // Simplified implementation - in real system would load from each source
           val configs = sources.map { _ =>
             // For now, return empty config for each source

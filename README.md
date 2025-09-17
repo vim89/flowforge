@@ -16,7 +16,7 @@ Build data pipelines that fail at compile time when contracts drift, keep busine
 Highlights
 - Contracts first: schemas + evolution policies enforced at compile time via `SchemaConforms`.
 - Pure transforms: pipeline logic is ordinary, testable Scala; IO is explicit via `F[_]`.
-- Effect/resource safety: all connectors and engines use `Resource[F, _]` and an `EffectSystem`.
+- Effect/resource safety: all connectors and engines use `FlowforgeResource[F, _]` and an `EffectSystem`.
 - Built‑in quality: multi‑rule validation with aggregated errors (no fail‑fast surprises).
 - Optional lineage: emit OpenLineage events; see runs in Marquez with one docker compose.
 
@@ -115,6 +115,7 @@ If `User` and the Avro contract diverge (extra/missing/mismatched fields), `sbt 
 - Decisions (ADRs): `docs/adr` (index: `docs/adr/INDEX.md`).
 - Failure anatomy: `docs/how-it-fails.md` (explains compiler messages from contract drift).
 - Public API: `docs/public-api.md`.
+- Bring Your Own Effect System (BYO‑F): `docs/effects/bring-your-own-effect.md` (EffectSystem and FlowforgeResource primer).
 
 ## FAQ
 

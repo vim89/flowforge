@@ -52,6 +52,7 @@ object Dependencies {
 
     // Experimental libraries
     val kyo = "0.8.5"
+    val monix   = "3.4.1"
 
     // Testing
     val scalaTest      = "3.2.19" // Updated: was 3.2.17

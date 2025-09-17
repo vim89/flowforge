@@ -1,7 +1,7 @@
 package com.flowforge.core.patterns
 
 import cats.data.{ Kleisli, Reader, ReaderT }
-import cats.effect.{ Resource, Sync }
+import com.flowforge.core.algebra.{ EffectSystem, FlowforgeResource }
 import cats.implicits._
 import cats.{ Applicative, Monad }
 import com.flowforge.core.algebra.{ DataAlgebra, DataDecoder, EffectSystem }
@@ -198,7 +198,7 @@ object ReaderPattern {
    * Resource management service
    */
   trait ResourceManager[F[_]] {
-    def acquireResource[R](name: String, config: ResourceConfig): Resource[F, R]
+    def acquireResource[R](name: String, config: ResourceConfig): FlowforgeResource[F, R]
     def releaseResource(name: String): F[Unit]
     def listResources: F[List[ResourceInfo]]
     def healthCheck: F[Map[String, ResourceHealth]]
@@ -462,7 +462,7 @@ object ReaderPattern {
   /**
    * Create a test context with mock dependencies
    */
-  def testContext[F[_]: EffectSystem: Sync]: AppContext[F] =
+  def testContext[F[_]: EffectSystem]: AppContext[F] =
     AppContext[F](
       core = FlowForgeDependencies[F](
         config = PipelineConfig(
@@ -613,7 +613,7 @@ object ReaderPattern {
 
   private object TestImplementations {
 
-    def mockDataAlgebra[F[_]: EffectSystem: Sync]: DataAlgebra[F] =
+    def mockDataAlgebra[F[_]: EffectSystem]: DataAlgebra[F] =
       DataInstances.createMockDataAlgebra[F]
 
     def mockLogger[F[_]: EffectSystem]: Logger[F] = new Logger[F] {
@@ -675,10 +675,10 @@ object ReaderPattern {
     }
 
     def mockResourceManager[F[_]: EffectSystem]: ResourceManager[F] = new ResourceManager[F] {
-      def acquireResource[R](name: String, config: ResourceConfig): Resource[F, R] = {
+      def acquireResource[R](name: String, config: ResourceConfig): FlowforgeResource[F, R] = {
         // Safe no-op resource that yields a null placeholder of requested type R
         val F = implicitly[EffectSystem[F]]
-        Resource.make[F, R](F.pure(null.asInstanceOf[R]))(_ => F.unit)
+        FlowforgeResource.make(F.pure(null.asInstanceOf[R]))(_ => F.unit)
       }
       def releaseResource(name: String): F[Unit]      = implicitly[EffectSystem[F]].delay(())
       def listResources: F[List[ResourceInfo]]        = implicitly[EffectSystem[F]].delay(List.empty)

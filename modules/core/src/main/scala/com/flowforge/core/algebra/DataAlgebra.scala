@@ -24,7 +24,7 @@ import scala.concurrent.duration.FiniteDuration
  *   - **Effect Polymorphism**: F[_] only where external effects are needed
  *   - **Type Safety**: All operations are statically typed
  *   - **Composability**: Operations compose via Kleisli arrows for external operations
- *   - **Resource Safety**: Automatic resource management via Resource[F, _] for IO
+ *   - **Resource Safety**: Automatic resource management via FlowforgeResource[F, _]
  *   - **Error Handling**: ValidatedNel for multi-error scenarios
  *   - **Spark Compliance**: Pure Spark operations are direct Dataset operations
  *

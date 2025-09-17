@@ -68,7 +68,7 @@
 package com.flowforge
 
 import cats.data._
-import cats.effect.Resource
+// No cats-effect in core public API
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.types.RefinedTypes.{ BucketName, TableName }
@@ -130,7 +130,7 @@ package object core {
   type PipelineState[S, A] = State[S, A]
 
   // Resource types (effect-agnostic)
-  type SafeResource[F[_], R]        = com.flowforge.core.algebra.FFResource[F, R]
+  type SafeResource[F[_], R]        = com.flowforge.core.algebra.FlowforgeResource[F, R]
   type ResourceAcquisition[F[_], R] = F[R]
   type ResourceRelease[F[_], R]     = R => F[Unit]
 

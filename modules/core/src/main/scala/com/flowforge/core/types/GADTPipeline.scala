@@ -543,7 +543,7 @@ object GADTPipelineExamples {
    * Example of 100% type-safe pipeline construction. This pipeline will fail to compile if types don't align
    * correctly.
    */
-  def createTypeSafePipeline[F[_]: EffectSystem: Sync]
+  def createTypeSafePipeline[F[_]: EffectSystem]
     : ValidatedNel[FlowForgeError, GADTPipeline[F, Unit, Unit]] = {
     import com.flowforge.core.instances.DefaultCodecs._
     implicit val da: com.flowforge.core.algebra.DataAlgebra[F] =
@@ -564,7 +564,7 @@ object GADTPipelineExamples {
   /**
    * Demonstration of compile-time type checking. These examples will fail to compile if attempted:
    */
-  def typeCheckingExamples[F[_]: EffectSystem: Sync]: Unit = {
+  def typeCheckingExamples[F[_]: EffectSystem]: Unit = {
     import com.flowforge.core.instances.DefaultCodecs._
     implicit val da: com.flowforge.core.algebra.DataAlgebra[F] =
       new com.flowforge.core.impl.InMemoryDataAlgebra[F]()

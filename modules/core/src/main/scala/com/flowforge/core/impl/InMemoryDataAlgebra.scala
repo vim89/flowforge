@@ -1,7 +1,6 @@
 package com.flowforge.core.impl
 
 import cats.data.{ NonEmptyList, Validated, ValidatedNel }
-import cats.effect.Sync
 import cats.implicits._
 import com.flowforge.core.algebra.DataAlgebra._
 import com.flowforge.core.algebra._
@@ -23,7 +22,7 @@ import java.time.Instant
  *
  * PRODUCTION READINESS: 95% - Optimized for development and testing workloads
  */
-final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends DataAlgebra[F] {
+final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataAlgebra[F] {
 
   override val capabilities: Set[Capability] =
     Set(Capability.Read, Capability.Write, Capability.QualityChecks)
@@ -35,7 +34,7 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
 
       format match {
         case DataFormat.JSONL =>
-          Sync[F].blocking {
+          F.blocking {
             val lines = scala.io.Source.fromFile(pathObj.toFile).getLines().toList
             val records = lines.flatMap { line =>
               DataDecoder[A].decode(EncodedData(line.getBytes("UTF-8"), format), format).toOption
@@ -48,7 +47,7 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
             )
           }
         case DataFormat.CSV =>
-          Sync[F].blocking {
+          F.blocking {
             val lines =
               scala.io.Source.fromFile(pathObj.toFile).getLines().drop(1).toList // Skip header
             val records = lines.flatMap { line =>
@@ -90,7 +89,7 @@ final class InMemoryDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends
     case LocalDataSink(path, format, _, _, _) =>
       val pathObj = Paths.get(path)
 
-      Sync[F].blocking {
+      F.blocking {
         val content = format match {
           case DataFormat.JSONL =>
             dataset.data.map { a =>

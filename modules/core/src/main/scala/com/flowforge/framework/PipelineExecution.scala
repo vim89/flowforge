@@ -1,6 +1,6 @@
 package com.flowforge.framework
 
-import com.flowforge.core.algebra.{ EffectSystem, FFResource }
+import com.flowforge.core.algebra.{ EffectSystem, FlowforgeResource }
 
 /**
  * Helpers to run pipelines with or without managed resources.
@@ -16,7 +16,7 @@ object PipelineExecution {
   /** Execute a pipeline using a managed resource scope (e.g., SparkSession). */
   def executeWithResources[F[_]: EffectSystem, A, B](
     pipeline: Pipeline[F, A, B],
-    resources: FFResource[F, Unit],
+    resources: FlowforgeResource[F, Unit],
   )(
     input: A,
   ): F[B] =

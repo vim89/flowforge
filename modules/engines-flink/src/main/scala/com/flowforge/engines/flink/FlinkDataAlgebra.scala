@@ -1,7 +1,6 @@
 package com.flowforge.engines.flink
 
 import cats.data.{ NonEmptyList, ValidatedNel }
-import cats.effect.Sync
 import com.flowforge.core.algebra.DataAlgebra._
 import com.flowforge.core.algebra._
 import com.flowforge.core.types.PipelineTypes.{ DataContract => PDataContract, QualityCheck }
@@ -14,7 +13,7 @@ import java.time.Instant
  * Minimal Flink-backed DataAlgebra implementation. Delegates to InMemoryDataAlgebra while exposing engine
  * capabilities so that pipelines behave consistently across Spark and Flink.
  */
-final class FlinkDataAlgebra[F[_]: Sync](implicit F: EffectSystem[F]) extends DataAlgebra[F] {
+final class FlinkDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataAlgebra[F] {
 
   private val delegate = new com.flowforge.core.impl.InMemoryDataAlgebra[F]()
 

@@ -46,3 +46,12 @@ This index organizes all existing documents into clear sections and points to th
 - For big decisions, create an ADR from `docs/adr/000-template.md` and link it in EVIDENCE and PLAN.
 - For any claim-heavy doc, add/update a “Reality” banner referencing `docs/plans/templates/EVIDENCE.md`.
 - Agents docs: `docs/contributing/HANDBOOK.md`, `docs/contributing/COVERAGE.md`
+## Core Design
+- Effect system (EffectSystem[F]) and resources (FlowforgeResource[F,R]): `docs/effects/bring-your-own-effect.md`
+- Core design & diagrams: `docs/design/core-design.md`
+- Runners & Connectors: `docs/design/runners-and-connectors.md`
+
+## Diagrams
+- Architecture: `docs/diagrams/architecture.md`
+- Pipeline sequence: `docs/diagrams/pipeline-sequence.md`
+- Core class diagram: `docs/diagrams/core-class-diagram.md`
