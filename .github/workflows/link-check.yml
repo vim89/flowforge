@@ -1,0 +1,31 @@
+name: Markdown Link Check
+
+on:
+  pull_request:
+  push:
+    branches: [ main, "feature/**", "mvp-0.0.1-snapshot" ]
+
+jobs:
+  lychee:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install lychee (link checker)
+        uses: lycheeverse/lychee-action@v1.10.0
+        with:
+          # Offline mode: check only local links and anchors; avoid flaky external checks
+          args: >-
+            --offline
+            --no-progress
+            --verbose
+            --accept mds
+            --format json
+            "docs/**/*.md" "README.md" "AGENTS.md"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fail on broken links
+        if: steps.lychee.outputs.exit_code != 0
+        run: exit 1

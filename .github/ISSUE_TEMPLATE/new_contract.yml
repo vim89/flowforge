@@ -1,0 +1,55 @@
+name: "New Data Contract"
+description: "Propose a new data contract via a simple form"
+title: "Contract: [domain]/[entity]"
+labels: ["contract-request"]
+body:
+  - type: input
+    id: domain
+    attributes:
+      label: Domain
+      description: Logical domain (e.g., sales, marketing)
+      placeholder: sales
+    validations:
+      required: true
+  - type: input
+    id: entity
+    attributes:
+      label: Entity (record name)
+      description: Name of the record/type in the contract (e.g., SalesV1)
+      placeholder: SalesV1
+    validations:
+      required: true
+  - type: dropdown
+    id: sourceType
+    attributes:
+      label: Source Type
+      options:
+        - parquet
+        - delta
+        - hive
+        - jdbc
+        - csv
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: Path / Table / JDBC table
+      description: e.g., gs://bucket/prefix, db.table, or schema.table
+      placeholder: gs://my-bucket/raw/sales
+    validations:
+      required: true
+  - type: input
+    id: owners
+    attributes:
+      label: Owners (comma-separated)
+      placeholder: data-stewards@acme
+  - type: dropdown
+    id: compatibility
+    attributes:
+      label: Compatibility Policy
+      options:
+        - BACKWARD
+        - FULL
+    validations:
+      required: true

@@ -1,0 +1,255 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 0.1.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  JAVA_OPTS: -Xmx4G -XX:+UseG1GC
+  SBT_OPTS: -Xmx4G -XX:+UseG1GC
+
+jobs:
+  validate-release:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is-prerelease: ${{ steps.version.outputs.is-prerelease }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+            if [[ $VERSION == *"alpha"* ]] || [[ $VERSION == *"beta"* ]] || [[ $VERSION == *"rc"* ]] || [[ $VERSION == *"snapshot"* ]]; then
+              IS_PRERELEASE=true
+            else
+              IS_PRERELEASE=false
+            fi
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "is-prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          echo "Release version: $VERSION (prerelease: $IS_PRERELEASE)"
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "Invalid version format: $VERSION"
+            echo "Expected format: X.Y.Z or X.Y.Z-qualifier"
+            exit 1
+          fi
+
+      - name: Check for existing release
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if gh release view "v$VERSION" &>/dev/null; then
+            echo "Release v$VERSION already exists!"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  pre-release-tests:
+    name: Pre-release tests
+    needs: [validate-release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Cache SBT and dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.sbt
+            ~/.coursier/cache
+            ~/.ivy2/cache
+          key: ${{ runner.os }}-sbt-release-${{ hashFiles('**/*.sbt', '**/project/**/*.scala') }}
+          restore-keys: |
+            ${{ runner.os }}-sbt-release-
+            ${{ runner.os }}-sbt-
+
+      - name: Check formatting
+        run: sbt scalafmtCheckAll
+
+      - name: Compile all modules
+        run: sbt compile Test/compile
+
+      - name: Run full test suite
+        run: |
+          echo "🧪 Running full test suite for release"
+          sbt coverage test
+          echo "🔥 Running compile-fail tests - proving contract enforcement"
+          sbt "compile-fail-tests / test"
+          echo "🚀 Running engine smoke tests"
+          sbt "engines-spark/testOnly *StreamingCDCSpec"
+          sbt "engines-flink/testOnly *EngineAbstractionSpec" 
+          sbt coverageReport
+          echo "✅ All release tests passed!"
+
+      - name: Generate coverage report
+        run: sbt coverageAggregate
+
+      - name: Validate g8 template for release
+        run: |
+          echo "📋 Validating g8 template for release"
+          cd /tmp
+          sbt new file://${{ github.workspace }}/flowforge.g8 --name="release-test-pipeline" --organization="com.flowforge.release"
+          cd release-test-pipeline
+          echo "🔨 Testing template compilation"
+          sbt compile
+          echo "🧪 Testing template tests"
+          sbt test
+          echo "🎯 Testing contract drift demo"
+          sed -i 's/id: Long/id: String/' src/main/scala/Contract.scala
+          if sbt compile; then
+            echo "❌ Contract drift should have failed compilation!"
+            exit 1
+          else
+            echo "✅ Contract drift prevention working correctly!"
+          fi
+
+  build-artifacts:
+    name: Build release artifacts
+    needs: [validate-release, pre-release-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Cache SBT and dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.sbt
+            ~/.coursier/cache
+            ~/.ivy2/cache
+          key: ${{ runner.os }}-sbt-release-${{ hashFiles('**/*.sbt', '**/project/**/*.scala') }}
+          restore-keys: |
+            ${{ runner.os }}-sbt-release-
+            ${{ runner.os }}-sbt-
+
+      - name: Update version in build.sbt
+        run: |
+          VERSION="${{ needs.validate-release.outputs.version }}"
+          sed -i "s/version := \".*\"/version := \"$VERSION\"/" build.sbt
+          echo "Updated build.sbt to version $VERSION"
+
+      - name: Build JAR artifacts
+        run: |
+          sbt clean compile
+          sbt "validation-cli / assembly"
+          sbt "contracts-extractor-cli / assembly"
+
+      - name: Create release directory
+        run: mkdir -p release-artifacts
+
+      - name: Copy artifacts
+        run: |
+          find . -name "*assembly*.jar" -exec cp {} release-artifacts/ \;
+          ls -la release-artifacts/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ needs.validate-release.outputs.version }}
+          path: release-artifacts/
+          retention-days: 30
+
+  create-release:
+    name: Create GitHub Release
+    needs: [validate-release, pre-release-tests, build-artifacts]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts-${{ needs.validate-release.outputs.version }}
+          path: release-artifacts/
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          VERSION="${{ needs.validate-release.outputs.version }}"
+          cat > release-notes.md << EOF
+          # FlowForge v$VERSION
+
+          ## 🚀 Features
+          - 100% Compile-time contracts - Data pipelines fail to compile if schema drift occurs
+          - Phantom-state builder pattern - Incomplete pipelines cannot be built
+          - SchemaConforms evidence system - Macro-based schema validation
+          - Contract-aware quickstart demo - Working examples of compile-time validation
+
+          ## 🛠 CLI Tools
+          - **validation-cli**: Schema validation and contract checking
+          - **contracts-extractor-cli**: Extract contracts from data sources
+
+          ## 📋 What's New
+          - Implemented 3 required compile-fail tests (missing sink, schema mismatch, illegal evolution)
+          - Deprecated legacy SchemaWitness system
+          - Enhanced template generation with contract enforcement
+
+          ## 🧪 Testing
+          - All modules tested with coverage reporting
+          - Compile-fail tests validate contract enforcement
+          - Integration tests for Spark/Delta workflows
+
+          Generated from commit: ${{ github.sha }}
+          EOF
+
+      - name: Create gitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.validate-release.outputs.version }}
+          name: FlowForge v${{ needs.validate-release.outputs.version }}
+          body_path: release-notes.md
+          prerelease: ${{ needs.validate-release.outputs.is-prerelease == 'true' }}
+          files: release-artifacts/*
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to Codecov
+        if: success()
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
