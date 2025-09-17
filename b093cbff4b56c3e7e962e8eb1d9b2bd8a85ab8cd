@@ -1,0 +1,1 @@
+cleanup-map: old=dd08ecfbabf4e4589713af67ce1c71799951f63d group=connectors label='connectors suite' backups=tag:backup/mvp-0.0.1-snapshot-2025-09-17,archive:archive/mvp-0.0.1-snapshot
