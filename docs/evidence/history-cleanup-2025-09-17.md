@@ -1,0 +1,36 @@
+# History Cleanup – 2025-09-17
+
+This document captures the steps, safety backups, and mapping for the history cleanup performed on Sep 17, 2025.
+
+## Safety Backups
+- Tag: `backup/mvp-0.0.1-snapshot-2025-09-17`
+- Archive branch: `archive/mvp-0.0.1-snapshot`
+- Offline bundle: `backups/2025-09-17-flowforge-all.bundle`
+
+These allow full restoration of the previous timeline.
+
+## Strategy
+- Produced a new curated, minimal history using an orphan branch: `mvp-0.0.1-clean`.
+- Grouped commits by functional area (build/ci/docs/core/contracts/engines/connectors/quality/platform/cli/templates/tests).
+- Old branch `mvp-0.0.1-snapshot` remains intact; no force-push performed.
+
+## Commit Outline (New History)
+1. chore(build): repo scaffolding, sbt and root configs
+2. ci: GitHub workflows and ops scripts
+3. docs: ADRs, plans, evidence, and agents handbook
+4. feat(core): algebras, types, builders with effect abstraction
+5. feat(contracts): typed contracts, schema equality, SDK helpers
+6. feat(engines): shared abstractions; Spark/Flink engines
+7. feat(connectors): S3, JDBC, Kafka, BigQuery, GCS
+8. feat(quality): ValidatedNel multi-rule checks + Deequ integration
+9. feat(platform): safety, monitoring and infrastructure modules
+10. feat(cli): validation and contracts-extractor (plus maintenance)
+11. docs(templates): examples and giter8 template
+12. test: testing utilities, integration and compile-fail suites
+13. chore: add remaining repository files
+
+## Notes
+- The original commit-by-commit authorship is preserved in backups; the curated history represents the final state organized for clarity.
+- If needed, we can attach `git notes` to new commits pointing to representative old SHAs.
+- Build validation should be run on CI after pushing this branch.
+
