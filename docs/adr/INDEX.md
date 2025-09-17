@@ -11,7 +11,7 @@ This index maps original documents to their canonical ADRs. Use this as the chec
   - ADR: docs/adr/011-contracts-compile-build-gates.md
   - Notes migrated: 2025-09-04 (see ADR-011 Appendix: Source Notes)
 - Effect System Decision
-  - Source: docs/archive/design/EffectSystemResearch.md, AGENTS.md (effect rules)
+  - Source: docs/archive/design/EffectSystemResearch.md, CONTRIBUTING.md (effect rules)
   - ADR: docs/adr/012-effect-system-decision.md
   - Notes migrated: 2025-09-04 (see ADR-012 Appendix: Source Notes)
 - Infrastructure Layer
@@ -53,7 +53,7 @@ This index maps original documents to their canonical ADRs. Use this as the chec
   - ADR: docs/adr/022-safe-generic-error-handling.md
 
 Coverage and Known Gaps
-- Rules_Notes.md: House rules overlap with AGENTS.md; some nuances may not be duplicated in ADRs. Action: keep archived; cross-link from AGENTS.md.
+- Rules_Notes.md: House rules overlap with CONTRIBUTING.md; some nuances may not be duplicated in ADRs. Action: keep archived; cross-link from CONTRIBUTING.md.
 - design.md: Diagrams and narrative; ADRs capture decisions, but not all diagrams. Action: keep archived for context.
 - IMPLEMENTATION_TODO.md: Detailed to-dos not fully itemized into PLAN.md. Action: import top items into PLAN or a tracked issue list before archiving.
 - Findings.md: Historical assessments with numbers/dates; ADR-016 summarizes governance but not every historical datapoint. Action: keep archived.

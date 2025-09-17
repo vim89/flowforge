@@ -3,11 +3,11 @@
 > Archived: Superseded by ADR-016 Ground Reality & Alignment Governance. See `docs/adr/016-ground-reality-governance.md`.
 
 Updated: 2025-09-03
-Scope: All Scala sources under `modules/**` and project sources (*.scala, *.sbt), and docs under `docs/**/*` plus `AGENTS.md` and README.md.
+Scope: All Scala sources under `modules/**` and project sources (*.scala, *.sbt), and docs under `docs/**/*` plus `CONTRIBUTING.md` and README.md.
 
 Repo-wide stats (snapshot)
 - Scala files: ~84 across modules (core, framework, engines-spark, contracts, connectors, typed-spark, CLIs, safety, config, logging, infrastructure, examples/tests).
-- Docs considered: 25+ files across design/ and reference/ plus README.md and AGENTS.md.
+- Docs considered: 25+ files across design/ and reference/ plus README.md and CONTRIBUTING.md.
 
 ## Executive Summary
 
@@ -88,7 +88,7 @@ Repo-wide stats (snapshot)
 ## References
 - Code: `modules/core/algebra`, `modules/engines-spark`, `modules/connectors/filesystem`, `modules/infrastructure`.
 - Docs: `docs/design/EffectSystemResearch.md`, `ALIGNMENT_STATUS.md`, `SCAFFOLDING_VS_PRODUCTION_AUDIT.md`, `design.md`, `PRODUCTION_REALITY_UPDATE.md`.
-- Marketing/Overview: `AGENTS.md`.
+- Marketing/Overview: `CONTRIBUTING.md`.
 
 ---
 
@@ -131,7 +131,7 @@ Limitations (next steps):
 
 ## Per‑Claim Cross‑Map (by theme)
 
-| Claim (docs/AGENTS.md) | Status | Evidence (files) | Notes |
+| Claim (docs/CONTRIBUTING.md) | Status | Evidence (files) | Notes |
 |---|---|---|---|
 | “Won’t even compile if your schema doesn’t match” | 🟡/❌ | modules/contracts/src/main/scala/com/flowforge/contracts/DataContract.scala; modules/core/types/*.scala; modules/core/types/TypeSafePipeline.scala | Runtime ValidatedNel; no compile‑time coupling to encoders/builders that would fail compilation on schema drift.
 | Compile‑time data contracts in pipelines | 🟡 | modules/core/types/PipelineBuilder2*.scala; modules/core/types/TypeSafePipeline.scala | Phantom types/typed builder exist; not enforcing schema vs dataset encoders.
@@ -167,13 +167,13 @@ Limitations (next steps):
 ## Documentation Corrections Applied (2025-09-03)
 
 - README.md: Replaced global “won’t compile/30 seconds” claims with a reality‑first overview, typed‑path example, and links to this report.
-- AGENTS.md: Clarified that compile‑time gates exist via the typed path; untyped APIs are not yet CI‑blocked; added roadmap notes.
+- CONTRIBUTING.md: Clarified that compile‑time gates exist via the typed path; untyped APIs are not yet CI‑blocked; added roadmap notes.
 - templates/data-pipeline.g8/README.md: Added reality note regarding build‑time checks and CI enforcement.
 - reference docs: Added reality banners to “30‑Minute Production Setup Goal”, “FlowForge - Data Engineering Excellence Platform”, and “Complete System Architecture Overhaul”.
 
 ## Reconciliation Notes (docs vs code)
 
-- AGENTS.md and README.md previously implied stronger guarantees (global “won’t compile”, “30‑second production”). Both have been updated on 2025‑09‑03 to reflect typed‑path compile gates and current scaffolding status. This report aligns with ALIGNMENT_STATUS.md and PRODUCTION_REALITY_UPDATE.md.
+- CONTRIBUTING.md and README.md previously implied stronger guarantees (global “won’t compile”, “30‑second production”). Both have been updated on 2025‑09‑03 to reflect typed‑path compile gates and current scaffolding status. This report aligns with ALIGNMENT_STATUS.md and PRODUCTION_REALITY_UPDATE.md.
 
 
 
@@ -284,11 +284,11 @@ val bytes = Files.readAllBytes(Paths.get(path))
 | contracts     | 🟡 INTERFACE   | 40%              | Runtime validation missing      |
 | templates     | ❌ MISSING      | 0%              | No implementation exists        |
 
-🎯 AGENTS.md/CLAUDE.md PROMISE vs REALITY
+🎯 CONTRIBUTING.md/CLAUDE.md PROMISE vs REALITY
 
 Major Promise Violations:
 
-| AGENTS.md/CLAUDE.md Promise  | Reality             | Gap           |
+| CONTRIBUTING.md/CLAUDE.md Promise  | Reality             | Gap           |
 |------------------------------|---------------------|---------------|
 | "30-second setup"            | No template system  | ❌ IMPOSSIBLE |
 | "Production-ready pipelines" | Toy implementations | ❌ MAJOR      |

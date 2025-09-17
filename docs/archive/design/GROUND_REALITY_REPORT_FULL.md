@@ -3,7 +3,7 @@
 > Archived: Superseded by ADR-016 Ground Reality & Alignment Governance. See `docs/adr/016-ground-reality-governance.md`.
 
 Updated: 2025-09-03
-Scope: All Scala sources under `modules/**` plus tests; docs under `docs/**/*` and `AGENTS.md`.
+Scope: All Scala sources under `modules/**` plus tests; docs under `docs/**/*` and `CONTRIBUTING.md`.
 
 ## Executive Summary
 
@@ -74,7 +74,7 @@ Notes: File list per module is provided in Appendix A.
 ## Claims in Docs vs Code Evidence
 
 - Compile-time schema/contract gates
-  - Docs: multiple references to “compile-time guarantees”, “won’t compile if schema doesn’t match” (AGENTS.md; design docs).
+  - Docs: multiple references to “compile-time guarantees”, “won’t compile if schema doesn’t match” (CONTRIBUTING.md; design docs).
   - Code: Typed builders (`PipelineBuilder2`, `TypeSafePipeline`) provide compile-time stage-shape constraints via `LabelledGeneric` witness points but do not wire contracts to Spark encoders or reject schema drift at compile time. No build flags to fail deprecations/untype usage. Status: 🟡/❌.
 
 - Effect separation (Spark vs external IO)
@@ -149,7 +149,7 @@ Notes: File list per module is provided in Appendix A.
 - `docs/reference/*` (various planning/strategy notes)
 - `docs/connectors/HDFS.md`
 - `docs/previous-chats/*`, `docs/backups/*` (meta only)
-- `AGENTS.md`
+- `CONTRIBUTING.md`
 
 Key claim patterns found: compile-time guarantees/gates, multi-engine, cloud portability, Deequ integration, observability/tracing/lineage, 30-second quickstart, CDC/SCD.
 
@@ -257,7 +257,7 @@ See “Docs Scanned” section above for top-level groups; specific filenames in
 - `docs/design/EffectSystemResearch.md`, `ALIGNMENT_STATUS.md`, `GROUND_REALITY_REPORT.md`, `IMPLEMENTATION_TODO.md`, `QA_PLAN.md`, `PRODUCTION_REALITY_UPDATE.md`, `SCAFFOLDING_VS_PRODUCTION_AUDIT.md`, `design.md`, `Findings.md`, `INFRASTRUCTURE_LAYER.md`, `RoadmapProposal.md`.
 - `docs/reference/*` planning/strategy documents.
 - `docs/connectors/HDFS.md`.
-- `AGENTS.md` (teaser + pitch + architecture outline).
+- `CONTRIBUTING.md` (teaser + pitch + architecture outline).
 
 ### Other Scala files outside `modules/**`
 

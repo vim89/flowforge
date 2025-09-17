@@ -24,7 +24,7 @@ We require a unified abstraction over effect systems to support IO boundaries, r
 ## References
 - Evidence: `docs/evidence/effect-per-module-and-purity.md` (§2, §3)
 - Plan: `docs/plan/effect-per-module-and-purity.md` (§4.4)
-- House Rules: `AGENTS.md` (§Effect System Implementation Rules)
+- House Rules: `CONTRIBUTING.md` (§Effect System Implementation Rules)
 
 ## End Goal (Big Picture)
 - Unified effect abstraction across the platform enabling pure Spark transforms and effectful IO/orchestration, with the flexibility to select Cats-Effect or ZIO for end-user of flowforge.

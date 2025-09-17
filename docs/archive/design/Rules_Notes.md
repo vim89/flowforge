@@ -639,7 +639,7 @@ To avoid repetitive rework, confusion, or lost context when ChatGPT Agents hits 
 ### 1. Context Re‑Initialization
 At the start of every session, ChatGPT Agents *must* refresh context by re-reading:
 - `docs/design/design.md`, `Findings.md`, `RoadmapProposal.md`
-- `AGENTS.md` (coding style, workflows)
+- `CONTRIBUTING.md` (coding style, workflows)
 - Any recent diffs or `STATE SNAPSHOT` outputs from prior sessions
 - Relevant reference docs in `docs/reference/*` only for learning - these documents don't directly influence implementation *as-is from them*
 - Previous conversations with ChatGPT OPENAI `docs/previous-chats/*` to get up to the speed
@@ -780,4 +780,4 @@ When wrapping up, ChatGPT Agents must summarize:
 - **Structured context engineering** lays a predictable foundation for ChatGPT & Agents’ state ([LlamaIndex blog]([llamaindex.ai](https://www.llamaindex.ai/blog/context-engineering-what-it-is-and-techniques-to-consider?utm_source=chatgpt.com)))
 - Summaries and checkpoints reduce token bloat and maintain conversation coherence
 - Conflict detection and small patches dramatically cut down wasted labor and merge conflicts
-> Archived (2025-09-04): House rules consolidated in AGENTS.md. See `AGENTS.md` and ADR index for decisions.
+> Archived (2025-09-04): House rules consolidated in CONTRIBUTING.md. See `CONTRIBUTING.md` and ADR index for decisions.

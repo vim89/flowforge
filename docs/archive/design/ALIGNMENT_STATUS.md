@@ -14,7 +14,7 @@
 | **IMPLEMENTATION_TODO.md** | "4 key methods missing" | 50+ methods need implementation | ⚠️ **MISALIGNED** | ✅ **CORRECTED** - Realistic scope documented |
 | **CLAUDE.md** | Effect system guidelines | Missing Effect System research application | ⚠️ **MISALIGNED** | ✅ **CORRECTED** - Added implementation rules |
 | **README.md** | "30-second, zero errors" | Architectural scaffold; typed path only | ✅ **ALIGNED** | ✅ Updated with reality-first note |
-| **AGENTS.md** | "typed-only enforced" | Typed gates exist; not enforced | ✅ **ALIGNED** | ✅ Wording corrected |
+| **CONTRIBUTING.md** | "typed-only enforced" | Typed gates exist; not enforced | ✅ **ALIGNED** | ✅ Wording corrected |
 
 ## 🔧 Critical Architectural Inconsistencies
 

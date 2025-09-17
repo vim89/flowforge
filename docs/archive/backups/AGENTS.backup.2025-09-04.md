@@ -863,7 +863,7 @@ structured protocol in every interaction:
 
 At the start of every session, ChatGPT Agents *must* refresh context by re-reading:
 
-- `docs/adr`, `docs/evidence`, `docs/plan`, `AGENTS.md`, `CLAUDE.md`
+- `docs/adr`, `docs/evidence`, `docs/plan`, `CONTRIBUTING.md`, `CLAUDE.md`
 - Any recent diffs or `STATE SNAPSHOT` outputs from prior sessions
 - Relevant reference docs in `docs/archive/*`
 - Code review of project flowforge: Entire codebase all modules, all .scala files, .github, .yml, .md, .sbt, .conf, .sh

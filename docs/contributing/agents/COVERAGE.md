@@ -4,7 +4,7 @@
 
 ## Sources
 - Backup: `docs/archive/backups/AGENTS.backup.2025-09-04.md`
-- Canonical: Handbook `docs/agents/HANDBOOK.md`, ADRs under `docs/adr/*`.
+- Canonical: Handbook `docs/contributing/HANDBOOK.md`, ADRs under `docs/adr/*`.
 
 ## Crosswalk (Selected Headings → Canonical)
 - Teaser / Brutal truth / Targets vs Today → Handbook §1; ADR‑018; ADR‑016

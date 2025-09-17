@@ -39,5 +39,5 @@ Audit documents identify a pattern of placeholder implementations being treated 
 ## Appendix: Source Notes (archive/design/Rules_Notes.md)
 
 - Source: `docs/archive/design/Rules_Notes.md` @ 877826bbf05636a3db581e425901fc490cac224d on 2025-09-04T17:18:50+05:30
-- Summary: Consolidated house rules and guidelines overlapping with AGENTS.md; captured here to retain policy context and historical rationale.
+- Summary: Consolidated house rules and guidelines overlapping with CONTRIBUTING.md; captured here to retain policy context and historical rationale.
 ```

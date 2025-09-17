@@ -6,7 +6,7 @@
 - Key modules: `core` (algebras, types, builders), `contracts` (typed contracts), `engines-spark`, `connectors`,
   `quality`, `infrastructure`; CLIs: `validation-cli`, `contracts-extractor-cli`.
 - Docs: ADRs `docs/adr/*` (decisions), Plans/Evidence in `docs/plan` and `docs/evidence`, Agents Handbook in
-  `docs/agents`.
+  `docs/contributing`.
 
 ## Build, Test, and Development Commands
 
@@ -236,8 +236,8 @@ When prompted with `CHECK CONTEXT` or At the start of every session, ChatGPT Age
 ### Session Workflow (Fast Loop)
 
 - Initialize: 
-  - Scan, read & study / learn from all project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*` `AGENTS.md`, `docs/agents`, `build.sbt`
-    References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`
+  - Scan, read & study / learn from all project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*` `CONTRIBUTING.md`, `docs/contributing`, `build.sbt`
+    References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/contributing/HANDBOOK.md`
   - Perform comprehensive code review of entire flowforge project source code.
 - Understand situation & get up to the speed: 
   - Provide ground reality - Code review results/outcome vs documentation alignment, gaps, major risks.
@@ -245,11 +245,11 @@ When prompted with `CHECK CONTEXT` or At the start of every session, ChatGPT Age
   - Update the documents ADRs, Evidences & Plan accordingly.
 - Validate: `sbt fullCheck` locally (fmt, compile).
 - PR: link ADRs; include test plan and any CLI logs; keep scope tight.
-- References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`.
+- References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/contributing/HANDBOOK.md`.
 
 ### Agent‑Specific Guardrails (Read First)
-- Scan, read & study / learn from all project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*`, `AGENTS.md`, `docs/agents`, `build.sbt`
-- References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`; Agents Coverage: `docs/agents/COVERAGE.md`
+- Scan, read & study / learn from all project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*`, `CONTRIBUTING.md`, `docs/contributing`, `build.sbt`
+- References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/contributing/HANDBOOK.md`; Agents Coverage: `docs/contributing/COVERAGE.md`
 - Use the 30‑point checklist (ADR‑020) during design/review; minimize shuffles, compute affected partitions first,
 - Ensure idempotency and DLQ where relevant.
 
@@ -257,9 +257,9 @@ When prompted with `CHECK CONTEXT` or At the start of every session, ChatGPT Age
 After context check, I provide: `SESSION GOAL: <Your concise task objective>`
 ChatGPT Agents you must respond with a clear, bullet-point plan for that session, like example below:
 - Plan for session: Advice which Plan, ADR to address 100% in this session by breaking into tasks.
-- Implement: Follow/ all rules given in ADRs, `AGENTS.md` and implement the best possible solution which should be production-ready, value-add and real-world. Strictly no scaffolding and toy implementations or placeholders.
+- Implement: Follow/ all rules given in ADRs, `CONTRIBUTING.md` and implement the best possible solution which should be production-ready, value-add and real-world. Strictly no scaffolding and toy implementations or placeholders.
 - Update Documents: Evidences, Plans, ADRs, README, Design & most importantly **End‑of‑Session STATE SNAPSHOT**
 
 ## References:
 - ADR Index `docs/adr/INDEX.md`
-- Agents Handbook `docs/agents/HANDBOOK.md`.
+- Agents Handbook `docs/contributing/HANDBOOK.md`.

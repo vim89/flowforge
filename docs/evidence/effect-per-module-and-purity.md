@@ -22,7 +22,7 @@
 - SparkDataAlgebra correctly keeps pure transforms; IO boundaries use EffectSystem as expected.
 
 ## 3) Prior Art & Sources
-- ADR-012; AGENTS.md (effect rules); EffectSystemResearch (archived).
+- ADR-012; CONTRIBUTING.md (effect rules); EffectSystemResearch (archived).
 
 ## 4) Options & Trade-offs
 | Option | Pros | Cons | Why |

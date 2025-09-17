@@ -1,22 +1,12 @@
 # Repository Guidelines
 
-## flowforge
-- **FlowForge** is a revolutionary **Data engineering pipeline archetype** built with **Scala's modern functional ecosystem**.
-- Compile-time Data contracts & Fiber-safe Data pipelines: Scala's Effect system in action.
-- A batteries‑included, functional-first toolkit for building full‑stack Data Engineering solutions & data pipelines in @scala.
-- We want to build a production-ready data pipeline archetype system in Scala. 
-- We used Giter8 templates to scaffold pipelines that are contract-driven, type-safe, effectful, and pluggable—all enforced through the Scala type system and effect libraries.
-- Trait-based runners switch between Spark, Flink, and Kafka
-- We’ll want to build a contract-first, pluggable platform using Giter8, Cats Effect, ZIO - delivering compile-time guarantees and fiber-safe execution.
-
-
 ## Project Structure & Module Organization
 
 - Multi‑module SBT repo: sources in `modules/*`, tests under `src/test/scala` mirroring packages.
 - Key modules: `core` (algebras, types, builders), `contracts` (typed contracts), `engines-spark`, `connectors`,
   `quality`, `infrastructure`; CLIs: `validation-cli`, `contracts-extractor-cli`.
-- Docs: ADRs `docs/adr/*` (decisions), Plans/Evidence in `docs/plan` and `docs/evidence`, Agents/Claude Handbook in
-  `docs/agents`.
+- Docs: ADRs `docs/adr/*` (decisions), Plans/Evidence in `docs/plan` and `docs/evidence`, Agents Handbook in
+  `docs/contributing`.
 
 ## Build, Test, and Development Commands
 
@@ -26,7 +16,6 @@
 - CLIs: `sbt validation-cli/run` and `sbt contracts-extractor-cli/run`.
 
 ## Coding Style & Naming Conventions
->**This is critical for Claude code review CI job as well**
 
 - Scala 2.13; idiomatic FP: immutability, pure functions, explicit effects, use for-comprehensions, Monads instead of
   try-catch-finally,
@@ -226,10 +215,10 @@ trait LegacyCompatibility[F[_] : Sync] extends ConfigurationAlgebra[F] {
 
 
 ### File structure guidance:
-- A class and its companion should live together in the same file.
+- A class and its companion should live together in the same file. 
 - sealed traits and their subtypes must also be in the same file for compiler safety.
 - File names usually match the main type they hold.
-- Multi-type grouping: When types are closely related, grouping is permitted—but only when justified. The file should then use meaningful lowerCamelCase names.
+- Multi-type grouping: When types are closely related, grouping is permitted—but only when justified. The file should then use meaningful lowerCamelCase names. 
 - Developer ergonomics: Having one type per file helps with navigation, findability, and code review. It avoids confusion and reduces search friction.
 
 ## Commit & Pull Request Guidelines
@@ -240,37 +229,37 @@ trait LegacyCompatibility[F[_] : Sync] extends ConfigurationAlgebra[F] {
 - Scope: keep PRs focused; avoid mixing refactors with feature changes.
 
 
-## Claude & other AI Agents specially for you for keeping Claude / AI coding assistant agile and aligned
+## ChatGPT Agents specially for you for Keeping ChatGPT Agents Agile and Aligned
 
-When prompted with `CHECK CONTEXT` or At the start of every session, Claude / AI agents *must* refresh context:
+When prompted with `CHECK CONTEXT` or At the start of every session, ChatGPT Agents *must* refresh context:
 
 ### Session Workflow (Fast Loop)
 
-- Initialize:
-    - Scan, read & study / learn from all project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*` `CLAUDE.md`, `docs/agents`, `build.sbt`
-      References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`
-    - Perform comprehensive code review of entire flowforge project source code.
-- Understand situation & get up to the speed:
-    - Provide ground reality - Code review results/outcome vs documentation alignment, gaps, major risks.
-    - Learn from previous git commits (as many historical commits as required) to understand what was implemented.
-    - Update the documents ADRs, Evidences & Plan accordingly.
-- Validate: `sbt fullCheck` locally (fmt, compile, test).
+- Initialize: 
+  - Scan, read & study / learn from all project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*` `CONTRIBUTING.md`, `docs/contributing`, `build.sbt`
+    References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/contributing/HANDBOOK.md`
+  - Perform comprehensive code review of entire flowforge project source code.
+- Understand situation & get up to the speed: 
+  - Provide ground reality - Code review results/outcome vs documentation alignment, gaps, major risks.
+  - Learn from previous git commits (as many historical commits as required) to understand what was implemented.
+  - Update the documents ADRs, Evidences & Plan accordingly.
+- Validate: `sbt fullCheck` locally (fmt, compile).
 - PR: link ADRs; include test plan and any CLI logs; keep scope tight.
-- References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`.
+- References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/contributing/HANDBOOK.md`.
 
-### Claude / AI Agent Specific Guardrails (Read First)
-- Scan, read & study / learn from all project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*`, `CLAUDE.md`, `docs/agents`, `build.sbt`
-- References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/agents/HANDBOOK.md`; Agents Coverage: `docs/agents/COVERAGE.md`
+### Agent‑Specific Guardrails (Read First)
+- Scan, read & study / learn from all project related documents - `docs/adr`, `docs/evidence`, `docs/plan`, `docs/archive/*/*`, `CONTRIBUTING.md`, `docs/contributing`, `build.sbt`
+- References: ADR Index `docs/adr/INDEX.md`; Agents Handbook `docs/contributing/HANDBOOK.md`; Agents Coverage: `docs/contributing/COVERAGE.md`
 - Use the 30‑point checklist (ADR‑020) during design/review; minimize shuffles, compute affected partitions first,
 - Ensure idempotency and DLQ where relevant.
 
 ### Session Goal:
 After context check, I provide: `SESSION GOAL: <Your concise task objective>`
-Claude / AI Agents you must respond with a clear, bullet-point plan for that session, like example below:
+ChatGPT Agents you must respond with a clear, bullet-point plan for that session, like example below:
 - Plan for session: Advice which Plan, ADR to address 100% in this session by breaking into tasks.
-- Implement: Follow/ all rules given in ADRs, `CLAUDE.md` and implement the best possible solution which should be production-ready, value-add and real-world. Strictly no scaffolding and toy implementations or placeholders.
+- Implement: Follow/ all rules given in ADRs, `CONTRIBUTING.md` and implement the best possible solution which should be production-ready, value-add and real-world. Strictly no scaffolding and toy implementations or placeholders.
 - Update Documents: Evidences, Plans, ADRs, README, Design & most importantly **End‑of‑Session STATE SNAPSHOT**
 
 ## References:
 - ADR Index `docs/adr/INDEX.md`
-- Agents Handbook `docs/agents/HANDBOOK.md`.
+- Agents Handbook `docs/contributing/HANDBOOK.md`.
