@@ -522,12 +522,10 @@ Why “bring your own audit DB/table” is the right call
 - Teams can choose governance/retention appropriate to their org.
 - FlowForge only defines the event schema and sink SPI; you decide where/how to persist and scale.
 
-Next steps (I can do these next)
+Next steps -
 
 - Scaffold modules: audit-core and audit-file (types, hash chain, JSONL writer, digest writer, simple verifier).
 - Wire hooks under ff.audit.enabled in PipelineExecution and DataAlgebra edges.
 - Provide an example + demo verifier CLI.
 - Add docs: “Audit Reporting 101” showing SQL views/materialized views for L1/L2 dashboards—pipeline success rates, DQ failures, throughput, top offsets/checkpoints,
   restart summaries.
-
-If you approve, I’ll scaffold Sprint A (audit-core + audit-file + hooks + example) in the repo so we can run and verify end‑to‑end.
