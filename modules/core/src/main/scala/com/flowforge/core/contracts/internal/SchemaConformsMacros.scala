@@ -7,11 +7,12 @@ import com.flowforge.core.contracts.internal.SchemaAST._
 import scala.reflect.macros.blackbox
 
 object SchemaConformsMacros {
+  import scala.annotation.unused
   def materializeImpl[Out: c.WeakTypeTag, Contract: c.WeakTypeTag, P <: SchemaPolicy: c.WeakTypeTag](
     c: blackbox.Context,
   )(
-    so: c.Expr[Shape[Out]],
-    sc: c.Expr[Shape[Contract]],
+    @unused so: c.Expr[Shape[Out]],
+    @unused sc: c.Expr[Shape[Contract]],
   ): c.Tree = {
     import c.universe._
 

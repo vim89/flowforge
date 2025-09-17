@@ -96,6 +96,17 @@ final case class ProductionSparkDataset[A](
 object ProductionSparkDataset {
 
   /**
+   * Utilities for constructing and working with production‑grade Spark Datasets inside FlowForge.
+   *
+   * A `ProductionSparkDataset[A]` wraps a Spark `Dataset[A]` with metadata and helper methods that make it
+   * easy to integrate with FlowForge’s typed contracts, quality checks, and sinks while keeping
+   * transformations pure.
+   *
+   * Typical usage is internal to the Spark `DataAlgebra` implementation, but the helpers are safe to use in
+   * examples/tests when you need to adapt a DataFrame/Dataset to the DSL.
+   */
+
+  /**
    * Create ProductionSparkDataset from DataFrame with MEMORY-SAFE lazy decoding
    *
    * CRITICAL FIX: No longer loads entire DataFrame into driver memory

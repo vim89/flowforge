@@ -7,10 +7,8 @@ import com.flowforge.core.lineage.OpenLineageEmitter
 import com.flowforge.core.types.BuilderState.{ WithContract, WithTransform }
 import com.flowforge.core.types.{
   BuilderState,
-  DataFormat,
   DataSink,
   DataSource,
-  Environment,
   PipelineConfig,
   PipelineStage,
   TypedSink,
@@ -150,8 +148,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
   ): FFPipeline[F, In, Out] = {
 
     // Per v1.0 plan: "wire OpenLineageEmitter.emitJobStart/Complete/Fail per stage and for the pipeline"
-    val runId   = OpenLineageEmitter.generateRunId()
-    val emitter = lineageEmitter.getOrElse(OpenLineageEmitter.noop[F])
+    // Lineage emitter can be integrated here per-stage; kept optional for now
 
     // Compose stages into a single Kleisli[F, In, Out]
     object KC {

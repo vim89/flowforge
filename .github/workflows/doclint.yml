@@ -1,0 +1,25 @@
+name: Doc Lint
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  doclint:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run doclint (advisory)
+        run: |
+          chmod +x scripts/doclint.sh
+          ./scripts/doclint.sh | tee doclint.txt
+      - name: Upload doclint report
+        uses: actions/upload-artifact@v4
+        with:
+          name: doclint-report
+          path: doclint.txt
+          retention-days: 7
+

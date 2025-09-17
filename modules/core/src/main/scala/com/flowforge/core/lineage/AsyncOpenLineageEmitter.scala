@@ -4,18 +4,20 @@ import com.flowforge.core.algebra.EffectSystem
 
 import java.util.concurrent.ArrayBlockingQueue
 import scala.util.Random
+import scala.annotation.unused
+import scala.language.existentials
 
 final class AsyncOpenLineageEmitter[F[_]: EffectSystem](
   underlying: OpenLineageEmitter[F],
   capacity: Int = 1024)
     extends OpenLineageEmitter[F] {
 
-  private val F   = EffectSystem[F]
-  private val q   = new ArrayBlockingQueue[() => F[Either[LineageError, Unit]]](capacity)
-  private val rnd = new Random()
+  private val F           = EffectSystem[F]
+  private val q           = new ArrayBlockingQueue[() => F[Either[LineageError, Unit]]](capacity)
+  @unused private val rnd = new Random()
 
   // Start single consumer fiber
-  private val _fiber = EffectSystem[F].start(loop)
+  @unused private val _fiber = EffectSystem[F].start(loop)
 
   private def loop: F[Unit] =
     F.flatMap(F.blocking(q.take())) { thunk =>

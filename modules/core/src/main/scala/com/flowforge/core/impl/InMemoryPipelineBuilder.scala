@@ -93,7 +93,6 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
   def addBatchTransform[C](
     transform: DataAlgebra.Dataset[Out] => DataAlgebra.Dataset[C],
   ): InMemoryTypedBuilder[F, In, C] = {
-    ef
     val stage = InMemoryStage.BatchTransform[F, DataAlgebra.Dataset[Out], DataAlgebra.Dataset[C]](
       name = s"batch-transform-${stages.size}",
       description = "Batch transformation",
@@ -176,7 +175,6 @@ class InMemoryStreamBuilder[F[_]] private[impl] (
     stageName: String,
     operation: fs2.Stream[F, A] => fs2.Stream[F, B],
   ): InMemoryStreamBuilder[F] = {
-    ef
     val stage = InMemoryStage.Streaming[F, A, B](
       name = stageName,
       description = "fs2.Stream operation",

@@ -1,8 +1,15 @@
 /**
- * FlowForge Data Contracts - Core Implementation
+ * FlowForge Data Contracts — core types and DSL.
  *
- * Complete type-safe data contract system with compile-time validation, runtime enforcement, and
- * comprehensive quality checking.
+ * This module defines the type‑safe contract system used by FlowForge:
+ *   - Compile‑time: contracts are checked against output types via
+ *     [[com.flowforge.core.contracts.SchemaConforms]]
+ *   - Runtime: contracts can validate concrete values and produce precise violations
+ *   - Quality: rules compose and aggregate using `ValidatedNel`
+ *
+ * See also:
+ *   - [[com.flowforge.core.contracts.SchemaConforms]] (compile‑time evidence)
+ *   - docs/how-it-fails.md (examples of compile‑time drift messages)
  */
 package com.flowforge.contracts
 
@@ -15,9 +22,7 @@ import eu.timepit.refined.types.string.NonEmptyString
 import java.time.Instant
 import scala.util.matching.Regex
 
-/**
- * Core DataContract type class for compile-time and runtime validation
- */
+/** Type class for compile‑time and runtime validation of domain models. */
 trait DataContract[A] {
   def validate(data: A): ValidatedNel[ContractViolation, A]
   def schema: ContractSchema
@@ -28,16 +33,14 @@ trait DataContract[A] {
 object DataContract {
   def apply[A](implicit ev: DataContract[A]): DataContract[A] = ev
 
-  // Builder for creating data contracts
+  /** Builder for creating data contracts. */
   def builder[A]: DataContractBuilder[A] = new DataContractBuilder[A]
 
-  // Pre-built strict contract that validates schema + all rules
+  /** Prebuilt strict view that validates schema and all rules. */
   def strict[A: DataContract]: DataContract[A] = DataContract[A]
 }
 
-/**
- * Schema definition with field constraints
- */
+/** Schema definition with per‑field constraints. */
 case class ContractSchema(
   name: NonEmptyString,
   fields: List[FieldContract],
@@ -51,6 +54,7 @@ case class FieldContract(
   constraints: List[FieldConstraint] = List.empty,
   description: Option[String] = None)
 
+/** Algebraic data type for field types used in contracts. */
 sealed trait FieldType
 object FieldType {
   case object StringType                             extends FieldType
@@ -64,6 +68,7 @@ object FieldType {
   case class StructType(fields: List[FieldContract]) extends FieldType
 }
 
+/** Algebraic data type for field‑level constraints. */
 sealed trait FieldConstraint
 object FieldConstraint {
   case class MinLength(value: Int)                           extends FieldConstraint
@@ -74,9 +79,7 @@ object FieldConstraint {
   case class Custom(name: String, validator: Any => Boolean) extends FieldConstraint
 }
 
-/**
- * Validation rules with composability
- */
+/** Composable validation rules evaluated at runtime. */
 trait ValidationRule[A] {
   def name: String
   def validate(data: A): ValidatedNel[ContractViolation, Unit]
@@ -90,9 +93,7 @@ object RuleSeverity {
   case object Info    extends RuleSeverity
 }
 
-/**
- * Standard validation rules
- */
+/** Common validation rules provided out of the box. */
 object ValidationRules {
   def nonNull[A](fieldName: String)(extract: A => Any): ValidationRule[A] =
     new ValidationRule[A] {
@@ -163,9 +164,7 @@ object ValidationRules {
     }
 }
 
-/**
- * Contract violations
- */
+/** Contract violations produced by runtime validation. */
 sealed trait ContractViolation extends Throwable {
   def message: String
   def fieldName: String

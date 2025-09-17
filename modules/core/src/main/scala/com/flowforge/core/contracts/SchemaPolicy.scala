@@ -1,5 +1,16 @@
 package com.flowforge.core.contracts
 
+/**
+ * Compile‑time schema evolution policy used by [[SchemaConforms]].
+ *
+ * Policies describe how strictly the output type `Out` must match the declared contract `Contract`:
+ *   - [[SchemaPolicy.Exact]]: Names and types must match exactly.
+ *   - [[SchemaPolicy.Backward]]: `Out` may add optional fields; consumers of older contracts still read it.
+ *   - [[SchemaPolicy.Forward]]: `Out` may omit non‑required fields; newer consumers still read older data.
+ *   - [[SchemaPolicy.Full]]: Most permissive; use with care.
+ *
+ * Case objects are for runtime values; traits are used at the type level for macro resolution.
+ */
 sealed trait SchemaPolicy
 
 object SchemaPolicy {

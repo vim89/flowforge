@@ -8,15 +8,25 @@ import com.flowforge.core.algebra.EffectSystem
  * Real, minimal pipeline and combinators built on Kleisli and EffectSystem. Focuses on practical,
  * production-friendly composition without placeholders.
  */
-import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.types.{ ExecutionStatus, PipelineMetrics, PipelineResult }
 import java.time.Instant
 import scala.concurrent.duration._
 
+/**
+ * A composable, typed pipeline step.
+ *
+ * Wraps a `Kleisli[F, A, B]` together with metadata (name, description, tags), enabling type‑safe composition
+ * of stages that may perform effects (F) while preserving input/output types.
+ *
+ * Usage {{@example import cats.data.Kleisli import com.flowforge.framework._
+ *
+ * val step: Pipeline[IO, In, Out] = Pipeline(Kleisli(process), PipelineMetadata(name = "transform")) val
+ * pipeline: Pipeline[IO, In, Out2] = step.andThen(otherStep) }}
+ */
 final case class Pipeline[F[_], A, B](run: Kleisli[F, A, B], metadata: PipelineMetadata) {
-  def name: String                                     = metadata.name
-  def stages: List[String]                             = metadata.stages
-  def execute(a: A)(implicit F: EffectSystem[F]): F[B] = run(a)
+  def name: String         = metadata.name
+  def stages: List[String] = metadata.stages
+  def execute(a: A): F[B]  = run(a)
 
   def executeWithMonitoring(a: A)(implicit F: EffectSystem[F]): F[PipelineResult[B]] = {
     val start = System.currentTimeMillis()
@@ -69,8 +79,9 @@ final case class Pipeline[F[_], A, B](run: Kleisli[F, A, B], metadata: PipelineM
     prev.andThen(this)
 }
 
+/** Helpers for building and composing pipelines. */
 object Pipeline {
-  def lift[F[_]: EffectSystem, A, B](f: A => F[B], name: String = "anonymous"): Pipeline[F, A, B] =
+  def lift[F[_], A, B](f: A => F[B], name: String = "anonymous"): Pipeline[F, A, B] =
     Pipeline(Kleisli(f), PipelineMetadata.single(name))
 
   def pure[F[_]: EffectSystem, A, B](f: A => B, name: String = "pure"): Pipeline[F, A, B] =
@@ -80,6 +91,9 @@ object Pipeline {
     Pipeline(Kleisli(a => EffectSystem[F].pure(a)), PipelineMetadata.single("identity"))
 }
 
+/**
+ * Human‑friendly details attached to pipeline stages for observability and docs.
+ */
 final case class PipelineMetadata(
   name: String,
   stages: List[String] = Nil,
@@ -96,10 +110,12 @@ final case class PipelineMetadata(
     )
 }
 
+/** Factory and common metadata instances. */
 object PipelineMetadata {
   def single(name: String): PipelineMetadata = PipelineMetadata(name, stages = List(name))
 }
 
+/** Combinators for composing `Pipeline` values. */
 object PipelineCombinators {
   def sequence[F[_]: EffectSystem, A](
     pipelines: NonEmptyList[Pipeline[F, A, A]],
@@ -122,7 +138,7 @@ object PipelineCombinators {
     Pipeline(run, md)
   }
 
-  def conditional[F[_]: EffectSystem, A](
+  def conditional[F[_], A](
     predicate: A => Boolean,
     ifTrue: Pipeline[F, A, A],
     ifFalse: Pipeline[F, A, A],
