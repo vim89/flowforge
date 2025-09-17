@@ -1,0 +1,59 @@
+flowchart TD
+    A[Developer writes types]
+    A -->|Producer record| A1[Out record]
+    A -->|Contract type| A2[Contract type]
+    A -->|Policy| A3[SchemaPolicy]
+
+    subgraph B[Typed Edges]
+      B1(TypedSource Out)
+      B2(TypedSink Out)
+      B1 -->|requires| E((Evidence))
+      B2 -->|requires| E((Evidence))
+    end
+
+    A1 --> B
+    A2 --> B
+    A3 --> B
+
+    E -->|typeclass| D1[[SchemaConforms]]
+
+    subgraph C[Derivation Facade]
+      direction TB
+      C0[Derivation facade]
+      C0 -->|Scala 2| C1[Backend: Magnolia + Macro]
+      C0 -->|Scala 3| C2[Backend: Quotes Macro]
+    end
+
+    D1 --> C
+
+    subgraph S2[Scala 2 - Magnolia]
+      direction TB
+      M1(Shape Out) --> M3[Build SchemaAST]
+      M2(Shape Contract) --> M3
+      M3 --> M4[Compare under Policy]
+      M4 -->|match| M5((Emit evidence))
+      M4 -->|diff| M6{{Abort with diff}}
+    end
+
+    subgraph S3[Scala 3 - Quotes]
+      direction TB
+      G1(Type inspection Out) --> G3[Build SchemaAST]
+      G2(Type inspection Contract) --> G3
+      G3 --> G4[Compare under Policy]
+      G4 -->|match| G5((Emit evidence))
+      G4 -->|diff| G6{{Abort with diff}}
+    end
+
+    C1 --> S2
+    C2 --> S3
+
+    M5 --> E
+    G5 --> E
+
+    subgraph R[Runtime]
+      direction TB
+      R1[No overhead] --> R2[Optional runtime guards]
+      R2 --> R3[Quality rules]
+    end
+
+    B --> R
