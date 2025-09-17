@@ -4,9 +4,9 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.Assertion
 
 /**
- * Compile-time contract failures for realistic Spark-style pipelines.
- * These use ScalaTest's assertTypeError to ensure code snippets do not typecheck
- * (i.e., fail at compile time due to missing SchemaConforms evidence).
+ * Compile-time contract failures for realistic Spark-style pipelines. These use ScalaTest's assertTypeError
+ * to ensure code snippets do not typecheck (i.e., fail at compile time due to missing SchemaConforms
+ * evidence).
  */
 class SparkContractCompileFailSpec extends AnyFunSuite {
 
@@ -79,4 +79,3 @@ class SparkContractCompileFailSpec extends AnyFunSuite {
     )
   }
 }
-

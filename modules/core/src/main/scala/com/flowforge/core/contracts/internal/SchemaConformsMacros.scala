@@ -68,7 +68,10 @@ object SchemaConformsMacros {
       }
     }
 
-    final case class Diff(missing: List[(String, SchemaAST)], extra: List[(String, SchemaAST)], mismatched: List[(String, SchemaAST, SchemaAST)])
+    final case class Diff(
+      missing: List[(String, SchemaAST)],
+      extra: List[(String, SchemaAST)],
+      mismatched: List[(String, SchemaAST, SchemaAST)])
 
     object Compare {
       private def normName(ci: Boolean)(s: String) = if (ci) s.toLowerCase else s
@@ -77,17 +80,24 @@ object SchemaConformsMacros {
         rec.fields.map(f => normName(ci)(f.name) -> f).toMap
 
       private def showType(ast: SchemaAST): String = ast match {
-        case Primitive(tag) => tag
-        case OptionT(v)     => s"Option[${showType(v)}]"
-        case ArrayT(e)      => s"List[${showType(e)}]"
-        case MapT(k, v)     => s"Map[${showType(k)}, ${showType(v)}]"
+        case Primitive(tag)    => tag
+        case OptionT(v)        => s"Option[${showType(v)}]"
+        case ArrayT(e)         => s"List[${showType(e)}]"
+        case MapT(k, v)        => s"Map[${showType(k)}, ${showType(v)}]"
         case Field(n, t, _, _) => s"$n: ${showType(t)}"
         case Record(n, fs)     => s"$n{${fs.map(f => s"${f.name}:${showType(f.tpe)}").mkString(",")}}"
       }
 
-      private def compareRecord(out: Record, con: Record, policy: c.Type, path: String): Diff = {
+      private def compareRecord(
+        out: Record,
+        con: Record,
+        policy: c.Type,
+        path: String,
+      ): Diff = {
         import c.universe._
-        val ci = policy =:= weakTypeOf[SchemaPolicy.ExactUnorderedCI] || policy =:= weakTypeOf[SchemaPolicy.ExactOrderedCI]
+        val ci = policy =:= weakTypeOf[SchemaPolicy.ExactUnorderedCI] || policy =:= weakTypeOf[
+          SchemaPolicy.ExactOrderedCI,
+        ]
         val outM = fieldMap(out, ci)
         val conM = fieldMap(con, ci)
 
@@ -105,8 +115,9 @@ object SchemaConformsMacros {
           val p  = s"$path${cF.name}."
           compareType(oF.tpe, cF.tpe, policy, p) match {
             case Diff(Nil, Nil, Nil) => Nil
-            case Diff(mi, ex, mm)    =>
-              val selfTypeMismatch = (showType(oF.tpe) != showType(cF.tpe)) && (mi.isEmpty && ex.isEmpty && mm.isEmpty)
+            case Diff(mi, ex, mm) =>
+              val selfTypeMismatch =
+                (showType(oF.tpe) != showType(cF.tpe)) && (mi.isEmpty && ex.isEmpty && mm.isEmpty)
               if (selfTypeMismatch) List((s"$path${cF.name}", cF.tpe, oF.tpe)) else mm
           }
         }
@@ -114,7 +125,12 @@ object SchemaConformsMacros {
         Diff(missing, extra, mismatches)
       }
 
-      def compareType(out: SchemaAST, con: SchemaAST, policy: c.Type, path: String): Diff = {
+      def compareType(
+        out: SchemaAST,
+        con: SchemaAST,
+        policy: c.Type,
+        path: String,
+      ): Diff = {
         import c.universe._
         (out, con) match {
           case (OptionT(o), OptionT(c)) => compareType(o, c, policy, path)
@@ -128,9 +144,10 @@ object SchemaConformsMacros {
             policy match {
               case p if p =:= weakTypeOf[SchemaPolicy.Backward] =>
                 // Allow missing only if contract field is optional or has default
-                val filteredMissing = d.missing.filterNot { case (n, _) =>
-                  val fname = n.stripPrefix(path)
-                  rc.fields.exists(f => f.name == fname && (f.hasDefault || f.isOptional))
+                val filteredMissing = d.missing.filterNot {
+                  case (n, _) =>
+                    val fname = n.stripPrefix(path)
+                    rc.fields.exists(f => f.name == fname && (f.hasDefault || f.isOptional))
                 }
                 d.copy(missing = filteredMissing, extra = Nil) // extra ignored in Backward
               case p if p =:= weakTypeOf[SchemaPolicy.Forward] =>
@@ -138,16 +155,34 @@ object SchemaConformsMacros {
               case p if p =:= weakTypeOf[SchemaPolicy.Full] => Diff(Nil, Nil, Nil)
               case p if p =:= weakTypeOf[SchemaPolicy.ExactByPosition] =>
                 val lenOk = ro.fields.length == rc.fields.length
-                val posMis = ro.fields.zipAll(rc.fields, Field("<none>", Primitive("<none>"), false, false), Field("<none>", Primitive("<none>"), false, false)).zipWithIndex.collect {
-                  case ((of, cf), idx) if showType(of.tpe) != showType(cf.tpe) => (s"${path}@pos$idx", cf.tpe, of.tpe)
-                }
-                val missing = if (!lenOk && rc.fields.length > ro.fields.length) rc.fields.drop(ro.fields.length).map(f => (s"$path${f.name}", f.tpe)) else Nil
-                val extra   = if (!lenOk && ro.fields.length > rc.fields.length) ro.fields.drop(rc.fields.length).map(f => (s"$path${f.name}", f.tpe)) else Nil
+                val posMis = ro.fields
+                  .zipAll(
+                    rc.fields,
+                    Field("<none>", Primitive("<none>"), false, false),
+                    Field("<none>", Primitive("<none>"), false, false),
+                  ).zipWithIndex.collect {
+                    case ((of, cf), idx) if showType(of.tpe) != showType(cf.tpe) =>
+                      (s"${path}@pos$idx", cf.tpe, of.tpe)
+                  }
+                val missing =
+                  if (!lenOk && rc.fields.length > ro.fields.length)
+                    rc.fields.drop(ro.fields.length).map(f => (s"$path${f.name}", f.tpe))
+                  else Nil
+                val extra =
+                  if (!lenOk && ro.fields.length > rc.fields.length)
+                    ro.fields.drop(rc.fields.length).map(f => (s"$path${f.name}", f.tpe))
+                  else Nil
                 Diff(missing, extra, posMis)
-              case p if p =:= weakTypeOf[SchemaPolicy.ExactOrdered] || p =:= weakTypeOf[SchemaPolicy.ExactOrderedCI] =>
+              case p
+                  if p =:= weakTypeOf[SchemaPolicy.ExactOrdered] || p =:= weakTypeOf[
+                    SchemaPolicy.ExactOrderedCI,
+                  ] =>
                 val namesOut = ro.fields.map(_.name)
                 val namesCon = rc.fields.map(_.name)
-                val orderMismatch = if (namesOut != namesCon) List((s"${path}__order__", Record("out", ro.fields), Record("con", rc.fields))) else Nil
+                val orderMismatch =
+                  if (namesOut != namesCon)
+                    List((s"${path}__order__", Record("out", ro.fields), Record("con", rc.fields)))
+                  else Nil
                 d.copy(mismatched = orderMismatch ++ d.mismatched)
               case _ => d
             }
@@ -163,12 +198,18 @@ object SchemaConformsMacros {
     val diff = Compare.compareType(outAst, conAst, weakTypeOf[P], path = "")
 
     if (diff.missing.nonEmpty || diff.extra.nonEmpty || diff.mismatched.nonEmpty) {
-      val fmtMissing = if (diff.missing.isEmpty) "<none>"
+      val fmtMissing =
+        if (diff.missing.isEmpty) "<none>"
         else diff.missing.map { case (n, t) => s"$n:${SchemaAST.pretty(t)}" }.mkString(", ")
-      val fmtExtra = if (diff.extra.isEmpty) "<none>"
+      val fmtExtra =
+        if (diff.extra.isEmpty) "<none>"
         else diff.extra.map { case (n, t) => s"$n:${SchemaAST.pretty(t)}" }.mkString(", ")
-      val fmtMismatched = if (diff.mismatched.isEmpty) "<none>"
-        else diff.mismatched.map { case (n, exp, got) => s"$n expected ${SchemaAST.pretty(exp)} found ${SchemaAST.pretty(got)}" }.mkString(", ")
+      val fmtMismatched =
+        if (diff.mismatched.isEmpty) "<none>"
+        else
+          diff.mismatched.map {
+            case (n, exp, got) => s"$n expected ${SchemaAST.pretty(exp)} found ${SchemaAST.pretty(got)}"
+          }.mkString(", ")
 
       val msg =
         s"""FlowForge: Contract drift (policy: %s).
