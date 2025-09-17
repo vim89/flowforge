@@ -1,0 +1,6 @@
+> project bad
+> compile
+x
+> project good
+> compile
+> reload
