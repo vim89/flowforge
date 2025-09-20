@@ -122,7 +122,7 @@ lazy val root = (project in file("."))
     qualityDeequ, // Removed empty quality module per v1.0-2 plan
     examples,
     compileFailTests,
-    it,
+    experimental
   )
   .settings(
     name               := "flowforge",
@@ -308,16 +308,6 @@ lazy val maintenanceCli = moduleProject("maintenance-cli")
 
 // ===== ADDITIONAL MODULES =====
 
-lazy val it = (project in file("integration-tests"))
-  .dependsOn(examples, connectorsGcs, enginesSpark)
-  .settings(
-    name           := "integration-tests",
-    description    := "Flowforge Integration tests",
-    publish / skip := true,
-    Test / fork    := true,
-    Test / skip    := !sys.props.get("withSparkIT").contains("true"),
-  )
-
 // ===== SBT ALIASES =====
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("fmtCheck", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
@@ -424,4 +414,17 @@ lazy val contractsSdk = moduleProject("contracts-sdk")
       }
       generated
     }.taskValue,
+  )
+// Experimental Scala 3 module for capture checking demos (opt-in)
+lazy val experimental = moduleProject("experimental")
+  .settings(
+    description        := "Experimental Scala 3 POCs",
+    scalaVersion       := Dependencies.Versions.scala3,
+    crossScalaVersions := Seq(Dependencies.Versions.scala3),
+    scalacOptions ++= Seq(
+      "-explain",
+      "-source:3.3"
+    ),
+    Compile / mainClass := Some("com.flowforge.experimental.caprese.Main"),
+    publish / skip      := true,
   )

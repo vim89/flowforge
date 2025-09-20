@@ -376,7 +376,7 @@ lazy val experimentalSettings = Seq(
   scalacOptions ++= Seq("-Xfatal-warnings")
 )
 
-lazy val experimentalCaprese = (project in file("modules/experimental-caprese"))
+lazy val experimental = (project in file("modules/experimental-caprese"))
   .settings(name := "flowforge-experimental-caprese")
   .settings(experimentalSettings)
 
@@ -393,7 +393,7 @@ lazy val experimentalKyo = (project in file("modules/experimental-kyo"))
   )
 
 lazy val experimentalExamples = (project in file("modules/experimental-examples"))
-  .dependsOn(experimentalCaprese, experimentalKyo, core /* your core module id */)
+  .dependsOn(experimental, experimentalKyo, core /* your core module id */)
   .settings(experimentalSettings)
 ```
 
@@ -604,7 +604,7 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: 'temurin', java-version: ${{ matrix.java }} }
       - name: SBT test (experimental only)
-        run: sbt "project experimentalCaprese" test "project experimentalKyo" test "project experimentalExamples" test
+        run: sbt "project experimental" test "project experimentalKyo" test "project experimentalExamples" test
 ```
 
 Optionally keep it **non-blocking** at first (soft gate). Later, promote to hard gate.
