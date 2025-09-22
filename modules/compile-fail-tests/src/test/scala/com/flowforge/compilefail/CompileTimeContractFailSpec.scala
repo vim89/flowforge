@@ -150,4 +150,38 @@ class CompileTimeContractFailSpec extends AnyWordSpec with Matchers {
       pipeline.name shouldBe "backward-compat-pipeline"
     }
   }
+
+  /**
+   * trait Expr
+   * case class Num(value: Double) extends Expr
+   * case class Sum(lhs: Expr, rhs: Expr) extends Expr
+   * case class Sub(lhs: Expr, rhs: Expr) extends Expr
+   * case class Mul(lhs: Expr, rhs: Expr) extends Expr
+   * case class Div(lhs: Expr, rhs: Expr) extends Expr
+   * case class Sin(expr: Expr) extends Expr
+   * case class Cos(expr: Expr) extends Expr
+   * // ... and everything else
+   *
+   *
+   *
+   *
+   * val computation =
+   * Sum(
+   * Num(2),
+   * Sum(
+   * Div(Num(3), Num(4)),
+   * Mul(
+   * Num(2),
+   * Mul(
+   * Num(8),
+   * Sin(Num(30))
+   * )
+   * )
+   * )
+   * )
+   *
+   *
+   */
+
+
 }

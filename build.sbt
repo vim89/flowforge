@@ -362,7 +362,7 @@ addCommandAlias("ffRunSpark", "engines-spark/run") // Spark local[*], DQ + Delta
 
 // Ensure examples compiles after contracts-sdk (belt-and-suspenders ordering)
 examples / Compile / compile := (examples / Compile / compile)
-  .dependsOn(contractsSdk / Compile / compile)
+  .dependsOn(contractsSdk / Compile / compile, core / Compile / compile)
   .value
 
 // ===== COMPILE-FAIL TESTS MODULE =====
