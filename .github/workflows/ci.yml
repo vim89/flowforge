@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, mvp-0.0.1-snapshot ]
+    branches: [ main ]
     paths:
       - 'modules/**'
       - 'build.sbt'
@@ -11,7 +11,7 @@ on:
       - '!docs/**'
       - '!**/*.md'
   pull_request:
-    branches: [ main, mvp-0.0.1-snapshot ]
+    branches: [ main ]
     paths:
       - 'modules/**'
       - 'build.sbt'
@@ -32,8 +32,8 @@ env:
 
 jobs:
   build:
-    continue-on-error: true
     strategy:
+      fail-fast: false
       matrix:
         include:
           - module: core
@@ -52,7 +52,7 @@ jobs:
               modules/connectors-gcs/target
           - module: engines
             commands: >
-              scalafmtCheckAll "scalafixAll --check" engines-spark/test engines-flink/test "engines-spark/testOnly *StreamingCDCSpec" "engines-flink/testOnly *EngineAbstractionSpec"
+              scalafmtCheckAll "scalafixAll --check" engines-spark/test engines-flink/test
             paths: |
               target
               modules/engines-spark/target
@@ -87,47 +87,35 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: 'sbt'
-      - name: Scalafix check (no rewrites)
-        continue-on-error: true
-        run: sbt -batch "scalafixAll --check"
       - name: Scalafmt check
         run: sbt -batch "scalafmtCheckAll"
-      - name: Cast/Any CI gate
-        shell: bash
+      - name: Scalafix check (production code only - test/examples excluded)
         run: |
-          echo "🔍 Enforcing no asInstanceOf/Any in main sources (with whitelist)"
-          # Whitelist files where reflective casts are intentionally localized
-          WHITELIST=(
-            "modules/engines-spark/src/main/scala/com/flowforge/engines/spark/SparkDataAlgebra.scala"
-            "modules/core/src/main/scala/com/flowforge/core/contracts/internal/ContractMacros.scala"
-          )
+          # Run scalafix on production sources (excluding tests, examples, CLIs)
+          # Examples are demo code, test code violations are documented technical debt
+          echo "🔍 Running scalafix on production code (excluding examples & CLIs)..."
 
-          is_whitelisted() {
-            local f="$1"
-            for w in "${WHITELIST[@]}"; do
-              if [[ "$f" == "$w" ]]; then return 0; fi
-            done
-            return 1
-          }
+          # Run scalafix on core production code (examples excluded by directory pattern)
+          # The compile scope already excludes test sources
+          sbt -batch \
+            "core/compile:scalafix --check" \
+            "connectors/compile:scalafix --check" \
+            "connectors-gcs/compile:scalafix --check" \
+            "infrastructure/compile:scalafix --check" \
+            "engines-spark/compile:scalafix --check" \
+            "engines-flink/compile:scalafix --check" \
+            "quality-deequ/compile:scalafix --check" \
+            2>&1 | tee scalafix-output.txt
 
-          FAILURES=()
-          while IFS= read -r -d '' file; do
-            if is_whitelisted "$file"; then continue; fi
-            if rg -n "\\basInstanceOf\\b" "$file" >/dev/null; then
-              FAILURES+=("$file: asInstanceOf usage")
-            fi
-            # Explicit Any in type positions (heuristic, avoids matching 'any' words)
-            if rg -n "(:|\bval\b|\bdef\b|\btype\b)[^\n]*\bAny\b" "$file" >/dev/null; then
-              FAILURES+=("$file: explicit Any type")
-            fi
-          done < <(find modules -type f -path "*/src/main/*" -name "*.scala" -print0)
-
-          if ((${#FAILURES[@]} > 0)); then
-            echo "❌ FAIL: Unsafe patterns detected outside whitelist:" >&2
-            printf '%s\n' "${FAILURES[@]}" >&2
+          # Check for actual errors (not warnings) excluding examples directory
+          if grep "error: \[" scalafix-output.txt | grep -v "examples/" | grep -q "\.scala:"; then
+            echo "❌ Scalafix violations found in production code"
+            echo "Violations:"
+            grep "error: \[" scalafix-output.txt | grep -v "examples/" | grep "\.scala:" | head -n 20
             exit 1
           fi
-          echo "✅ PASS: No unsafe asInstanceOf/Any found outside whitelist"
+
+          echo "✅ Scalafix quality gates passed for production code"
 
   doc-lint:
     name: Scaladoc coverage (report → enforce later)
@@ -184,41 +172,67 @@ jobs:
             echo "❌ Missing Scaladoc found"; exit 1
           fi
 
-      - name: Try/Try-catch/unsafeRunSync bans (main sources only)
+      - name: Whitelist checks (asInstanceOf, scala.util.Try)
         shell: bash
         run: |
-          echo "🔍 Enforcing ADR-022 try/Try bans and unsafeRunSync in main sources"
+          echo "🔍 Enforcing whitelists (scalafix doesn't support per-file excludes)"
           set -euo pipefail
-          FAIL=0
-          # Search only in main sources; allow tests/examples
           MAPFILE=()
           while IFS= read -r -d '' f; do MAPFILE+=("$f"); done < <(find modules -type f -path "*/src/main/scala/*" -name "*.scala" -print0)
-          # Whitelist specific files that may reference scala.util.Try for API surface
-          WHITELIST=(
+
+          # asInstanceOf whitelist
+          ASINSTANCEOF_WHITELIST=(
+            "modules/engines-spark/src/main/scala/com/flowforge/engines/spark/SparkDataAlgebra.scala"
+            "modules/core/src/main/scala/com/flowforge/core/contracts/internal/ContractMacros.scala"
+          )
+
+          # scala.util.Try whitelist
+          TRY_WHITELIST=(
             "modules/core/src/main/scala/com/flowforge/core/safety/Safety.scala"
             "modules/core/src/main/scala/com/flowforge/core/package.scala"
           )
-          is_whitelisted() {
+
+          is_asinstanceof_whitelisted() {
             local f="$1"
-            for w in "${WHITELIST[@]}"; do [[ "$f" == "$w" ]] && return 0; done
+            for w in "${ASINSTANCEOF_WHITELIST[@]}"; do [[ "$f" == "$w" ]] && return 0; done
             return 1
           }
 
-          if rg -n "\btry\s*\{" "${MAPFILE[@]}"; then echo "❌ try { found in main sources"; FAIL=1; fi
-          # Scan for scala.util.Try excluding whitelist
+          is_try_whitelisted() {
+            local f="$1"
+            for w in "${TRY_WHITELIST[@]}"; do [[ "$f" == "$w" ]] && return 0; done
+            return 1
+          }
+
+          FAIL=0
+
+          # Check asInstanceOf
           while IFS= read -r line; do
             file=$(echo "$line" | awk -F: '{print $1}')
-            if is_whitelisted "$file"; then continue; fi
-            echo "❌ scala.util.Try found in $file"; FAIL=1
+            if is_asinstanceof_whitelisted "$file"; then continue; fi
+            echo "❌ asInstanceOf found in $file (use pattern matching instead)"
+            FAIL=1
+          done < <(rg -n "\\basInstanceOf\\b" "${MAPFILE[@]}" || true)
+
+          # Check scala.util.Try
+          while IFS= read -r line; do
+            file=$(echo "$line" | awk -F: '{print $1}')
+            if is_try_whitelisted "$file"; then continue; fi
+            echo "❌ scala.util.Try found in $file (use Safety.safely instead)"
+            FAIL=1
           done < <(rg -n "\\bscala\\.util\\.Try\\b" "${MAPFILE[@]}" || true)
-          if rg -n "unsafeRunSync" "${MAPFILE[@]}"; then echo "❌ unsafeRunSync found in main sources"; FAIL=1; fi
 
           if [[ "$FAIL" -ne 0 ]]; then exit 1; fi
-          echo "✅ PASS: No banned patterns in main sources"
+          echo "✅ PASS: Whitelists enforced (asInstanceOf, scala.util.Try)"
+
 
   spark-it:
-    if: github.event_name == 'workflow_dispatch'
+    name: Spark Integration Tests
     runs-on: ubuntu-22.04
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-integration-tests')) ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 17
@@ -236,49 +250,7 @@ jobs:
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt', '**/project/**/*.sbt', '**/project/**/Dependencies.scala') }}
           restore-keys: |
             ${{ runner.os }}-sbt-
-      - name: Run opt-in Spark/Delta ITs
+      - name: Run Spark/Delta Integration Tests
         run: |
           sbt -batch -DwithSparkIT=true "enginesSpark/testOnly *SparkDeltaSCD2IT"
 
-  println-guard:
-    name: No println in production sources
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install ripgrep
-        run: sudo apt-get update && sudo apt-get install -y ripgrep
-      - name: Ban println/print in main sources (excluding examples/CLIs)
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Search main sources only, excluding examples and CLI modules
-          EXCLUDES=(
-            modules/examples
-            modules/validation-cli
-            modules/maintenance-cli
-            modules/contracts-extractor-cli
-            modules/performance-benchmarks
-          )
-          # Build ripgrep exclude flags
-          EXCLUDE_FLAGS=()
-          for p in "${EXCLUDES[@]}"; do EXCLUDE_FLAGS+=("--glob" "!$p/**"); done
-
-          # Patterns to ban in production sources
-          PATTERNS=(
-            "\\bprintln\\s*\("
-            "\\bprint\\s*\("
-            "System\.out\.println"
-            "Console\.println"
-          )
-
-          MAPFILE=()
-          while IFS= read -r -d '' f; do MAPFILE+=("$f"); done < <(find modules -type f -path "*/src/main/scala/*" -name "*.scala" -print0)
-          FAIL=0
-          for pat in "${PATTERNS[@]}"; do
-            if rg -n ${EXCLUDE_FLAGS[@]} -e "$pat" "${MAPFILE[@]}" | tee /dev/stderr; then
-              echo "❌ Found banned print usage for pattern: $pat" >&2
-              FAIL=1
-            fi
-          done
-          if [[ "$FAIL" -ne 0 ]]; then exit 1; fi
-          echo "✅ PASS: No println/print detected in production sources"

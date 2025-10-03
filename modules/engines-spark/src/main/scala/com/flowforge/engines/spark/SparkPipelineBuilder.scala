@@ -1,8 +1,8 @@
 package com.flowforge.engines.spark
 
 import cats.data.Kleisli
-import cats.implicits._
 import cats.effect.Resource
+import cats.implicits._
 import com.flowforge.core.algebra.DataAlgebra.WriteOptions
 import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
 import com.flowforge.core.types._
@@ -126,7 +126,7 @@ class SparkTypedBuilder[F[_]: EffectSystem, In, Out] private[spark] (
   def addQualityCheck(
     contract: com.flowforge.core.types.PipelineTypes.DataContract[Out],
   ): SparkTypedBuilder[F, In, Out] = {
-    val F = EffectSystem[F]
+    EffectSystem[F]
     val stage = SparkStage.Quality[F, Out](
       name = s"spark-quality-${stages.size}",
       description = "Spark distributed quality validation",

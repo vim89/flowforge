@@ -2,11 +2,11 @@ package com.flowforge.examples.runners
 
 import com.flowforge.core.PipelineBuilder
 import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
-import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
 import com.flowforge.core.contracts.derive.Shape
+import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
 import com.flowforge.core.types._
-import com.flowforge.engines.spark.SparkDataAlgebra
 import com.flowforge.engines.flink.FlinkDataAlgebra
+import com.flowforge.engines.spark.SparkDataAlgebra
 import com.flowforge.framework.PipelineExecution
 
 /**
@@ -153,7 +153,7 @@ object KafkaPipelineExample {
       .addTransform[User](u => E.pure(u.copy(age = u.age + 5)))
       .addTypedSink[User, SchemaPolicy.Exact](
         TypedSink(sink),
-        (out, d) => E.flatMap(dao.read[User](src))(ds => E.map(dao.write(ds, d))(_ => ())),
+        (_, d) => E.flatMap(dao.read[User](src))(ds => E.map(dao.write(ds, d))(_ => ())),
       )
       .build()
 

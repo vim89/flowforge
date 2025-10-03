@@ -29,7 +29,6 @@
  */
 package com.flowforge.core.types
 import cats.data.{ Kleisli, ValidatedNel }
-import cats.effect.Sync
 import cats.implicits._
 import com.flowforge.core.algebra.EffectSystem
 

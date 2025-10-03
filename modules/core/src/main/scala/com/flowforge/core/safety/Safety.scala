@@ -1,14 +1,15 @@
 package com.flowforge.core.safety
 
-import cats.data.Validated
-import cats.data.ValidatedNel
+import cats.data.{ Validated, ValidatedNel }
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.logging.CoreLogger
 import com.flowforge.core.types.FlowForgeError
 
 import scala.annotation.tailrec
+// scalafix:off DisableSyntax
 import scala.util.Try
+// scalafix:on DisableSyntax
 
 /**
  * Universal safety helpers for pure and effectful code paths.
@@ -87,4 +88,3 @@ object Safety {
     def toEither: Result[A] = v.toEither.leftMap(errs => FlowForgeError.CompositeError(errs))
   }
 }
-// scalafix:off noScalaUtilTry

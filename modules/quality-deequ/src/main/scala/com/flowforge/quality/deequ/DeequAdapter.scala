@@ -1,11 +1,11 @@
 package com.flowforge.quality.deequ
 
+import cats.syntax.either._
 import com.flowforge.core.algebra.DataAlgebra
 import com.flowforge.core.algebra.DataAlgebra.{ QualityViolation, ViolationSeverity }
 import com.flowforge.core.types.{ QualityConstraint => FFConstraint }
 import com.flowforge.engines.spark.ProductionSparkDataset
 import org.apache.spark.sql.SparkSession
-import cats.syntax.either._
 
 /**
  * FlowForge Data Quality with Deequ 2.0.12 for Spark 3.5
@@ -108,7 +108,7 @@ object DeequAdapter {
 
     deequResult match {
       case Right(result) => result
-      case Left(error)   =>
+      case Left(_)       =>
         // Fallback to native Spark checks if Deequ fails
         // best-effort logging without failing the data path
         ()

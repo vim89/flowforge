@@ -1,7 +1,6 @@
 package com.flowforge.connectors.safety
 
 import com.flowforge.core.safety.ErrorMapper
-import com.flowforge.core.types.FlowForgeError
 import com.flowforge.core.types.FlowForgeError.{ ConfigurationError, ValidationError }
 import com.flowforge.core.types.SystemError
 

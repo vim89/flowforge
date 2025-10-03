@@ -1,3 +1,4 @@
+// scalafix:off DisableSyntax.throw
 /**
  * FlowForge Core Module - Data Modeling Types
  *

@@ -7,7 +7,6 @@ import com.flowforge.core.contracts.derive.Shape
 import com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
 import com.flowforge.core.types.TypedIO._
 import com.flowforge.core.types._
-import com.flowforge.framework.Pipeline
 
 /**
  * Typestate (phantom types) demo: show that an incomplete pipeline REFUSES to build.

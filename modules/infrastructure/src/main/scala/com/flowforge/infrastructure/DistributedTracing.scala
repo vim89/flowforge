@@ -1,7 +1,6 @@
 package com.flowforge.infrastructure
 
 import cats.effect.Sync
-import cats.syntax.all._
 
 /**
  * Distributed tracing for request tracking.
@@ -32,9 +31,7 @@ object DistributedTracing {
 
   private class OpenTelemetryTracing[F[_]: Sync] extends DistributedTracing[F] {
     import io.opentelemetry.api.GlobalOpenTelemetry
-    import io.opentelemetry.api.common.Attributes
     import io.opentelemetry.api.trace.{ Span, SpanKind, StatusCode }
-    import io.opentelemetry.context.{ Context, Scope }
 
     private val tracer = GlobalOpenTelemetry.getTracer("com.flowforge.tracing")
 

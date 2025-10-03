@@ -1,3 +1,4 @@
+// scalafix:off DisableSyntax.var DisableSyntax.throw DisableSyntax.null DisableSyntax.noUnsafeRunSync
 package com.flowforge.contracts
 
 import com.flowforge.core.contracts.derive.Shape
@@ -56,7 +57,7 @@ class SchemaConformsCompileSpec extends AnyWordSpec with Matchers {
         tags: List[String],
         score: Option[Double])
 
-      implicit val complexRecordShape: Shape[ComplexRecord] = Shape.gen[ComplexRecord]
+      Shape.gen[ComplexRecord]
 
       val evidence: SchemaConforms[ComplexRecord, ComplexRecord, SchemaPolicy.Exact] =
         implicitly[SchemaConforms[ComplexRecord, ComplexRecord, SchemaPolicy.Exact]]

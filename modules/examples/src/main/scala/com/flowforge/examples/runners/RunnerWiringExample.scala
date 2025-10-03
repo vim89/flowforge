@@ -195,7 +195,7 @@ object RunnerWiringExample {
       .addTransform[User](u => E.pure(u.copy(age = math.max(0, u.age))))
       .addTypedSink[User, SchemaPolicy.Exact](
         TypedSink(sink),
-        (u: User, d) =>
+        (_: User, d) =>
           E.flatMap(dao.read(src)) { ds =>
             dao.write(ds, d)(userEncoder)
             log("Done")

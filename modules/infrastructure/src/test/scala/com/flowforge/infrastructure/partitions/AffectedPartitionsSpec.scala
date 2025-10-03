@@ -1,3 +1,4 @@
+// scalafix:off DisableSyntax.var DisableSyntax.throw DisableSyntax.null DisableSyntax.noUnsafeRunSync
 package com.flowforge.infrastructure.partitions
 
 import org.scalatest.funsuite.AnyFunSuite

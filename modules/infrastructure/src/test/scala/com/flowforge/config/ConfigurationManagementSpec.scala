@@ -1,9 +1,10 @@
+// scalafix:off DisableSyntax.var DisableSyntax.throw DisableSyntax.null DisableSyntax.noUnsafeRunSync
 package com.flowforge.config
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 class ConfigurationManagementSpec extends AnyWordSpec with Matchers {
   "TypesafeConfigurationManagement" should {

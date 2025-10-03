@@ -3,12 +3,8 @@ package com.flowforge.framework
 import cats.data.{ Kleisli, NonEmptyList }
 import cats.syntax.all._
 import com.flowforge.core.algebra.EffectSystem
-
-/**
- * Real, minimal pipeline and combinators built on Kleisli and EffectSystem. Focuses on practical,
- * production-friendly composition without placeholders.
- */
 import com.flowforge.core.types.{ ExecutionStatus, PipelineMetrics, PipelineResult }
+
 import java.time.Instant
 import scala.concurrent.duration._
 

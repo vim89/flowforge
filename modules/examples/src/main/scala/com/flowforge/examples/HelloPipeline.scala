@@ -3,11 +3,10 @@ package com.flowforge.examples
 import cats.effect.{ IO, IOApp, Resource }
 import com.flowforge.core.PipelineBuilder
 import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
-import com.flowforge.core.contracts.SchemaPolicy
-import com.flowforge.core.contracts.SchemaConforms
+import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
 import com.flowforge.core.types._
-import com.flowforge.framework.PipelineExecution
 import com.flowforge.engines.spark.{ ProductionSparkDataset, SparkDataAlgebra }
+import com.flowforge.framework.PipelineExecution
 import org.apache.spark.sql.SparkSession
 
 /**

@@ -1,7 +1,6 @@
 package com.flowforge.examples.connectors
 
-import com.flowforge.core.algebra.{ DataDecoder, DataEncoder, EffectSystem }
-import com.flowforge.core.algebra.{ EncodedData => FFEncodedData }
+import com.flowforge.core.algebra.{ DataDecoder, DataEncoder, EffectSystem, EncodedData => FFEncodedData }
 import com.flowforge.core.types.DataFormat
 
 import java.nio.file.{ Files, Paths, StandardOpenOption }

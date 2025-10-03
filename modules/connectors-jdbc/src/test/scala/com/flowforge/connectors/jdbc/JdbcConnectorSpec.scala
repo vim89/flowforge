@@ -1,15 +1,14 @@
+// scalafix:off DisableSyntax.var DisableSyntax.throw DisableSyntax.null DisableSyntax.noUnsafeRunSync
 package com.flowforge.connectors.jdbc
 
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
 import com.flowforge.core.instances.EffectInstances
-import com.flowforge.core.instances.DefaultCodecs._
-import com.flowforge.core.types.{ DataSink, DataSource }
 import com.flowforge.core.types.RefinedTypes.TableName
 import com.flowforge.engines.spark.SparkDataAlgebra
 import org.apache.spark.sql.SparkSession
 import org.scalatest.funsuite.AnyFunSuite
-import cats.effect.unsafe.implicits.global
 import org.scalatest.matchers.should.Matchers
 
 class JdbcConnectorSpec extends AnyFunSuite with Matchers {

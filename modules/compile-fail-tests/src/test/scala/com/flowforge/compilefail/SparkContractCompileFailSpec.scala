@@ -1,7 +1,7 @@
+// scalafix:off DisableSyntax.var DisableSyntax.throw DisableSyntax.null DisableSyntax.noUnsafeRunSync
 package com.flowforge.compilefail
 
 import org.scalatest.funsuite.AnyFunSuite
-import org.scalatest.Assertion
 
 /**
  * Compile-time contract failures for realistic Spark-style pipelines. These use ScalaTest's assertTypeError

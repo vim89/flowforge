@@ -1,8 +1,9 @@
+// scalafix:off DisableSyntax.var DisableSyntax.throw DisableSyntax.null DisableSyntax.noUnsafeRunSync
 package com.flowforge.compilefail
 
 import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
-import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 class SchemaPolicyMatrixSpec extends AnyWordSpec with Matchers {
   case class U(

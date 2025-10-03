@@ -171,11 +171,12 @@ jobs:
             ${{ runner.os }}-sbt-release-
             ${{ runner.os }}-sbt-
 
-      - name: Update version in build.sbt
+      - name: Set release version
         run: |
           VERSION="${{ needs.validate-release.outputs.version }}"
-          sed -i "s/version := \".*\"/version := \"$VERSION\"/" build.sbt
-          echo "Updated build.sbt to version $VERSION"
+          echo "Building with version: $VERSION (from git tag)"
+          # sbt-dynver uses git tags for versioning automatically
+          git tag -f "v$VERSION" 2>/dev/null || true
 
       - name: Build JAR artifacts
         run: |
@@ -286,35 +287,44 @@ jobs:
           name: release-artifacts-${{ needs.validate-release.outputs.version }}
           path: release-artifacts/
 
-      - name: Generate release notes
+      - name: Generate dynamic release notes
         id: release-notes
         run: |
           VERSION="${{ needs.validate-release.outputs.version }}"
-          cat > release-notes.md << EOF
-          # FlowForge v$VERSION
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
 
-          ## 🚀 Features
-          - 100% Compile-time contracts - Data pipelines fail to compile if schema drift occurs
-          - Phantom-state builder pattern - Incomplete pipelines cannot be built
-          - SchemaConforms evidence system - Macro-based schema validation
-          - Contract-aware quickstart demo - Working examples of compile-time validation
+          {
+            echo "# FlowForge v$VERSION"
+            echo ""
 
-          ## 🛠 CLI Tools
-          - **validation-cli**: Schema validation and contract checking
-          - **contracts-extractor-cli**: Extract contracts from data sources
+            if [ -n "$PREV_TAG" ]; then
+              echo "## 📝 Changes since $PREV_TAG"
+              echo ""
+              git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges | head -n 50
+              echo ""
+              echo ""
+            fi
 
-          ## 📋 What's New
-          - Implemented 3 required compile-fail tests (missing sink, schema mismatch, illegal evolution)
-          - Deprecated legacy SchemaWitness system
-          - Enhanced template generation with contract enforcement
-
-          ## 🧪 Testing
-          - All modules tested with coverage reporting
-          - Compile-fail tests validate contract enforcement
-          - Integration tests for Spark/Delta workflows
-
-          Generated from commit: ${{ github.sha }}
-          EOF
+            echo "## 🚀 Core Features"
+            echo "- 100% Compile-time contracts - Data pipelines fail to compile on schema drift"
+            echo "- Phantom-state builder pattern - Type-safe pipeline construction"
+            echo "- Macro-based schema validation - Zero-runtime overhead"
+            echo ""
+            echo "## 🛠 CLI Tools"
+            echo "- **validation-cli**: Schema validation and contract checking"
+            echo "- **contracts-extractor-cli**: Extract contracts from data sources"
+            echo ""
+            echo "## 📊 Statistics"
+            COMMIT_COUNT=$(git rev-list --count ${PREV_TAG}..HEAD 2>/dev/null || echo "N/A")
+            CONTRIBUTOR_COUNT=$(git shortlog -sn ${PREV_TAG}..HEAD 2>/dev/null | wc -l || echo "N/A")
+            echo "- Commits: $COMMIT_COUNT"
+            echo "- Contributors: $CONTRIBUTOR_COUNT"
+            echo "- Commit: \`${{ github.sha }}\`"
+            echo ""
+            echo "## 📚 Documentation"
+            echo "- API Docs: https://vim89.github.io/flowforge/api/"
+            echo "- Getting Started: https://github.com/vim89/flowforge#getting-started"
+          } > release-notes.md
 
       - name: Create gitHub release
         uses: softprops/action-gh-release@v1
@@ -332,3 +342,13 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
+
+      - name: Rollback instructions
+        if: failure()
+        run: |
+          echo "❌ Release failed!"
+          echo ""
+          echo "To rollback:"
+          echo "  1. Delete failed release: gh release delete v${{ needs.validate-release.outputs.version }} -y"
+          echo "  2. Delete tag: git push --delete origin v${{ needs.validate-release.outputs.version }}"
+          echo "  3. Fix issues and re-tag when ready"

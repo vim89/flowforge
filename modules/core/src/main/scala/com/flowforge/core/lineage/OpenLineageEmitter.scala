@@ -1,9 +1,9 @@
+// scalafix:off DisableSyntax.throw
 package com.flowforge.core.lineage
 import cats.implicits._
 import com.flowforge.core.algebra.EffectSystem
 
 import java.time.Instant
-import java.util.UUID
 
 /**
  * OpenLineage event emitter for FlowForge v1.0

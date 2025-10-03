@@ -3,9 +3,9 @@ package com.flowforge.core.lineage
 import com.flowforge.core.algebra.EffectSystem
 
 import java.util.concurrent.ArrayBlockingQueue
-import scala.util.Random
 import scala.annotation.unused
 import scala.language.existentials
+import scala.util.Random
 
 final class AsyncOpenLineageEmitter[F[_]: EffectSystem](
   underlying: OpenLineageEmitter[F],

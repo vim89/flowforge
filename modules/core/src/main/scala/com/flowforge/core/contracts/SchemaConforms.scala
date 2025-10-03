@@ -1,7 +1,4 @@
 package com.flowforge.core.contracts
-
-import com.flowforge.core.contracts.derive.Shape
-
 import scala.annotation.implicitNotFound
 
 /**

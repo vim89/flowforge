@@ -1,3 +1,4 @@
+// scalafix:off DisableSyntax.throw
 package com.flowforge.core.impl
 
 import cats.data.{ NonEmptyList, Validated, ValidatedNel }

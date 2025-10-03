@@ -461,3 +461,6 @@ lazy val unidocProjects = Seq(
 )
 
 ThisBuild / ScalaUnidoc / unidocProjectFilter := inProjects(unidocProjects.map(_.project): _*)
+
+// Scalafix: Disable auto-run on compile (run explicitly in CI)
+ThisBuild / scalafixOnCompile := false

@@ -38,8 +38,8 @@
 package com.flowforge.core.algebra
 
 import cats.data.{ NonEmptyList, ValidatedNel }
-import com.flowforge.core.algebra.EffectSystem
 import cats.implicits._
+import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.types.ConfigError
 import eu.timepit.refined.types.string.NonEmptyString
 import fs2.Stream

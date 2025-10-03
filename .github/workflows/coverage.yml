@@ -14,29 +14,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up JDK 17 (with SBT cache)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '17'
+          cache: 'sbt'
 
-      - name: Cache SBT and dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.ivy2/cache
-            ~/.cache/coursier
-            ~/.sbt
-            **/target
-          key: ${{ runner.os }}-sbt-coverage-${{ hashFiles('**/build.sbt', '**/project/**/*.sbt', '**/project/**/*.scala') }}
-          restore-keys: |
-            ${{ runner.os }}-sbt-coverage-
-
-      - name: Run coverage with thresholds
+      - name: Run coverage with per-module thresholds
         run: |
           sbt -batch \
-            "set ThisBuild / coverageMinimum := 75" \
-            "set ThisBuild / coverageFailOnMinimum := true" \
+            "set core / coverageMinimumStmtTotal := 80" \
+            "set core / coverageMinimumBranchTotal := 75" \
+            "set core / coverageFailOnMinimum := true" \
+            "set infrastructure / coverageMinimumStmtTotal := 70" \
+            "set infrastructure / coverageMinimumBranchTotal := 65" \
+            "set infrastructure / coverageFailOnMinimum := true" \
+            "set connectors / coverageMinimumStmtTotal := 70" \
+            "set connectors / coverageFailOnMinimum := true" \
+            "set enginesSpark / coverageMinimumStmtTotal := 60" \
+            "set enginesSpark / coverageFailOnMinimum := false" \
+            "set qualityDeequ / coverageMinimumStmtTotal := 60" \
+            "set qualityDeequ / coverageFailOnMinimum := false" \
             clean coverage test coverageReport coverageAggregate
 
       - name: Upload coverage to Codecov

@@ -1,14 +1,11 @@
 package com.flowforge.config
 
 import cats.data.ValidatedNel
-import cats.syntax.either._
 import cats.effect.Sync
+import cats.syntax.either._
 import com.flowforge.core.algebra.{ ConfigurationAlgebra, FlowForgeConfig }
-import com.flowforge.core.safety.Safety
-import com.flowforge.core.safety.ErrorMapper
+import com.flowforge.core.safety.{ ErrorMapper, Safety }
 import com.typesafe.config.{ Config, ConfigFactory }
-
-import scala.util.{ Failure, Success, Try }
 
 /**
  * Configuration error types.

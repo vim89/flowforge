@@ -495,7 +495,7 @@ object PipelineSyntax {
   def log[F[_]: EffectSystem, A](message: String)(implicit L: com.flowforge.core.logging.CoreLogger[F])
     : PipelineComponent[F, A, A] =
     Kleisli[F, A, A] { a =>
-      val F = implicitly[EffectSystem[F]]
+      implicitly[EffectSystem[F]]
       for {
         _ <- L.info(message)
       } yield a
@@ -510,7 +510,7 @@ object PipelineSyntax {
   )(implicit L: com.flowforge.core.logging.CoreLogger[F],
   ): PipelineComponent[F, A, A] =
     Kleisli[F, A, A] { a =>
-      val F = implicitly[EffectSystem[F]]
+      implicitly[EffectSystem[F]]
       for {
         _ <- L.info(s"$name = ${extractor(a)}")
       } yield a

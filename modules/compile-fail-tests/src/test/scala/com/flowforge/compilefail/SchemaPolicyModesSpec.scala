@@ -1,3 +1,4 @@
+// scalafix:off DisableSyntax.var DisableSyntax.throw DisableSyntax.null DisableSyntax.noUnsafeRunSync
 package com.flowforge.compilefail
 
 import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
