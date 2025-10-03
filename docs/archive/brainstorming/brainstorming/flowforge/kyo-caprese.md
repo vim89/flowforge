@@ -174,10 +174,10 @@ If you want, I can adapt the Kyo interop stub (`KyoInterop.toIO`) to the exact f
 
 [1]: https://github.com/getkyo/kyo "GitHub - getkyo/kyo: Toolkit for Scala Development"
 [2]: https://docs.scala-lang.org/scala3/reference/experimental/cc.html "Capture Checking"
-[3]: https://gist.github.com/ahoy-jon/0aec8bcf636fac096ae5e4b9ed706fe0?utm_source=chatgpt.com "The Rebirth of Tagless Final: An Ergonomic Approach in Kyo"
-[4]: https://users.scala-lang.org/t/kyo-0-16-0-released/10501?utm_source=chatgpt.com "Kyo 0.16.0 released - Announce"
-[5]: https://abgru.me/publication/capturing-types/capturing-types.pdf?utm_source=chatgpt.com "Keeping Track of Capabilities - ABG"
-[6]: https://nrinaudo.github.io/articles/capture_checking.html?utm_source=chatgpt.com "Hands on Capture Checking - Nicolas Rinaudo"
+[3]: https://gist.github.com/ahoy-jon/0aec8bcf636fac096ae5e4b9ed706fe0 "The Rebirth of Tagless Final: An Ergonomic Approach in Kyo"
+[4]: https://users.scala-lang.org/t/kyo-0-16-0-released/10501 "Kyo 0.16.0 released - Announce"
+[5]: https://abgru.me/publication/capturing-types/capturing-types.pdf "Keeping Track of Capabilities - ABG"
+[6]: https://nrinaudo.github.io/articles/capture_checking.html "Hands on Capture Checking - Nicolas Rinaudo"
 
 --------
 # What is caprese exactly? Is it effect system?
@@ -199,12 +199,12 @@ Not in the usual sense. Caprese is **language-level infrastructure** to *express
 
 **Bottom line:** Caprese = *research & compiler/type-system work* (capabilities + capture checking) to make effects/resources safe in direct style. It’s **not** a runtime effect system itself, but it can **complement** or **underpin** library effect systems. ([Scala][1], [Scala Days][2])
 
-[1]: https://scala-lang.org/api/3.3.6/docs/docs/reference/experimental/cc.html?utm_source=chatgpt.com "Capture Checking"
-[2]: https://scaladays.org/editions/2025/talks/capture-checking-a-new-approach?utm_source=chatgpt.com "Capture Checking: A New Approach to Effect Safety in Scala"
-[3]: https://popl24.sigplan.org/details/wits-2024-papers/11/Inside-the-Scala-Capture-Checker?utm_source=chatgpt.com "Inside the Scala Capture Checker (WITS 2024)"
-[4]: https://www.reddit.com/r/scala/comments/1jx07p8/experimental_capture_checking_new_syntax_for/?utm_source=chatgpt.com "Experimental Capture Checking: New Syntax for Explicit ..."
-[5]: https://degoes.net/articles/scala-resurrection?utm_source=chatgpt.com "Scala Resurrection"
-[6]: https://github.com/getkyo/kyo/issues/211?utm_source=chatgpt.com "Issue #211 · getkyo/kyo - Caprese Alternative"
+[1]: https://scala-lang.org/api/3.3.6/docs/docs/reference/experimental/cc.html "Capture Checking"
+[2]: https://scaladays.org/editions/2025/talks/capture-checking-a-new-approach "Capture Checking: A New Approach to Effect Safety in Scala"
+[3]: https://popl24.sigplan.org/details/wits-2024-papers/11/Inside-the-Scala-Capture-Checker "Inside the Scala Capture Checker (WITS 2024)"
+[4]: https://www.reddit.com/r/scala/comments/1jx07p8/experimental_capture_checking_new_syntax_for/ "Experimental Capture Checking: New Syntax for Explicit ..."
+[5]: https://degoes.net/articles/scala-resurrection "Scala Resurrection"
+[6]: https://github.com/getkyo/kyo/issues/211 "Issue #211 · getkyo/kyo - Caprese Alternative"
 
 -----
 # How can Caprese be a really useful in data engineering data pipelines & of-course flowforge? We need a real value-add with simplicity not really a fancy thing or over-engineering. Think logically
@@ -297,17 +297,17 @@ Here’s a no-nonsense take: **Caprese/capture-checking can be a net win in data
 
 Use Caprese **surgically** to make FlowForge’s high-risk spots *compile-time safe*, while preserving your current direct-style, effect-polymorphic design. That’s real DX and operational value with almost no ceremony.
 
-[1]: https://docs.scala-lang.org/scala3/reference/experimental/cc.html?utm_source=chatgpt.com "Capture Checking"
-[2]: https://scala-lang.org/api/3.3.6/docs/docs/reference/experimental/cc.html?utm_source=chatgpt.com "Capture Checking"
-[3]: https://scaladays.org/editions/2025/talks/hands-on-capture-checking?utm_source=chatgpt.com "Hands-On Capture Checking (with Martin Odersky)"
-[4]: https://abgru.me/publication/capturing-types/capturing-types.pdf?utm_source=chatgpt.com "Keeping Track of Capabilities - ABG"
-[5]: https://softwaremill.com/the-future-of-effects-in-scala/?utm_source=chatgpt.com "The future of effects in Scala?"
-[6]: https://docs.scala-lang.org/scala3/reference/experimental/index.html?utm_source=chatgpt.com "Experimental"
-[7]: https://dotty.epfl.ch/docs/reference/experimental/index.html?utm_source=chatgpt.com "Experimental - Scala 3 - EPFL"
-[8]: https://github.com/getkyo/kyo?utm_source=chatgpt.com "getkyo/kyo: Toolkit for Scala Development"
-[9]: https://www.reddit.com/r/scala/comments/1fg3n1r/kyo_0120_released/?utm_source=chatgpt.com "Kyo 0.12.0 released 🚀 : r/scala"
-[10]: https://docs.scala-lang.org/tour/compound-types.html?utm_source=chatgpt.com "Intersection Types, aka Compound Types | Tour of Scala"
-[11]: https://scaladays.org/editions/2025/talks/the-first-steps-towards-practical?utm_source=chatgpt.com "The first steps towards practical capture checking"
+[1]: https://docs.scala-lang.org/scala3/reference/experimental/cc.html "Capture Checking"
+[2]: https://scala-lang.org/api/3.3.6/docs/docs/reference/experimental/cc.html "Capture Checking"
+[3]: https://scaladays.org/editions/2025/talks/hands-on-capture-checking "Hands-On Capture Checking (with Martin Odersky)"
+[4]: https://abgru.me/publication/capturing-types/capturing-types.pdf "Keeping Track of Capabilities - ABG"
+[5]: https://softwaremill.com/the-future-of-effects-in-scala/ "The future of effects in Scala?"
+[6]: https://docs.scala-lang.org/scala3/reference/experimental/index.html "Experimental"
+[7]: https://dotty.epfl.ch/docs/reference/experimental/index.html "Experimental - Scala 3 - EPFL"
+[8]: https://github.com/getkyo/kyo "getkyo/kyo: Toolkit for Scala Development"
+[9]: https://www.reddit.com/r/scala/comments/1fg3n1r/kyo_0120_released/ "Kyo 0.12.0 released 🚀 : r/scala"
+[10]: https://docs.scala-lang.org/tour/compound-types.html "Intersection Types, aka Compound Types | Tour of Scala"
+[11]: https://scaladays.org/editions/2025/talks/the-first-steps-towards-practical "The first steps towards practical capture checking"
 
 -------
 
@@ -667,13 +667,13 @@ This plan keeps everything **surgical** and **beginner-friendly**, while demonst
 
 If you want, I can generate the **exact Scala files** for `experimental-caprese` and `experimental-kyo` (interfaces, syntax, and two runnable examples) so you can paste them in and run the CI job immediately.
 
-[1]: https://docs.scala-lang.org/scala3/reference/experimental/cc.html?utm_source=chatgpt.com "Capture Checking"
-[2]: https://github.com/getkyo/kyo?utm_source=chatgpt.com "getkyo/kyo: Toolkit for Scala Development"
-[3]: https://docs.scala-lang.org/scala3/reference/new-types/intersection-types.html?utm_source=chatgpt.com "Intersection Types"
-[4]: https://scaladays.org/editions/2025/talks/the-first-steps-towards-practical?utm_source=chatgpt.com "The first steps towards practical capture checking"
-[5]: https://contributors.scala-lang.org/t/experimental-capture-checking-new-syntax-for-explicit-capture-polymorphism/7095?page=2&utm_source=chatgpt.com "Experimental Capture Checking: New Syntax for Explicit ..."
-[6]: https://gist.github.com/ahoy-jon/0aec8bcf636fac096ae5e4b9ed706fe0?utm_source=chatgpt.com "The Rebirth of Tagless Final: An Ergonomic Approach in Kyo"
-[7]: https://github.com/typelevel/cats-effect/discussions/4221?utm_source=chatgpt.com "Performance Benchmark #4221 - typelevel cats-effect"
+[1]: https://docs.scala-lang.org/scala3/reference/experimental/cc.html "Capture Checking"
+[2]: https://github.com/getkyo/kyo "getkyo/kyo: Toolkit for Scala Development"
+[3]: https://docs.scala-lang.org/scala3/reference/new-types/intersection-types.html "Intersection Types"
+[4]: https://scaladays.org/editions/2025/talks/the-first-steps-towards-practical "The first steps towards practical capture checking"
+[5]: https://contributors.scala-lang.org/t/experimental-capture-checking-new-syntax-for-explicit-capture-polymorphism/7095 "Experimental Capture Checking: New Syntax for Explicit ..."
+[6]: https://gist.github.com/ahoy-jon/0aec8bcf636fac096ae5e4b9ed706fe0 "The Rebirth of Tagless Final: An Ergonomic Approach in Kyo"
+[7]: https://github.com/typelevel/cats-effect/discussions/4221 "Performance Benchmark #4221 - typelevel cats-effect"
 
 ----
 
@@ -798,14 +798,14 @@ That’s it. You’ve just made your **compile-time schema/contract story strict
 
 If you want, I can draft the minimal code (3–4 files) that adds `FieldDefault`, `pureTransform`, `withCapability`, and the two Kyo overloads—so you can drop them into `modules/experimental` and run.
 
-[1]: https://docs.scala-lang.org/scala3/reference/experimental/cc.html?utm_source=chatgpt.com "Capture Checking"
-[2]: https://scala-lang.org/api/3.3.6/docs/docs/reference/experimental/cc.html?utm_source=chatgpt.com "Capture Checking"
-[3]: https://docs.confluent.io/platform/current/schema-registry/fundamentals/schema-evolution.html?utm_source=chatgpt.com "Schema Evolution and Compatibility for Schema Registry ..."
-[4]: https://developer.confluent.io/patterns/event-stream/schema-compatibility/?utm_source=chatgpt.com "Schema Compatibility"
-[5]: https://github.com/getkyo/kyo?utm_source=chatgpt.com "getkyo/kyo: Toolkit for Scala Development"
-[6]: https://docs.scala-lang.org/scala3/reference/new-types/intersection-types.html?utm_source=chatgpt.com "Intersection Types"
-[7]: https://scaladays.org/editions/2025/talks/capture-checking-a-new-approach?utm_source=chatgpt.com "Capture Checking: A New Approach to Effect Safety in Scala"
-[8]: https://nrinaudo.github.io/articles/capture_checking.html?utm_source=chatgpt.com "Hands on Capture Checking - Nicolas Rinaudo"
+[1]: https://docs.scala-lang.org/scala3/reference/experimental/cc.html "Capture Checking"
+[2]: https://scala-lang.org/api/3.3.6/docs/docs/reference/experimental/cc.html "Capture Checking"
+[3]: https://docs.confluent.io/platform/current/schema-registry/fundamentals/schema-evolution.html "Schema Evolution and Compatibility for Schema Registry ..."
+[4]: https://developer.confluent.io/patterns/event-stream/schema-compatibility/ "Schema Compatibility"
+[5]: https://github.com/getkyo/kyo "getkyo/kyo: Toolkit for Scala Development"
+[6]: https://docs.scala-lang.org/scala3/reference/new-types/intersection-types.html "Intersection Types"
+[7]: https://scaladays.org/editions/2025/talks/capture-checking-a-new-approach "Capture Checking: A New Approach to Effect Safety in Scala"
+[8]: https://nrinaudo.github.io/articles/capture_checking.html "Hands on Capture Checking - Nicolas Rinaudo"
 
 -------
 # Let's also understand how data engineering works -
@@ -986,35 +986,35 @@ Expose run metrics (duration, input lag, records) and **SLA result**. Provide ti
 
 If you want, I can turn this into concrete FlowForge module stubs (audit tables, progress store, GX/Deequ & OpenLineage adapters, DeltaMergeSink, and a small “maintenance job”) so you can drop them in and run demos end-to-end.
 
-[1]: https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/?utm_source=chatgpt.com "Dimensional Modeling Techniques"
-[2]: https://learn.microsoft.com/en-us/power-bi/guidance/star-schema?utm_source=chatgpt.com "Understand star schema and the importance for Power BI"
-[3]: https://www.databricks.com/blog/data-vault-best-practice-implementation-lakehouse?utm_source=chatgpt.com "Data Vault Best practice & Implementation on the Lakehouse"
-[4]: https://coalesce.io/data-insights/data-vault-2-0-the-complete-implementation-guide/?utm_source=chatgpt.com "Data Vault 2.0: The Complete Implementation Guide - Coalesce"
-[5]: https://www.dataversity.net/a-brief-history-of-data-stewardship/?utm_source=chatgpt.com "A Brief History of Data Stewardship"
-[6]: https://data.fsu.edu/data-stewardship?utm_source=chatgpt.com "Data Stewardship - Data Governance and Analytics Services"
-[7]: https://docs.confluent.io/platform/current/schema-registry/fundamentals/schema-evolution.html?utm_source=chatgpt.com "Schema Evolution and Compatibility for Schema Registry on ..."
-[8]: https://developer.confluent.io/patterns/event-stream/schema-compatibility/?utm_source=chatgpt.com "Schema Compatibility - Confluent Developer"
-[9]: https://debezium.io/documentation/faq/?utm_source=chatgpt.com "Frequently Asked Questions"
-[10]: https://spark.apache.org/docs/3.5.1/structured-streaming-programming-guide.html?utm_source=chatgpt.com "Structured Streaming Programming Guide"
-[11]: https://nightlies.apache.org/flink/flink-docs-master/docs/concepts/stateful-stream-processing/?utm_source=chatgpt.com "Stateful Stream Processing | Apache Flink"
-[12]: https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/?utm_source=chatgpt.com "Exactly-Once Semantics Are Possible: Here's How Kafka ..."
-[13]: https://docs.spring.io/spring-kafka/reference/kafka/exactly-once.html?utm_source=chatgpt.com "Exactly Once Semantics :: Spring Kafka"
-[14]: https://www.wherescape.com/blog/mastering-data-vault-modeling-architecture-best-practices-and-essential-tools/?utm_source=chatgpt.com "Essential Guide to Data Vault Modeling and Best Practices"
-[15]: https://docs.greatexpectations.io/docs/0.18/oss/guides/validation/validate_data_overview/?utm_source=chatgpt.com "Data Validation workflow"
-[16]: https://greatexpectations.io/?utm_source=chatgpt.com "Great Expectations: have confidence in your data, no matter ..."
-[17]: https://github.com/awslabs/deequ?utm_source=chatgpt.com "Deequ is a library built on top of Apache Spark for defining ..."
-[18]: https://openlineage.io/docs/?utm_source=chatgpt.com "About OpenLineage"
-[19]: https://docs.datahub.com/docs/features/feature-guides/lineage?utm_source=chatgpt.com "About DataHub Lineage"
-[20]: https://docs.open-metadata.org/latest/how-to-guides/data-lineage?utm_source=chatgpt.com "Data Lineage | OpenMetadata Lineage How-To Guide"
-[21]: https://docs.databricks.com/aws/en/delta/merge?utm_source=chatgpt.com "Upsert into a Delta Lake table using merge"
-[22]: https://docs.databricks.com/aws/en/sql/language-manual/delta-optimize?utm_source=chatgpt.com "OPTIMIZE | Databricks on AWS"
-[23]: https://delta.io/blog/2023-02-01-delta-lake-time-travel/?utm_source=chatgpt.com "Delta Lake Time Travel"
-[24]: https://airflow.apache.org/docs/apache-airflow/2.4.2/_api/airflow/models/slamiss/index.html?utm_source=chatgpt.com "airflow.models.slamiss"
-[25]: https://docs.dagster.io/guides/labs/observability-update/freshness?utm_source=chatgpt.com "Freshness policies"
-[26]: https://docs.getdbt.com/reference/resource-properties/freshness?utm_source=chatgpt.com "freshness | dbt Developer Hub"
-[27]: https://docs.dagster.io/guides/test/data-freshness-testing?utm_source=chatgpt.com "Data freshness checks"
-[28]: https://docs.getdbt.com/docs/deploy/source-freshness?utm_source=chatgpt.com "Source freshness | dbt Developer Hub - dbt Docs"
-[29]: https://datamanagement.wiki/role/data_steward?utm_source=chatgpt.com "Data steward - Data Management Wiki"
+[1]: https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/ "Dimensional Modeling Techniques"
+[2]: https://learn.microsoft.com/en-us/power-bi/guidance/star-schema "Understand star schema and the importance for Power BI"
+[3]: https://www.databricks.com/blog/data-vault-best-practice-implementation-lakehouse "Data Vault Best practice & Implementation on the Lakehouse"
+[4]: https://coalesce.io/data-insights/data-vault-2-0-the-complete-implementation-guide/ "Data Vault 2.0: The Complete Implementation Guide - Coalesce"
+[5]: https://www.dataversity.net/a-brief-history-of-data-stewardship/ "A Brief History of Data Stewardship"
+[6]: https://data.fsu.edu/data-stewardship "Data Stewardship - Data Governance and Analytics Services"
+[7]: https://docs.confluent.io/platform/current/schema-registry/fundamentals/schema-evolution.html "Schema Evolution and Compatibility for Schema Registry on ..."
+[8]: https://developer.confluent.io/patterns/event-stream/schema-compatibility/ "Schema Compatibility - Confluent Developer"
+[9]: https://debezium.io/documentation/faq/ "Frequently Asked Questions"
+[10]: https://spark.apache.org/docs/3.5.1/structured-streaming-programming-guide.html "Structured Streaming Programming Guide"
+[11]: https://nightlies.apache.org/flink/flink-docs-master/docs/concepts/stateful-stream-processing/ "Stateful Stream Processing | Apache Flink"
+[12]: https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/ "Exactly-Once Semantics Are Possible: Here's How Kafka ..."
+[13]: https://docs.spring.io/spring-kafka/reference/kafka/exactly-once.html "Exactly Once Semantics :: Spring Kafka"
+[14]: https://www.wherescape.com/blog/mastering-data-vault-modeling-architecture-best-practices-and-essential-tools/ "Essential Guide to Data Vault Modeling and Best Practices"
+[15]: https://docs.greatexpectations.io/docs/0.18/oss/guides/validation/validate_data_overview/ "Data Validation workflow"
+[16]: https://greatexpectations.io/ "Great Expectations: have confidence in your data, no matter ..."
+[17]: https://github.com/awslabs/deequ "Deequ is a library built on top of Apache Spark for defining ..."
+[18]: https://openlineage.io/docs/ "About OpenLineage"
+[19]: https://docs.datahub.com/docs/features/feature-guides/lineage "About DataHub Lineage"
+[20]: https://docs.open-metadata.org/latest/how-to-guides/data-lineage "Data Lineage | OpenMetadata Lineage How-To Guide"
+[21]: https://docs.databricks.com/aws/en/delta/merge "Upsert into a Delta Lake table using merge"
+[22]: https://docs.databricks.com/aws/en/sql/language-manual/delta-optimize "OPTIMIZE | Databricks on AWS"
+[23]: https://delta.io/blog/2023-02-01-delta-lake-time-travel/ "Delta Lake Time Travel"
+[24]: https://airflow.apache.org/docs/apache-airflow/2.4.2/_api/airflow/models/slamiss/index.html "airflow.models.slamiss"
+[25]: https://docs.dagster.io/guides/labs/observability-update/freshness "Freshness policies"
+[26]: https://docs.getdbt.com/reference/resource-properties/freshness "freshness | dbt Developer Hub"
+[27]: https://docs.dagster.io/guides/test/data-freshness-testing "Data freshness checks"
+[28]: https://docs.getdbt.com/docs/deploy/source-freshness "Source freshness | dbt Developer Hub - dbt Docs"
+[29]: https://datamanagement.wiki/role/data_steward "Data steward - Data Management Wiki"
 
 -----
 # I mean we now proved compile-time contracts already using Magnolia (Scala3 future)
@@ -1145,24 +1145,24 @@ This is *surgical*, opt-in, and maps exactly to failure modes you already see in
 
 If you want, I can turn this into a short PR plan (a few helpers, two method overloads, and a starter doc) that you can drop straight into `modules/experimental` and `core-runtime`.
 
-[1]: https://typelevel.org/cats-effect/docs/thread-model?utm_source=chatgpt.com "Thread Model · Cats Effect"
-[2]: https://typelevel.org/cats-effect/docs/std/queue?utm_source=chatgpt.com "Queue · Cats Effect"
-[3]: https://typelevel.org/cats-effect/docs/std/backpressure?utm_source=chatgpt.com "Backpressure · Cats Effect"
-[4]: https://typelevel.org/cats-effect/docs/std/resource?utm_source=chatgpt.com "Resource · Cats Effect"
-[5]: https://typelevel.org/blog/2020/10/30/concurrency-in-ce3.html?utm_source=chatgpt.com "Concurrency in Cats Effect 3"
-[6]: https://www.baeldung.com/scala/cats-effect-cancellation?utm_source=chatgpt.com "Cancellation in Cats Effect | Baeldung on Scala"
-[7]: https://spark.apache.org/docs/3.5.1/structured-streaming-programming-guide.html?utm_source=chatgpt.com "Structured Streaming Programming Guide"
-[8]: https://nightlies.apache.org/flink/flink-docs-master/docs/dev/datastream/fault-tolerance/checkpointing/?utm_source=chatgpt.com "Checkpointing | Apache Flink"
-[9]: https://docs.confluent.io/kafka/design/delivery-semantics.html?utm_source=chatgpt.com "Message Delivery Guarantees for Apache Kafka"
-[10]: https://strimzi.io/blog/2023/05/03/kafka-transactions/?utm_source=chatgpt.com "Exactly-once semantics with Kafka transactions"
-[11]: https://debezium.io/documentation/reference/stable/configuration/storage.html?utm_source=chatgpt.com "Storing state of a Debezium connector"
-[12]: https://docs.databricks.com/aws/en/delta/merge?utm_source=chatgpt.com "Upsert into a Delta Lake table using merge | Databricks on AWS"
-[13]: https://typelevel.org/cats-effect/docs/core/starvation-and-tuning?utm_source=chatgpt.com "Starvation and Tuning · Cats Effect"
-[14]: https://github.com/getkyo/kyo?utm_source=chatgpt.com "getkyo/kyo: Toolkit for Scala Development"
-[15]: https://docs.scala-lang.org/scala3/book/types-intersection.html?utm_source=chatgpt.com "Intersection Types | Scala 3 — Book"
-[16]: https://scala-lang.org/api/3.3.6/docs/docs/reference/experimental/cc.html?utm_source=chatgpt.com "Capture Checking"
-[17]: https://docs.scala-lang.org/scala3/reference/experimental/cc.html?utm_source=chatgpt.com "Capture Checking"
-[18]: https://nightlies.apache.org/flink/flink-docs-master/docs/ops/state/checkpointing_under_backpressure/?utm_source=chatgpt.com "Checkpointing under backpressure | Apache Flink"
+[1]: https://typelevel.org/cats-effect/docs/thread-model "Thread Model · Cats Effect"
+[2]: https://typelevel.org/cats-effect/docs/std/queue "Queue · Cats Effect"
+[3]: https://typelevel.org/cats-effect/docs/std/backpressure "Backpressure · Cats Effect"
+[4]: https://typelevel.org/cats-effect/docs/std/resource "Resource · Cats Effect"
+[5]: https://typelevel.org/blog/2020/10/30/concurrency-in-ce3.html "Concurrency in Cats Effect 3"
+[6]: https://www.baeldung.com/scala/cats-effect-cancellation "Cancellation in Cats Effect | Baeldung on Scala"
+[7]: https://spark.apache.org/docs/3.5.1/structured-streaming-programming-guide.html "Structured Streaming Programming Guide"
+[8]: https://nightlies.apache.org/flink/flink-docs-master/docs/dev/datastream/fault-tolerance/checkpointing/ "Checkpointing | Apache Flink"
+[9]: https://docs.confluent.io/kafka/design/delivery-semantics.html "Message Delivery Guarantees for Apache Kafka"
+[10]: https://strimzi.io/blog/2023/05/03/kafka-transactions/ "Exactly-once semantics with Kafka transactions"
+[11]: https://debezium.io/documentation/reference/stable/configuration/storage.html "Storing state of a Debezium connector"
+[12]: https://docs.databricks.com/aws/en/delta/merge "Upsert into a Delta Lake table using merge | Databricks on AWS"
+[13]: https://typelevel.org/cats-effect/docs/core/starvation-and-tuning "Starvation and Tuning · Cats Effect"
+[14]: https://github.com/getkyo/kyo "getkyo/kyo: Toolkit for Scala Development"
+[15]: https://docs.scala-lang.org/scala3/book/types-intersection.html "Intersection Types | Scala 3 — Book"
+[16]: https://scala-lang.org/api/3.3.6/docs/docs/reference/experimental/cc.html "Capture Checking"
+[17]: https://docs.scala-lang.org/scala3/reference/experimental/cc.html "Capture Checking"
+[18]: https://nightlies.apache.org/flink/flink-docs-master/docs/ops/state/checkpointing_under_backpressure/ "Checkpointing under backpressure | Apache Flink"
 
 -----
 
@@ -1230,18 +1230,18 @@ Absolutely. Let’s lock in a **“non-rewrite pact”**: FlowForge should never
 
 **Bottom line:** FlowForge stays a **thin, typed scaffold**—we *prove* safety and correctness around the pioneers, never inside them. All heavy lifting remains with Spark/Flink/Kafka/Debezium/Delta and we reference their guarantees directly.
 
-[1]: https://spark.apache.org/docs/3.5.1/structured-streaming-programming-guide.html?utm_source=chatgpt.com "Structured Streaming Programming Guide"
-[2]: https://docs.databricks.com/aws/en/structured-streaming/checkpoints?utm_source=chatgpt.com "Structured Streaming checkpoints | Databricks on AWS"
-[3]: https://nightlies.apache.org/flink/flink-docs-master/docs/dev/datastream/fault-tolerance/checkpointing/?utm_source=chatgpt.com "Checkpointing | Apache Flink"
-[4]: https://flink.apache.org/2018/02/28/an-overview-of-end-to-end-exactly-once-processing-in-apache-flink-with-apache-kafka-too/?utm_source=chatgpt.com "An Overview of End-to-End Exactly-Once Processing in ..."
-[5]: https://docs.confluent.io/kafka/design/delivery-semantics.html?utm_source=chatgpt.com "Message Delivery Guarantees for Apache Kafka"
-[6]: https://debezium.io/documentation/reference/stable/development/engine.html?utm_source=chatgpt.com "Debezium Engine"
-[7]: https://learn.microsoft.com/en-us/azure/databricks/delta/merge?utm_source=chatgpt.com "Upsert into a Delta Lake table using merge"
-[8]: https://delta.io/blog/delta-lake-upsert/?utm_source=chatgpt.com "Delta Lake Upsert"
-[9]: https://openlineage.io/docs/spec/object-model/?utm_source=chatgpt.com "Object Model"
-[10]: https://typelevel.org/cats-effect/docs/thread-model?utm_source=chatgpt.com "Thread Model · Cats Effect"
-[11]: https://typelevel.org/cats-effect/docs/2.x/datatypes/io?utm_source=chatgpt.com "IO · Cats Effect"
-[12]: https://openlineage.io/docs/?utm_source=chatgpt.com "About OpenLineage"
+[1]: https://spark.apache.org/docs/3.5.1/structured-streaming-programming-guide.html "Structured Streaming Programming Guide"
+[2]: https://docs.databricks.com/aws/en/structured-streaming/checkpoints "Structured Streaming checkpoints | Databricks on AWS"
+[3]: https://nightlies.apache.org/flink/flink-docs-master/docs/dev/datastream/fault-tolerance/checkpointing/ "Checkpointing | Apache Flink"
+[4]: https://flink.apache.org/2018/02/28/an-overview-of-end-to-end-exactly-once-processing-in-apache-flink-with-apache-kafka-too/ "An Overview of End-to-End Exactly-Once Processing in ..."
+[5]: https://docs.confluent.io/kafka/design/delivery-semantics.html "Message Delivery Guarantees for Apache Kafka"
+[6]: https://debezium.io/documentation/reference/stable/development/engine.html "Debezium Engine"
+[7]: https://learn.microsoft.com/en-us/azure/databricks/delta/merge "Upsert into a Delta Lake table using merge"
+[8]: https://delta.io/blog/delta-lake-upsert/ "Delta Lake Upsert"
+[9]: https://openlineage.io/docs/spec/object-model/ "Object Model"
+[10]: https://typelevel.org/cats-effect/docs/thread-model "Thread Model · Cats Effect"
+[11]: https://typelevel.org/cats-effect/docs/2.x/datatypes/io "IO · Cats Effect"
+[12]: https://openlineage.io/docs/ "About OpenLineage"
 
 ------
 

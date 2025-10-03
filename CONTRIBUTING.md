@@ -5,7 +5,7 @@
 - Multi‑module SBT repo: sources in `modules/*`, tests under `src/test/scala` mirroring packages.
 - Key modules: `core` (algebras, types, builders), `contracts` (typed contracts), `engines-spark`, `connectors`,
   `quality`, `infrastructure`; CLIs: `validation-cli`, `contracts-extractor-cli`.
-- Docs: ADRs `docs/adr/*` (decisions), Plans/Evidence in `docs/plan` and `docs/evidence`, Agents Handbook in
+- Docs: ADRs `docs/adr/*` (decisions), Plans/Evidence in `docs/plan` and `docs/evidence`, Developer Handbook in
   `docs/contributing`.
 
 ## Build, test, and development commands
@@ -248,4 +248,4 @@ This project values clear plans, small scoped pull requests, and reliable build 
 
 ## References
 - ADR Index `docs/adr/INDEX.md`
-- Contributor Guide `docs/contributing/HANDBOOK.md`
+- Developer Handbook `docs/contributing/HANDBOOK.md`

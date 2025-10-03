@@ -37,15 +37,15 @@ This index organizes all existing documents into clear sections and points to th
 
 ## Prompts / Operations
 - Previous chats: `docs/previous-chats/previous-conv1.txt`
-- Backups: `docs/backups/AGENTS.2025-09-03.md`
+- Backups: `docs/backups/ASSISTANTS.2025-09-03.md`
 
 ## Snapshots
 - State snapshot: `docs/STATE_SNAPSHOT.md`
 
 ## Notes
 - For big decisions, create an ADR from `docs/adr/000-template.md` and link it in EVIDENCE and PLAN.
-- For any claim-heavy doc, add/update a “Reality” banner referencing `docs/plans/templates/EVIDENCE.md`.
-- Agents docs: `docs/contributing/HANDBOOK.md`, `docs/contributing/COVERAGE.md`
+- For any claim-heavy doc, add/update a "Reality" banner referencing `docs/plans/templates/EVIDENCE.md`.
+- Developer tooling docs: `docs/contributing/HANDBOOK.md`, `docs/contributing/COVERAGE.md`
 ## Core Design
 - Effect system (EffectSystem[F]) and resources (FlowforgeResource[F,R]): `docs/effects/bring-your-own-effect.md`
 - Core design & diagrams: `docs/design/core-design.md`

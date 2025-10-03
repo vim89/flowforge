@@ -178,7 +178,7 @@
 - Connectors: FileSystem connector present; GCS/S3/BigQuery modules exist as scaffolds (no implementations yet).
 - Build: `delta-spark` remains the Delta dependency; Spark artifacts are `provided`.
 - Compilation: `sbt compile` succeeds across modules (modules without sources trivially compile).
- - Docs: README reality-first update; AGENTS wording corrected; Ground Reality report expanded with repo stats.
+ - Docs: README reality-first update; ASSISTANTS wording corrected; Ground Reality report expanded with repo stats.
 
 ### Next 10 Working Days — Execution Plan
 1. Core hardening (EffectSystem laws, error ADTs, codecs/schemas, PipelineBuilder2 behaviors, remove placeholder combinators).

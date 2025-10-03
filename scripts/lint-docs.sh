@@ -10,7 +10,7 @@ ok()  { echo -e "${green}OK:${reset} $1"; }
 if ! rg -n "^## Session Workflow" CONTRIBUTING.md >/dev/null 2>&1; then err "CONTRIBUTING.md missing 'Session Workflow' section"; else ok "CONTRIBUTING.md has Session Workflow"; fi
 if ! rg -n "^## Condensed Pipeline Checklist" CONTRIBUTING.md >/dev/null 2>&1; then err "CONTRIBUTING.md missing 'Condensed Pipeline Checklist'"; else ok "CONTRIBUTING.md has condensed checklist"; fi
 if ! rg -n "ADR Index `docs/adr/INDEX.md`" CONTRIBUTING.md >/dev/null 2>&1; then err "CONTRIBUTING.md missing ADR Index reference"; else ok "CONTRIBUTING.md references ADR Index"; fi
-if ! rg -n "Agents Handbook `docs/contributing/HANDBOOK.md`" CONTRIBUTING.md >/dev/null 2>&1; then err "CONTRIBUTING.md missing Handbook reference"; else ok "CONTRIBUTING.md references Handbook"; fi
+if ! rg -n "Developer Handbook `docs/contributing/HANDBOOK.md`" CONTRIBUTING.md >/dev/null 2>&1; then err "CONTRIBUTING.md missing Handbook reference"; else ok "CONTRIBUTING.md references Handbook"; fi
 
 # 2) Handbook must contain key sections
 declare -a handbook_sections=(
@@ -40,7 +40,7 @@ declare -a handbook_sections=(
   "^## 14\. Testing & QA"
   "^## 15\. Anti\-Patterns to Reject"
   "^## 16\. 30\-Point Checklist \(Pointer\)"
-  "^## 17\. Session Workflow \(Agents\)"
+  "^## 17\. Session Workflow \(Developer Tooling\)"
   "^## 18\. Functional Programming Foundation"
   "^## 19\. Low\-Level Design & Design Patterns"
 )
@@ -55,7 +55,7 @@ for adr in 002 011 012 013 014 018 019 020; do
 done
 
 # 4) Coverage crosswalk must reference backup and handbook
-if ! rg -n "AGENTS\.backup\.2025\-09\-04\.md" docs/contributing/COVERAGE.md >/dev/null 2>&1; then err "Coverage map missing backup reference"; else ok "Coverage references backup"; fi
+if ! rg -n "ASSISTANTS\.backup\.2025\-09\-04\.md" docs/contributing/COVERAGE.md >/dev/null 2>&1; then err "Coverage map missing backup reference"; else ok "Coverage references backup"; fi
 if ! rg -n "docs/contributing/HANDBOOK\.md" docs/contributing/COVERAGE.md >/dev/null 2>&1; then err "Coverage map missing handbook reference"; else ok "Coverage references handbook"; fi
 
 $pass || exit 1

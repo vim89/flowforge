@@ -58,7 +58,7 @@ Coverage and Known Gaps
 - IMPLEMENTATION_TODO.md: Detailed to-dos not fully itemized into PLAN.md. Action: import top items into PLAN or a tracked issue list before archiving.
 - Findings.md: Historical assessments with numbers/dates; ADR-016 summarizes governance but not every historical datapoint. Action: keep archived.
 - Reference docs (docs/reference/*): Visionary material; ADRs/Evidence reflect current truth, but references contain context/value propositions. Action: archive with banners, don’t delete.
-- backups/AGENTS.2025-09-03.md and previous-chats/previous-conv1.txt: Historical; keep.
+- backups/ASSISTANTS.2025-09-03.md and previous-chats/previous-conv1.txt: Historical; keep.
 
 Archive Recommendation
 - Do NOT hard-delete. Archive the listed sources under docs/archive/ with a “Superseded by ADR-XXX” banner at top and keep links alive for context/history.

@@ -419,10 +419,10 @@ We must design FlowForge’s derivation layer so the **public API stays macro-ag
 
 [1]: https://www.scalatest.org/user_guide/using_matchers "Using matchers"
 [2]: https://docs.scala-lang.org/toolkit/testing-suite.html "How to write tests? | The Scala Toolkit"
-[3]: https://github.com/scalameta/munit?utm_source=chatgpt.com "scalameta/munit: Scala testing library with actionable ..."
-[4]: https://scalameta.org/munit/blog/2021/01/05/macromix.html?utm_source=chatgpt.com "Publish Scala 2 and Scala 3 macros together · MUnit"
-[5]: https://www.scala-sbt.org/1.x/docs/Testing-sbt-plugins.html?utm_source=chatgpt.com "sbt Reference Manual — Testing sbt plugins"
-[6]: https://stackoverflow.com/questions/20114298/how-do-i-write-a-scala-unit-test-that-ensures-compliation-fails?utm_source=chatgpt.com "How do I write a scala unit test that ensures compliation fails?"
+[3]: https://github.com/scalameta/munit "scalameta/munit: Scala testing library with actionable ..."
+[4]: https://scalameta.org/munit/blog/2021/01/05/macromix.html "Publish Scala 2 and Scala 3 macros together · MUnit"
+[5]: https://www.scala-sbt.org/1.x/docs/Testing-sbt-plugins.html "sbt Reference Manual — Testing sbt plugins"
+[6]: https://stackoverflow.com/questions/20114298/how-do-i-write-a-scala-unit-test-that-ensures-compliation-fails "How do I write a scala unit test that ensures compliation fails?"
 
 
 **Why this works**

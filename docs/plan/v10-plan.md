@@ -85,12 +85,12 @@ Short answer: **yes, you can de-scope building *custom* S3/Azure connectors for 
 
 This way you keep v1.0 focused on your signature move—**compile-time contracts + pure transforms + runtime enforcement + lineage**—while still being credibly “multi-cloud” on day one through Spark’s standard connectors. ([Apache Hadoop][1], [Google Cloud][3], [Delta Lake][5])
 
-[1]: https://hadoop.apache.org/docs/r3.4.1/hadoop-aws/tools/hadoop-aws/index.html?utm_source=chatgpt.com "Hadoop-AWS module: Integration with Amazon Web Services"
-[2]: https://hadoop.apache.org/docs/stable/hadoop-azure/index.html?utm_source=chatgpt.com "Hadoop Azure Support: ABFS - Azure Data Lake Storage Gen2"
-[3]: https://cloud.google.com/dataproc/docs/concepts/connectors/cloud-storage?utm_source=chatgpt.com "Cloud Storage connector | Dataproc Documentation"
-[4]: https://github.com/GoogleCloudDataproc/hadoop-connectors?utm_source=chatgpt.com "GoogleCloudDataproc/hadoop-connectors"
-[5]: https://delta-docs-incubator.netlify.app/?utm_source=chatgpt.com "Welcome to the Delta Lake documentation | Delta Lake"
-[6]: https://delta.io/blog/2022-05-18-multi-cluster-writes-to-delta-lake-storage-in-s3/?utm_source=chatgpt.com "Multi-cluster writes to Delta Lake Storage in S3"
-[7]: https://www.businessinsider.com/microsoft-amazon-aws-azure-compare-cloud-giants-2025-7?utm_source=chatgpt.com "Azure vs AWS: The first time we get to truly compare these cloud giants"
-[8]: https://www.channelinsider.com/infrastructure/cloud-and-hybrid/aws-vs-azure-vs-google-cloud/?utm_source=chatgpt.com "AWS vs. Azure vs. Google Cloud"
+[1]: https://hadoop.apache.org/docs/r3.4.1/hadoop-aws/tools/hadoop-aws/index.html "Hadoop-AWS module: Integration with Amazon Web Services"
+[2]: https://hadoop.apache.org/docs/stable/hadoop-azure/index.html "Hadoop Azure Support: ABFS - Azure Data Lake Storage Gen2"
+[3]: https://cloud.google.com/dataproc/docs/concepts/connectors/cloud-storage "Cloud Storage connector | Dataproc Documentation"
+[4]: https://github.com/GoogleCloudDataproc/hadoop-connectors "GoogleCloudDataproc/hadoop-connectors"
+[5]: https://delta-docs-incubator.netlify.app/ "Welcome to the Delta Lake documentation | Delta Lake"
+[6]: https://delta.io/blog/2022-05-18-multi-cluster-writes-to-delta-lake-storage-in-s3/ "Multi-cluster writes to Delta Lake Storage in S3"
+[7]: https://www.businessinsider.com/microsoft-amazon-aws-azure-compare-cloud-giants-2025-7 "Azure vs AWS: The first time we get to truly compare these cloud giants"
+[8]: https://www.channelinsider.com/infrastructure/cloud-and-hybrid/aws-vs-azure-vs-google-cloud/ "AWS vs. Azure vs. Google Cloud"
 
