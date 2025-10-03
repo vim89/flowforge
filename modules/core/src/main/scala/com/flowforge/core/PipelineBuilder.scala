@@ -4,6 +4,7 @@ import cats.data.Kleisli
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
 import com.flowforge.core.lineage.OpenLineageEmitter
+import com.flowforge.core.observability.Tracer
 import com.flowforge.core.types.BuilderState.{ WithContract, WithTransform }
 import com.flowforge.core.types.{
   BuilderState,
@@ -32,7 +33,8 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
   description: String = "",
   stages: List[PipelineStage[F, _, _]] = List.empty,
   config: Option[PipelineConfig] = None,
-  lineageEmitter: Option[OpenLineageEmitter[F]] = None) {
+  lineageEmitter: Option[OpenLineageEmitter[F]] = None,
+  tracer: Option[Tracer[F]] = None) {
 
   def withDescription(desc: String): PipelineBuilder[S, F, In, Out] =
     copy(description = desc)
@@ -42,6 +44,10 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
 
   def withLineageEmitter(emitter: OpenLineageEmitter[F]): PipelineBuilder[S, F, In, Out] =
     copy(lineageEmitter = Some(emitter))
+
+  /** Attach a tracer implementation (no-op by default). */
+  def withTracer(t: Tracer[F]): PipelineBuilder[S, F, In, Out] =
+    copy(tracer = Some(t))
 
   /**
    * Add typed source with explicit contract and policy. This is the ONLY way to add sources - no untyped
@@ -159,7 +165,10 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
     }
 
     val kleisliAny: Kleisli[F, Any, Any] =
-      stages.foldLeft(Kleisli.ask[F, Any])((acc, st) => acc.andThen(KC.kAny(st.execute)))
+      stages.foldLeft(Kleisli.ask[F, Any]) { (acc, st) =>
+        val next = acc.andThen(KC.kAny(st.execute))
+        tracer.fold(next) { tr => Kleisli { in => tr.inSpan(st.name)(next.run(in)) } }
+      }
     val kleisli: Kleisli[F, In, Out] = KC.kTyped[In, Out](kleisliAny)
 
     val md = PipelineMetadata(

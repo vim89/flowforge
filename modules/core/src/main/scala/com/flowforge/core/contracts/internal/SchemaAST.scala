@@ -12,6 +12,8 @@ object TypeShape {
   final case class PrimitiveShape(name: String) extends TypeShape
   final case class SequenceShape(elem: TypeShape) extends TypeShape
   final case class MapShape(key: PrimitiveShape, value: TypeShape) extends TypeShape
+  // Represents nested optionality (e.g., List[Option[A]]). Field-level optionality remains on FieldShape.
+  final case class OptionalShape(inner: TypeShape) extends TypeShape
   final case class FieldShape(
     name: String,
     shape: TypeShape,
@@ -24,6 +26,7 @@ object TypeShape {
     case PrimitiveShape(name) => name
     case SequenceShape(elem) => s"List[${pretty(elem)}]"
     case MapShape(key, value) => s"Map[${pretty(key)}, ${pretty(value)}]"
+    case OptionalShape(inner) => s"Option[${pretty(inner)}]"
     case FieldShape(name, tpe, hasDefault, isOptional) =>
       val opt = if (isOptional) " (optional)" else ""
       val dflt = if (hasDefault) " (default)" else ""
@@ -41,7 +44,7 @@ object SchemaAST {
   type Record = TypeShape.StructShape
   type Field = TypeShape.FieldShape
   type Primitive = TypeShape.PrimitiveShape
-  type OptionT = TypeShape.SequenceShape
+  type OptionT = TypeShape.OptionalShape
   type ArrayT = TypeShape.SequenceShape
   type MapT = TypeShape.MapShape
 
@@ -52,8 +55,8 @@ object SchemaAST {
     TypeShape.FieldShape(name, tpe, hasDefault, isOptional)
   def Primitive(tag: String): TypeShape.PrimitiveShape =
     TypeShape.PrimitiveShape(tag)
-  def OptionT(value: TypeShape): TypeShape.SequenceShape =
-    TypeShape.SequenceShape(value)
+  def OptionT(value: TypeShape): TypeShape.OptionalShape =
+    TypeShape.OptionalShape(value)
   def ArrayT(elem: TypeShape): TypeShape.SequenceShape =
     TypeShape.SequenceShape(elem)
   def MapT(key: TypeShape.PrimitiveShape, value: TypeShape): TypeShape.MapShape =

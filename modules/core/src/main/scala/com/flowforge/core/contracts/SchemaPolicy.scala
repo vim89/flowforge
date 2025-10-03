@@ -21,6 +21,8 @@ sealed trait SchemaPolicy
 object SchemaPolicy {
   // Sealed traits for type-level usage in macros
   sealed trait Exact            extends SchemaPolicy
+  // Back-compat: unordered, case-sensitive equality of fields
+  sealed trait ExactUnordered  extends SchemaPolicy
   sealed trait ExactUnorderedCI extends SchemaPolicy
   sealed trait ExactOrdered     extends SchemaPolicy
   sealed trait ExactOrderedCI   extends SchemaPolicy
@@ -31,6 +33,8 @@ object SchemaPolicy {
 
   // Case objects for runtime usage - implement the traits
   case object Exact            extends SchemaPolicy.Exact
+  // Back-compat alias. Semantics match Exact (unordered, case-sensitive)
+  case object ExactUnordered  extends SchemaPolicy.ExactUnordered
   case object ExactUnorderedCI extends SchemaPolicy.ExactUnorderedCI
   case object ExactOrdered     extends SchemaPolicy.ExactOrdered
   case object ExactOrderedCI   extends SchemaPolicy.ExactOrderedCI

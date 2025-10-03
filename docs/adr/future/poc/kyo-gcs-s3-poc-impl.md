@@ -424,11 +424,11 @@ object Main extends IOApp.Simple:
 Key references used for this POC: Kyo ↔ Cats interop (cancellation propagation) ([GitHub][1]); S3 AbortMultipartUpload semantics (freeing parts; may require multiple aborts due to in-flight parts) ([AWS Documentation][2]); GCS resumable uploads and Java `Storage#writer` using resumable by default for large content ([Google Cloud][3]); `WriteChannel` capture/restore to resume sessions ([Google Cloud][4], [Google Cloud][5]); Cats-Effect blocking/cancellation guidance for SDK calls ([Typelevel][6]).
 
 [1]: https://github.com/getkyo/kyo "GitHub - getkyo/kyo: Toolkit for Scala Development"
-[2]: https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html?utm_source=chatgpt.com "AbortMultipartUpload - Amazon Simple Storage Service"
-[3]: https://cloud.google.com/storage/docs/resumable-uploads?utm_source=chatgpt.com "Resumable uploads | Cloud Storage"
-[4]: https://cloud.google.com/java/docs/reference/google-cloud-core/latest/com.google.cloud.WriteChannel?utm_source=chatgpt.com "Interface WriteChannel (2.59.0) | Java client library"
-[5]: https://googleapis.dev/java/google-cloud-clients/0.97.0-alpha/com/google/cloud/class-use/WriteChannel.html?utm_source=chatgpt.com "Uses of Interface com.google.cloud.WriteChannel"
-[6]: https://typelevel.org/cats-effect/docs/faq?utm_source=chatgpt.com "FAQ · Cats Effect"
+[2]: https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html "AbortMultipartUpload - Amazon Simple Storage Service"
+[3]: https://cloud.google.com/storage/docs/resumable-uploads "Resumable uploads | Cloud Storage"
+[4]: https://cloud.google.com/java/docs/reference/google-cloud-core/latest/com.google.cloud.WriteChannel "Interface WriteChannel (2.59.0) | Java client library"
+[5]: https://googleapis.dev/java/google-cloud-clients/0.97.0-alpha/com/google/cloud/class-use/WriteChannel.html "Uses of Interface com.google.cloud.WriteChannel"
+[6]: https://typelevel.org/cats-effect/docs/faq "FAQ · Cats Effect"
 
 ----
 
@@ -942,8 +942,8 @@ object Main extends IOApp.Simple:
 
 [1]: https://docs.localstack.cloud/aws/services/s3/ "Simple Storage Service (S3) | Docs"
 [2]: https://github.com/fsouza/fake-gcs-server "GitHub - fsouza/fake-gcs-server: Google Cloud Storage emulator & testing library."
-[3]: https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html?utm_source=chatgpt.com "AbortMultipartUpload - Amazon Simple Storage Service"
-[4]: https://cloud.google.com/storage/docs/resumable-uploads?utm_source=chatgpt.com "Resumable uploads | Cloud Storage"
+[3]: https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html "AbortMultipartUpload - Amazon Simple Storage Service"
+[4]: https://cloud.google.com/storage/docs/resumable-uploads "Resumable uploads | Cloud Storage"
 
 ---
 

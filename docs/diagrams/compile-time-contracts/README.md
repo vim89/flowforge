@@ -10,6 +10,7 @@ Quick links:
 - Common flowchart: `docs/diagrams/compile-time-contracts/flowchart.md`
 - UML (Scala 2 • Magnolia): `docs/diagrams/compile-time-contracts/scala2-magnolia-uml.md`
 - UML (Scala 3 • Mirrors/macros): `docs/diagrams/compile-time-contracts/scala3-mirror-uml.md`
+- Field vs Element Optionality: `docs/diagrams/compile-time-contracts/optionality.md`
 
 Related reading:
 
@@ -19,4 +20,4 @@ Related reading:
 
 Implementation note (Scala 2.13):
 
-- FlowForge now normalizes both Out and Contract types into a deep `SchemaAST` and compares them under the selected `SchemaPolicy`. This brings the implementation fully in line with these diagrams. Earlier versions compared shallow field lists; the new approach validates nested records, options, arrays, and maps recursively with path-aware diffs.
+- FlowForge now normalizes both Out and Contract types into a deep `TypeShape` ADT (replacing legacy `SchemaAST`) and compares them under the selected `SchemaPolicy`. This validates nested records, options (field vs element), arrays, and maps recursively with path-aware diffs.

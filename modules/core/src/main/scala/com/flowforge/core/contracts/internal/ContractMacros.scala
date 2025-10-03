@@ -63,10 +63,15 @@ object ContractMacros {
 
     // TypeShape builder - pure functional approach
     object ShapeBuilder {
-      def buildTypeShape(tpe: Type): TypeShape = {
+      def buildTypeShape(tpe: Type, inField: Boolean = false): TypeShape = {
         import TypeInspector._
 
-        optionArg(tpe).map(buildTypeShape).getOrElse {
+        optionArg(tpe).map { inner =>
+          // Field-level Option is captured on FieldShape.isOptional; avoid double-wrapping there.
+          // Outside of field context (e.g., List[Option[A]]), preserve optionality as OptionalShape.
+          if (inField) buildTypeShape(inner, inField = false)
+          else TypeShape.OptionalShape(buildTypeShape(inner, inField = false))
+        }.getOrElse {
           seqArg(tpe).map(elem => SequenceShape(buildTypeShape(elem))).getOrElse {
             mapArgs(tpe).map { case (k, v) =>
               if (!isAtomicKey(k)) {
@@ -94,8 +99,8 @@ object ContractMacros {
           val paramType = tpe.member(param.name).asMethod.returnType
           val hasDefault = param.asTerm.isParamWithDefault
           val (underlyingType, isOptional) = TypeInspector.optionArg(paramType).fold((paramType, false))(t => (t, true))
-
-          FieldShape(name, buildTypeShape(underlyingType), hasDefault, isOptional)
+          // For field-level shape, pass inField = true so Option is carried via isOptional flag
+          FieldShape(name, buildTypeShape(underlyingType, inField = true), hasDefault, isOptional)
         }
 
         StructShape(fields)
@@ -137,6 +142,15 @@ object ContractMacros {
 
           case (SequenceShape(outElem), SequenceShape(contractElem)) =>
             compare(s"$path[]", outElem, contractElem)
+
+          case (OptionalShape(outInner), OptionalShape(contractInner)) =>
+            compare(s"$path?", outInner, contractInner)
+
+          case (OptionalShape(_), other) =>
+            (Nil, Nil, List(Mismatch(path, TypeShape.pretty(other), s"optional ${TypeShape.pretty(other)}")))
+
+          case (other, OptionalShape(_)) =>
+            (Nil, Nil, List(Mismatch(path, s"optional ${TypeShape.pretty(other)}", TypeShape.pretty(other))))
 
           case (MapShape(outKey, outVal), MapShape(contractKey, contractVal)) =>
             val keyMismatch = if ((caseInsensitive && outKey.name.equalsIgnoreCase(contractKey.name)) ||

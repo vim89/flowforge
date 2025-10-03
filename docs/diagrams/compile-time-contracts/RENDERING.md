@@ -32,3 +32,9 @@ Our practice
 
 - Keep a Mermaid source in the repo (for diffs), and export an SVG for environments that can’t render Mermaid (IDEA Markdown, PDF, etc.).
 - Place exported assets under `docs/diagrams/**.svg` next to the Mermaid source.
+
+Optionality diagram
+
+- Source: `docs/diagrams/compile-time-contracts/optionality.md`
+- Export: `mmdc -i docs/diagrams/compile-time-contracts/optionality.md -o docs/diagrams/compile-time-contracts/optionality.svg -b transparent`
+- Link both `.md` and `.svg` in docs for best UX.

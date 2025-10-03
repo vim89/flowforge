@@ -417,8 +417,8 @@ We must design FlowForge’s derivation layer so the **public API stays macro-ag
 * **MUnit (2 & 3):** `compileErrors` to assert the compiler rejects a snippet. ([Scala Documentation][2], [GitHub][3], [scalameta.org][4])
 * **Alt (no test macros):** a small **sbt scripted**/harness project that compiles a sample and expects failure. ([scala-sbt.org][5], [stackoverflow.com][6])
 
-[1]: https://www.scalatest.org/user_guide/using_matchers?utm_source=chatgpt.com "Using matchers"
-[2]: https://docs.scala-lang.org/toolkit/testing-suite.html?utm_source=chatgpt.com "How to write tests? | The Scala Toolkit"
+[1]: https://www.scalatest.org/user_guide/using_matchers "Using matchers"
+[2]: https://docs.scala-lang.org/toolkit/testing-suite.html "How to write tests? | The Scala Toolkit"
 [3]: https://github.com/scalameta/munit?utm_source=chatgpt.com "scalameta/munit: Scala testing library with actionable ..."
 [4]: https://scalameta.org/munit/blog/2021/01/05/macromix.html?utm_source=chatgpt.com "Publish Scala 2 and Scala 3 macros together · MUnit"
 [5]: https://www.scala-sbt.org/1.x/docs/Testing-sbt-plugins.html?utm_source=chatgpt.com "sbt Reference Manual — Testing sbt plugins"

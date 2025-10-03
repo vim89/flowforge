@@ -107,6 +107,44 @@ val valid: SchemaConforms[UserReordered, User, SchemaPolicy.ExactUnordered] = im
 
 ---
 
+### Nested optionality inside collections
+
+Under Exact (and ExactUnordered) policies, element optionality is part of the schema. A producer changing
+`List[Option[Int]]` to `List[Int]` (or vice‑versa) is a breaking change.
+
+Code that should NOT compile:
+
+```
+import com.flowforge.core.contracts._
+
+type Out      = List[Option[Int]]
+type Contract = List[Int]
+
+// Compile-time error: element optionality mismatch
+implicitly[SchemaConforms[Out, Contract, SchemaPolicy.Exact]]
+```
+
+Indicative error message shape:
+
+```
+Compile-time contract drift (policy: com.flowforge.core.contracts.SchemaPolicy.Exact).
+Out: List[Option[Int]] vs Contract: List[Int]
+Mismatch attributes: []? expected Int, found optional Int
+```
+
+Similarly, for maps:
+
+```
+type Out2      = Map[String, Option[Int]]
+type Contract2 = Map[String, Int]
+implicitly[SchemaConforms[Out2, Contract2, SchemaPolicy.Exact]] // fails
+```
+
+This guards against silently dropping optionality in deeply nested structures. See also the diagram:
+`docs/diagrams/compile-time-contracts/optionality.md` (Field vs Element Optionality).
+
+---
+
 ### Additional policies (Scala 2 backports from Scala 3 PoC)
 
 - `SchemaPolicy.ExactOrdered`: Requires same field names and order; reordering fails.

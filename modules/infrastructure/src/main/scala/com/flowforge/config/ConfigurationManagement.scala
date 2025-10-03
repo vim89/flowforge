@@ -56,10 +56,11 @@ object ConfigurationManagement {
     new TypesafeConfigurationManagement[F]
 
   private class TypesafeConfigurationManagement[F[_]: Sync] extends ConfigurationManagement[F] {
-    private var config: Config = ConfigFactory.load()
+    // Replace mutable var with atomic reference for thread-safe, effect-friendly updates
+    private val configRef = new java.util.concurrent.atomic.AtomicReference[Config](ConfigFactory.load())
 
     def loadTypeSafeConfig[T: ConfigDecoder](key: String): F[ValidatedNel[ConfigError, T]] =
-      Sync[F].delay(implicitly[ConfigDecoder[T]].decode(config, key))
+      Sync[F].delay(implicitly[ConfigDecoder[T]].decode(configRef.get(), key))
 
     def watchConfig[T: ConfigDecoder](key: String)(onChange: T => F[Unit]): F[Unit] =
       // Minimal implementation: expose explicit reload via reloadConfig; background watching is
@@ -69,7 +70,7 @@ object ConfigurationManagement {
 
     def reloadConfig: F[Unit] =
       Sync[F].delay {
-        config = ConfigFactory.load()
+        configRef.set(ConfigFactory.load())
       }
   }
 

@@ -90,6 +90,32 @@ class PolicyCompileFailSpec extends AnyFunSuite {
     )
   }
 
+  test("Exact rejects nested element optionality change in List") {
+    assertTypeError(
+      """
+         |import com.flowforge.core.contracts._
+         |
+         |type Out      = List[Option[Int]]
+         |type Contract = List[Int]
+         |
+         |implicitly[SchemaConforms[Out, Contract, SchemaPolicy.Exact]]
+      """.stripMargin,
+    )
+  }
+
+  test("Exact rejects nested element optionality change in Map values") {
+    assertTypeError(
+      """
+         |import com.flowforge.core.contracts._
+         |
+         |type Out      = Map[String, Option[Int]]
+         |type Contract = Map[String, Int]
+         |
+         |implicitly[SchemaConforms[Out, Contract, SchemaPolicy.Exact]]
+      """.stripMargin,
+    )
+  }
+
   test("Backward allows extra optional field") {
     assertCompiles(
       """

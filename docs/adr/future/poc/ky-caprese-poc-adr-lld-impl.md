@@ -358,19 +358,19 @@ val later: () => Unit =
 ::contentReference[oaicite:42]{index=42}
 ```
 
-[1]: https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html?utm_source=chatgpt.com "AbortMultipartUpload - Amazon Simple Storage Service"
-[2]: https://cloud.google.com/storage/docs/resumable-uploads?utm_source=chatgpt.com "Resumable uploads | Cloud Storage"
-[3]: https://opentelemetry.io/docs/specs/otel/metrics/data-model/?utm_source=chatgpt.com "Metrics Data Model"
-[4]: https://github.com/getkyo/kyo?utm_source=chatgpt.com "getkyo/kyo: Toolkit for Scala Development"
-[5]: https://opentelemetry.io/blog/2024/java-metric-systems-compared/?utm_source=chatgpt.com "OpenTelemetry Java Metrics Performance Comparison"
-[6]: https://index.scala-lang.org/getkyo/kyo/artifacts/kyo-stats-otel/0.14.1?utm_source=chatgpt.com "kyo"
-[7]: https://nrinaudo.github.io/articles/capture_checking.html?utm_source=chatgpt.com "Hands on Capture Checking - Nicolas Rinaudo"
-[8]: https://docs.scala-lang.org/scala3/reference/experimental/cc.html?utm_source=chatgpt.com "Capture Checking"
-[9]: https://stackoverflow.com/questions/60705536/task-not-serializable-error-while-calling-udf-to-spark-dataframe?utm_source=chatgpt.com "scala - Task not serializable error while calling udf to spark ..."
-[10]: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html?utm_source=chatgpt.com "IAM roles - AWS Identity and Access Management"
-[11]: https://cloud.google.com/iam/docs/workload-identity-federation-with-other-clouds?utm_source=chatgpt.com "Configure Workload Identity Federation with AWS or Azure ..."
-[12]: https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html?utm_source=chatgpt.com "Security best practices in IAM - AWS Identity and Access ..."
-[13]: https://cloud.google.com/iam/docs/best-practices-for-using-workload-identity-federation?utm_source=chatgpt.com "Best practices for using Workload Identity Federation"
-[14]: https://www.firefly.ai/academy/setting-up-workload-identity-federation-between-github-actions-and-google-cloud-platform?utm_source=chatgpt.com "Setting Up Workload Identity Federation Between GitHub ..."
+[1]: https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html "AbortMultipartUpload - Amazon Simple Storage Service"
+[2]: https://cloud.google.com/storage/docs/resumable-uploads "Resumable uploads | Cloud Storage"
+[3]: https://opentelemetry.io/docs/specs/otel/metrics/data-model/ "Metrics Data Model"
+[4]: https://github.com/getkyo/kyo "getkyo/kyo: Toolkit for Scala Development"
+[5]: https://opentelemetry.io/blog/2024/java-metric-systems-compared/ "OpenTelemetry Java Metrics Performance Comparison"
+[6]: https://index.scala-lang.org/getkyo/kyo/artifacts/kyo-stats-otel/0.14.1 "kyo"
+[7]: https://nrinaudo.github.io/articles/capture_checking.html "Hands on Capture Checking - Nicolas Rinaudo"
+[8]: https://docs.scala-lang.org/scala3/reference/experimental/cc.html "Capture Checking"
+[9]: https://stackoverflow.com/questions/60705536/task-not-serializable-error-while-calling-udf-to-spark-dataframe "scala - Task not serializable error while calling udf to spark ..."
+[10]: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html "IAM roles - AWS Identity and Access Management"
+[11]: https://cloud.google.com/iam/docs/workload-identity-federation-with-other-clouds "Configure Workload Identity Federation with AWS or Azure ..."
+[12]: https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html "Security best practices in IAM - AWS Identity and Access ..."
+[13]: https://cloud.google.com/iam/docs/best-practices-for-using-workload-identity-federation "Best practices for using Workload Identity Federation"
+[14]: https://www.firefly.ai/academy/setting-up-workload-identity-federation-between-github-actions-and-google-cloud-platform "Setting Up Workload Identity Federation Between GitHub ..."
 
 ---

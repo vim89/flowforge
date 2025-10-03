@@ -1,6 +1,20 @@
-# flowforge - start here
+# Start Here
 
 This is the quickest way to experience FlowForge’s unique value: contracts‑first pipelines that fail at compile time on schema drift, with batteries‑included Spark execution, Delta + DQ, lineage by default, and optional Flink.
+
+## For Engineering Managers
+
+- Move failures left: pipelines don’t compile when contracts drift.
+- Faster feedback: pure transformations keep local tests instant.
+- Safer operations: idempotent edge effects by design; clear ownership of contracts.
+- See: `docs/diagrams/compile-time-contracts/flowchart.svg`, `docs/design/framework-behaviors.md`, `docs/quality/release-criteria.md`.
+
+## For Staff Data Architects
+
+- Policy lattice: Exact/Backward/Forward (+ ordered/CI/positional variants).
+- Typestate builder: `build()` only when complete — enforced by types.
+- Pure vs effect boundaries; engines behind one algebra (Spark/Flink).
+- See: `docs/how-it-fails.md`, `docs/diagrams/compile-time-contracts/optionality.md`, `docs/public-api.md`, `docs/adr/INDEX.md`.
 
 What you’ll do in 5 minutes:
 - Generate a project from the template
@@ -62,4 +76,3 @@ sbt maintenance-cli/run -- compact --path /tmp/delta/table --targetFiles 4
 - Flink minimal: CSV read/write parity example.
 
 Happy building!
-
