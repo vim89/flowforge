@@ -91,7 +91,7 @@ object CompileTimeContractsDemo extends IOApp.Simple {
 
       // Test that all SchemaPolicy case objects exist
       _ <- IO.println(s"   ✓ Exact: ${SchemaPolicy.Exact}")
-      _ <- IO.println(s"   ✓ ExactUnordered: ${SchemaPolicy.ExactUnordered}")
+      _ <- IO.println(s"   ✓ ExactUnorderedCI: ${SchemaPolicy.ExactUnorderedCI}")
       _ <- IO.println(s"   ✓ Backward: ${SchemaPolicy.Backward}")
       _ <- IO.println(s"   ✓ Forward: ${SchemaPolicy.Forward}")
       _ <- IO.println(s"   ✓ Full: ${SchemaPolicy.Full}")

@@ -66,7 +66,7 @@ case class FlowForgePipeline[F[_]: EffectSystem, A, B](
   /**
    * Validate the pipeline configuration.
    */
-  def validate: ConfigValidation[Unit] =
+  def validate: com.flowforge.core.syntax.ValidationSyntax.ConfigValidation[Unit] =
     // Pipeline-level validation logic would go here
     ().validNel
 }

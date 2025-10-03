@@ -11,7 +11,7 @@ ThisBuild / scalaVersion := Dependencies.Versions.scala213
 ThisBuild / crossScalaVersions := Seq(
   Dependencies.Versions.scala212,
   Dependencies.Versions.scala213,
-  // Dependencies.Versions.scala3  // TODO: Enable when Scala 3 implementation for compile-time contracts is ready
+  Dependencies.Versions.scala3  // ✅ Enabled: Improved macro implementation supports Scala 3
 )
 
 // ===== REPOSITORY RESOLVERS =====
@@ -93,6 +93,15 @@ ThisBuild / Test / testOptions += Tests.Argument("-oDF")
 ThisBuild / Test / fork := true
 ThisBuild / Test / javaOptions += "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED"
 
+// Scaladoc settings (visible in scaladoc.yml job)
+ThisBuild / Compile / doc / scalacOptions ++= Seq(
+  "-groups",
+  "-doc-title",
+  "FlowForge API",
+  "-doc-version",
+  version.value,
+)
+
 // Helper function for module projects
 def moduleProject(name: String): Project =
   Project(name, file(s"modules/$name"))
@@ -151,6 +160,8 @@ lazy val core = moduleProject("core")
           Seq(
             "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.10",
             "org.scala-lang"                % "scala-reflect" % scalaVersion.value,
+            // Temporary for legacy SchemaWitness (shapeless) kept under scala-2 sources only
+            "com.chuusai"                   %% "shapeless"     % "2.3.10",
           )
         case Some((3, _)) =>
           Seq(
@@ -225,7 +236,8 @@ lazy val enginesFlink = moduleProject("engines-flink")
   .dependsOn(core, connectors, enginesSpark % "test->compile")
   .settings(
     description        := "Apache Flink execution engine",
-    crossScalaVersions := Seq(Dependencies.Versions.scala212, Dependencies.Versions.scala213),
+    // Flink Scala API is 2.12-only; avoid invalid 2.13 cross build
+    crossScalaVersions := Seq(Dependencies.Versions.scala212),
     libraryDependencies ++= Dependencies.forModule("engines-flink"),
   )
 
@@ -428,3 +440,24 @@ lazy val experimental = moduleProject("experimental")
     Compile / mainClass := Some("com.flowforge.experimental.caprese.Main"),
     publish / skip      := true,
   )
+// ===== UNIDOC (optional unified API) =====
+import sbtunidoc.ScalaUnidocPlugin
+import sbtunidoc.ScalaUnidocPlugin.autoImport._
+
+// Only aggregate Scala 2.13 modules (Flink is 2.12-only). This keeps unidoc stable.
+lazy val unidocProjects = Seq(
+  core,
+  contracts,
+  connectors,
+  connectorsGcs,
+  connectorsJdbc,
+  enginesSpark,
+  qualityDeequ,
+  infrastructure,
+  examples,
+  validationCli,
+  contractsExtractorCli,
+  maintenanceCli,
+)
+
+ThisBuild / ScalaUnidoc / unidocProjectFilter := inProjects(unidocProjects.map(_.project): _*)

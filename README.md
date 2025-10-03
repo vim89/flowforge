@@ -117,6 +117,46 @@ If `User` and the Avro contract diverge (extra/missing/mismatched fields), `sbt 
 - Public API: `docs/public-api.md`.
 - Bring Your Own Effect System (BYO‑F): `docs/effects/bring-your-own-effect.md` (EffectSystem and FlowforgeResource primer).
 
+## Public API (Stable 1.0)
+
+Stable packages and entry points you can depend on:
+
+- `com.flowforge.core.PipelineBuilder` — typestate builder; incomplete pipelines won’t compile.
+- `com.flowforge.core.contracts.SchemaConforms` and `SchemaPolicy` — compile‑time contract evidence and policy lattice.
+- `com.flowforge.core.algebra.DataAlgebra[F]` — engine‑agnostic data operations.
+- `com.flowforge.engines.spark.*` — Spark engine implementation (primary in 1.0).
+- `com.flowforge.quality.deequ.DeequAdapter` — optional Deequ integration; native checks by default.
+
+Full reference: docs/public-api.md
+
+## Compile‑time Contract Drift (text screenshots)
+
+Exact policy — missing field
+
+```
+FlowForge: Contract drift (policy: SchemaPolicy.Exact).
+Out: UserPartial vs Contract: User
+Missing attributes: email : String
+Extra attributes: 
+Mismatch attributes: 
+```
+
+ExactOrdered — reordered fields (fails)
+
+```
+Compile-time contract drift (policy: SchemaPolicy.ExactOrdered).
+Out: B vs Contract: A
+Mismatch attributes: .@0(name) expected id, found name
+```
+
+ExactByPosition — type mismatch at position
+
+```
+Compile-time contract drift (policy: SchemaPolicy.ExactByPosition).
+Out: (String, Long) vs Contract: D
+Mismatch attributes: .@0 expected Long, found String
+```
+
 ## FAQ
 
 - Does it require Scala knowledge?

@@ -117,7 +117,7 @@ class CompileTimeContractSpec extends AnyWordSpec with Matchers {
       val backwardPolicy       = SchemaPolicy.Backward
       val forwardPolicy        = SchemaPolicy.Forward
       val fullPolicy           = SchemaPolicy.Full
-      val exactUnorderedPolicy = SchemaPolicy.ExactUnordered
+      val exactUnorderedPolicy = SchemaPolicy.ExactUnorderedCI
 
       // All should be instances of SchemaPolicy
       exactPolicy shouldBe a[SchemaPolicy]

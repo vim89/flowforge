@@ -26,9 +26,13 @@ trait SchemaConforms[Out, Contract, P <: SchemaPolicy]
 
 object SchemaConforms {
   import scala.language.experimental.macros
-  implicit def materialize[Out, Contract, P <: SchemaPolicy](
-    implicit so: Shape[Out],
-    sc: Shape[Contract],
-  ): SchemaConforms[Out, Contract, P] =
-    macro internal.SchemaConformsMacros.materializeImpl[Out, Contract, P]
+
+  /**
+   * Materialize compile-time evidence that Out conforms to Contract under policy P.
+   *
+   * Uses improved macro that builds TypeShape representations and performs
+   * policy-specific comparison. No runtime overhead - pure compile-time validation.
+   */
+  implicit def materialize[Out, Contract, P <: SchemaPolicy]: SchemaConforms[Out, Contract, P] =
+    macro internal.ContractMacros.conformsImpl[Out, Contract, P]
 }

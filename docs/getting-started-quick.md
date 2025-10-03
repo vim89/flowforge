@@ -20,3 +20,11 @@ object QuickStart extends IOApp.Simple {
 ```
 
 See the [architecture overview](diagrams/overview.svg) for how components fit together.
+
+## 3-step fast feedback loop (DX)
+
+1) Run `sbt ffDev` to compile + run focused tests (target <3s for pure code).
+
+2) Introduce a contract drift (e.g., change a field in a case class) and run `sbt compile` — it should fail with a readable, path‑aware diff from `SchemaConforms`.
+
+3) Fix the type or relax the policy (Exact → Backward) and re‑run `sbt compile` — it should turn green.

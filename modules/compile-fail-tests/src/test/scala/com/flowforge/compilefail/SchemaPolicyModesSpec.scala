@@ -27,10 +27,10 @@ class SchemaPolicyModesSpec extends AnyWordSpec with Matchers {
     }
   }
 
-  "ExactUnordered" should {
+  "ExactUnorderedCI" should {
     "succeed when fields are reordered" in
       assertCompiles("""
-        implicitly[SchemaConforms[B, A, SchemaPolicy.ExactUnordered]]
+        implicitly[SchemaConforms[B, A, SchemaPolicy.ExactUnorderedCI]]
       """)
   }
 

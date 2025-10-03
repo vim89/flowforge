@@ -96,21 +96,28 @@ final case class ProductionSparkDataset[A](
 object ProductionSparkDataset {
 
   /**
-   * Utilities for constructing and working with production‑grade Spark Datasets inside FlowForge.
-   *
-   * A `ProductionSparkDataset[A]` wraps a Spark `Dataset[A]` with metadata and helper methods that make it
-   * easy to integrate with FlowForge’s typed contracts, quality checks, and sinks while keeping
-   * transformations pure.
-   *
-   * Typical usage is internal to the Spark `DataAlgebra` implementation, but the helpers are safe to use in
-   * examples/tests when you need to adapt a DataFrame/Dataset to the DSL.
-   */
+    * Utilities for constructing and working with production‑grade Spark Datasets inside FlowForge.
+    *
+    * A `ProductionSparkDataset[A]` wraps a Spark `Dataset[A]` with metadata and helper methods that make it
+    * easy to integrate with FlowForge’s typed contracts, quality checks, and sinks while keeping
+    * transformations pure.
+    *
+    * Typical usage is internal to the Spark `DataAlgebra` implementation, but the helpers are safe to use in
+    * examples/tests when you need to adapt a DataFrame/Dataset to the DSL.
+    */
 
   /**
-   * Create ProductionSparkDataset from DataFrame with MEMORY-SAFE lazy decoding
-   *
-   * CRITICAL FIX: No longer loads entire DataFrame into driver memory
-   */
+    * Create ProductionSparkDataset from an existing Spark [[org.apache.spark.sql.DataFrame]] while avoiding
+    * driver OOMs.
+    *
+    * Uses a small JSON sample for compatibility with FlowForge’s decoders and keeps the full dataset lazily
+    * evaluated on the cluster.
+    *
+    * @param df the input DataFrame
+    * @param spark the SparkSession used for auxiliary operations
+    * @tparam A element type with a FlowForge [[com.flowforge.core.algebra.DataDecoder]] instance
+    * @return a ProductionSparkDataset[A] backed by the given DataFrame
+    */
   def fromDataFrame[A: DataDecoder](
     df: DataFrame,
     spark: SparkSession,
@@ -155,9 +162,7 @@ object ProductionSparkDataset {
     ProductionSparkDataset(sampleData, df, schema, metadata)
   }
 
-  /**
-   * Map Spark DataType to FlowForge DataType
-   */
+  /** Map Spark SQL DataType to FlowForge [[com.flowforge.core.types.DataType]]. */
   private def mapSparkTypeToFlowForgeType(
     sparkType: org.apache.spark.sql.types.DataType,
   ): DataType = {

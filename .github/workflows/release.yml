@@ -16,6 +16,11 @@ on:
         default: false
         type: boolean
 
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -82,11 +87,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java 21
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
 
       - name: Cache SBT and dependencies
         uses: actions/cache@v4
@@ -148,11 +153,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java 21
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
 
       - name: Cache SBT and dependencies
         uses: actions/cache@v4
@@ -193,9 +198,83 @@ jobs:
           path: release-artifacts/
           retention-days: 30
 
+  publish-docs:
+    name: Publish Scaladoc to GitHub Pages
+    needs: [validate-release, pre-release-tests]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Cache SBT and dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.sbt
+            ~/.coursier/cache
+            ~/.ivy2/cache
+          key: ${{ runner.os }}-sbt-docs-${{ hashFiles('**/*.sbt', '**/project/**/*.scala') }}
+          restore-keys: |
+            ${{ runner.os }}-sbt-docs-
+            ${{ runner.os }}-sbt-
+      - name: Generate Scaladoc for all modules
+        run: |
+          sbt -batch doc
+          # Try unified docs for Scala 2.13 modules; don't fail release if unidoc fails
+          sbt -batch unidoc || echo "unidoc failed (non-fatal)"
+      - name: Assemble site folder
+        run: |
+          mkdir -p public/api
+          for m in modules/*; do \
+            mod=$(basename "$m"); \
+            api_dir="$m/target/scala-2.13/api"; \
+            if [ -d "$api_dir" ]; then \
+              mkdir -p "public/api/$mod"; \
+              cp -R "$api_dir"/* "public/api/$mod"/; \
+            fi; \
+          done
+          # Root module (if any aggregated docs exist)
+          if [ -d target/scala-2.13/api ]; then \
+            mkdir -p public/api/root && cp -R target/scala-2.13/api/* public/api/root/; \
+          fi
+          # Unified docs (if present)
+          if [ -d target/scala-2.13/unidoc ] || [ -d target/scala-2.13/api-unidoc ]; then \
+            UNIDOC_DIR="$(ls -d target/scala-2.13/*unidoc 2>/dev/null | head -n1)"; \
+            if [ -n "$UNIDOC_DIR" ]; then \
+              mkdir -p public/api/unified && cp -R "$UNIDOC_DIR"/* public/api/unified/; \
+            fi; \
+          fi
+          # Add index
+          cat > public/index.html << 'EOF'
+          <!doctype html>
+          <html><head><meta charset="utf-8"><title>FlowForge API</title></head>
+          <body>
+            <h1>FlowForge API (Scaladoc)</h1>
+            <ul>
+              $(for d in api/*; do echo "<li><a href=\"$d/index.html\">$(basename "$d")</a></li>"; done)
+            </ul>
+          </body></html>
+          EOF
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
   create-release:
     name: Create GitHub Release
-    needs: [validate-release, pre-release-tests, build-artifacts]
+    needs: [validate-release, pre-release-tests, build-artifacts, publish-docs]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

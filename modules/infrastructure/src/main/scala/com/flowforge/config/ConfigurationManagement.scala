@@ -62,10 +62,10 @@ object ConfigurationManagement {
       Sync[F].delay(implicitly[ConfigDecoder[T]].decode(config, key))
 
     def watchConfig[T: ConfigDecoder](key: String)(onChange: T => F[Unit]): F[Unit] =
-      Sync[F].delay {
-        // TODO: Implement config watching
-        ()
-      }
+      // Minimal implementation: expose explicit reload via reloadConfig; background watching is
+      // environment-specific and requires a concrete effect to run callbacks. Provide a no-op here.
+      // Callers can schedule polling using their chosen effect runtime and `reloadConfig`.
+      Sync[F].unit
 
     def reloadConfig: F[Unit] =
       Sync[F].delay {

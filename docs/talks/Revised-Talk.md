@@ -15,6 +15,19 @@
 - Include **live “red→green” moment** (policy: Exact → Backward).
 - Add **FAQ slide** answers inline (policy order, CI, evolution safety, fibers across IO/ZIO, unit testing strategy).
 
+## Why-First Addendum (2025-10-02)
+
+- The Why, in 20 seconds:
+  - Runtime schema drift burns nights and weekends. If we move that failure to compile time, we protect trading hours and engineers’ sleep.
+  - Side-effects (audit/Slack) inside Spark transforms amplify retries and speculation → duplicates, rate limits, and untraceable incidents. We put all effects at the edges and make them idempotent.
+- A Story (real‑world):
+  - “A partner team rolled out a late‑night change that removed a nullable column. Our on‑call couldn’t roll back in time; both teams were up all night before trading opened. If that mismatch were a compile error, we would have slept.”
+- Clear boundary:
+  - Compile‑time: structural compatibility of types vs contracts (policy lattice), builder typestate (no incomplete pipelines).
+  - Runtime: real files/streams can still be corrupt or empty → optional DQ guards, lineage, and metrics.
+- DX vs Process:
+  - DX is fast red→green loops (template + compile‑fail tests). Process is CI gates: policy matrix + example diffs in PRs.
+
 
 
 
@@ -24,6 +37,10 @@
 - What if broken pipelines never launched—because the **compiler** stopped them?
 - What if orchestration **respected fibers**, and Spark transforms stayed **pure**?
 - Today: a design blueprint for **type-first, effect-aware** data engineering in Scala.
+
+### Slide 1.0b — Why you should care (1 min)
+- You lose the most hours to: schema drift discovered at runtime; non‑idempotent edge effects; inability to roll back safely.
+- This design turns those into build‑time failures and edge‑only effects with idempotency.
 
 > *Speaker note:* Start with a 30-second “we shipped junk on Friday because a field was added silently.” Then: “let’s move that pain left—into the compiler.”
 

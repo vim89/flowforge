@@ -1,10 +1,6 @@
 # flowforge Public API (v1.0)
 
-## Status: Proposed 1.0 surface (Pre-RC)
-
-Per v1.0 plan: This document labels the **proposed FlowForge 1.0 public API surface** until RC. All APIs listed here are intended for public consumption and will maintain binary compatibility within the 1.x series.
-
-**⚠️ Until RC**: APIs may still evolve based on feedback and testing.
+Status: RC-ready public surface. APIs listed here are intended for public use and will maintain binary compatibility within 1.x (see guarantees below).
 
 ## Core public APIs
 
@@ -39,9 +35,9 @@ com.flowforge.core.types.QualityConstraint:
   - Factory methods: `fromDataFrame()`, `fromParquet()`, `fromDelta()`
 - **SparkDataAlgebra**: Spark-specific DataAlgebra implementation
 
-### Flink integration  
-- **FlinkDataStream**: `com.flowforge.engines.flink.FlinkDataStream[A]`
-- **FlinkDataAlgebra**: Streaming-specific DataAlgebra implementation
+### Flink integration
+- **FlinkDataAlgebra**: `com.flowforge.engines.flink.FlinkDataAlgebra[F]` (minimal parity via in‑memory delegate).
+- Cross‑build: Scala 2.12 only (Flink Scala API constraint). Not feature‑parity with Spark in 1.0; stable façade guaranteed.
 
 ## Data Quality (v1.0 dual-mode)
 
@@ -54,7 +50,7 @@ com.flowforge.core.types.QualityConstraint:
 ### Quality configuration
 - **Native Mode**: Always available, uses Spark DataFrame operations
 - **Deequ Enhancement**: Enable via `-Dff.quality.mode=deequ` system property
-- **Version Support**: Deequ 2.0.11-spark-3.5 when available on classpath
+- **Version Support**: Deequ 2.0.12‑spark‑3.5 when available on classpath
 
 ## Lineage & observability (v1.0 auto-emit)
 
@@ -65,12 +61,14 @@ com.flowforge.core.types.QualityConstraint:
   - `OPENLINEAGE_NAMESPACE`: Lineage namespace (default: `"flowforge"`)
 - **Zero-Config**: Works out of the box with Marquez docker-compose setup
 
-## Key keatures (v1.0 guarantees)
+## Key features (v1.0 guarantees)
 
 ### Type safety
-- **100% Compile-Time Contracts**: Pipelines won't build if schemas don't match
-- **Phantom-State Builder**: Type system prevents incomplete pipelines  
-- **Schema Policy Enforcement**: Exact, Backward, Forward compatibility policies
+- **100% Compile-Time Contracts**: Pipelines won't build if schemas don't match (improved implementation)
+- **Phantom-State Builder**: Type system prevents incomplete pipelines
+- **Superior Schema Policy System**: Exact, ExactUnorderedCI, ExactOrdered, ExactByPosition, Backward, Forward, Full policies
+- **TypeShape ADT**: Clean, functional schema representation replacing old SchemaAST
+- **Policy-Based Comparison**: Maintainable, extensible schema validation engine
 - **Refined Types**: `FieldName`, `SchemaVersion` with compile-time validation
 
 ### Effect system support
@@ -164,6 +162,5 @@ Available in documentation with copy-pasteable examples for each cloud provider.
 
 ---
 
-**Document Status**: Living document, updated with each RC milestone
-**Last Updated**: flowforge v1.0.0-RC1 preparation  
-**Next Review**: At API freeze milestone
+Document Status: RC-ready
+Last Updated: 2025‑10‑02
