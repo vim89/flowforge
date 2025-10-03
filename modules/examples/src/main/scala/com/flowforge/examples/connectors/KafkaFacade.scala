@@ -7,15 +7,14 @@ import com.flowforge.core.types.DataFormat
 import java.nio.file.{ Files, Paths, StandardOpenOption }
 
 /**
-  * Minimal file-backed Kafka facade.
-  *
-  * Simulates a Kafka topic as a JSONL file at `<baseDir>/<topic>.jsonl`.
-  * Each publish appends a JSON line. consumeAll reads and decodes all lines.
-  *
-  * This is for runnable examples without adding heavy dependencies. The real
-  * wiring for Kafka (clients, Spark Structured Streaming, or Flink) would live
-  * under connectors/engines.
-  */
+ * Minimal file-backed Kafka facade.
+ *
+ * Simulates a Kafka topic as a JSONL file at `<baseDir>/<topic>.jsonl`. Each publish appends a JSON line.
+ * consumeAll reads and decodes all lines.
+ *
+ * This is for runnable examples without adding heavy dependencies. The real wiring for Kafka (clients, Spark
+ * Structured Streaming, or Flink) would live under connectors/engines.
+ */
 object KafkaFacade {
 
   trait KafkaTopic[F[_], A] {
@@ -24,7 +23,10 @@ object KafkaFacade {
     def consumeAll: F[List[A]]
   }
 
-  def topic[F[_], A](baseDir: String, topic: String)(implicit
+  def topic[F[_], A](
+    baseDir: String,
+    topic: String,
+  )(implicit
     F: EffectSystem[F],
     enc: DataEncoder[A],
     dec: DataDecoder[A],
@@ -50,7 +52,8 @@ object KafkaFacade {
         })(_ => ())
       }
 
-    def publishAll(as: List[A]): F[Unit] = as.foldLeft(F.pure(())) { (acc, a) => F.flatMap(acc)(_ => publish(a)) }
+    def publishAll(as: List[A]): F[Unit] =
+      as.foldLeft(F.pure(()))((acc, a) => F.flatMap(acc)(_ => publish(a)))
 
     def consumeAll: F[List[A]] = F.blocking {
       if (!Files.exists(path)) List.empty[A]

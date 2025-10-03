@@ -1,6 +1,6 @@
 package com.flowforge.examples.demo
 
-import cats.effect.{IO, IOApp}
+import cats.effect.{ IO, IOApp }
 import com.flowforge.core.PipelineBuilder
 import com.flowforge.core.contracts.SchemaPolicy
 import com.flowforge.core.contracts.derive.Shape
@@ -10,23 +10,26 @@ import com.flowforge.core.types._
 import com.flowforge.framework.Pipeline
 
 /**
-  * Typestate (phantom types) demo: show that an incomplete pipeline REFUSES to build.
-  *
-  * - GREEN section: complete pipeline compiles and runs (safe)
-  * - RED section: uncomment to PROVOKE a compile-time error for a pipeline missing the sink
-  *
-  * This example is brand-agnostic and relies only on the public FlowForge builder surface:
-  *   PipelineBuilder[IO] → addTypedSource → addTransform → addTypedSink → build()
-  *
-  * References on typestate/phantom types & compile-safe builders:
-  *   - Xebia: Compile‑safe Builder Pattern Using Phantom Types (Scala) — prevents `.build()` until complete
-  *   - Typelevel Cats‑Effect IOApp — entry point to run IO programs cleanly
-  *   - ZIO/Cats fibers docs (background on structured concurrency)
-  */
+ * Typestate (phantom types) demo: show that an incomplete pipeline REFUSES to build.
+ *
+ *   - GREEN section: complete pipeline compiles and runs (safe)
+ *   - RED section: uncomment to PROVOKE a compile-time error for a pipeline missing the sink
+ *
+ * This example is brand-agnostic and relies only on the public FlowForge builder surface: PipelineBuilder[IO]
+ * → addTypedSource → addTransform → addTypedSink → build()
+ *
+ * References on typestate/phantom types & compile-safe builders:
+ *   - Xebia: Compile‑safe Builder Pattern Using Phantom Types (Scala) — prevents `.build()` until complete
+ *   - Typelevel Cats‑Effect IOApp — entry point to run IO programs cleanly
+ *   - ZIO/Cats fibers docs (background on structured concurrency)
+ */
 object TypestateRefusal extends IOApp.Simple {
 
   // --- Domain types: Producer (extra field) vs Consumer (contract)
-  final case class Producer(id: Long, email: String, age: Int)
+  final case class Producer(
+    id: Long,
+    email: String,
+    age: Int)
   final case class Consumer(id: Long, email: String)
 
   // Contract shape evidence for compile‑time validation + typed endpoints
@@ -35,7 +38,7 @@ object TypestateRefusal extends IOApp.Simple {
 
   // Typed endpoints (paths are placeholders; the demo reader/writer are pure/side‑effect‑free)
   private val source: TypedSource[Consumer] = localParquetSource[Consumer]("examples-data/users.parquet")
-  private val sink:   TypedSink[Consumer]   = localParquetSink[Consumer]("examples-data/out/users.parquet")
+  private val sink: TypedSink[Consumer]     = localParquetSink[Consumer]("examples-data/out/users.parquet")
 
   // =========================
   // GREEN: complete pipeline

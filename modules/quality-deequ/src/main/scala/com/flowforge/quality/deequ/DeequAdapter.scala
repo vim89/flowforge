@@ -20,11 +20,11 @@ import cats.syntax.either._
  * This keeps FlowForge core lean while giving enterprise users optional Deequ power.
  */
 /**
-  * Entry points for running FlowForge quality constraints using either native Spark checks (default) or
-  * Amazon Deequ (optional, via reflection when present on the classpath).
-  *
-  * Use system property `-Dff.quality.mode=deequ` to prefer Deequ when available.
-  */
+ * Entry points for running FlowForge quality constraints using either native Spark checks (default) or Amazon
+ * Deequ (optional, via reflection when present on the classpath).
+ *
+ * Use system property `-Dff.quality.mode=deequ` to prefer Deequ when available.
+ */
 object DeequAdapter {
 
   private val deequAvailable: Boolean =
@@ -34,16 +34,20 @@ object DeequAdapter {
     }.getOrElse(false)
 
   /**
-    * Run FlowForge constraints against a Spark-backed dataset.
-    *
-    * Falls back to native mode if Deequ is unavailable or errors. For non‑Spark datasets, returns a passing
-    * result (no-op).
-    *
-    * @param spark current SparkSession
-    * @param dataset FlowForge dataset (Spark-backed recommended)
-    * @param constraints list of constraints to validate
-    * @tparam A element type of the dataset
-    */
+   * Run FlowForge constraints against a Spark-backed dataset.
+   *
+   * Falls back to native mode if Deequ is unavailable or errors. For non‑Spark datasets, returns a passing
+   * result (no-op).
+   *
+   * @param spark
+   *   current SparkSession
+   * @param dataset
+   *   FlowForge dataset (Spark-backed recommended)
+   * @param constraints
+   *   list of constraints to validate
+   * @tparam A
+   *   element type of the dataset
+   */
   def runChecks[A](
     spark: SparkSession,
     dataset: DataAlgebra.Dataset[A],

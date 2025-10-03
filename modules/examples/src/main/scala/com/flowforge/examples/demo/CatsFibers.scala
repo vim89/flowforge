@@ -1,6 +1,6 @@
 package com.flowforge.examples.demo
 
-import cats.effect.{IO, IOApp, Fiber}
+import cats.effect.{ Fiber, IO, IOApp }
 import scala.concurrent.duration._
 
 object CatsFibers extends IOApp.Simple {

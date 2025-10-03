@@ -13,16 +13,19 @@ import org.apache.spark.sql.SparkSession
 /**
  * Hello Pipeline — minimal end‑to‑end example
  *
- * - Reads a small CSV of users from resources
- * - Applies a simple typed transform
- * - Enforces a compile‑time contract (Exact policy)
- * - Writes a curated Parquet output locally
- * - Runs with lineage disabled by default
+ *   - Reads a small CSV of users from resources
+ *   - Applies a simple typed transform
+ *   - Enforces a compile‑time contract (Exact policy)
+ *   - Writes a curated Parquet output locally
+ *   - Runs with lineage disabled by default
  */
 object HelloPipeline extends IOApp.Simple {
 
   // Domain model (output type)
-  final case class User(id: Long, email: String, age: Int)
+  final case class User(
+    id: Long,
+    email: String,
+    age: Int)
 
   // Compile-time policy: output type conforms to itself exactly (demo). Replace RHS with generated contracts-sdk type in real projects.
   implicit val conforms: SchemaConforms[User, User, SchemaPolicy.Exact] = implicitly
@@ -34,22 +37,24 @@ object HelloPipeline extends IOApp.Simple {
   implicit val userEncoder: com.flowforge.core.algebra.DataEncoder[User] = {
     import com.flowforge.core.algebra._
     DataEncoder.instance[User](
-      (data, format) => format match {
-        case DataFormat.JSON | DataFormat.JSONL =>
-          val js = s"""{"id":%d,"email":"%s","age":%d}""".format(data.id, data.email, data.age)
-          Right(EncodedData(js.getBytes("UTF-8"), format))
-        case other => Left(UnsupportedFormat(other, "User"))
-      },
-      _ => DataSchema(
-        fields = List(
-          StructField(RefinedTypes.FieldName.unsafeFrom("id"), DataType.Long, nullable = false),
-          StructField(RefinedTypes.FieldName.unsafeFrom("email"), DataType.String, nullable = false),
-          StructField(RefinedTypes.FieldName.unsafeFrom("age"), DataType.Integer, nullable = false),
+      (data, format) =>
+        format match {
+          case DataFormat.JSON | DataFormat.JSONL =>
+            val js = s"""{"id":%d,"email":"%s","age":%d}""".format(data.id, data.email, data.age)
+            Right(EncodedData(js.getBytes("UTF-8"), format))
+          case other => Left(UnsupportedFormat(other, "User"))
+        },
+      _ =>
+        DataSchema(
+          fields = List(
+            StructField(RefinedTypes.FieldName.unsafeFrom("id"), DataType.Long, nullable = false),
+            StructField(RefinedTypes.FieldName.unsafeFrom("email"), DataType.String, nullable = false),
+            StructField(RefinedTypes.FieldName.unsafeFrom("age"), DataType.Integer, nullable = false),
+          ),
+          version = RefinedTypes.SchemaVersion.unsafeFrom(1),
+          metadata = Map.empty,
+          createdAt = java.time.Instant.now(),
         ),
-        version = RefinedTypes.SchemaVersion.unsafeFrom(1),
-        metadata = Map.empty,
-        createdAt = java.time.Instant.now(),
-      ),
     )
   }
 
@@ -68,7 +73,7 @@ object HelloPipeline extends IOApp.Simple {
     sparkResource("FlowForge-Hello").use { spark =>
       val dao: DataAlgebra[IO] = SparkDataAlgebra.createSparkDataAlgebra[IO](spark).algebra
 
-      val src  = DataSource.local("modules/examples/src/main/resources/fixtures/raw-users.csv", DataFormat.CSV)
+      val src = DataSource.local("modules/examples/src/main/resources/fixtures/raw-users.csv", DataFormat.CSV)
       val sink = DataSink.local("target/hello/curated", DataFormat.Parquet)
 
       val pipeline = PipelineBuilder[BuilderState.Empty, IO, Unit, Unit](name = "hello-pipeline")

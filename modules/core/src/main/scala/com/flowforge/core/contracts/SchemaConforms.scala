@@ -30,8 +30,8 @@ object SchemaConforms {
   /**
    * Materialize compile-time evidence that Out conforms to Contract under policy P.
    *
-   * Uses improved macro that builds TypeShape representations and performs
-   * policy-specific comparison. No runtime overhead - pure compile-time validation.
+   * Uses improved macro that builds TypeShape representations and performs policy-specific comparison. No
+   * runtime overhead - pure compile-time validation.
    */
   implicit def materialize[Out, Contract, P <: SchemaPolicy]: SchemaConforms[Out, Contract, P] =
     macro internal.ContractMacros.conformsImpl[Out, Contract, P]

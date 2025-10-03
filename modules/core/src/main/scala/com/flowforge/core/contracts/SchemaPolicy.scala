@@ -3,8 +3,8 @@ package com.flowforge.core.contracts
 /**
  * Schema comparison policies for compile-time contract validation.
  *
- * Clean enum-based design. Each policy defines how two schemas
- * should be compared for conformance at compile time.
+ * Clean enum-based design. Each policy defines how two schemas should be compared for conformance at compile
+ * time.
  *
  * Policy behavior:
  *   - [[SchemaPolicy.Exact]]: Perfect match (unordered, case-insensitive)
@@ -20,9 +20,9 @@ sealed trait SchemaPolicy
 
 object SchemaPolicy {
   // Sealed traits for type-level usage in macros
-  sealed trait Exact            extends SchemaPolicy
+  sealed trait Exact extends SchemaPolicy
   // Back-compat: unordered, case-sensitive equality of fields
-  sealed trait ExactUnordered  extends SchemaPolicy
+  sealed trait ExactUnordered   extends SchemaPolicy
   sealed trait ExactUnorderedCI extends SchemaPolicy
   sealed trait ExactOrdered     extends SchemaPolicy
   sealed trait ExactOrderedCI   extends SchemaPolicy
@@ -32,9 +32,9 @@ object SchemaPolicy {
   sealed trait Full             extends SchemaPolicy
 
   // Case objects for runtime usage - implement the traits
-  case object Exact            extends SchemaPolicy.Exact
+  case object Exact extends SchemaPolicy.Exact
   // Back-compat alias. Semantics match Exact (unordered, case-sensitive)
-  case object ExactUnordered  extends SchemaPolicy.ExactUnordered
+  case object ExactUnordered   extends SchemaPolicy.ExactUnordered
   case object ExactUnorderedCI extends SchemaPolicy.ExactUnorderedCI
   case object ExactOrdered     extends SchemaPolicy.ExactOrdered
   case object ExactOrderedCI   extends SchemaPolicy.ExactOrderedCI

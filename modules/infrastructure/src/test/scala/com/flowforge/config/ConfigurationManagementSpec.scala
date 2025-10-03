@@ -10,7 +10,7 @@ class ConfigurationManagementSpec extends AnyWordSpec with Matchers {
     "load invalid for missing key and allow reload without error" in {
       val cm = ConfigurationManagement.forTypesafeConfig[IO]
       import ConfigurationManagement._
-      val v  = cm.loadTypeSafeConfig[String]("flowforge.missing.key").unsafeRunSync()
+      val v = cm.loadTypeSafeConfig[String]("flowforge.missing.key").unsafeRunSync()
       v.isInvalid shouldBe true
       noException should be thrownBy cm.reloadConfig.unsafeRunSync()
     }

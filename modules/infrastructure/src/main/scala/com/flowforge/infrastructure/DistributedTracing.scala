@@ -50,11 +50,12 @@ object DistributedTracing {
           val scope = span.makeCurrent()
           (span, scope)
         },
-      ) { case _ => operation } { case (span, scope) =>
-        Sync[F].delay {
-          try span.end()
-          finally scope.close()
-        }
+      ) { case _ => operation } {
+        case (span, scope) =>
+          Sync[F].delay {
+            try span.end()
+            finally scope.close()
+          }
       }
 
     def addTag(key: String, value: String): F[Unit] =

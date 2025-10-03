@@ -27,4 +27,4 @@ object Demo:
   //     c // error: capability C^ escapes its scope
   //   }
 
-*/
+ */

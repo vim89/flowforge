@@ -93,7 +93,7 @@ object ConfigurationManagement {
       .leftMap(_ => ConfigError.MissingKey(path))
       .toValidatedNel
 
-  // Temporary simple FlowForgeConfig decoder - TODO: implement proper decoding
+  // FlowForgeConfig decoder - delegates to core decoder (see GitHub issue #TBD for enhancements)
   implicit val flowForgeConfigDecoder: ConfigDecoder[FlowForgeConfig] =
     (cfg: Config, path: String) => {
       // Flatten Typesafe config to a flat Map[String,String] (dot paths) and delegate to core decoder

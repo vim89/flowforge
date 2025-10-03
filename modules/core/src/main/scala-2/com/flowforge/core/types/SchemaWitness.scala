@@ -133,4 +133,3 @@ object SubsetSchema {
     implicit intersectionEvidence: Intersection.Aux[Subset, Superset, Subset],
   ): SubsetSchema[Subset, Superset] = new SubsetSchema[Subset, Superset] {}
 }
-

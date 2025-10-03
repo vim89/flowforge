@@ -167,7 +167,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
     val kleisliAny: Kleisli[F, Any, Any] =
       stages.foldLeft(Kleisli.ask[F, Any]) { (acc, st) =>
         val next = acc.andThen(KC.kAny(st.execute))
-        tracer.fold(next) { tr => Kleisli { in => tr.inSpan(st.name)(next.run(in)) } }
+        tracer.fold(next)(tr => Kleisli(in => tr.inSpan(st.name)(next.run(in))))
       }
     val kleisli: Kleisli[F, In, Out] = KC.kTyped[In, Out](kleisliAny)
 
