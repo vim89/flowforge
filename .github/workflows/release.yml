@@ -53,9 +53,11 @@ jobs:
           if [ -z "$TARGET_INPUT" ]; then
             TARGET_INPUT="${GITHUB_SHA}"
           fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "is-prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
-          echo "target_commitish=$TARGET_INPUT" >> $GITHUB_OUTPUT
+          {
+            echo "version=$VERSION"
+            echo "is-prerelease=$IS_PRERELEASE"
+            echo "target_commitish=$TARGET_INPUT"
+          } >> "$GITHUB_OUTPUT"
           echo "Release version: $VERSION (prerelease: $IS_PRERELEASE, target=$TARGET_INPUT)"
 
       - name: Validate version format
@@ -105,10 +107,10 @@ jobs:
           echo "🧪 Running full test suite for release"
           sbt coverage test
           echo "🔥 Running compile-fail tests - proving contract enforcement"
-          sbt "compile-fail-tests / test"
+          sbt "compileFailTests/test"
           echo "🚀 Running engine smoke tests"
-          sbt "engines-spark/testOnly *StreamingCDCSpec"
-          sbt "engines-flink/testOnly *EngineAbstractionSpec" 
+          sbt "enginesSpark/testOnly *StreamingCDCSpec"
+          sbt "enginesFlink/testOnly *EngineAbstractionSpec" 
           sbt coverageReport
           echo "✅ All release tests passed!"
 
@@ -206,24 +208,24 @@ jobs:
       - name: Assemble site folder
         run: |
           mkdir -p public/api
-          for m in modules/*; do \
-            mod=$(basename "$m"); \
-            api_dir="$m/target/scala-2.13/api"; \
-            if [ -d "$api_dir" ]; then \
-              mkdir -p "public/api/$mod"; \
-              cp -R "$api_dir"/* "public/api/$mod"/; \
-            fi; \
+          for m in modules/*; do
+            mod=$(basename "$m")
+            api_dir="$m/target/scala-2.13/api"
+            if [ -d "$api_dir" ]; then
+              mkdir -p "public/api/$mod"
+              cp -R "$api_dir"/* "public/api/$mod"/
+            fi
           done
           # Root module (if any aggregated docs exist)
-          if [ -d target/scala-2.13/api ]; then \
-            mkdir -p public/api/root && cp -R target/scala-2.13/api/* public/api/root/; \
+          if [ -d target/scala-2.13/api ]; then
+            mkdir -p public/api/root && cp -R target/scala-2.13/api/* public/api/root/
           fi
           # Unified docs (if present)
-          if [ -d target/scala-2.13/unidoc ] || [ -d target/scala-2.13/api-unidoc ]; then \
-            UNIDOC_DIR="$(ls -d target/scala-2.13/*unidoc 2>/dev/null | head -n1)"; \
-            if [ -n "$UNIDOC_DIR" ]; then \
-              mkdir -p public/api/unified && cp -R "$UNIDOC_DIR"/* public/api/unified/; \
-            fi; \
+          if [ -d target/scala-2.13/unidoc ] || [ -d target/scala-2.13/api-unidoc ]; then
+            UNIDOC_DIR="$(find target/scala-2.13 -maxdepth 1 -name '*unidoc' -type d 2>/dev/null | head -n1)"
+            if [ -n "$UNIDOC_DIR" ]; then
+              mkdir -p public/api/unified && cp -R "$UNIDOC_DIR"/* public/api/unified/
+            fi
           fi
           # Add index
           cat > public/index.html << 'EOF'
@@ -271,7 +273,7 @@ jobs:
             if [ -n "$PREV_TAG" ]; then
               echo "## 📝 Changes since $PREV_TAG"
               echo ""
-              git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges | head -n 50
+              git log "${PREV_TAG}..HEAD" --pretty=format:"- %s (%h)" --no-merges | head -n 50
               echo ""
               echo ""
             fi
@@ -286,8 +288,8 @@ jobs:
             echo "- **contracts-extractor-cli**: Extract contracts from data sources"
             echo ""
             echo "## 📊 Statistics"
-            COMMIT_COUNT=$(git rev-list --count ${PREV_TAG}..HEAD 2>/dev/null || echo "N/A")
-            CONTRIBUTOR_COUNT=$(git shortlog -sn ${PREV_TAG}..HEAD 2>/dev/null | wc -l || echo "N/A")
+            COMMIT_COUNT=$(git rev-list --count "${PREV_TAG}..HEAD" 2>/dev/null || echo "N/A")
+            CONTRIBUTOR_COUNT=$(git shortlog -sn "${PREV_TAG}..HEAD" 2>/dev/null | wc -l || echo "N/A")
             echo "- Commits: $COMMIT_COUNT"
             echo "- Contributors: $CONTRIBUTOR_COUNT"
             echo "- Commit: \`${{ github.sha }}\`"
