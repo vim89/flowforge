@@ -11,14 +11,14 @@ import org.scalatest.matchers.should.Matchers
  * Comprehensive test suite for CommonValidations.
  *
  * Coverage targets:
- * - Statement coverage: 100%
- * - Branch coverage: 100%
- * - All edge cases and error paths
+ *   - Statement coverage: 100%
+ *   - Branch coverage: 100%
+ *   - All edge cases and error paths
  */
 class CommonValidationsSpec extends AnyFunSuite with Matchers {
 
   test("validateUser validates valid user") {
-    val user = CommonValidations.UserValidation("Alice", "alice@example.com", 25)
+    val user   = CommonValidations.UserValidation("Alice", "alice@example.com", 25)
     val result = CommonValidations.validateUser(user)
 
     result.isValid shouldBe true
@@ -26,7 +26,7 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
   }
 
   test("validateUser rejects user with empty name") {
-    val user = CommonValidations.UserValidation("", "alice@example.com", 25)
+    val user   = CommonValidations.UserValidation("", "alice@example.com", 25)
     val result = CommonValidations.validateUser(user)
 
     result.isInvalid shouldBe true
@@ -36,14 +36,14 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
   }
 
   test("validateUser rejects user with whitespace-only name") {
-    val user = CommonValidations.UserValidation("   ", "alice@example.com", 25)
+    val user   = CommonValidations.UserValidation("   ", "alice@example.com", 25)
     val result = CommonValidations.validateUser(user)
 
     result.isInvalid shouldBe true
   }
 
   test("validateUser rejects user with invalid email") {
-    val user = CommonValidations.UserValidation("Alice", "invalid-email", 25)
+    val user   = CommonValidations.UserValidation("Alice", "invalid-email", 25)
     val result = CommonValidations.validateUser(user)
 
     result.isInvalid shouldBe true
@@ -53,7 +53,7 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
   }
 
   test("validateUser rejects user with age below minimum") {
-    val user = CommonValidations.UserValidation("Alice", "alice@example.com", -1)
+    val user   = CommonValidations.UserValidation("Alice", "alice@example.com", -1)
     val result = CommonValidations.validateUser(user)
 
     result.isInvalid shouldBe true
@@ -63,7 +63,7 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
   }
 
   test("validateUser rejects user with age above maximum") {
-    val user = CommonValidations.UserValidation("Alice", "alice@example.com", 200)
+    val user   = CommonValidations.UserValidation("Alice", "alice@example.com", 200)
     val result = CommonValidations.validateUser(user)
 
     result.isInvalid shouldBe true
@@ -81,7 +81,7 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
   }
 
   test("validateUser accumulates multiple errors") {
-    val user = CommonValidations.UserValidation("", "invalid-email", 200)
+    val user   = CommonValidations.UserValidation("", "invalid-email", 200)
     val result = CommonValidations.validateUser(user)
 
     result.isInvalid shouldBe true
@@ -89,14 +89,14 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
   }
 
   test("validateUser validates email with plus sign") {
-    val user = CommonValidations.UserValidation("Alice", "alice+tag@example.com", 25)
+    val user   = CommonValidations.UserValidation("Alice", "alice+tag@example.com", 25)
     val result = CommonValidations.validateUser(user)
 
     result.isValid shouldBe true
   }
 
   test("validateUser validates email with subdomain") {
-    val user = CommonValidations.UserValidation("Alice", "alice@mail.example.com", 25)
+    val user   = CommonValidations.UserValidation("Alice", "alice@mail.example.com", 25)
     val result = CommonValidations.validateUser(user)
 
     result.isValid shouldBe true
@@ -104,12 +104,12 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
 
   test("validatePipelineConfig validates valid configuration") {
     val source = DataSource.local("/tmp/input", DataFormat.Parquet)
-    val sink = DataSink.local("/tmp/output", DataFormat.Parquet)
+    val sink   = DataSink.local("/tmp/output", DataFormat.Parquet)
     val config = PipelineConfig(
       name = Refined.unsafeApply("test-pipeline"),
       environment = Environment.Development,
       source = source,
-      sink = sink
+      sink = sink,
     )
 
     val result = CommonValidations.validatePipelineConfig(config)
@@ -119,14 +119,14 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
 
   test("validatePipelineConfig rejects empty pipeline name") {
     val source = DataSource.local("/tmp/input", DataFormat.Parquet)
-    val sink = DataSink.local("/tmp/output", DataFormat.Parquet)
+    val sink   = DataSink.local("/tmp/output", DataFormat.Parquet)
 
     // Create a config with empty name - we need to bypass the refined type
     val config = PipelineConfig(
       name = Refined.unsafeApply(" "), // whitespace only
       environment = Environment.Development,
       source = source,
-      sink = sink
+      sink = sink,
     )
 
     val result = CommonValidations.validatePipelineConfig(config)
@@ -135,20 +135,20 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
 
   test("validatePipelineConfig validates environment field") {
     val source = DataSource.local("/tmp/input", DataFormat.Parquet)
-    val sink = DataSink.local("/tmp/output", DataFormat.Parquet)
+    val sink   = DataSink.local("/tmp/output", DataFormat.Parquet)
 
     val devConfig = PipelineConfig(
       name = Refined.unsafeApply("test-pipeline"),
       environment = Environment.Development,
       source = source,
-      sink = sink
+      sink = sink,
     )
 
     val prodConfig = PipelineConfig(
       name = Refined.unsafeApply("test-pipeline"),
       environment = Environment.Production,
       source = source,
-      sink = sink
+      sink = sink,
     )
 
     CommonValidations.validatePipelineConfig(devConfig).isValid shouldBe true
@@ -157,13 +157,13 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
 
   test("validatePipelineConfig validates source field") {
     val source = DataSource.gcs("my-bucket", "data/input", DataFormat.JSON)
-    val sink = DataSink.local("/tmp/output", DataFormat.Parquet)
+    val sink   = DataSink.local("/tmp/output", DataFormat.Parquet)
 
     val config = PipelineConfig(
       name = Refined.unsafeApply("test-pipeline"),
       environment = Environment.Development,
       source = source,
-      sink = sink
+      sink = sink,
     )
 
     val result = CommonValidations.validatePipelineConfig(config)
@@ -172,13 +172,13 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
 
   test("validatePipelineConfig validates sink field") {
     val source = DataSource.local("/tmp/input", DataFormat.Parquet)
-    val sink = DataSink.gcs("output-bucket", "data/output", DataFormat.Avro)
+    val sink   = DataSink.gcs("output-bucket", "data/output", DataFormat.Avro)
 
     val config = PipelineConfig(
       name = Refined.unsafeApply("test-pipeline"),
       environment = Environment.Development,
       source = source,
-      sink = sink
+      sink = sink,
     )
 
     val result = CommonValidations.validatePipelineConfig(config)
@@ -186,8 +186,8 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
   }
 
   test("validateDataQuality validates non-empty data") {
-    val data = List(1, 2, 3, 4, 5)
-    val rules = QualityRules.empty
+    val data   = List(1, 2, 3, 4, 5)
+    val rules  = QualityRules.empty
     val result = CommonValidations.validateDataQuality(data, rules)
 
     result.isValid shouldBe true
@@ -195,16 +195,16 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
   }
 
   test("validateDataQuality validates single element list") {
-    val data = List(42)
-    val rules = QualityRules.empty
+    val data   = List(42)
+    val rules  = QualityRules.empty
     val result = CommonValidations.validateDataQuality(data, rules)
 
     result.isValid shouldBe true
   }
 
   test("validateDataQuality rejects empty data") {
-    val data = List.empty[Int]
-    val rules = QualityRules.empty
+    val data   = List.empty[Int]
+    val rules  = QualityRules.empty
     val result = CommonValidations.validateDataQuality(data, rules)
 
     result.isInvalid shouldBe true
@@ -212,24 +212,24 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
 
   test("validateDataQuality works with different data types") {
     val stringData = List("a", "b", "c")
-    val rules = QualityRules.empty
-    val result = CommonValidations.validateDataQuality(stringData, rules)
+    val rules      = QualityRules.empty
+    val result     = CommonValidations.validateDataQuality(stringData, rules)
 
     result.isValid shouldBe true
   }
 
   test("validateDataQuality works with complex objects") {
     case class Record(id: Int, name: String)
-    val data = List(Record(1, "A"), Record(2, "B"))
-    val rules = QualityRules.empty
+    val data   = List(Record(1, "A"), Record(2, "B"))
+    val rules  = QualityRules.empty
     val result = CommonValidations.validateDataQuality(data, rules)
 
     result.isValid shouldBe true
   }
 
   test("validateDataQuality ignores rules parameter") {
-    val data = List(1, 2, 3)
-    val strictRules = QualityRules.strict
+    val data          = List(1, 2, 3)
+    val strictRules   = QualityRules.strict
     val standardRules = QualityRules.standard
 
     // Should behave the same regardless of rules
@@ -313,15 +313,15 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
   }
 
   test("validateUser handles null name") {
-    val user = CommonValidations.UserValidation(null, "alice@example.com", 25)
+    val user   = CommonValidations.UserValidation(null, "alice@example.com", 25)
     val result = CommonValidations.validateUser(user)
 
     result.isInvalid shouldBe true
   }
 
   test("validateDataQuality error includes field name") {
-    val data = List.empty[String]
-    val rules = QualityRules.empty
+    val data   = List.empty[String]
+    val rules  = QualityRules.empty
     val result = CommonValidations.validateDataQuality(data, rules)
 
     result.isInvalid shouldBe true
@@ -331,12 +331,12 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
 
   test("validatePipelineConfig with all environments") {
     val source = DataSource.local("/tmp/input", DataFormat.Parquet)
-    val sink = DataSink.local("/tmp/output", DataFormat.Parquet)
+    val sink   = DataSink.local("/tmp/output", DataFormat.Parquet)
 
     val environments = List(
       Environment.Development,
       Environment.Staging,
-      Environment.Production
+      Environment.Production,
     )
 
     environments.foreach { env =>
@@ -344,7 +344,7 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
         name = Refined.unsafeApply("test-pipeline"),
         environment = env,
         source = source,
-        sink = sink
+        sink = sink,
       )
 
       val result = CommonValidations.validatePipelineConfig(config)
@@ -358,7 +358,7 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
     val sources = List(
       DataSource.local("/tmp/input", DataFormat.Parquet),
       DataSource.gcs("bucket", "prefix", DataFormat.JSON),
-      DataSource.s3("bucket", "prefix", DataFormat.Avro)
+      DataSource.s3("bucket", "prefix", DataFormat.Avro),
     )
 
     sources.foreach { source =>
@@ -366,7 +366,7 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
         name = Refined.unsafeApply("test-pipeline"),
         environment = Environment.Development,
         source = source,
-        sink = sink
+        sink = sink,
       )
 
       val result = CommonValidations.validatePipelineConfig(config)
@@ -380,7 +380,7 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
     val sinks = List(
       DataSink.local("/tmp/output", DataFormat.Parquet),
       DataSink.gcs("bucket", "prefix", DataFormat.JSON),
-      DataSink.s3("bucket", "prefix", DataFormat.Avro)
+      DataSink.s3("bucket", "prefix", DataFormat.Avro),
     )
 
     sinks.foreach { sink =>
@@ -388,7 +388,7 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
         name = Refined.unsafeApply("test-pipeline"),
         environment = Environment.Development,
         source = source,
-        sink = sink
+        sink = sink,
       )
 
       val result = CommonValidations.validatePipelineConfig(config)
@@ -397,32 +397,32 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
   }
 
   test("validateDataQuality with large dataset") {
-    val data = (1 to 10000).toList
-    val rules = QualityRules.empty
+    val data   = (1 to 10000).toList
+    val rules  = QualityRules.empty
     val result = CommonValidations.validateDataQuality(data, rules)
 
     result.isValid shouldBe true
   }
 
   test("validateUser with minimal valid input") {
-    val user = CommonValidations.UserValidation("A", "a@b.co", 0)
+    val user   = CommonValidations.UserValidation("A", "a@b.co", 0)
     val result = CommonValidations.validateUser(user)
 
     result.isValid shouldBe true
   }
 
   test("validateUser with maximal valid input") {
-    val longName = "A" * 1000
+    val longName  = "A" * 1000
     val longEmail = "a" * 50 + "@" + "b" * 50 + ".com"
-    val user = CommonValidations.UserValidation(longName, longEmail, 150)
-    val result = CommonValidations.validateUser(user)
+    val user      = CommonValidations.UserValidation(longName, longEmail, 150)
+    val result    = CommonValidations.validateUser(user)
 
     result.isValid shouldBe true
   }
 
   test("validateSchemaCompatibility with empty schemas") {
     val emptySchema = DataSchema.builder.build
-    val result = CommonValidations.validateSchemaCompatibility(emptySchema, emptySchema)
+    val result      = CommonValidations.validateSchemaCompatibility(emptySchema, emptySchema)
 
     result.isValid shouldBe true
   }

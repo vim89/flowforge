@@ -42,10 +42,17 @@ class EffectsErrorPathsSpec extends AnyFunSuite with Matchers {
   }
 
   test("parMapN propagates failure from any participant", How) {
-    val a   = IO.pure(1)
-    val b   = IO.raiseError[Int](new RuntimeException("z"))
-    val c   = IO.pure(3)
-    val res = a.parMapN(b, c)((x, y, z) => x + y + z).attempt.unsafeRunSync()
+    val a = IO.pure(1)
+    val b = IO.raiseError[Int](new RuntimeException("z"))
+    val c = IO.pure(3)
+    val res = a
+      .parMapN(b, c)(
+        (
+          x,
+          y,
+          z,
+        ) => x + y + z,
+      ).attempt.unsafeRunSync()
     res.isLeft shouldBe true
   }
 }

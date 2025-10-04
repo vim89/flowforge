@@ -2,7 +2,7 @@ package com.flowforge.core.patterns
 
 import cats.data.ValidatedNel
 import cats.syntax.all._
-import com.flowforge.core.patterns.ValidationTypes.{ConfigValidationResult, invalid, valid}
+import com.flowforge.core.patterns.ValidationTypes.{ invalid, valid, ConfigValidationResult }
 import com.flowforge.core.types.ConfigError
 
 import scala.util.matching.Regex

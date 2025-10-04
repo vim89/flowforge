@@ -153,14 +153,14 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
       DataFormat.JSON,
       DataFormat.JSONL,
       DataFormat.ORC,
-      DataFormat.Delta
+      DataFormat.Delta,
     )
     formats should have size 7
 
     // Verify pattern matching works
     DataFormat.Parquet match {
       case DataFormat.Parquet => succeed
-      case _ => fail("Pattern matching failed")
+      case _                  => fail("Pattern matching failed")
     }
   }
 
@@ -179,14 +179,14 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
       CompressionType.Bzip2,
       CompressionType.Deflate,
       CompressionType.Zlib,
-      CompressionType.Zstd
+      CompressionType.Zstd,
     )
     compressionTypes should have size 8
 
     // Verify pattern matching works
     CompressionType.Snappy match {
       case CompressionType.Snappy => succeed
-      case _ => fail("Pattern matching failed")
+      case _                      => fail("Pattern matching failed")
     }
   }
 
@@ -263,7 +263,7 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
   test("DataType.Struct should construct with fields") {
     val fields = List(
       StructField(FieldName("name"), DataType.String),
-      StructField(FieldName("age"), DataType.Integer)
+      StructField(FieldName("age"), DataType.Integer),
     )
     val structType = DataType.Struct(fields)
     structType.sqlType shouldBe "STRUCT<name:STRING,age:INTEGER>"
@@ -281,7 +281,7 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("DataType.nullable should not double-wrap nullable types") {
-    val nullable = DataType.Nullable(DataType.String)
+    val nullable      = DataType.Nullable(DataType.String)
     val doubleWrapped = DataType.nullable(nullable)
     doubleWrapped shouldBe nullable
   }
@@ -290,13 +290,13 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
   // Test that DataType values can be constructed and accessed
   test("DataType ADT values should be accessible") {
     // Verify basic types exist
-    val stringType = DataType.String
+    val stringType  = DataType.String
     val decimalType = DataType.decimal(10, 2)
 
     // Verify pattern matching works
     stringType match {
       case DataType.String => succeed
-      case _ => fail("Pattern matching failed")
+      case _               => fail("Pattern matching failed")
     }
 
     // Verify sqlType method works instead
@@ -350,7 +350,7 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
   test("DataSchema should construct with fields") {
     val fields = List(
       StructField("id", DataType.String),
-      StructField("name", DataType.String)
+      StructField("name", DataType.String),
     )
     val schema = DataSchema(fields, SchemaVersion(1))
     schema.fields should have size 2
@@ -415,7 +415,7 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("DataSchema.withMetadata should add metadata") {
-    val schema = DataSchema.builder.addField("id", DataType.String).build
+    val schema  = DataSchema.builder.addField("id", DataType.String).build
     val updated = schema.withMetadata("version", "2.0")
 
     updated.metadata should contain("version" -> "2.0")
@@ -501,14 +501,16 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
 
   test("DataSource.GcsSource should support schema") {
     val schema = DataSchema.builder.addField("id", DataType.String).build
-    val source = DataSource.gcs("bucket", "prefix", DataFormat.Parquet)
+    val source = DataSource
+      .gcs("bucket", "prefix", DataFormat.Parquet)
       .withSchema(schema)
 
     source.schema shouldBe Some(schema)
   }
 
   test("DataSource.GcsSource should support compression") {
-    val source = DataSource.gcs("bucket", "prefix", DataFormat.Parquet)
+    val source = DataSource
+      .gcs("bucket", "prefix", DataFormat.Parquet)
       .withCompression(CompressionType.Snappy)
 
     source.compression shouldBe CompressionType.Snappy
@@ -534,7 +536,8 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("DataSource.BigQuerySource should support filter") {
-    val source = DataSource.bigQuery("project", "dataset", "table")
+    val source = DataSource
+      .bigQuery("project", "dataset", "table")
       .withFilter("date > '2024-01-01'")
 
     source.filter shouldBe Some("date > '2024-01-01'")
@@ -544,7 +547,7 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
     val source = DataSource.jdbc(
       "jdbc:postgresql://localhost:5432/db",
       "users",
-      "org.postgresql.Driver"
+      "org.postgresql.Driver",
     )
 
     source.url shouldBe "jdbc:postgresql://localhost:5432/db"
@@ -553,7 +556,8 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("DataSource.JdbcSource should support query") {
-    val source = DataSource.jdbc("jdbc:url", "table", "driver")
+    val source = DataSource
+      .jdbc("jdbc:url", "table", "driver")
       .withQuery("SELECT * FROM users WHERE active = true")
 
     source.query shouldBe Some("SELECT * FROM users WHERE active = true")
@@ -577,14 +581,14 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
       DataSink.WriteMode.Append,
       DataSink.WriteMode.Overwrite,
       DataSink.WriteMode.ErrorIfExists,
-      DataSink.WriteMode.Ignore
+      DataSink.WriteMode.Ignore,
     )
     writeModes should have size 4
 
     // Verify pattern matching works
     DataSink.WriteMode.Append match {
       case DataSink.WriteMode.Append => succeed
-      case _ => fail("Pattern matching failed")
+      case _                         => fail("Pattern matching failed")
     }
   }
 
@@ -598,14 +602,16 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("DataSink.GcsSink should support write mode") {
-    val sink = DataSink.gcs("bucket", "prefix", DataFormat.Parquet)
+    val sink = DataSink
+      .gcs("bucket", "prefix", DataFormat.Parquet)
       .withWriteMode(DataSink.WriteMode.Overwrite)
 
     sink.writeMode shouldBe DataSink.WriteMode.Overwrite
   }
 
   test("DataSink.GcsSink should support partitioning") {
-    val sink = DataSink.gcs("bucket", "prefix", DataFormat.Parquet)
+    val sink = DataSink
+      .gcs("bucket", "prefix", DataFormat.Parquet)
       .partitionedBy("year", "month", "day")
 
     sink.partitionBy shouldBe List("year", "month", "day")
@@ -633,7 +639,7 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
   test("TypedSource should wrap DataSource with compile-time schema") {
     case class User(id: String, name: String)
 
-    val source = DataSource.gcs("bucket", "prefix", DataFormat.Parquet)
+    val source      = DataSource.gcs("bucket", "prefix", DataFormat.Parquet)
     val typedSource = TypedSource[User](source)
 
     typedSource.underlying shouldBe source
@@ -730,14 +736,14 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
       QualitySeverity.Info,
       QualitySeverity.Warning,
       QualitySeverity.Error,
-      QualitySeverity.Critical
+      QualitySeverity.Critical,
     )
     severities should have size 4
 
     // Verify pattern matching works
     QualitySeverity.Error match {
       case QualitySeverity.Error => succeed
-      case _ => fail("Pattern matching failed")
+      case _                     => fail("Pattern matching failed")
     }
   }
 
@@ -748,7 +754,7 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
   test("QualityRules should construct with constraints") {
     val constraints = List(
       QualityConstraint.NotNull(FieldName("id")),
-      QualityConstraint.Unique(FieldName("email"))
+      QualityConstraint.Unique(FieldName("email")),
     )
     val rules = QualityRules(constraints)
 
@@ -759,8 +765,8 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
     val rules = QualityRules(
       List(
         QualityConstraint.NotNull(FieldName("id"), QualitySeverity.Error),
-        QualityConstraint.Range(FieldName("age"), Some(0.0), Some(120.0), QualitySeverity.Warning)
-      )
+        QualityConstraint.Range(FieldName("age"), Some(0.0), Some(120.0), QualitySeverity.Warning),
+      ),
     )
 
     rules.errorConstraints should have size 1
@@ -771,8 +777,8 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
     val rules = QualityRules(
       List(
         QualityConstraint.NotNull(FieldName("id"), QualitySeverity.Error),
-        QualityConstraint.Range(FieldName("age"), Some(0.0), Some(120.0), QualitySeverity.Warning)
-      )
+        QualityConstraint.Range(FieldName("age"), Some(0.0), Some(120.0), QualitySeverity.Warning),
+      ),
     )
 
     rules.warningConstraints should have size 1
@@ -780,7 +786,7 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("QualityRules.addConstraint should add constraint") {
-    val rules = QualityRules.empty
+    val rules   = QualityRules.empty
     val updated = rules.addConstraint(QualityConstraint.NotNull(FieldName("id")))
 
     updated.constraints should have size 1
@@ -827,7 +833,7 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
     val sink = JdbcSink(
       "jdbc:postgresql://localhost/db",
       TableName("users"),
-      "org.postgresql.Driver"
+      "org.postgresql.Driver",
     )
 
     sink.url should include("postgresql")
@@ -840,7 +846,7 @@ class DataTypesSpec extends AnyFunSuite with Matchers {
       "jdbc:url",
       "table",
       "driver",
-      DataSink.WriteMode.Append
+      DataSink.WriteMode.Append,
     )
 
     sink.table.value shouldBe "table"

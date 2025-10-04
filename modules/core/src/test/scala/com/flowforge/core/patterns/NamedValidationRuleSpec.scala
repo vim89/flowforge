@@ -9,15 +9,15 @@ import org.scalatest.matchers.should.Matchers
  * Comprehensive test suite for NamedValidationRule.
  *
  * Coverage targets:
- * - Statement coverage: 100%
- * - Branch coverage: 100%
- * - All edge cases and error paths
+ *   - Statement coverage: 100%
+ *   - Branch coverage: 100%
+ *   - All edge cases and error paths
  */
 class NamedValidationRuleSpec extends AnyFunSuite with Matchers {
 
   test("validate runs the validator function") {
-    val validator: Int => ValidationResult[Int] = x =>
-      if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
+    val validator: Int => ValidationResult[Int] =
+      x => if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
 
     val rule = NamedValidationRule("positive-check", validator)
 
@@ -26,22 +26,21 @@ class NamedValidationRuleSpec extends AnyFunSuite with Matchers {
   }
 
   test("validate returns original value on success") {
-    val validator: String => ValidationResult[String] = s =>
-      if (s.nonEmpty) valid(s) else invalid(TestErrors.error("must not be empty"))
+    val validator: String => ValidationResult[String] =
+      s => if (s.nonEmpty) valid(s) else invalid(TestErrors.error("must not be empty"))
 
-    val rule = NamedValidationRule("non-empty-check", validator)
-    val input = "hello"
+    val rule   = NamedValidationRule("non-empty-check", validator)
+    val input  = "hello"
     val result = rule.validate(input)
 
     getValue(result) shouldBe Some(input)
   }
 
   test("validate returns error on failure") {
-    val error = TestErrors.error("must be even")
-    val validator: Int => ValidationResult[Int] = x =>
-      if (x % 2 == 0) valid(x) else invalid(error)
+    val error                                   = TestErrors.error("must be even")
+    val validator: Int => ValidationResult[Int] = x => if (x % 2 == 0) valid(x) else invalid(error)
 
-    val rule = NamedValidationRule("even-check", validator)
+    val rule   = NamedValidationRule("even-check", validator)
     val result = rule.validate(5)
 
     result.isInvalid shouldBe true
@@ -50,17 +49,17 @@ class NamedValidationRuleSpec extends AnyFunSuite with Matchers {
 
   test("name is stored correctly") {
     val validator: Int => ValidationResult[Int] = valid
-    val rule = NamedValidationRule("test-rule", validator)
+    val rule                                    = NamedValidationRule("test-rule", validator)
 
     rule.name shouldBe "test-rule"
   }
 
   test("combine creates new rule with concatenated name") {
-    val validator1: Int => ValidationResult[Int] = x =>
-      if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
+    val validator1: Int => ValidationResult[Int] =
+      x => if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
 
-    val validator2: Int => ValidationResult[Int] = x =>
-      if (x < 100) valid(x) else invalid(TestErrors.error("must be < 100"))
+    val validator2: Int => ValidationResult[Int] =
+      x => if (x < 100) valid(x) else invalid(TestErrors.error("must be < 100"))
 
     val rule1 = NamedValidationRule("positive", validator1)
     val rule2 = NamedValidationRule("less-than-100", validator2)
@@ -70,11 +69,11 @@ class NamedValidationRuleSpec extends AnyFunSuite with Matchers {
   }
 
   test("combine validates using both validators") {
-    val validator1: Int => ValidationResult[Int] = x =>
-      if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
+    val validator1: Int => ValidationResult[Int] =
+      x => if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
 
-    val validator2: Int => ValidationResult[Int] = x =>
-      if (x < 100) valid(x) else invalid(TestErrors.error("must be < 100"))
+    val validator2: Int => ValidationResult[Int] =
+      x => if (x < 100) valid(x) else invalid(TestErrors.error("must be < 100"))
 
     val rule1 = NamedValidationRule("positive", validator1)
     val rule2 = NamedValidationRule("less-than-100", validator2)
@@ -87,82 +86,82 @@ class NamedValidationRuleSpec extends AnyFunSuite with Matchers {
   }
 
   test("combine accumulates errors from both validators") {
-    val validator1: Int => ValidationResult[Int] = x =>
-      if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
+    val validator1: Int => ValidationResult[Int] =
+      x => if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
 
-    val validator2: Int => ValidationResult[Int] = x =>
-      if (x % 2 == 0) valid(x) else invalid(TestErrors.error("must be even"))
+    val validator2: Int => ValidationResult[Int] =
+      x => if (x % 2 == 0) valid(x) else invalid(TestErrors.error("must be even"))
 
     val rule1 = NamedValidationRule("positive", validator1)
     val rule2 = NamedValidationRule("even", validator2)
 
     val combined = rule1.combine(rule2)
-    val result = combined.validate(-5) // Fails both rules
+    val result   = combined.validate(-5) // Fails both rules
 
     result.isInvalid shouldBe true
     getErrors(result).map(_.size) shouldBe Some(2)
   }
 
   test("combine with passing first and failing second") {
-    val validator1: Int => ValidationResult[Int] = x =>
-      if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
+    val validator1: Int => ValidationResult[Int] =
+      x => if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
 
-    val validator2: Int => ValidationResult[Int] = x =>
-      if (x < 10) valid(x) else invalid(TestErrors.error("must be < 10"))
+    val validator2: Int => ValidationResult[Int] =
+      x => if (x < 10) valid(x) else invalid(TestErrors.error("must be < 10"))
 
     val rule1 = NamedValidationRule("positive", validator1)
     val rule2 = NamedValidationRule("small", validator2)
 
     val combined = rule1.combine(rule2)
-    val result = combined.validate(50) // Passes first, fails second
+    val result   = combined.validate(50) // Passes first, fails second
 
     result.isInvalid shouldBe true
     getErrors(result).map(_.size) shouldBe Some(1)
   }
 
   test("combine with failing first and passing second") {
-    val validator1: Int => ValidationResult[Int] = x =>
-      if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
+    val validator1: Int => ValidationResult[Int] =
+      x => if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
 
-    val validator2: Int => ValidationResult[Int] = x =>
-      if (x < 10) valid(x) else invalid(TestErrors.error("must be < 10"))
+    val validator2: Int => ValidationResult[Int] =
+      x => if (x < 10) valid(x) else invalid(TestErrors.error("must be < 10"))
 
     val rule1 = NamedValidationRule("positive", validator1)
     val rule2 = NamedValidationRule("small", validator2)
 
     val combined = rule1.combine(rule2)
-    val result = combined.validate(-5) // Fails first, passes second (< 10)
+    val result   = combined.validate(-5) // Fails first, passes second (< 10)
 
     result.isInvalid shouldBe true
     getErrors(result).map(_.size) shouldBe Some(1)
   }
 
   test("combine returns original value when both validators pass") {
-    val validator1: Int => ValidationResult[Int] = x =>
-      if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
+    val validator1: Int => ValidationResult[Int] =
+      x => if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
 
-    val validator2: Int => ValidationResult[Int] = x =>
-      if (x < 100) valid(x) else invalid(TestErrors.error("must be < 100"))
+    val validator2: Int => ValidationResult[Int] =
+      x => if (x < 100) valid(x) else invalid(TestErrors.error("must be < 100"))
 
     val rule1 = NamedValidationRule("positive", validator1)
     val rule2 = NamedValidationRule("small", validator2)
 
     val combined = rule1.combine(rule2)
-    val input = 50
-    val result = combined.validate(input)
+    val input    = 50
+    val result   = combined.validate(input)
 
     getValue(result) shouldBe Some(input)
   }
 
   test("multiple combine operations") {
-    val validator1: Int => ValidationResult[Int] = x =>
-      if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
+    val validator1: Int => ValidationResult[Int] =
+      x => if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
 
-    val validator2: Int => ValidationResult[Int] = x =>
-      if (x % 2 == 0) valid(x) else invalid(TestErrors.error("must be even"))
+    val validator2: Int => ValidationResult[Int] =
+      x => if (x % 2 == 0) valid(x) else invalid(TestErrors.error("must be even"))
 
-    val validator3: Int => ValidationResult[Int] = x =>
-      if (x < 1000) valid(x) else invalid(TestErrors.error("must be < 1000"))
+    val validator3: Int => ValidationResult[Int] =
+      x => if (x < 1000) valid(x) else invalid(TestErrors.error("must be < 1000"))
 
     val rule1 = NamedValidationRule("positive", validator1)
     val rule2 = NamedValidationRule("even", validator2)
@@ -194,11 +193,11 @@ class NamedValidationRuleSpec extends AnyFunSuite with Matchers {
   test("combine works with complex domain objects") {
     case class Product(name: String, price: Double)
 
-    val nameValidator: Product => ValidationResult[Product] = p =>
-      if (p.name.nonEmpty) valid(p) else invalid(TestErrors.error("name required"))
+    val nameValidator: Product => ValidationResult[Product] =
+      p => if (p.name.nonEmpty) valid(p) else invalid(TestErrors.error("name required"))
 
-    val priceValidator: Product => ValidationResult[Product] = p =>
-      if (p.price > 0) valid(p) else invalid(TestErrors.error("price must be positive"))
+    val priceValidator: Product => ValidationResult[Product] =
+      p => if (p.price > 0) valid(p) else invalid(TestErrors.error("price must be positive"))
 
     val rule1 = NamedValidationRule("name-check", nameValidator)
     val rule2 = NamedValidationRule("price-check", priceValidator)
@@ -213,7 +212,7 @@ class NamedValidationRuleSpec extends AnyFunSuite with Matchers {
 
   test("validator that always passes") {
     val alwaysPass: Int => ValidationResult[Int] = valid
-    val rule = NamedValidationRule("always-pass", alwaysPass)
+    val rule                                     = NamedValidationRule("always-pass", alwaysPass)
 
     rule.validate(Int.MinValue).isValid shouldBe true
     rule.validate(0).isValid shouldBe true
@@ -221,9 +220,9 @@ class NamedValidationRuleSpec extends AnyFunSuite with Matchers {
   }
 
   test("validator that always fails") {
-    val error = TestErrors.error("always fails")
+    val error                                    = TestErrors.error("always fails")
     val alwaysFail: Int => ValidationResult[Int] = _ => invalid(error)
-    val rule = NamedValidationRule("always-fail", alwaysFail)
+    val rule                                     = NamedValidationRule("always-fail", alwaysFail)
 
     rule.validate(Int.MinValue).isInvalid shouldBe true
     rule.validate(0).isInvalid shouldBe true
@@ -232,8 +231,8 @@ class NamedValidationRuleSpec extends AnyFunSuite with Matchers {
 
   test("combine with always-pass validator") {
     val alwaysPass: Int => ValidationResult[Int] = valid
-    val conditionalValidator: Int => ValidationResult[Int] = x =>
-      if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
+    val conditionalValidator: Int => ValidationResult[Int] =
+      x => if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
 
     val rule1 = NamedValidationRule("always-pass", alwaysPass)
     val rule2 = NamedValidationRule("positive", conditionalValidator)
@@ -245,10 +244,10 @@ class NamedValidationRuleSpec extends AnyFunSuite with Matchers {
   }
 
   test("combine with always-fail validator") {
-    val error = TestErrors.error("always fails")
+    val error                                    = TestErrors.error("always fails")
     val alwaysFail: Int => ValidationResult[Int] = _ => invalid(error)
-    val conditionalValidator: Int => ValidationResult[Int] = x =>
-      if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
+    val conditionalValidator: Int => ValidationResult[Int] =
+      x => if (x > 0) valid(x) else invalid(TestErrors.error("must be positive"))
 
     val rule1 = NamedValidationRule("always-fail", alwaysFail)
     val rule2 = NamedValidationRule("positive", conditionalValidator)
@@ -262,15 +261,15 @@ class NamedValidationRuleSpec extends AnyFunSuite with Matchers {
 
   test("name with special characters") {
     val validator: Int => ValidationResult[Int] = valid
-    val rule = NamedValidationRule("test-rule_v2.0", validator)
+    val rule                                    = NamedValidationRule("test-rule_v2.0", validator)
 
     rule.name shouldBe "test-rule_v2.0"
   }
 
   test("combine preserves name format with special characters") {
     val validator: Int => ValidationResult[Int] = valid
-    val rule1 = NamedValidationRule("rule-1.0", validator)
-    val rule2 = NamedValidationRule("rule_2.0", validator)
+    val rule1                                   = NamedValidationRule("rule-1.0", validator)
+    val rule2                                   = NamedValidationRule("rule_2.0", validator)
 
     val combined = rule1.combine(rule2)
     combined.name shouldBe "rule-1.0+rule_2.0"
@@ -280,8 +279,8 @@ class NamedValidationRuleSpec extends AnyFunSuite with Matchers {
     val validator: Option[Int] => ValidationResult[Option[Int]] = opt =>
       opt match {
         case Some(x) if x > 0 => valid(opt)
-        case Some(_) => invalid(TestErrors.error("must be positive"))
-        case None => valid(opt)
+        case Some(_)          => invalid(TestErrors.error("must be positive"))
+        case None             => valid(opt)
       }
 
     val rule = NamedValidationRule("optional-positive", validator)
@@ -302,7 +301,7 @@ class NamedValidationRuleSpec extends AnyFunSuite with Matchers {
     val rule2 = NamedValidationRule("rule2", validator2)
 
     val combined = rule1.combine(rule2)
-    val result = combined.validate(42)
+    val result   = combined.validate(42)
 
     val errors = getErrors(result)
     errors.map(_.toList) shouldBe Some(List(error1, error2))

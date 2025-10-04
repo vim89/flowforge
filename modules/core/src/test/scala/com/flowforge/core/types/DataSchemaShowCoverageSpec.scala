@@ -13,9 +13,9 @@ class DataSchemaShowCoverageSpec extends AnyFunSuite with Matchers {
       .withMetadata("owner", "team")
       .build
     val txt = s1.show
-    txt should include ("DataSchema(v1)")
-    txt should include ("id: STRING")
-    txt should include ("age: INTEGER?")
+    txt should include("DataSchema(v1)")
+    txt should include("id: STRING")
+    txt should include("age: INTEGER?")
 
     val s2 = s1.evolve(List(StructField.required("email", DataType.String)))
     s2.version.value shouldBe (s1.version.value + 1)

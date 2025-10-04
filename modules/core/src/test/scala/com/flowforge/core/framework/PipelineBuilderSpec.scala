@@ -21,15 +21,18 @@ class PipelineBuilderSpec extends AnyFunSuite with Matchers {
   final case class UserContract(id: Long, name: String)
   type PipelineOut = UserContract
 
-  private val source  = TypedSource[UserContract](DataSource.local("/tmp/in", DataFormat.JSON))
-  private val sink    = TypedSink[UserContract](DataSink.local("/tmp/out", DataFormat.JSON))
-  private val reader  = (_: DataSource) => IO.pure(UserContract(1L, "Alice"))
-  private val writer  = (_: PipelineOut, _: DataSink) => IO.unit
+  private val source = TypedSource[UserContract](DataSource.local("/tmp/in", DataFormat.JSON))
+  private val sink   = TypedSink[UserContract](DataSink.local("/tmp/out", DataFormat.JSON))
+  private val reader = (_: DataSource) => IO.pure(UserContract(1L, "Alice"))
+  private val writer = (_: PipelineOut, _: DataSink) => IO.unit
 
-  test("builds end-to-end pipeline with typed endpoints, tracer and lineage tags; builder mutators and multi-transform metadata", How) {
+  test(
+    "builds end-to-end pipeline with typed endpoints, tracer and lineage tags; builder mutators and multi-transform metadata",
+    How,
+  ) {
     // minimal tracer to exercise withTracer path
     val tracer = new Tracer[IO] {
-      def inSpan[A](name: String)(fa: IO[A]): IO[A]       = fa
+      def inSpan[A](name: String)(fa: IO[A]): IO[A]      = fa
       def annotate(key: String, value: String): IO[Unit] = IO.unit
     }
     val lineage = OpenLineageEmitter.noop[IO]

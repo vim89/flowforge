@@ -15,10 +15,9 @@ class FlowforgeResourceCoverageSpec extends AnyFunSuite with Matchers {
     r1 shouldBe 43
 
     @volatile var released = false
-    val made = FlowforgeResource.make[IO, String](IO.pure("res"))(_ => IO { released = true })
-    val r2   = made.use(s => IO.pure(s.length)).unsafeRunSync()
+    val made               = FlowforgeResource.make[IO, String](IO.pure("res"))(_ => IO { released = true })
+    val r2                 = made.use(s => IO.pure(s.length)).unsafeRunSync()
     r2 shouldBe 3
     released shouldBe true
   }
 }
-

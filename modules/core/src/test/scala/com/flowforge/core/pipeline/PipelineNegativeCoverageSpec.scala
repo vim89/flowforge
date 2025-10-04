@@ -20,25 +20,28 @@ class PipelineNegativeCoverageSpec extends AnyFunSuite with Matchers {
   private val sink = DataSink.local("/out", DataFormat.JSON)
 
   test("filter failure path raises IllegalArgumentException") {
-    val b = PipelineSyntax.EnhancedPipelineBuilder.from[IO, Int]("neg-filter", src)
+    val b = PipelineSyntax.EnhancedPipelineBuilder
+      .from[IO, Int]("neg-filter", src)
       .map(_ + 1)
       .filter(_ => false)
       .to(sink)
-    intercept[IllegalArgumentException] { b.execute(1).unsafeRunSync() }
+    intercept[IllegalArgumentException](b.execute(1).unsafeRunSync())
   }
 
   test("validate failure raises ValidationException") {
-    val b = PipelineSyntax.EnhancedPipelineBuilder.from[IO, String]("neg-validate", src)
+    val b = PipelineSyntax.EnhancedPipelineBuilder
+      .from[IO, String]("neg-validate", src)
       .map(_.trim)
       .validate(_ => Validated.invalidNel(FlowForgeError.ValidationError("bad", Some("x"))))
       .to(sink)
-    intercept[ValidationException] { b.execute(" data ").unsafeRunSync() }
+    intercept[ValidationException](b.execute(" data ").unsafeRunSync())
   }
 
   test("quality failure raises QualityException") {
-    val b = PipelineSyntax.EnhancedPipelineBuilder.from[IO, String]("neg-quality", src)
+    val b = PipelineSyntax.EnhancedPipelineBuilder
+      .from[IO, String]("neg-quality", src)
       .quality(s => IO.pure(DataAlgebra.QualityResult(s, passed = false, violations = Nil, score = 0.0)))
       .to(sink)
-    intercept[QualityException] { b.execute("x").unsafeRunSync() }
+    intercept[QualityException](b.execute("x").unsafeRunSync())
   }
 }

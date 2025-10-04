@@ -14,4 +14,3 @@ class InfrastructureFastCoverageSpec extends AnyFunSuite with Matchers {
     noException should be thrownBy L.error("z").unsafeRunSync()
   }
 }
-

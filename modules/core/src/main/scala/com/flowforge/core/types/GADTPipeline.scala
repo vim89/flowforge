@@ -282,7 +282,7 @@ case class GADTPipelineBuilder[F[_]: EffectSystem, State <: GADTBuilderState, In
           (acc, f(input)) match {
             case (Validated.Valid(_), v)                        => v
             case (i @ Validated.Invalid(_), Validated.Valid(_)) => i
-          case (Validated.Invalid(e1), Validated.Invalid(e2)) => Validated.Invalid(e1.concatNel(e2))
+            case (Validated.Invalid(e1), Validated.Invalid(e2)) => Validated.Invalid(e1.concatNel(e2))
           }
         }
       },

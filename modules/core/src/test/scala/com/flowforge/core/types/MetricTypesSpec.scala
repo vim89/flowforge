@@ -23,13 +23,13 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("MetricValue.Counter.increment should increase value") {
-    val counter = MetricValue.Counter(10L)
+    val counter     = MetricValue.Counter(10L)
     val incremented = counter.increment(5L)
     incremented.value shouldBe 15L
   }
 
   test("MetricValue.Counter.increment should use default of 1") {
-    val counter = MetricValue.Counter(10L)
+    val counter     = MetricValue.Counter(10L)
     val incremented = counter.increment()
     incremented.value shouldBe 11L
   }
@@ -41,7 +41,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("MetricValue.Gauge.update should change value") {
-    val gauge = MetricValue.Gauge(50.0)
+    val gauge   = MetricValue.Gauge(50.0)
     val updated = gauge.update(75.0)
     updated.value shouldBe 75.0
   }
@@ -53,7 +53,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("MetricValue.Histogram should construct correctly") {
-    val buckets = Map(1.0 -> 10L, 5.0 -> 20L, 10.0 -> 30L)
+    val buckets   = Map(1.0 -> 10L, 5.0 -> 20L, 10.0 -> 30L)
     val histogram = MetricValue.Histogram(buckets, 60L, 300.0)
     histogram.count shouldBe 60L
     histogram.sum shouldBe 300.0
@@ -61,9 +61,9 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("MetricValue.Histogram.observe should update histogram") {
-    val buckets = Map(5.0 -> 0L, 10.0 -> 0L)
+    val buckets   = Map(5.0 -> 0L, 10.0 -> 0L)
     val histogram = MetricValue.Histogram(buckets, 0L, 0.0)
-    val observed = histogram.observe(3.0)
+    val observed  = histogram.observe(3.0)
 
     observed.count shouldBe 1L
     observed.sum shouldBe 3.0
@@ -78,14 +78,14 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
 
   test("MetricValue.Timer should construct correctly") {
     val durations = List(100.milliseconds, 200.milliseconds, 300.milliseconds)
-    val timer = MetricValue.Timer(durations)
+    val timer     = MetricValue.Timer(durations)
     timer.count shouldBe 3
     timer.totalDuration shouldBe 600.milliseconds
     timer.meanDuration shouldBe 200.milliseconds
   }
 
   test("MetricValue.Timer.record should add duration") {
-    val timer = MetricValue.Timer(List(100.milliseconds))
+    val timer    = MetricValue.Timer(List(100.milliseconds))
     val recorded = timer.record(200.milliseconds)
     recorded.count shouldBe 2
     recorded.durations should contain(200.milliseconds)
@@ -215,7 +215,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   test("MetricLabels.merge should combine labels") {
     val labels1 = MetricLabels("a" -> "1", "b" -> "2")
     val labels2 = MetricLabels("b" -> "3", "c" -> "4")
-    val merged = labels1.merge(labels2)
+    val merged  = labels1.merge(labels2)
 
     merged.get("a") shouldBe Some("1")
     merged.get("b") shouldBe Some("3") // labels2 takes precedence
@@ -253,35 +253,40 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("Metric.withLabel should add label") {
-    val metric = Metric.counter("count", 10L)
+    val metric = Metric
+      .counter("count", 10L)
       .withLabel("method", "GET")
 
     metric.labels.get("method") shouldBe Some("GET")
   }
 
   test("Metric.withLabels should merge labels") {
-    val metric = Metric.counter("count", 10L)
+    val metric = Metric
+      .counter("count", 10L)
       .withLabels(MetricLabels("env" -> "prod"))
 
     metric.labels.get("env") shouldBe Some("prod")
   }
 
   test("Metric.withDescription should set description") {
-    val metric = Metric.counter("count", 10L)
+    val metric = Metric
+      .counter("count", 10L)
       .withDescription("Total count")
 
     metric.description shouldBe Some("Total count")
   }
 
   test("Metric.withMetadata should add metadata") {
-    val metric = Metric.counter("count", 10L)
+    val metric = Metric
+      .counter("count", 10L)
       .withMetadata("source", "api")
 
     metric.metadata should contain("source" -> "api")
   }
 
   test("Metric.matches should filter by labels") {
-    val metric = Metric.counter("count", 10L)
+    val metric = Metric
+      .counter("count", 10L)
       .withLabel("env", "production")
 
     metric.matches(Map("env" -> "prod.*")) shouldBe true
@@ -325,7 +330,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   test("MetricCollection should add multiple metrics") {
     val metrics = List(
       Metric.counter("count1", 10L),
-      Metric.counter("count2", 20L)
+      Metric.counter("count2", 20L),
     )
     val collection = MetricCollection.empty.addAll(metrics)
 
@@ -333,29 +338,32 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("MetricCollection.filter should filter metrics") {
-    val collection = MetricCollection.from(
-      Metric.counter("count1", 10L),
-      Metric.counter("count2", 20L)
-    ).filter(_.numericValue > 15)
+    val collection = MetricCollection
+      .from(
+        Metric.counter("count1", 10L),
+        Metric.counter("count2", 20L),
+      ).filter(_.numericValue > 15)
 
     collection.size shouldBe 1
   }
 
   test("MetricCollection.filterByName should filter by name") {
-    val collection = MetricCollection.from(
-      Metric.counter("requests", 100L),
-      Metric.counter("errors", 5L)
-    ).filterByName("requests")
+    val collection = MetricCollection
+      .from(
+        Metric.counter("requests", 100L),
+        Metric.counter("errors", 5L),
+      ).filterByName("requests")
 
     collection.size shouldBe 1
     collection.metrics.head.name shouldBe "requests"
   }
 
   test("MetricCollection.filterByLabels should filter by labels") {
-    val collection = MetricCollection.from(
-      Metric.counter("count", 10L).withLabel("env", "prod"),
-      Metric.counter("count", 20L).withLabel("env", "dev")
-    ).filterByLabels(Map("env" -> "prod"))
+    val collection = MetricCollection
+      .from(
+        Metric.counter("count", 10L).withLabel("env", "prod"),
+        Metric.counter("count", 20L).withLabel("env", "dev"),
+      ).filterByLabels(Map("env" -> "prod"))
 
     collection.size shouldBe 1
   }
@@ -364,7 +372,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
     val collection = MetricCollection.from(
       Metric.counter("requests", 100L),
       Metric.counter("requests", 200L),
-      Metric.counter("errors", 5L)
+      Metric.counter("errors", 5L),
     )
 
     val grouped = collection.groupByName
@@ -375,7 +383,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   test("MetricCollection.groupByLabel should group by label") {
     val collection = MetricCollection.from(
       Metric.counter("count", 10L).withLabel("env", "prod"),
-      Metric.counter("count", 20L).withLabel("env", "dev")
+      Metric.counter("count", 20L).withLabel("env", "dev"),
     )
 
     val grouped = collection.groupByLabel("env")
@@ -385,7 +393,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
 
   test("MetricCollection.find should find metric by name") {
     val collection = MetricCollection.from(
-      Metric.counter("requests", 100L)
+      Metric.counter("requests", 100L),
     )
 
     collection.find("requests") shouldBe defined
@@ -396,15 +404,15 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
     val collection = MetricCollection.from(
       Metric.counter("requests", 100L),
       Metric.counter("requests", 200L),
-      Metric.counter("errors", 5L)
+      Metric.counter("errors", 5L),
     )
 
     collection.metricNames shouldBe Set("requests", "errors")
   }
 
   test("MetricCollection.combine should merge collections") {
-    val col1 = MetricCollection.from(Metric.counter("a", 1L))
-    val col2 = MetricCollection.from(Metric.counter("b", 2L))
+    val col1     = MetricCollection.from(Metric.counter("a", 1L))
+    val col2     = MetricCollection.from(Metric.counter("b", 2L))
     val combined = col1.combine(col2)
 
     combined.size shouldBe 2
@@ -413,7 +421,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   test("MetricCollection.toMap should create map") {
     val collection = MetricCollection.from(
       Metric.counter("requests", 100L),
-      Metric.counter("errors", 5L)
+      Metric.counter("errors", 5L),
     )
 
     val map = collection.toMap
@@ -448,7 +456,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
     val metrics = PipelineMetrics(
       "pipeline",
       recordsProcessed = 1000L,
-      processingTime = 10.seconds
+      processingTime = 10.seconds,
     )
     metrics.recordsPerSecond shouldBe 100.0
   }
@@ -457,7 +465,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
     val metrics = PipelineMetrics(
       "pipeline",
       bytesProcessed = 1000L,
-      processingTime = 10.seconds
+      processingTime = 10.seconds,
     )
     metrics.bytesPerSecond shouldBe 100.0
   }
@@ -466,7 +474,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
     val metrics = PipelineMetrics(
       "pipeline",
       recordsProcessed = 100L,
-      recordsFailed = 5L
+      recordsFailed = 5L,
     )
     metrics.errorRate shouldBe 0.05
     metrics.successRate shouldBe 0.95
@@ -485,8 +493,8 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("PipelineMetrics.combine should aggregate metrics") {
-    val m1 = PipelineMetrics("pipeline", recordsProcessed = 100L, bytesProcessed = 1000L)
-    val m2 = PipelineMetrics("pipeline", recordsProcessed = 200L, bytesProcessed = 2000L)
+    val m1       = PipelineMetrics("pipeline", recordsProcessed = 100L, bytesProcessed = 1000L)
+    val m2       = PipelineMetrics("pipeline", recordsProcessed = 200L, bytesProcessed = 2000L)
     val combined = m1.combine(m2)
 
     combined.recordsProcessed shouldBe 300L
@@ -497,7 +505,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
     val metrics = PipelineMetrics(
       "pipeline",
       recordsProcessed = 1000L,
-      processingTime = 10.seconds
+      processingTime = 10.seconds,
     )
 
     val collection = metrics.toMetrics
@@ -526,7 +534,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   test("QualityMetrics.averageCompleteness should calculate correctly") {
     val metrics = QualityMetrics(
       "dataset",
-      completeness = Map("field1" -> 0.9, "field2" -> 1.0)
+      completeness = Map("field1" -> 0.9, "field2" -> 1.0),
     )
     metrics.averageCompleteness shouldBe 0.95
   }
@@ -541,7 +549,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
       "dataset",
       completeness = Map("f1" -> 1.0),
       uniqueness = Map("f2" -> 0.9),
-      validity = Map("f3" -> 0.8)
+      validity = Map("f3" -> 0.8),
     )
 
     val score = metrics.calculateOverallScore
@@ -550,8 +558,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("QualityMetrics.withOverallScore should set score") {
-    val metrics = QualityMetrics.empty("dataset")
-      .withOverallScore
+    val metrics = QualityMetrics.empty("dataset").withOverallScore
 
     metrics.overallScore shouldBe defined
   }
@@ -560,7 +567,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
     val metrics = QualityMetrics(
       "dataset",
       completeness = Map("f" -> 1.0),
-      overallScore = Some(0.95)
+      overallScore = Some(0.95),
     )
 
     metrics.meetsThreshold(0.9) shouldBe true
@@ -568,7 +575,8 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("QualityMetrics.builder should build metrics fluently") {
-    val metrics = QualityMetrics.builder("dataset")
+    val metrics = QualityMetrics
+      .builder("dataset")
       .completeness("email", 0.99)
       .uniqueness("id", 1.0)
       .validity("phone", 0.95)
@@ -585,7 +593,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
   test("QualityMetrics.toMetrics should create metric collection") {
     val metrics = QualityMetrics(
       "dataset",
-      completeness = Map("email" -> 0.99)
+      completeness = Map("email" -> 0.99),
     )
 
     val collection = metrics.toMetrics
@@ -616,7 +624,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
     val metrics = PerformanceMetrics(
       "component",
       networkBytesIn = 1000L,
-      networkBytesOut = 2000L
+      networkBytesOut = 2000L,
     )
     metrics.networkTotalBytes shouldBe 3000L
   }
@@ -636,7 +644,7 @@ class MetricTypesSpec extends AnyFunSuite with Matchers {
     val metrics = PerformanceMetrics(
       "component",
       cpuUsage = 75.0,
-      memoryUsage = 1024L * 1024L
+      memoryUsage = 1024L * 1024L,
     )
 
     val collection = metrics.toMetrics

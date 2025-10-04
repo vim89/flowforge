@@ -13,27 +13,27 @@ import scala.concurrent.duration._
  * Comprehensive test suite for DataQualityValidation.
  *
  * Coverage targets:
- * - Statement coverage: 100%
- * - Branch coverage: 100%
- * - All edge cases and error paths
+ *   - Statement coverage: 100%
+ *   - Branch coverage: 100%
+ *   - All edge cases and error paths
  */
 class DataQualityValidationSpec extends AnyFunSuite with Matchers {
 
   test("freshness validates recent timestamp") {
     val recentTimestamp = Instant.now().minusSeconds(30)
-    val result = DataQualityValidation.freshness[Unit]("field", recentTimestamp, 1.minute)
+    val result          = DataQualityValidation.freshness[Unit]("field", recentTimestamp, 1.minute)
     result.isValid shouldBe true
   }
 
   test("freshness validates timestamp at exact max age") {
     val timestamp = Instant.now().minusSeconds(60)
-    val result = DataQualityValidation.freshness[Unit]("field", timestamp, 1.minute)
+    val result    = DataQualityValidation.freshness[Unit]("field", timestamp, 1.minute)
     result.isValid shouldBe true
   }
 
   test("freshness rejects old timestamp") {
     val oldTimestamp = Instant.now().minusSeconds(120)
-    val result = DataQualityValidation.freshness[Unit]("field", oldTimestamp, 1.minute)
+    val result       = DataQualityValidation.freshness[Unit]("field", oldTimestamp, 1.minute)
     result.isInvalid shouldBe true
 
     getErrors(result).map(_.head) match {
@@ -49,7 +49,7 @@ class DataQualityValidationSpec extends AnyFunSuite with Matchers {
 
   test("freshness validates with millisecond precision") {
     val timestamp = Instant.now().minusMillis(500)
-    val result = DataQualityValidation.freshness[Unit]("field", timestamp, 1.second)
+    val result    = DataQualityValidation.freshness[Unit]("field", timestamp, 1.second)
     result.isValid shouldBe true
   }
 
@@ -148,31 +148,31 @@ class DataQualityValidationSpec extends AnyFunSuite with Matchers {
   }
 
   test("referentialIntegrity validates all valid foreign keys") {
-    val foreignKeys = List(1, 2, 3)
+    val foreignKeys    = List(1, 2, 3)
     val referenceTable = Set(1, 2, 3, 4, 5)
-    val result = DataQualityValidation.referentialIntegrity("field", foreignKeys, referenceTable)
+    val result         = DataQualityValidation.referentialIntegrity("field", foreignKeys, referenceTable)
     result.isValid shouldBe true
     getValue(result) shouldBe Some(foreignKeys)
   }
 
   test("referentialIntegrity validates empty foreign key list") {
-    val foreignKeys = List.empty[Int]
+    val foreignKeys    = List.empty[Int]
     val referenceTable = Set(1, 2, 3)
-    val result = DataQualityValidation.referentialIntegrity("field", foreignKeys, referenceTable)
+    val result         = DataQualityValidation.referentialIntegrity("field", foreignKeys, referenceTable)
     result.isValid shouldBe true
   }
 
   test("referentialIntegrity validates with empty reference table when no foreign keys") {
-    val foreignKeys = List.empty[Int]
+    val foreignKeys    = List.empty[Int]
     val referenceTable = Set.empty[Int]
-    val result = DataQualityValidation.referentialIntegrity("field", foreignKeys, referenceTable)
+    val result         = DataQualityValidation.referentialIntegrity("field", foreignKeys, referenceTable)
     result.isValid shouldBe true
   }
 
   test("referentialIntegrity rejects invalid foreign keys") {
-    val foreignKeys = List(1, 2, 99)
+    val foreignKeys    = List(1, 2, 99)
     val referenceTable = Set(1, 2, 3)
-    val result = DataQualityValidation.referentialIntegrity("field", foreignKeys, referenceTable)
+    val result         = DataQualityValidation.referentialIntegrity("field", foreignKeys, referenceTable)
     result.isInvalid shouldBe true
 
     getErrors(result).map(_.head) match {
@@ -187,9 +187,9 @@ class DataQualityValidationSpec extends AnyFunSuite with Matchers {
   }
 
   test("referentialIntegrity rejects multiple invalid foreign keys") {
-    val foreignKeys = List(1, 99, 88, 77)
+    val foreignKeys    = List(1, 99, 88, 77)
     val referenceTable = Set(1, 2, 3)
-    val result = DataQualityValidation.referentialIntegrity("field", foreignKeys, referenceTable)
+    val result         = DataQualityValidation.referentialIntegrity("field", foreignKeys, referenceTable)
     result.isInvalid shouldBe true
 
     getErrors(result).map(_.head) match {
@@ -260,17 +260,17 @@ class DataQualityValidationSpec extends AnyFunSuite with Matchers {
   }
 
   test("businessRule validates value satisfying rule") {
-    val rule = (x: Int) => x > 0
+    val rule      = (x: Int) => x > 0
     val validator = DataQualityValidation.businessRule[Int]("positive", "Value must be positive")(rule)
-    val result = validator(5)
+    val result    = validator(5)
     result.isValid shouldBe true
     getValue(result) shouldBe Some(5)
   }
 
   test("businessRule rejects value violating rule") {
-    val rule = (x: Int) => x > 0
+    val rule      = (x: Int) => x > 0
     val validator = DataQualityValidation.businessRule[Int]("positive", "Value must be positive")(rule)
-    val result = validator(-5)
+    val result    = validator(-5)
     result.isInvalid shouldBe true
 
     getErrors(result).map(_.head) match {
@@ -288,7 +288,8 @@ class DataQualityValidationSpec extends AnyFunSuite with Matchers {
   test("businessRule works with complex domain objects") {
     case class User(name: String, age: Int)
     val rule = (u: User) => u.age >= 18 && u.name.nonEmpty
-    val validator = DataQualityValidation.businessRule[User]("adult-user", "User must be adult with name")(rule)
+    val validator =
+      DataQualityValidation.businessRule[User]("adult-user", "User must be adult with name")(rule)
 
     validator(User("Alice", 25)).isValid shouldBe true
     validator(User("Bob", 17)).isInvalid shouldBe true
@@ -297,7 +298,10 @@ class DataQualityValidationSpec extends AnyFunSuite with Matchers {
 
   test("businessRule works with string validation") {
     val rule = (s: String) => s.length >= 8 && s.exists(_.isDigit)
-    val validator = DataQualityValidation.businessRule[String]("strong-password", "Password must be 8+ chars with digit")(rule)
+    val validator =
+      DataQualityValidation.businessRule[String]("strong-password", "Password must be 8+ chars with digit")(
+        rule,
+      )
 
     validator("password123").isValid shouldBe true
     validator("short1").isInvalid shouldBe true
@@ -305,21 +309,22 @@ class DataQualityValidationSpec extends AnyFunSuite with Matchers {
   }
 
   test("businessRule preserves custom rule name in error") {
-    val rule = (x: Int) => x % 2 == 0
+    val rule      = (x: Int) => x % 2 == 0
     val validator = DataQualityValidation.businessRule[Int]("even-number", "Must be even")(rule)
-    val result = validator(3)
+    val result    = validator(3)
 
     getErrors(result).map(_.head.asInstanceOf[QualityViolation].violatedValue) shouldBe Some("even-number")
   }
 
   test("businessRule preserves custom description in error message") {
     val rule = (x: Int) => x < 100
-    val validator = DataQualityValidation.businessRule[Int]("max-limit", "Value exceeds maximum limit of 100")(rule)
+    val validator =
+      DataQualityValidation.businessRule[Int]("max-limit", "Value exceeds maximum limit of 100")(rule)
     val result = validator(150)
 
     getErrors(result).map(_.head.asInstanceOf[QualityViolation].message) match {
       case Some(msg) => msg should include("Value exceeds maximum limit of 100")
-      case None => fail("Expected error message")
+      case None      => fail("Expected error message")
     }
   }
 }

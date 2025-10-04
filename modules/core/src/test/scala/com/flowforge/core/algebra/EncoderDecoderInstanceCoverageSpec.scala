@@ -22,9 +22,10 @@ class EncoderDecoderInstanceCoverageSpec extends AnyFunSuite with Matchers {
   }
 
   test("EncodingError/DecodingError helpers") {
-    val ue  = UnsupportedFormat(DataFormat.Parquet, "X").withContext(Map("k" -> 1)).withCause(new RuntimeException("x"))
-    ue.message.toLowerCase should include ("not supported")
-    val cd  = CorruptedData("bad").withContext(Map("k" -> 2)).withCause(new RuntimeException("y"))
-    cd.message.toLowerCase should include ("corrupted")
+    val ue = UnsupportedFormat(DataFormat.Parquet, "X")
+      .withContext(Map("k" -> 1)).withCause(new RuntimeException("x"))
+    ue.message.toLowerCase should include("not supported")
+    val cd = CorruptedData("bad").withContext(Map("k" -> 2)).withCause(new RuntimeException("y"))
+    cd.message.toLowerCase should include("corrupted")
   }
 }

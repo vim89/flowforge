@@ -18,7 +18,7 @@ class PipelineSyntaxCoverageSpec extends AnyFunSuite with Matchers {
   test("EnhancedPipelineBuilder build and execute happy path") {
     val src  = DataSource.local("/tmp/in", DataFormat.JSON)
     val sink = DataSink.local("/tmp/out", DataFormat.JSON)
-    val cfg  = PipelineConfig.builder
+    val cfg = PipelineConfig.builder
       .withName("cov")
       .withEnvironment(Environment.Development)
       .withSource(src)
@@ -28,10 +28,14 @@ class PipelineSyntaxCoverageSpec extends AnyFunSuite with Matchers {
       .toOption
       .get
 
-    val builder = EnhancedPipelineBuilder.from[IO, String]("cov", src)
+    val builder = EnhancedPipelineBuilder
+      .from[IO, String]("cov", src)
       .map(_.trim)
       .transform(s => IO.pure(s"x_$s"))
-      .validate(s => if (s.startsWith("x_")) Validated.valid(s) else Validated.invalidNel(FlowForgeError.ConfigurationError("bad")))
+      .validate(s =>
+        if (s.startsWith("x_")) Validated.valid(s)
+        else Validated.invalidNel(FlowForgeError.ConfigurationError("bad")),
+      )
       .quality(s => IO.pure(DataAlgebra.QualityResult(s, passed = true, Nil, 1.0)))
       .to(sink)
       .withRetry(1)
@@ -41,6 +45,6 @@ class PipelineSyntaxCoverageSpec extends AnyFunSuite with Matchers {
     val built = builder.build
     built.isRight shouldBe true
     val out = builder.execute(" data ").unsafeRunSync()
-    out should startWith ("x_")
+    out should startWith("x_")
   }
 }

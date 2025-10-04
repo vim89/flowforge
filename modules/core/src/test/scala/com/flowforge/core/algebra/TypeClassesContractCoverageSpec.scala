@@ -11,10 +11,14 @@ class TypeClassesContractCoverageSpec extends AnyFunSuite with Matchers {
       if (x > 0) cats.data.Validated.valid(()) else cats.data.Validated.invalidNel(RuleViolation("gt0", ">0"))
     }
     val ruleWarn: ValidationRule[Int] = ValidationRule("lt10", "less than 10", ErrorSeverity.Warning) { x =>
-      if (x < 10) cats.data.Validated.valid(()) else cats.data.Validated.invalidNel(RuleViolation("lt10", "<10"))
+      if (x < 10) cats.data.Validated.valid(())
+      else cats.data.Validated.invalidNel(RuleViolation("lt10", "<10"))
     }
 
-    val dc  = DataContract.fromRules(List(ruleBlock, ruleWarn), DataSchema.builder.addField("x", DataType.Integer).build)
+    val dc = DataContract.fromRules(
+      List(ruleBlock, ruleWarn),
+      DataSchema.builder.addField("x", DataType.Integer).build,
+    )
     val dc2 = DataContract.fromRules(List(ruleWarn), DataSchema.builder.build)
 
     // success
@@ -32,7 +36,8 @@ class TypeClassesContractCoverageSpec extends AnyFunSuite with Matchers {
   }
 
   test("ProcessingMetrics combine and helpers") {
-    val a = ProcessingMetrics(recordCount = 10, byteSize = 100, processingTimeMs = 5, errorCount = 1).withTiming("op", 10).withCustom("c", 1.5)
+    val a = ProcessingMetrics(recordCount = 10, byteSize = 100, processingTimeMs = 5, errorCount = 1)
+      .withTiming("op", 10).withCustom("c", 1.5)
     val b = ProcessingMetrics(recordCount = 5, byteSize = 50, processingTimeMs = 7, errorCount = 0)
     val c = a.combine(b)
     c.recordCount shouldBe 15

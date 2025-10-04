@@ -13,7 +13,7 @@ class MetricsCollectorCoverageSpec extends AnyFunSuite with Matchers {
       data => ProcessingMetrics(recordCount = 1, byteSize = data.length, processingTimeMs = 0),
       List("len"),
     )
-    val m  = mc.collect("abc")
+    val m = mc.collect("abc")
     m.byteSize shouldBe 3
     val mt = mc.collectTimed("abc", 42.millis)
     mt.customMetrics.get("processing_duration_ms").exists(_ >= 42.0) shouldBe true

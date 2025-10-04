@@ -8,7 +8,8 @@ import com.flowforge.core.types.DataSink.WriteMode
 class DataSourcesSinksOptionsSpec extends AnyFunSuite with Matchers {
 
   test("GCS sink setters: compression, partitioning, write mode", What) {
-    val sink = DataSink.gcs("bucket", "prefix", DataFormat.Parquet)
+    val sink = DataSink
+      .gcs("bucket", "prefix", DataFormat.Parquet)
       .withCompression(CompressionType.Snappy)
       .partitionedBy("dt", "id")
       .withWriteMode(WriteMode.Overwrite)
@@ -19,7 +20,8 @@ class DataSourcesSinksOptionsSpec extends AnyFunSuite with Matchers {
   }
 
   test("S3 sink setters: compression, partitioning, write mode", What) {
-    val sink = DataSink.s3("bucket", "out", DataFormat.JSON)
+    val sink = DataSink
+      .s3("bucket", "out", DataFormat.JSON)
       .withCompression(CompressionType.Gzip)
       .partitionedBy("p1")
       .withWriteMode(WriteMode.Append)
@@ -37,7 +39,8 @@ class DataSourcesSinksOptionsSpec extends AnyFunSuite with Matchers {
   }
 
   test("JDBC and BigQuery sources hold optional attributes", What) {
-    val jdbc = DataSource.jdbc("jdbc:postgresql://h/db", "users", "org.postgresql.Driver")
+    val jdbc = DataSource
+      .jdbc("jdbc:postgresql://h/db", "users", "org.postgresql.Driver")
       .withQuery("select 1")
     jdbc.query shouldBe Some("select 1")
 

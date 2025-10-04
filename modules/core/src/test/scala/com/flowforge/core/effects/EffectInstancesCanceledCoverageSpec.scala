@@ -12,15 +12,16 @@ class EffectInstancesCanceledCoverageSpec extends AnyFunSuite with Matchers {
   implicit val es: EffectSystem[IO] = com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
 
   test("bracketCase canceled exit case when fiber canceled") {
-    @volatile var canceled = false
-    val acquire = IO.pure(1)
+    @volatile var canceled       = false
+    val acquire                  = IO.pure(1)
     val useNever: Int => IO[Int] = _ => IO.never
-    val release = (_: Int, ec: es.ExitCase[Throwable]) => IO {
-      ec match {
-        case es.ExitCase.Canceled => canceled = true
-        case _                    => ()
+    val release = (_: Int, ec: es.ExitCase[Throwable]) =>
+      IO {
+        ec match {
+          case es.ExitCase.Canceled => canceled = true
+          case _                    => ()
+        }
       }
-    }
 
     val effect = es.bracketCase(acquire)(useNever)(release)
     val fiber  = es.start(effect).unsafeRunSync()
@@ -29,4 +30,3 @@ class EffectInstancesCanceledCoverageSpec extends AnyFunSuite with Matchers {
     canceled shouldBe true
   }
 }
-

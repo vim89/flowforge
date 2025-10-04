@@ -9,9 +9,9 @@ import org.scalatest.matchers.should.Matchers
  * Comprehensive test suite for ValidationCombinators.
  *
  * Coverage targets:
- * - Statement coverage: 100%
- * - Branch coverage: 100%
- * - All edge cases and error paths
+ *   - Statement coverage: 100%
+ *   - Branch coverage: 100%
+ *   - All edge cases and error paths
  */
 class ValidationCombinatorsSpec extends AnyFunSuite with Matchers {
 
@@ -286,15 +286,19 @@ class ValidationCombinatorsSpec extends AnyFunSuite with Matchers {
   }
 
   test("validateAll validates all elements successfully") {
-    val validator = (x: Int) => if (x > 0) valid[ConfigError, Int](x) else invalid(ConfigError.InvalidValue("x", x.toString, "positive"))
-    val result    = ValidationCombinators.validateAll(List(1, 2, 3))(validator)
+    val validator = (x: Int) =>
+      if (x > 0) valid[ConfigError, Int](x)
+      else invalid(ConfigError.InvalidValue("x", x.toString, "positive"))
+    val result = ValidationCombinators.validateAll(List(1, 2, 3))(validator)
     result.isValid shouldBe true
     getValue(result) shouldBe Some(List(1, 2, 3))
   }
 
   test("validateAll accumulates errors from multiple elements") {
-    val validator = (x: Int) => if (x > 0) valid[ConfigError, Int](x) else invalid(ConfigError.InvalidValue("x", x.toString, "positive"))
-    val result    = ValidationCombinators.validateAll(List(-1, 2, -3))(validator)
+    val validator = (x: Int) =>
+      if (x > 0) valid[ConfigError, Int](x)
+      else invalid(ConfigError.InvalidValue("x", x.toString, "positive"))
+    val result = ValidationCombinators.validateAll(List(-1, 2, -3))(validator)
     result.isInvalid shouldBe true
     getErrors(result).map(_.size) shouldBe Some(2)
   }
@@ -330,69 +334,88 @@ class ValidationCombinatorsSpec extends AnyFunSuite with Matchers {
   }
 
   test("when applies validator when condition is true") {
-    val validator = (x: Int) => if (x > 0) valid[ConfigError, Int](x) else invalid(ConfigError.InvalidValue("x", x.toString, "positive"))
+    val validator = (x: Int) =>
+      if (x > 0) valid[ConfigError, Int](x)
+      else invalid(ConfigError.InvalidValue("x", x.toString, "positive"))
     val conditional = ValidationCombinators.when[Int](condition = true)(validator)
     conditional(5).isValid shouldBe true
     conditional(-5).isInvalid shouldBe true
   }
 
   test("when skips validator when condition is false") {
-    val validator = (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "always fails"))
+    val validator =
+      (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "always fails"))
     val conditional = ValidationCombinators.when[Int](condition = false)(validator)
     conditional(5).isValid shouldBe true // Should pass because condition is false
   }
 
   test("whenValue applies validator when predicate is true") {
-    val validator = (x: Int) => if (x > 10) valid[ConfigError, Int](x) else invalid(ConfigError.InvalidValue("x", x.toString, ">10"))
+    val validator = (x: Int) =>
+      if (x > 10) valid[ConfigError, Int](x) else invalid(ConfigError.InvalidValue("x", x.toString, ">10"))
     val conditional = ValidationCombinators.whenValue[Int](_ > 5)(validator)
 
-    conditional(15).isValid shouldBe true // predicate true, validator passes
+    conditional(15).isValid shouldBe true  // predicate true, validator passes
     conditional(7).isInvalid shouldBe true // predicate true, validator fails
-    conditional(3).isValid shouldBe true // predicate false, skipped
+    conditional(3).isValid shouldBe true   // predicate false, skipped
   }
 
   test("whenValue skips validator when predicate is false") {
-    val validator = (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "always fails"))
+    val validator =
+      (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "always fails"))
     val conditional = ValidationCombinators.whenValue[Int](_ > 10)(validator)
     conditional(5).isValid shouldBe true // Predicate false, validator skipped
   }
 
   test("eitherOr passes if first validator succeeds") {
-    val validator1 = (x: Int) => if (x > 0) valid[ConfigError, Int](x) else invalid(ConfigError.InvalidValue("x", x.toString, "positive"))
-    val validator2 = (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "always fails"))
+    val validator1 = (x: Int) =>
+      if (x > 0) valid[ConfigError, Int](x)
+      else invalid(ConfigError.InvalidValue("x", x.toString, "positive"))
+    val validator2 =
+      (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "always fails"))
     val combined = ValidationCombinators.eitherOr(validator1, validator2)
     combined(5).isValid shouldBe true
   }
 
   test("eitherOr passes if second validator succeeds when first fails") {
-    val validator1 = (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "always fails"))
+    val validator1 =
+      (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "always fails"))
     val validator2 = (x: Int) => valid[ConfigError, Int](x)
-    val combined = ValidationCombinators.eitherOr(validator1, validator2)
+    val combined   = ValidationCombinators.eitherOr(validator1, validator2)
     combined(5).isValid shouldBe true
   }
 
   test("eitherOr fails if both validators fail") {
-    val validator1 = (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "fails 1"))
-    val validator2 = (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "fails 2"))
+    val validator1 =
+      (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "fails 1"))
+    val validator2 =
+      (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "fails 2"))
     val combined = ValidationCombinators.eitherOr(validator1, validator2)
     combined(5).isInvalid shouldBe true
   }
 
   test("allOf passes if all validators succeed") {
-    val validator1 = (x: Int) => if (x > 0) valid[ConfigError, Int](x) else invalid(ConfigError.InvalidValue("x", x.toString, "positive"))
-    val validator2 = (x: Int) => if (x < 100) valid[ConfigError, Int](x) else invalid(ConfigError.InvalidValue("x", x.toString, "<100"))
-    val validator3 = (x: Int) => if (x % 2 == 0) valid[ConfigError, Int](x) else invalid(ConfigError.InvalidValue("x", x.toString, "even"))
+    val validator1 = (x: Int) =>
+      if (x > 0) valid[ConfigError, Int](x)
+      else invalid(ConfigError.InvalidValue("x", x.toString, "positive"))
+    val validator2 = (x: Int) =>
+      if (x < 100) valid[ConfigError, Int](x) else invalid(ConfigError.InvalidValue("x", x.toString, "<100"))
+    val validator3 = (x: Int) =>
+      if (x % 2 == 0) valid[ConfigError, Int](x)
+      else invalid(ConfigError.InvalidValue("x", x.toString, "even"))
     val combined = ValidationCombinators.allOf(List(validator1, validator2, validator3))
     combined(50).isValid shouldBe true
     getValue(combined(50)) shouldBe Some(50)
   }
 
   test("allOf accumulates errors from all failing validators") {
-    val validator1 = (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "fails 1"))
-    val validator2 = (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "fails 2"))
-    val validator3 = (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "fails 3"))
+    val validator1 =
+      (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "fails 1"))
+    val validator2 =
+      (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "fails 2"))
+    val validator3 =
+      (x: Int) => invalid[ConfigError, Int](ConfigError.InvalidValue("x", x.toString, "fails 3"))
     val combined = ValidationCombinators.allOf(List(validator1, validator2, validator3))
-    val result = combined(5)
+    val result   = combined(5)
     result.isInvalid shouldBe true
     getErrors(result).map(_.size) shouldBe Some(3)
   }
@@ -410,7 +433,7 @@ class ValidationCombinatorsSpec extends AnyFunSuite with Matchers {
   }
 
   test("fail always validates unsuccessfully") {
-    val error = ConfigError.InvalidValue("field", "value", "expected")
+    val error  = ConfigError.InvalidValue("field", "value", "expected")
     val result = ValidationCombinators.fail[Int](error)(42)
     result.isInvalid shouldBe true
     getErrors(result).map(_.head) shouldBe Some(error)
@@ -418,7 +441,7 @@ class ValidationCombinatorsSpec extends AnyFunSuite with Matchers {
 
   test("fail preserves custom error") {
     val customError = ConfigError.MissingRequired("important-field")
-    val result = ValidationCombinators.fail[String](customError)("anything")
+    val result      = ValidationCombinators.fail[String](customError)("anything")
     getErrors(result).map(_.head) shouldBe Some(customError)
   }
 }

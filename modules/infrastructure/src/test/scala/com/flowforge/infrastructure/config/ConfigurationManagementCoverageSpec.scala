@@ -16,4 +16,3 @@ class ConfigurationManagementCoverageSpec extends AnyFunSuite with Matchers {
     stringDecoder.decode(cfg, "flowforge.missing").isInvalid shouldBe true
   }
 }
-

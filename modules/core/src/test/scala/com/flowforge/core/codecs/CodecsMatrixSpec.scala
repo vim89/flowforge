@@ -20,13 +20,18 @@ class CodecsMatrixSpec extends AnyFunSuite with Matchers {
     DataFormat.Delta,
   )
 
-  test("Int encoder supports JSON/JSONL/CSV only; String encoder supports all; decoders follow supportsFormat", What) {
+  test(
+    "Int encoder supports JSON/JSONL/CSV only; String encoder supports all; decoders follow supportsFormat",
+    What,
+  ) {
     val i = 42
     val s = "hello"
     all.foreach { f =>
       val ie = intEncoder.encode(i, f)
       ie.isRight shouldBe true
-      intEncoder.supportsFormat(f) shouldBe (f == DataFormat.JSON || f == DataFormat.JSONL || f == DataFormat.CSV)
+      intEncoder.supportsFormat(
+        f,
+      ) shouldBe (f == DataFormat.JSON || f == DataFormat.JSONL || f == DataFormat.CSV)
 
       val se = stringEncoder.encode(s, f)
       se.isRight shouldBe true
@@ -34,7 +39,9 @@ class CodecsMatrixSpec extends AnyFunSuite with Matchers {
 
       val sd = stringDecoder.decode(EncodedData(s.getBytes("UTF-8"), f), f)
       sd.isRight shouldBe true
-      stringDecoder.supportsFormat(f) shouldBe (f == DataFormat.JSON || f == DataFormat.JSONL || f == DataFormat.CSV)
+      stringDecoder.supportsFormat(
+        f,
+      ) shouldBe (f == DataFormat.JSON || f == DataFormat.JSONL || f == DataFormat.CSV)
     }
   }
 
@@ -50,8 +57,8 @@ class CodecsMatrixSpec extends AnyFunSuite with Matchers {
   }
 
   test("Map[String,String] decoder error branch (expected object) and CSV array split", What) {
-    val m      = Map("k1" -> "v1", "k2" -> "v2")
-    val mEncJ  = mapStringStringEncoder.encode(m, DataFormat.JSON).toOption.get
+    val m     = Map("k1" -> "v1", "k2" -> "v2")
+    val mEncJ = mapStringStringEncoder.encode(m, DataFormat.JSON).toOption.get
     mapStringStringDecoder.decode(mEncJ, DataFormat.JSON).toOption.get shouldBe m
 
     val csvEnc = mapStringStringEncoder.encode(m, DataFormat.CSV).toOption.get
@@ -63,7 +70,7 @@ class CodecsMatrixSpec extends AnyFunSuite with Matchers {
   }
 
   test("tuple2Encoder supports JSON only", What) {
-    val ok  = tuple2Encoder[String, String].encode("k" -> "v", DataFormat.JSON)
+    val ok = tuple2Encoder[String, String].encode("k" -> "v", DataFormat.JSON)
     ok.isRight shouldBe true
     val bad = tuple2Encoder[String, String].encode("k" -> "v", DataFormat.CSV)
     bad.isLeft shouldBe true

@@ -138,7 +138,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
       maxRetries = Refined.unsafeApply(3),
       initialDelay = 1.second,
       maxDelay = 10.seconds,
-      backoffFactor = 2.0
+      backoffFactor = 2.0,
     )
 
     policy.maxRetries.value shouldBe 3
@@ -158,7 +158,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
       maxRetries = Refined.unsafeApply(3),
       initialDelay = 1.second,
       maxDelay = 10.seconds,
-      backoffFactor = 0.5
+      backoffFactor = 0.5,
     )
 
     policy.validate.isInvalid shouldBe true
@@ -169,7 +169,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
       maxRetries = Refined.unsafeApply(3),
       initialDelay = 10.seconds,
       maxDelay = 1.second,
-      backoffFactor = 2.0
+      backoffFactor = 2.0,
     )
 
     policy.validate.isInvalid shouldBe true
@@ -220,7 +220,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
       failureThreshold = Refined.unsafeApply(10),
       resetTimeout = 1.minute,
       callTimeout = 30.seconds,
-      maxConcurrentCalls = Refined.unsafeApply(100)
+      maxConcurrentCalls = Refined.unsafeApply(100),
     )
 
     config.failureThreshold.value shouldBe 10
@@ -246,7 +246,8 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("SparkConfig.withMemory should update memory settings") {
-    val config = SparkConfig.default("app")
+    val config = SparkConfig
+      .default("app")
       .withMemory("4g", "2g")
 
     config.executorMemory shouldBe "4g"
@@ -254,49 +255,56 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("SparkConfig.withCores should update executor cores") {
-    val config = SparkConfig.default("app")
+    val config = SparkConfig
+      .default("app")
       .withCores(4)
 
     config.executorCores.value shouldBe 4
   }
 
   test("SparkConfig.withMaster should set master URL") {
-    val config = SparkConfig.default("app")
+    val config = SparkConfig
+      .default("app")
       .withMaster("spark://localhost:7077")
 
     config.master shouldBe Some("spark://localhost:7077")
   }
 
   test("SparkConfig.withProperty should add custom property") {
-    val config = SparkConfig.default("app")
+    val config = SparkConfig
+      .default("app")
       .withProperty("spark.sql.shuffle.partitions", "200")
 
     config.additionalProps should contain("spark.sql.shuffle.partitions" -> "200")
   }
 
   test("SparkConfig.validate should accept valid memory formats") {
-    val config = SparkConfig.default("app")
+    val config = SparkConfig
+      .default("app")
       .withMemory("2g", "1g")
 
     config.validate.isValid shouldBe true
   }
 
   test("SparkConfig.validate should accept lowercase memory format") {
-    val config = SparkConfig.default("app")
+    val config = SparkConfig
+      .default("app")
       .withMemory("512m", "256m")
 
     config.validate.isValid shouldBe true
   }
 
   test("SparkConfig.validate should reject invalid executor memory format") {
-    val config = SparkConfig.default("app")
+    val config = SparkConfig
+      .default("app")
       .copy(executorMemory = "invalid")
 
     config.validate.isInvalid shouldBe true
   }
 
   test("SparkConfig.validate should reject invalid driver memory format") {
-    val config = SparkConfig.default("app")
+    val config = SparkConfig
+      .default("app")
       .copy(driverMemory = "2GB")
 
     config.validate.isInvalid shouldBe true
@@ -325,21 +333,24 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("FlinkConfig.withParallelism should update parallelism") {
-    val config = FlinkConfig.default("job")
+    val config = FlinkConfig
+      .default("job")
       .withParallelism(8)
 
     config.parallelism.value shouldBe 8
   }
 
   test("FlinkConfig.withCheckpointing should set checkpoint interval") {
-    val config = FlinkConfig.default("job")
+    val config = FlinkConfig
+      .default("job")
       .withCheckpointing(10.seconds)
 
     config.checkpointInterval shouldBe Some(10.seconds)
   }
 
   test("FlinkConfig.withProperty should add custom property") {
-    val config = FlinkConfig.default("job")
+    val config = FlinkConfig
+      .default("job")
       .withProperty("state.backend", "rocksdb")
 
     config.additionalProps should contain("state.backend" -> "rocksdb")
@@ -350,7 +361,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
       FlinkRestartStrategy.NoRestart,
       FlinkRestartStrategy.FixedDelay,
       FlinkRestartStrategy.FailureRate,
-      FlinkRestartStrategy.Exponential
+      FlinkRestartStrategy.Exponential,
     )
 
     strategies should have size 4
@@ -432,7 +443,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
 
   test("PipelineConfig should construct via builder") {
     val source = DataSource.local("/input", DataFormat.CSV)
-    val sink = DataSink.local("/output", DataFormat.Parquet)
+    val sink   = DataSink.local("/output", DataFormat.Parquet)
 
     val result = PipelineConfig.builder
       .withName("test-pipeline")
@@ -455,8 +466,8 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("PipelineConfig should support Spark config") {
-    val source = DataSource.local("/input", DataFormat.CSV)
-    val sink = DataSink.local("/output", DataFormat.Parquet)
+    val source      = DataSource.local("/input", DataFormat.CSV)
+    val sink        = DataSink.local("/output", DataFormat.Parquet)
     val sparkConfig = SparkConfig.default("app")
 
     val result = PipelineConfig.builder
@@ -471,8 +482,8 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("PipelineConfig should support Flink config") {
-    val source = DataSource.local("/input", DataFormat.CSV)
-    val sink = DataSink.local("/output", DataFormat.Parquet)
+    val source      = DataSource.local("/input", DataFormat.CSV)
+    val sink        = DataSink.local("/output", DataFormat.Parquet)
     val flinkConfig = FlinkConfig.default("job")
 
     val result = PipelineConfig.builder
@@ -488,7 +499,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
 
   test("PipelineConfig.validate should reject both Spark and Flink configs") {
     val source = DataSource.local("/input", DataFormat.CSV)
-    val sink = DataSink.local("/output", DataFormat.Parquet)
+    val sink   = DataSink.local("/output", DataFormat.Parquet)
 
     val config = PipelineConfig(
       name = Refined.unsafeApply("pipeline"),
@@ -496,7 +507,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
       source = source,
       sink = sink,
       sparkConfig = Some(SparkConfig.default("app")),
-      flinkConfig = Some(FlinkConfig.default("job"))
+      flinkConfig = Some(FlinkConfig.default("job")),
     )
 
     config.validate.isInvalid shouldBe true
@@ -504,7 +515,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
 
   test("PipelineConfig.validate should require either Spark or Flink config") {
     val source = DataSource.local("/input", DataFormat.CSV)
-    val sink = DataSink.local("/output", DataFormat.Parquet)
+    val sink   = DataSink.local("/output", DataFormat.Parquet)
 
     val config = PipelineConfig(
       name = Refined.unsafeApply("pipeline"),
@@ -512,7 +523,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
       source = source,
       sink = sink,
       sparkConfig = None,
-      flinkConfig = None
+      flinkConfig = None,
     )
 
     config.validate.isInvalid shouldBe true
@@ -520,7 +531,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
 
   test("PipelineConfig should support quality rules") {
     val source = DataSource.local("/input", DataFormat.CSV)
-    val sink = DataSink.local("/output", DataFormat.Parquet)
+    val sink   = DataSink.local("/output", DataFormat.Parquet)
 
     val result = PipelineConfig.builder
       .withName("pipeline")
@@ -536,7 +547,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
 
   test("PipelineConfig should support tags") {
     val source = DataSource.local("/input", DataFormat.CSV)
-    val sink = DataSink.local("/output", DataFormat.Parquet)
+    val sink   = DataSink.local("/output", DataFormat.Parquet)
 
     val result = PipelineConfig.builder
       .withName("pipeline")
@@ -555,14 +566,14 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
 
   test("PipelineConfig.withTag should add tag") {
     val source = DataSource.local("/input", DataFormat.CSV)
-    val sink = DataSink.local("/output", DataFormat.Parquet)
+    val sink   = DataSink.local("/output", DataFormat.Parquet)
 
     val config = PipelineConfig(
       name = Refined.unsafeApply("pipeline"),
       environment = Environment.Development,
       source = source,
       sink = sink,
-      sparkConfig = Some(SparkConfig.default("app"))
+      sparkConfig = Some(SparkConfig.default("app")),
     )
 
     val updated = config.withTag("owner", "alice")
@@ -571,14 +582,14 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
 
   test("PipelineConfig.withQuality should update quality rules") {
     val source = DataSource.local("/input", DataFormat.CSV)
-    val sink = DataSink.local("/output", DataFormat.Parquet)
+    val sink   = DataSink.local("/output", DataFormat.Parquet)
 
     val config = PipelineConfig(
       name = Refined.unsafeApply("pipeline"),
       environment = Environment.Development,
       source = source,
       sink = sink,
-      sparkConfig = Some(SparkConfig.default("app"))
+      sparkConfig = Some(SparkConfig.default("app")),
     )
 
     val updated = config.withQuality(QualityRules.strict)
@@ -591,7 +602,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
 
   test("ConfigUtils.merge should merge configurations") {
     val source = DataSource.local("/input", DataFormat.CSV)
-    val sink = DataSink.local("/output", DataFormat.Parquet)
+    val sink   = DataSink.local("/output", DataFormat.Parquet)
 
     val base = PipelineConfig(
       name = Refined.unsafeApply("base"),
@@ -599,7 +610,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
       source = source,
       sink = sink,
       sparkConfig = Some(SparkConfig.default("base-app")),
-      tags = Map("base" -> "value")
+      tags = Map("base" -> "value"),
     )
 
     val overrideConfig = PipelineConfig(
@@ -608,7 +619,7 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
       source = source,
       sink = sink,
       sparkConfig = Some(SparkConfig.default("override-app")),
-      tags = Map("override" -> "value")
+      tags = Map("override" -> "value"),
     )
 
     val merged = ConfigUtils.merge(base, overrideConfig)
@@ -628,14 +639,14 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
 
   test("ConfigUtils.validateConfiguration should validate config") {
     val source = DataSource.local("/input", DataFormat.CSV)
-    val sink = DataSink.local("/output", DataFormat.Parquet)
+    val sink   = DataSink.local("/output", DataFormat.Parquet)
 
     val validConfig = PipelineConfig(
       name = Refined.unsafeApply("pipeline"),
       environment = Environment.Development,
       source = source,
       sink = sink,
-      sparkConfig = Some(SparkConfig.default("app"))
+      sparkConfig = Some(SparkConfig.default("app")),
     )
 
     ConfigUtils.validateConfiguration(validConfig).isValid shouldBe true
@@ -650,8 +661,8 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
 
   test("PipelineConfig.fromMap should parse basic configuration") {
     val configMap = Map(
-      "pipeline.name" -> "test-pipeline",
-      "pipeline.environment" -> "production"
+      "pipeline.name"        -> "test-pipeline",
+      "pipeline.environment" -> "production",
     )
 
     val result = PipelineConfig.fromMap(configMap)

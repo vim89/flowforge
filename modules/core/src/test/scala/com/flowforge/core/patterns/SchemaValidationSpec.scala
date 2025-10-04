@@ -11,9 +11,9 @@ import org.scalatest.matchers.should.Matchers
  * Comprehensive test suite for SchemaValidation.
  *
  * Coverage targets:
- * - Statement coverage: 100%
- * - Branch coverage: 100%
- * - All edge cases and error paths
+ *   - Statement coverage: 100%
+ *   - Branch coverage: 100%
+ *   - All edge cases and error paths
  */
 class SchemaValidationSpec extends AnyFunSuite with Matchers {
 
@@ -417,7 +417,7 @@ class SchemaValidationSpec extends AnyFunSuite with Matchers {
 
     val newSchema = DataSchema.builder
       .addField("id", DataType.String, required = true)
-      .addField("count", DataType.Long, required = true) // promoted type
+      .addField("count", DataType.Long, required = true)           // promoted type
       .addField("new_optional", DataType.String, required = false) // added optional
       .build
 

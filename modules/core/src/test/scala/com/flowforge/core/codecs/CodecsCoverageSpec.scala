@@ -32,7 +32,7 @@ class CodecsCoverageSpec extends AnyFunSuite with Matchers {
   }
 
   test("Map[String,String] encoder/decoder covers supported and unsupported branches") {
-    val m = Map("a" -> "1", "b" -> "2")
+    val m       = Map("a" -> "1", "b" -> "2")
     val jsonEnc = mapStringStringEncoder.encode(m, DataFormat.JSON)
     jsonEnc.isRight shouldBe true
     mapStringStringDecoder.decode(jsonEnc.toOption.get, DataFormat.JSON).isRight shouldBe true
@@ -46,7 +46,7 @@ class CodecsCoverageSpec extends AnyFunSuite with Matchers {
   }
 
   test("Json encoder/decoder and tuple encoder exercise branches") {
-    val j = Json.obj("x" -> Json.fromInt(1))
+    val j   = Json.obj("x" -> Json.fromInt(1))
     val enc = jsonEncoder.encode(j, DataFormat.JSON)
     enc.isRight shouldBe true
     jsonDecoder.decode(enc.toOption.get, DataFormat.JSON).isRight shouldBe true
@@ -58,4 +58,3 @@ class CodecsCoverageSpec extends AnyFunSuite with Matchers {
     tEncBad.isLeft shouldBe true
   }
 }
-

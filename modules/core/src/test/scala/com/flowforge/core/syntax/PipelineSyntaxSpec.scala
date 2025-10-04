@@ -1,7 +1,7 @@
 // scalafix:off DisableSyntax.noUnsafeRunSync
 package com.flowforge.core.syntax
 
-import cats.data.{Kleisli, ValidatedNel}
+import cats.data.{ Kleisli, ValidatedNel }
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import cats.syntax.all._
@@ -15,17 +15,19 @@ import scala.concurrent.duration._
 
 class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
 
-  implicit val ioEffectSystem: EffectSystem[IO] = com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
+  implicit val ioEffectSystem: EffectSystem[IO] =
+    com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
 
   val testSource: DataSource = DataSource.local("/test/input", DataFormat.CSV)
-  val testSink: DataSink = DataSink.local("/test/output", DataFormat.Parquet)
+  val testSink: DataSink     = DataSink.local("/test/output", DataFormat.Parquet)
 
   // ===============================
   // ENHANCED PIPELINE BUILDER TESTS
   // ===============================
 
   test("EnhancedPipelineBuilder should build pipeline with source and sink") {
-    val builder = EnhancedPipelineBuilder.from[IO, String]("test-pipeline", testSource)
+    val builder = EnhancedPipelineBuilder
+      .from[IO, String]("test-pipeline", testSource)
       .to(testSink)
 
     val result = builder.build
@@ -36,7 +38,7 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   test("EnhancedPipelineBuilder should fail without source") {
     val builder = EnhancedPipelineBuilder[IO, String, String](
       name = "test",
-      transformation = Kleisli(IO.pure(_))
+      transformation = Kleisli(IO.pure(_)),
     )
 
     val result = builder.build
@@ -51,7 +53,8 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   }
 
   test("EnhancedPipelineBuilder.transform should apply transformation") {
-    val builder = EnhancedPipelineBuilder.from[IO, Int]("test", testSource)
+    val builder = EnhancedPipelineBuilder
+      .from[IO, Int]("test", testSource)
       .transform(x => IO.pure(x * 2))
       .to(testSink)
 
@@ -60,7 +63,8 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   }
 
   test("EnhancedPipelineBuilder.map should apply pure transformation") {
-    val builder = EnhancedPipelineBuilder.from[IO, Int]("test", testSource)
+    val builder = EnhancedPipelineBuilder
+      .from[IO, Int]("test", testSource)
       .map(_ * 2)
       .to(testSink)
 
@@ -69,7 +73,8 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   }
 
   test("EnhancedPipelineBuilder.filter should filter records") {
-    val builder = EnhancedPipelineBuilder.from[IO, Int]("test", testSource)
+    val builder = EnhancedPipelineBuilder
+      .from[IO, Int]("test", testSource)
       .filter(_ > 0)
       .to(testSink)
 
@@ -82,7 +87,8 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
       if (s.nonEmpty) s.validNel
       else FlowForgeError.ValidationError("Empty string").invalidNel
 
-    val builder = EnhancedPipelineBuilder.from[IO, String]("test", testSource)
+    val builder = EnhancedPipelineBuilder
+      .from[IO, String]("test", testSource)
       .validate(validator)
       .to(testSink)
 
@@ -94,7 +100,8 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
     def qualityCheck(s: String): IO[QualityResult[String]] =
       IO.pure(QualityResult.passed(s))
 
-    val builder = EnhancedPipelineBuilder.from[IO, String]("test", testSource)
+    val builder = EnhancedPipelineBuilder
+      .from[IO, String]("test", testSource)
       .quality(qualityCheck)
       .to(testSink)
 
@@ -103,7 +110,8 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   }
 
   test("EnhancedPipelineBuilder.withRetry should set retry policy") {
-    val builder = EnhancedPipelineBuilder.from[IO, String]("test", testSource)
+    val builder = EnhancedPipelineBuilder
+      .from[IO, String]("test", testSource)
       .withRetry(3)
       .to(testSink)
 
@@ -112,7 +120,8 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   }
 
   test("EnhancedPipelineBuilder.withTimeout should set timeout") {
-    val builder = EnhancedPipelineBuilder.from[IO, String]("test", testSource)
+    val builder = EnhancedPipelineBuilder
+      .from[IO, String]("test", testSource)
       .withTimeout(30.seconds)
       .to(testSink)
 
@@ -126,10 +135,11 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
       environment = Environment.Development,
       source = testSource,
       sink = testSink,
-      sparkConfig = Some(SparkConfig.default("app"))
+      sparkConfig = Some(SparkConfig.default("app")),
     )
 
-    val builder = EnhancedPipelineBuilder.from[IO, String]("test", testSource)
+    val builder = EnhancedPipelineBuilder
+      .from[IO, String]("test", testSource)
       .withConfig(config)
       .to(testSink)
 
@@ -138,7 +148,8 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   }
 
   test("EnhancedPipelineBuilder.execute should run pipeline") {
-    val builder = EnhancedPipelineBuilder.from[IO, Int]("test", testSource)
+    val builder = EnhancedPipelineBuilder
+      .from[IO, Int]("test", testSource)
       .map(_ * 2)
       .to(testSink)
 
@@ -160,11 +171,11 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   // ===============================
 
   test("PipelineComponentOps >>> should compose components") {
-    val comp1: PipelineComponent[IO, Int, Int] = Kleisli(x => IO.pure(x * 2))
+    val comp1: PipelineComponent[IO, Int, Int]    = Kleisli(x => IO.pure(x * 2))
     val comp2: PipelineComponent[IO, Int, String] = Kleisli(x => IO.pure(s"value: $x"))
 
     val composed = comp1 >>> comp2
-    val result = composed.run(5).unsafeRunSync()
+    val result   = composed.run(5).unsafeRunSync()
     result shouldBe "value: 10"
   }
 
@@ -197,19 +208,19 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   }
 
   test("transform constructor should create transformation") {
-    val comp = transform[IO, Int, String](x => s"value: $x")
+    val comp   = transform[IO, Int, String](x => s"value: $x")
     val result = comp.run(42).unsafeRunSync()
     result shouldBe "value: 42"
   }
 
   test("transformF constructor should create effectful transformation") {
-    val comp = transformF[IO, Int, String](x => IO.pure(s"value: $x"))
+    val comp   = transformF[IO, Int, String](x => IO.pure(s"value: $x"))
     val result = comp.run(42).unsafeRunSync()
     result shouldBe "value: 42"
   }
 
   test("filter constructor should create filter component") {
-    val comp = filter[IO, Int](_ > 0)
+    val comp   = filter[IO, Int](_ > 0)
     val result = comp.run(5).unsafeRunSync()
     result shouldBe 5
 
@@ -249,7 +260,7 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
     }
 
     val retried = withRetry[IO, Int](3)(comp)
-    val result = retried.run(5).unsafeRunSync()
+    val result  = retried.run(5).unsafeRunSync()
     result shouldBe 10
   }
 
@@ -258,11 +269,11 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   // ===============================
 
   test("ForComprehensionOps should support for-comprehension") {
-    val comp1: PipelineComponent[IO, Int, Int] = Kleisli(x => IO.pure(x * 2))
+    val comp1: PipelineComponent[IO, Int, Int]    = Kleisli(x => IO.pure(x * 2))
     val comp2: PipelineComponent[IO, Int, String] = Kleisli(x => IO.pure(s"value: $x"))
 
     val combined = for {
-      _ <- comp1
+      _    <- comp1
       text <- comp2
     } yield text
 
@@ -278,7 +289,7 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   test("ValidationException should format message") {
     val errors = List(
       FlowForgeError.ValidationError("Error 1"),
-      FlowForgeError.ValidationError("Error 2")
+      FlowForgeError.ValidationError("Error 2"),
     )
     val exception = ValidationException(errors)
 
@@ -297,7 +308,7 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   // ===============================
 
   test("functionToComponent should convert function to component") {
-    val f: Int => String = x => s"value: $x"
+    val f: Int => String                         = x => s"value: $x"
     val comp: PipelineComponent[IO, Int, String] = f
 
     val result = comp.run(42).unsafeRunSync()
@@ -305,7 +316,7 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   }
 
   test("effectfulFunctionToComponent should convert effectful function") {
-    val f: Int => IO[String] = x => IO.pure(s"value: $x")
+    val f: Int => IO[String]                     = x => IO.pure(s"value: $x")
     val comp: PipelineComponent[IO, Int, String] = f
 
     val result = comp.run(42).unsafeRunSync()
@@ -333,12 +344,12 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
     val op2 = cats.data.ReaderT[IO, String, String](_ => IO.pure("result"))
 
     val chained = op1 >> op2
-    val result = chained.run("config").unsafeRunSync()
+    val result  = chained.run("config").unsafeRunSync()
     result shouldBe "result"
   }
 
   test("ReaderPipelineOps.mapResult should transform result") {
-    val op = cats.data.ReaderT[IO, String, Int](_ => IO.pure(42))
+    val op     = cats.data.ReaderT[IO, String, Int](_ => IO.pure(42))
     val mapped = op.mapResult(_ * 2)
 
     val result = mapped.run("config").unsafeRunSync()
@@ -346,7 +357,7 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   }
 
   test("ReaderPipelineOps.handleErrorWith should handle errors") {
-    val op = cats.data.ReaderT[IO, String, Int](_ => IO.raiseError(new RuntimeException("error")))
+    val op      = cats.data.ReaderT[IO, String, Int](_ => IO.raiseError(new RuntimeException("error")))
     val handled = op.handleErrorWith(_ => cats.data.ReaderT[IO, String, Int](_ => IO.pure(42)))
 
     val result = handled.run("config").unsafeRunSync()
@@ -364,7 +375,7 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
 
   test("Examples.diPipeline should create DI pipeline") {
     val pipeline = Examples.diPipeline[IO]("test-pipeline")
-    val result = pipeline.run("test-config").unsafeRunSync()
+    val result   = pipeline.run("test-config").unsafeRunSync()
     result should include("test-pipeline")
     result should include("test-config")
   }
@@ -374,7 +385,8 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
   // ===============================
 
   test("Complete pipeline with multiple transformations should work") {
-    val pipeline = EnhancedPipelineBuilder.from[IO, Int]("integration-test", testSource)
+    val pipeline = EnhancedPipelineBuilder
+      .from[IO, Int]("integration-test", testSource)
       .map(_ * 2)
       .filter(_ > 5)
       .transform(x => IO.pure(x + 10))
@@ -390,7 +402,8 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
       if (s.length > 3) s.validNel
       else FlowForgeError.ValidationError("Too short").invalidNel
 
-    val pipeline = EnhancedPipelineBuilder.from[IO, String]("validation-test", testSource)
+    val pipeline = EnhancedPipelineBuilder
+      .from[IO, String]("validation-test", testSource)
       .validate(validator)
       .to(testSink)
 
@@ -403,7 +416,8 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
       if (s.length > 3) s.validNel
       else FlowForgeError.ValidationError("Too short").invalidNel
 
-    val pipeline = EnhancedPipelineBuilder.from[IO, String]("validation-test", testSource)
+    val pipeline = EnhancedPipelineBuilder
+      .from[IO, String]("validation-test", testSource)
       .validate(validator)
       .to(testSink)
 
@@ -418,7 +432,7 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
     val comp3 = transform[IO, Int, String](x => s"Result: $x")
 
     val composed = comp1 >>> comp2 >>> comp3
-    val result = composed.run(5).unsafeRunSync()
+    val result   = composed.run(5).unsafeRunSync()
     result shouldBe "Result: 20" // (5 * 2) + 10 = 20
   }
 

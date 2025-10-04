@@ -9,7 +9,7 @@ class FlowForgeErrorUtilsCoverageSpec extends AnyFunSuite with Matchers {
   test("fromThrowable and factory helpers") {
     val ex  = new RuntimeException("boom")
     val err = FlowForgeError.fromThrowable(ex, Map("k" -> "v"))
-    err.message should include ("boom")
+    err.message should include("boom")
 
     val mf = FlowForgeError.missingField("id")
     mf.fieldName shouldBe "id"
@@ -18,7 +18,8 @@ class FlowForgeErrorUtilsCoverageSpec extends AnyFunSuite with Matchers {
     sv.field shouldBe "f"
 
     // Ensure show instance does not crash
-    FlowForgeError.showFlowForgeError.show(ValidationError.MissingRequiredField("x")) should include ("FlowForgeError")
+    FlowForgeError.showFlowForgeError.show(ValidationError.MissingRequiredField("x")) should include(
+      "FlowForgeError",
+    )
   }
 }
-

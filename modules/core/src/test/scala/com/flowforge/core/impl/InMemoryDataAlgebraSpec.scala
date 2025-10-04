@@ -30,13 +30,16 @@ class InMemoryDataAlgebraSpec extends AnyFunSuite with Matchers {
   val algebra = new InMemoryDataAlgebra[IO]
 
   // Encoder needed for join outputs producing 3-tuples
-  implicit val tuple3Encoder: DataEncoder[(String, String, String)] = new DataEncoder[(String, String, String)] {
-    def encode(data: (String, String, String), format: DataFormat) = Right(EncodedData(Array.emptyByteArray, format))
-    def schema(format: DataFormat): DataSchema                                  = DataSchema.builder.build
-    def estimateSize(data: (String, String, String), format: DataFormat): Long  = 0L
-    def supportsFormat(format: DataFormat): Boolean                             = true
-    def optimizationHints(data: (String, String, String), format: DataFormat)   = EncodingHints.default
-  }
+  implicit val tuple3Encoder: DataEncoder[(String, String, String)] =
+    new DataEncoder[(String, String, String)] {
+      def encode(data: (String, String, String), format: DataFormat) = Right(
+        EncodedData(Array.emptyByteArray, format),
+      )
+      def schema(format: DataFormat): DataSchema                                 = DataSchema.builder.build
+      def estimateSize(data: (String, String, String), format: DataFormat): Long = 0L
+      def supportsFormat(format: DataFormat): Boolean                            = true
+      def optimizationHints(data: (String, String, String), format: DataFormat)  = EncodingHints.default
+    }
 
   // Helper to create temporary test files
   def createTempFile(content: String, suffix: String = ".jsonl"): File = {
@@ -529,13 +532,15 @@ test2"""
       DatasetMetadata(2, DataSchema.builder.build, 1, Instant.now()),
     )
 
-    val result = algebra.flatMap(dataset, (x: Int) => {
-      SimpleDataset(
-        List(x, x * 10),
-        DataSchema.builder.build,
-        DatasetMetadata(2, DataSchema.builder.build, 1, Instant.now()),
-      )
-    })
+    val result = algebra.flatMap(
+      dataset,
+      (x: Int) =>
+        SimpleDataset(
+          List(x, x * 10),
+          DataSchema.builder.build,
+          DatasetMetadata(2, DataSchema.builder.build, 1, Instant.now()),
+        ),
+    )
 
     result.data shouldBe List(1, 10, 2, 20)
     result.metadata.recordCount shouldBe 4
@@ -548,13 +553,15 @@ test2"""
       DatasetMetadata(1, DataSchema.builder.build, 1, Instant.now()),
     )
 
-    val result = algebra.flatMap(dataset, (_: Int) => {
-      SimpleDataset(
-        List.empty[Int],
-        DataSchema.builder.build,
-        DatasetMetadata(0, DataSchema.builder.build, 1, Instant.now()),
-      )
-    })
+    val result = algebra.flatMap(
+      dataset,
+      (_: Int) =>
+        SimpleDataset(
+          List.empty[Int],
+          DataSchema.builder.build,
+          DatasetMetadata(0, DataSchema.builder.build, 1, Instant.now()),
+        ),
+    )
 
     result.data shouldBe List.empty
     result.schema shouldBe dataset.schema
@@ -581,13 +588,15 @@ test2"""
 
   test("join combines datasets by key") {
     // Provide local encoder for tuple3 output required by join's typeclass bound
-    implicit val tuple3Encoder: DataEncoder[(String, String, String)] = new DataEncoder[(String, String, String)] {
-      def encode(data: (String, String, String), format: DataFormat) = Right(EncodedData(Array.emptyByteArray, format))
-      def schema(format: DataFormat): DataSchema                                  = DataSchema.builder.build
-      def estimateSize(data: (String, String, String), format: DataFormat): Long  = 0L
-      def supportsFormat(format: DataFormat): Boolean                             = true
-      def optimizationHints(data: (String, String, String), format: DataFormat)   = EncodingHints.default
-    }
+    implicit val tuple3Encoder: DataEncoder[(String, String, String)] =
+      new DataEncoder[(String, String, String)] {
+        def encode(data: (String, String, String), format: DataFormat) =
+          Right(EncodedData(Array.emptyByteArray, format))
+        def schema(format: DataFormat): DataSchema                                 = DataSchema.builder.build
+        def estimateSize(data: (String, String, String), format: DataFormat): Long = 0L
+        def supportsFormat(format: DataFormat): Boolean                            = true
+        def optimizationHints(data: (String, String, String), format: DataFormat)  = EncodingHints.default
+      }
     val left = SimpleDataset(
       List(("k1", "left1"), ("k2", "left2")),
       DataSchema.builder.build,
@@ -776,7 +785,7 @@ test2"""
   test("evolveSchema migrates dataset to new schema") {
     val sourceSchema = DataSchema.builder.addField("old", DataType.String).build
     val targetSchema = DataSchema.builder.addField("new", DataType.String).build
-    val dataset      = SimpleDataset(List(1, 2), sourceSchema, DatasetMetadata(2, sourceSchema, 1, Instant.now()))
+    val dataset = SimpleDataset(List(1, 2), sourceSchema, DatasetMetadata(2, sourceSchema, 1, Instant.now()))
 
     val srcSch = sourceSchema
     val tgtSch = targetSchema
@@ -868,7 +877,11 @@ test2"""
   // ===============================
 
   test("validate returns passing quality result") {
-    val dataset  = SimpleDataset(List("test"), DataSchema.builder.build, DatasetMetadata(1, DataSchema.builder.build, 1, Instant.now()))
+    val dataset = SimpleDataset(
+      List("test"),
+      DataSchema.builder.build,
+      DatasetMetadata(1, DataSchema.builder.build, 1, Instant.now()),
+    )
     val contract: PDataContract[String] = _ => cats.data.Validated.validNel(())
 
     val result = algebra.validate(dataset, contract).unsafeRunSync()
@@ -880,7 +893,11 @@ test2"""
   }
 
   test("runQualityChecks returns results for all checks") {
-    val dataset = SimpleDataset(List("test"), DataSchema.builder.build, DatasetMetadata(1, DataSchema.builder.build, 1, Instant.now()))
+    val dataset = SimpleDataset(
+      List("test"),
+      DataSchema.builder.build,
+      DatasetMetadata(1, DataSchema.builder.build, 1, Instant.now()),
+    )
 
     val check1: QualityCheck[String] = _ => cats.data.Validated.validNel(())
     val check2: QualityCheck[String] = _ => cats.data.Validated.validNel(())

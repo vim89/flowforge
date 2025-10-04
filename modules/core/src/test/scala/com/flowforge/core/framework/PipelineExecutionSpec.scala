@@ -5,7 +5,7 @@ import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.flowforge.core.algebra.{ EffectSystem, FlowforgeResource }
 import com.flowforge.core.instances.EffectInstances
-import com.flowforge.framework.{Pipeline, PipelineExecution}
+import com.flowforge.framework.{ Pipeline, PipelineExecution }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 

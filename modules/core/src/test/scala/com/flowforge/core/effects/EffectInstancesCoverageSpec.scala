@@ -17,26 +17,28 @@ class EffectInstancesCoverageSpec extends AnyFunSuite with Matchers {
 
     val acquire = IO.pure(1)
     val useOk   = (_: Int) => IO.pure(42)
-    val release = (_: Int, ec: es.ExitCase[Throwable]) => IO {
-      ec match {
-        case _ : Any => ()
+    val release = (_: Int, ec: es.ExitCase[Throwable]) =>
+      IO {
+        ec match {
+          case _: Any => ()
+        }
+        ec match {
+          case es.ExitCase.Completed => exitWasCompleted = true
+          case _                     => ()
+        }
       }
-      ec match {
-        case es.ExitCase.Completed => exitWasCompleted = true
-        case _                     => ()
-      }
-    }
     es.bracketCase(acquire)(useOk)(release).unsafeRunSync()
     exitWasCompleted shouldBe true
 
-    val releaseErr = (_: Int, ec: es.ExitCase[Throwable]) => IO {
-      ec match {
-        case es.ExitCase.Error(_) => exitWasError = true
-        case _                    => ()
+    val releaseErr = (_: Int, ec: es.ExitCase[Throwable]) =>
+      IO {
+        ec match {
+          case es.ExitCase.Error(_) => exitWasError = true
+          case _                    => ()
+        }
       }
-    }
     val boom = (_: Int) => IO.raiseError[Int](new RuntimeException("boom"))
-    intercept[RuntimeException] { es.bracketCase(acquire)(boom)(releaseErr).unsafeRunSync() }
+    intercept[RuntimeException](es.bracketCase(acquire)(boom)(releaseErr).unsafeRunSync())
     exitWasError shouldBe true
   }
 
@@ -54,7 +56,8 @@ class EffectInstancesCoverageSpec extends AnyFunSuite with Matchers {
       attempts += 1
       if (attempts < 2) throw new RuntimeException("retry") else 7
     }
-    val retried = es.retryWithBackoff(flakey, maxRetries = 3, initialDelay = 1.millis, backoffFactor = 1.0).unsafeRunSync()
+    val retried = es
+      .retryWithBackoff(flakey, maxRetries = 3, initialDelay = 1.millis, backoffFactor = 1.0).unsafeRunSync()
     retried shouldBe 7
   }
 }

@@ -26,7 +26,10 @@ class OpenLineageEmitterHelpersSpec extends AnyFunSuite with Matchers {
     r3 shouldBe Right(())
   }
 
-  test("generateRunId uses system property when set and Http emitter maps failures", com.flowforge.core.testing.How) {
+  test(
+    "generateRunId uses system property when set and Http emitter maps failures",
+    com.flowforge.core.testing.How,
+  ) {
     val propKey = "openlineage.run.id"
     try {
       System.setProperty(propKey, "ff-fixed-id")
@@ -37,8 +40,7 @@ class OpenLineageEmitterHelpersSpec extends AnyFunSuite with Matchers {
       val http = new HttpOpenLineageEmitter[IO]()
       val res  = http.emitJobStart("ns", "job", id).unsafeRunSync()
       res.isLeft shouldBe true
-    } finally {
+    } finally
       System.clearProperty(propKey)
-    }
   }
 }

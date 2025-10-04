@@ -24,14 +24,14 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
       ErrorCategory.Configuration,
       ErrorCategory.Network,
       ErrorCategory.Security,
-      ErrorCategory.Unknown
+      ErrorCategory.Unknown,
     )
     categories should have size 7
 
     // Verify pattern matching works
     ErrorCategory.Validation match {
       case ErrorCategory.Validation => succeed
-      case _ => fail("Pattern matching failed")
+      case _                        => fail("Pattern matching failed")
     }
   }
 
@@ -92,14 +92,14 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("ValidationError.SchemaViolation should support withContext") {
-    val error = ValidationError.SchemaViolation("userId", "String", "Int")
+    val error    = ValidationError.SchemaViolation("userId", "String", "Int")
     val enriched = error.withContext("pipelineId", "test-pipeline")
     enriched.context should contain("pipelineId" -> "test-pipeline")
   }
 
   test("ValidationError.SchemaViolation should support withCause") {
-    val error = ValidationError.SchemaViolation("userId", "String", "Int")
-    val cause = new RuntimeException("Parse error")
+    val error    = ValidationError.SchemaViolation("userId", "String", "Int")
+    val cause    = new RuntimeException("Parse error")
     val enriched = error.withCause(cause)
     enriched.cause shouldBe Some(cause)
     enriched.getCause shouldBe cause
@@ -111,7 +111,7 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
       expected = "String",
       actual = "Int",
       schemaName = Some("UserSchema"),
-      message = "Custom message"
+      message = "Custom message",
     )
     error.schemaName shouldBe Some("UserSchema")
     error.message shouldBe "Custom message"
@@ -176,7 +176,7 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
   test("SystemError.OperationTimeout should construct with durations") {
     val timeout = 30.seconds
     val elapsed = 35.seconds
-    val error = SystemError.OperationTimeout("query-execution", timeout, elapsed)
+    val error   = SystemError.OperationTimeout("query-execution", timeout, elapsed)
     error.operation shouldBe "query-execution"
     error.timeout shouldBe timeout
     error.elapsed shouldBe elapsed
@@ -199,7 +199,7 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
 
   test("BusinessError.SlaViolation should construct correctly") {
     val duration = java.time.Duration.ofMinutes(5)
-    val error = BusinessError.SlaViolation("latency", "100ms", "500ms", duration)
+    val error    = BusinessError.SlaViolation("latency", "100ms", "500ms", duration)
     error.slaMetric shouldBe "latency"
     error.expectedValue shouldBe "100ms"
     error.actualValue shouldBe "500ms"
@@ -241,8 +241,8 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("FlowForgeError.CompositeError should aggregate errors correctly") {
-    val error1 = FlowForgeError.ValidationError("Error 1")
-    val error2 = FlowForgeError.ValidationError("Error 2")
+    val error1    = FlowForgeError.ValidationError("Error 1")
+    val error2    = FlowForgeError.ValidationError("Error 2")
     val composite = FlowForgeError.CompositeError(NonEmptyList.of(error1, error2))
 
     composite.errors.toList should have size 2
@@ -251,15 +251,15 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
 
   test("FlowForgeError.CompositeError isRetryable should be true if any error is retryable") {
     val nonRetryable = FlowForgeError.ValidationError("Error 1")
-    val retryable = SystemError.ServiceUnavailable("service")
-    val composite = FlowForgeError.CompositeError(NonEmptyList.of(nonRetryable, retryable))
+    val retryable    = SystemError.ServiceUnavailable("service")
+    val composite    = FlowForgeError.CompositeError(NonEmptyList.of(nonRetryable, retryable))
 
     composite.isRetryable shouldBe true
   }
 
   test("FlowForgeError.CompositeError isRetryable should be false if all errors are non-retryable") {
-    val error1 = FlowForgeError.ValidationError("Error 1")
-    val error2 = FlowForgeError.ValidationError("Error 2")
+    val error1    = FlowForgeError.ValidationError("Error 1")
+    val error2    = FlowForgeError.ValidationError("Error 2")
     val composite = FlowForgeError.CompositeError(NonEmptyList.of(error1, error2))
 
     composite.isRetryable shouldBe false
@@ -271,7 +271,7 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
 
   test("FlowForgeError.fromThrowable should create SystemError") {
     val throwable = new RuntimeException("Something went wrong")
-    val error = FlowForgeError.fromThrowable(throwable)
+    val error     = FlowForgeError.fromThrowable(throwable)
 
     error shouldBe a[SystemError.ServiceUnavailable]
     error.cause shouldBe Some(throwable)
@@ -280,8 +280,8 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
 
   test("FlowForgeError.fromThrowable should include context") {
     val throwable = new RuntimeException("Error")
-    val context = Map("pipelineId" -> "test-123", "stage" -> "transform")
-    val error = FlowForgeError.fromThrowable(throwable, context)
+    val context   = Map("pipelineId" -> "test-123", "stage" -> "transform")
+    val error     = FlowForgeError.fromThrowable(throwable, context)
 
     error.context shouldBe context
   }
@@ -320,20 +320,20 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("All errors should support withContext with map") {
-    val error = FlowForgeError.ValidationError("Error")
+    val error    = FlowForgeError.ValidationError("Error")
     val enriched = error.withContext(Map("key1" -> "value1", "key2" -> "value2"))
     enriched.context should contain("key1" -> "value1")
     enriched.context should contain("key2" -> "value2")
   }
 
   test("All errors should support withContext with key-value") {
-    val error = FlowForgeError.ValidationError("Error")
+    val error    = FlowForgeError.ValidationError("Error")
     val enriched = error.withContext("pipelineId", "test-pipeline")
     enriched.context should contain("pipelineId" -> "test-pipeline")
   }
 
   test("Errors should preserve existing context when adding new context") {
-    val error = FlowForgeError.ValidationError("Error", context = Map("existing" -> "value"))
+    val error    = FlowForgeError.ValidationError("Error", context = Map("existing" -> "value"))
     val enriched = error.withContext("new", "data")
     enriched.context should contain("existing" -> "value")
     enriched.context should contain("new" -> "data")
@@ -391,7 +391,7 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
       ValidationError.SchemaViolation("field", "expected", "actual"),
       ValidationError.QualityViolation("constraint", "value"),
       ValidationError.MissingRequiredField("field"),
-      ValidationError.TypeMismatch("field", "expected", "actual", "value")
+      ValidationError.TypeMismatch("field", "expected", "actual", "value"),
     )
 
     errors.foreach {
@@ -406,13 +406,13 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
     val errors: List[SystemError] = List(
       SystemError.ResourceExhausted("resource", "limit", "current"),
       SystemError.ServiceUnavailable("service"),
-      SystemError.OperationTimeout("operation", 1.second, 2.seconds)
+      SystemError.OperationTimeout("operation", 1.second, 2.seconds),
     )
 
     errors.foreach {
-      case _: SystemError.ResourceExhausted   => // ok
-      case _: SystemError.ServiceUnavailable  => // ok
-      case _: SystemError.OperationTimeout    => // ok
+      case _: SystemError.ResourceExhausted  => // ok
+      case _: SystemError.ServiceUnavailable => // ok
+      case _: SystemError.OperationTimeout   => // ok
     }
   }
 
@@ -420,7 +420,7 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
     val duration = java.time.Duration.ofMinutes(1)
     val errors: List[BusinessError] = List(
       BusinessError.DataContractViolation("contract", "rule", "dataset"),
-      BusinessError.SlaViolation("metric", "expected", "actual", duration)
+      BusinessError.SlaViolation("metric", "expected", "actual", duration),
     )
 
     errors.foreach {
@@ -457,7 +457,7 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
 
   test("Error copy should create new instance with same values") {
     val original = ValidationError.SchemaViolation("field", "expected", "actual")
-    val copy = original.copy()
+    val copy     = original.copy()
 
     copy.field shouldBe original.field
     copy.expected shouldBe original.expected
@@ -474,17 +474,21 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("Errors with same values should be equal") {
-    val errorId = "test-id"
+    val errorId   = "test-id"
     val timestamp = Instant.now()
     val error1 = ValidationError.SchemaViolation(
-      "field", "expected", "actual",
+      "field",
+      "expected",
+      "actual",
       errorId = errorId,
-      timestamp = timestamp
+      timestamp = timestamp,
     )
     val error2 = ValidationError.SchemaViolation(
-      "field", "expected", "actual",
+      "field",
+      "expected",
+      "actual",
       errorId = errorId,
-      timestamp = timestamp
+      timestamp = timestamp,
     )
 
     error1 shouldBe error2
