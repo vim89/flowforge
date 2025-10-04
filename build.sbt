@@ -8,10 +8,12 @@ ThisBuild / organization := "com.flowforge"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 // Default Scala stays 2.13 for most modules; Spark/Deequ modules are handled pragmatically via deps.
 ThisBuild / scalaVersion := Dependencies.Versions.scala213
+// Cross-compile defaults: build-level + commands iterate over Scala 2.13 and 3 for speed and stability.
+// Module-specific overrides (e.g., enginesFlink) can still target 2.12 explicitly.
+// Global cross-build: keep 2.13 only for stability and speed.
+// Module overrides handle 2.12 (Flink) and Scala 3 (experimental) explicitly.
 ThisBuild / crossScalaVersions := Seq(
-  Dependencies.Versions.scala212,
-  Dependencies.Versions.scala213,
-  Dependencies.Versions.scala3  // ✅ Enabled: Improved macro implementation supports Scala 3
+  Dependencies.Versions.scala213
 )
 
 // ===== REPOSITORY RESOLVERS =====
@@ -127,7 +129,6 @@ lazy val root = (project in file("."))
     connectorsGcs,
     connectorsJdbc,
     enginesSpark,
-    enginesFlink,
     qualityDeequ, // Removed empty quality module per v1.0-2 plan
     examples,
     compileFailTests,
@@ -155,6 +156,8 @@ lazy val infrastructure = moduleProject("infrastructure")
 lazy val core = moduleProject("core")
   .settings(
     description := "Core abstractions and custom type system",
+    // Inherit ThisBuild cross (2.13, 3). Flink-specific modules handle 2.12 separately.
+    crossScalaVersions := (ThisBuild / crossScalaVersions).value,
     libraryDependencies ++= Dependencies.forModule("core"),
     // Minimal, justified excludes only
     coverageExcludedPackages := Seq(

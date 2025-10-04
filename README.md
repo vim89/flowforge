@@ -1,8 +1,16 @@
 # flowforge - Type‑safe-first Data Engineering
 
 ![Build](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/ci.yml?branch=main&label=build)
+[![Nightly](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/nightly.yml?branch=main&label=nightly)](https://github.com/vim89/flowforge/actions/workflows/nightly.yml)
 [![Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?label=coverage)](https://app.codecov.io/gh/vim89/flowforge)
+[![Core Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=core&label=core)](https://app.codecov.io/gh/vim89/flowforge/flags/core)
+[![Contracts Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=contracts&label=contracts)](https://app.codecov.io/gh/vim89/flowforge/flags/contracts)
+[![Connectors Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=connectors&label=connectors)](https://app.codecov.io/gh/vim89/flowforge/flags/connectors)
+[![Infrastructure Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=infrastructure&label=infrastructure)](https://app.codecov.io/gh/vim89/flowforge/flags/infrastructure)
 [![Scaladoc](https://img.shields.io/badge/api-Scaladoc-informational)](https://vim89.github.io/flowforge/api/)
+[![Docs Lint](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/docs-lint.yml?branch=main&label=docs%20lint)](https://github.com/vim89/flowforge/actions/workflows/docs-lint.yml)
+[![Link Check](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/link-check.yml?branch=main&label=links)](https://github.com/vim89/flowforge/actions/workflows/link-check.yml)
+[![Security](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/security.yml?branch=main&label=security)](https://github.com/vim89/flowforge/actions/workflows/security.yml)
 [![Changelog](https://img.shields.io/badge/changelog-Release%20Please-blue)](CHANGELOG.md)
 ![Release](https://img.shields.io/github/v/release/vim89/flowforge?include_prereleases&label=release)
 ![License](https://img.shields.io/github/license/vim89/flowforge)
@@ -59,6 +67,16 @@ You get compile‑time guarantees (not CI or runtime heuristics), a small opinio
 - Public API: [docs/public-api.md](docs/public-api.md)
 - How it fails (error anatomy): [docs/how-it-fails.md](docs/how-it-fails.md)
 - Framework behaviors (non‑negotiables): [docs/design/framework-behaviors.md](docs/design/framework-behaviors.md)
+- Cut a release: [docs/release/how-to-cut-a-release.md](docs/release/how-to-cut-a-release.md)
+
+### Module status (coverage)
+
+>Nightly runs provide broader integration coverage.
+
+- Core: [![Core Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=core&label=core)](https://app.codecov.io/gh/vim89/flowforge/flags/core)
+- Contracts: [![Contracts Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=contracts&label=contracts)](https://app.codecov.io/gh/vim89/flowforge/flags/contracts)
+- Connectors: [![Connectors Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=connectors&label=connectors)](https://app.codecov.io/gh/vim89/flowforge/flags/connectors)
+- Infrastructure: [![Infrastructure Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=infrastructure&label=infrastructure)](https://app.codecov.io/gh/vim89/flowforge/flags/infrastructure)
 
 ## Guarantees (Non‑negotiables)
 
@@ -129,6 +147,20 @@ PipelineBuilder[IO]("demo")
 | Scala | 2.13 (primary) | Scala 3 for core only (no Spark deps) |
 | Spark | 3.5.x | Runs on Java 17 |
 | Flink | Scala 2.12 only | Scala API constraints |
+
+### Flink (2.12)
+
+Flink’s Scala API is 2.12‑only. The root build excludes Flink from the default aggregate so that `+compile`, `+test:compile`, and `+test` stay green for 2.13 (and Scala 3 where applicable). Build/test Flink explicitly when you need it:
+
+```
+# Compile Flink (Scala 2.12)
+sbt "++2.12.* enginesFlink/compile"
+
+# Run Flink tests (Scala 2.12)
+sbt "++2.12.* enginesFlink/test"
+```
+
+References: Flink documents binary incompatibility across Scala lines and the need to select the matching `_2.12` artifacts for the Scala API. See Flink’s docs on Scala versions and sbt cross‑build guidance. 
 
 ## Architecture (at a glance)
 

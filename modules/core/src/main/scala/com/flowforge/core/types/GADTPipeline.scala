@@ -275,7 +275,17 @@ case class GADTPipelineBuilder[F[_]: EffectSystem, State <: GADTBuilderState, In
     ev: State =:= GADTHasTransform,
   ): GADTPipelineBuilder[F, GADTHasQuality, Input, Output] = {
     val qualityStage = GADTStage.Quality[F, Output](
-      validation = input => validations.toList.traverse(_(input)).map(_ => ()),
+      validation = input => {
+        import cats.data.{ NonEmptyList, Validated }
+        val start: ValidatedNel[FlowForgeError, Unit] = Validated.valid(())
+        validations.toList.foldLeft(start) { (acc, f) =>
+          (acc, f(input)) match {
+            case (Validated.Valid(_), v)                        => v
+            case (i @ Validated.Invalid(_), Validated.Valid(_)) => i
+          case (Validated.Invalid(e1), Validated.Invalid(e2)) => Validated.Invalid(e1.concatNel(e2))
+          }
+        }
+      },
       dataType = GADTDataType[Output](),
     )
 

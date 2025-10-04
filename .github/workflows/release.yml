@@ -1,10 +1,21 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 0.1.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        default: false
+        type: boolean
+      target:
+        description: 'target_commitish (branch name or commit SHA). Defaults to the triggering commit.'
+        required: false
+        type: string
     inputs:
       version:
         description: 'Release version (e.g., 0.1.0)'
@@ -36,29 +47,26 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       is-prerelease: ${{ steps.version.outputs.is-prerelease }}
+      target-commitish: ${{ steps.version.outputs.target_commitish }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
 
       - name: Determine version
         id: version
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-            IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
-          else
-            VERSION=${GITHUB_REF#refs/tags/v}
-            if [[ $VERSION == *"alpha"* ]] || [[ $VERSION == *"beta"* ]] || [[ $VERSION == *"rc"* ]] || [[ $VERSION == *"snapshot"* ]]; then
-              IS_PRERELEASE=true
-            else
-              IS_PRERELEASE=false
-            fi
+          VERSION="${{ github.event.inputs.version }}"
+          IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
+          TARGET_INPUT="${{ github.event.inputs.target }}"
+          if [ -z "$TARGET_INPUT" ]; then
+            TARGET_INPUT="${GITHUB_SHA}"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "is-prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
-          echo "Release version: $VERSION (prerelease: $IS_PRERELEASE)"
+          echo "target_commitish=$TARGET_INPUT" >> $GITHUB_OUTPUT
+          echo "Release version: $VERSION (prerelease: $IS_PRERELEASE, target=$TARGET_INPUT)"
 
       - name: Validate version format
         run: |
@@ -85,25 +93,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Cache SBT and dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.sbt
-            ~/.coursier/cache
-            ~/.ivy2/cache
-          key: ${{ runner.os }}-sbt-release-${{ hashFiles('**/*.sbt', '**/project/**/*.scala') }}
-          restore-keys: |
-            ${{ runner.os }}-sbt-release-
-            ${{ runner.os }}-sbt-
+      - name: Coursier cache (sbt/ivy)
+        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
 
       - name: Check formatting
         run: sbt scalafmtCheckAll
@@ -151,25 +150,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Cache SBT and dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.sbt
-            ~/.coursier/cache
-            ~/.ivy2/cache
-          key: ${{ runner.os }}-sbt-release-${{ hashFiles('**/*.sbt', '**/project/**/*.scala') }}
-          restore-keys: |
-            ${{ runner.os }}-sbt-release-
-            ${{ runner.os }}-sbt-
+      - name: Coursier cache (sbt/ivy)
+        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
 
       - name: Set release version
         run: |
@@ -208,25 +198,16 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
         with:
           distribution: 'temurin'
           java-version: '17'
-      - name: Cache SBT and dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.sbt
-            ~/.coursier/cache
-            ~/.ivy2/cache
-          key: ${{ runner.os }}-sbt-docs-${{ hashFiles('**/*.sbt', '**/project/**/*.scala') }}
-          restore-keys: |
-            ${{ runner.os }}-sbt-docs-
-            ${{ runner.os }}-sbt-
+      - name: Coursier cache (sbt/ivy)
+        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
       - name: Generate Scaladoc for all modules
         run: |
           sbt -batch doc
@@ -266,12 +247,12 @@ jobs:
           </body></html>
           EOF
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
         with:
           path: public
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
 
   create-release:
     name: Create GitHub Release
@@ -279,10 +260,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
         with:
           name: release-artifacts-${{ needs.validate-release.outputs.version }}
           path: release-artifacts/
@@ -327,18 +308,19 @@ jobs:
           } > release-notes.md
 
       - name: Create gitHub release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@26f96dfa697d77e81fd5907df203aa23a56210a8
         with:
           tag_name: v${{ needs.validate-release.outputs.version }}
           name: FlowForge v${{ needs.validate-release.outputs.version }}
           body_path: release-notes.md
+          target_commitish: ${{ needs.validate-release.outputs.target-commitish }}
           prerelease: ${{ needs.validate-release.outputs.is-prerelease == 'true' }}
           files: release-artifacts/*
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload to Codecov
         if: success()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false

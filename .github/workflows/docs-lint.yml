@@ -5,13 +5,20 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   docs-lint:
     name: Documentation Structure & Scaladoc
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Set up ripgrep
         run: |
@@ -28,7 +35,7 @@ jobs:
 
       - name: Upload Scaladoc report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8a2d59903357f237d72ff6efea362c5f70 # v4.6.2
         with:
           name: doclint-report
           path: doclint-report.txt

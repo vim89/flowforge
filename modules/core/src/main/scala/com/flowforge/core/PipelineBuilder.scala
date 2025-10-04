@@ -174,7 +174,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
     val md = PipelineMetadata(
       name = name,
       stages = stages.map(_.name),
-      transformations = stages.collect { case _: PipelineStage.Transform[_, _, _] => 1 }.sum,
+      transformations = stages.count(_.isTransform),
       qualityChecks = 0,
       tags = Map(
         "builder" -> "contract-aware",

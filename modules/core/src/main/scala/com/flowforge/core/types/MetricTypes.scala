@@ -144,9 +144,9 @@ object MetricValue {
         FiniteDuration(totalDuration.toMillis / durations.length, TimeUnit.MILLISECONDS)
       else FiniteDuration(0, TimeUnit.MILLISECONDS)
     def maxDuration: FiniteDuration =
-      durations.maxOption.getOrElse(FiniteDuration(0, TimeUnit.MILLISECONDS))
+      if (durations.isEmpty) FiniteDuration(0, TimeUnit.MILLISECONDS) else durations.max
     def minDuration: FiniteDuration =
-      durations.minOption.getOrElse(FiniteDuration(0, TimeUnit.MILLISECONDS))
+      if (durations.isEmpty) FiniteDuration(0, TimeUnit.MILLISECONDS) else durations.min
 
     def record(duration: FiniteDuration): Timer = copy(durations = durations :+ duration)
   }
@@ -319,7 +319,7 @@ case class MetricLabels(labels: Map[String, String] = Map.empty) {
    * Create a subset with only specified keys.
    */
   def subset(keys: Set[String]): MetricLabels =
-    MetricLabels(labels.view.filterKeys(keys.contains).toMap)
+    MetricLabels(labels.filter { case (k, _) => keys.contains(k) })
 
   /**
    * Merge with other labels, giving precedence to other.

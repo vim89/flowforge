@@ -6,6 +6,7 @@ import com.flowforge.core.contracts.SchemaPolicy
 import com.flowforge.core.instances.EffectInstances._
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import com.flowforge.core.testing.Why
 
 /**
  * Compile-time contract enforcement tests.
@@ -32,7 +33,7 @@ class CompileTimeContractSpec extends AnyWordSpec with Matchers {
 
   "100% Compile-Time Contract Builder" should {
 
-    "have the correct API signature for phantom-state enforcement" in {
+    "have the correct API signature for phantom-state enforcement" taggedAs(Why) in {
       // This test documents the API structure and ensures the builder exists
       val builderEmpty = PipelineBuilder[IO]("test")
 
@@ -62,7 +63,7 @@ class CompileTimeContractSpec extends AnyWordSpec with Matchers {
        */
     }
 
-    "enforce complete pipeline stages at compile time" in {
+    "enforce complete pipeline stages at compile time" taggedAs(Why) in {
       /*
        * DOCUMENTED COMPILE-TIME GUARANTEE #1: Missing sink
        *
@@ -82,7 +83,7 @@ class CompileTimeContractSpec extends AnyWordSpec with Matchers {
       succeed
     }
 
-    "enforce schema compatibility at source and sink" in {
+    "enforce schema compatibility at source and sink" taggedAs(Why) in {
       /*
        * DOCUMENTED COMPILE-TIME GUARANTEE #2: Schema mismatch
        *
@@ -112,7 +113,7 @@ class CompileTimeContractSpec extends AnyWordSpec with Matchers {
       succeed
     }
 
-    "provide the correct schema policy types" in {
+    "provide the correct schema policy types" taggedAs(Why) in {
       // Test that SchemaPolicy case objects exist and can be used
       val exactPolicy          = SchemaPolicy.Exact
       val backwardPolicy       = SchemaPolicy.Backward
@@ -128,7 +129,7 @@ class CompileTimeContractSpec extends AnyWordSpec with Matchers {
       exactUnorderedPolicy shouldBe a[SchemaPolicy]
     }
 
-    "demonstrate phantom types prevent invalid states" in {
+    "demonstrate phantom types prevent invalid states" taggedAs(Why) in {
       // Test that we can create a builder in Empty state
       val emptyBuilder = PipelineBuilder[IO]("phantom-test")
 

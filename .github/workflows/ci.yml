@@ -61,34 +61,24 @@ jobs:
     runs-on: ubuntu-22.04
     if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17 (with SBT cache)
-        uses: actions/setup-java@v4
+      - name: SBT (build matrix)
+        uses: ./.github/actions/sbt
         with:
-          distribution: temurin
           java-version: '17'
-          cache: 'sbt'
-
-      - name: Build module
-        run: sbt -batch ${{ matrix.commands }}
+          distribution: temurin
+          commands: ${{ matrix.commands }}
 
   refactor-lint:
     name: Refactor lint & Unsafe cast gate
     runs-on: ubuntu-22.04
     if: ${{ !github.event.pull_request.draft }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up JDK 17 (with SBT cache)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: 'sbt'
       - name: Scalafmt check
-        run: sbt -batch "scalafmtCheckAll"
+        uses: ./.github/actions/sbt
+        with:
+          java-version: '17'
+          distribution: temurin
+          commands: scalafmtCheckAll
       - name: Scalafix check (production code only - test/examples excluded)
         run: |
           # Run scalafix on production sources (excluding tests, examples, CLIs)
@@ -253,4 +243,3 @@ jobs:
       - name: Run Spark/Delta Integration Tests
         run: |
           sbt -batch -DwithSparkIT=true "enginesSpark/testOnly *SparkDeltaSCD2IT"
-

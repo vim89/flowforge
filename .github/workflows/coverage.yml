@@ -9,34 +9,74 @@ jobs:
   coverage:
     name: Scoverage + Codecov (unit modules)
     runs-on: ubuntu-22.04
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     timeout-minutes: 30
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17 (with SBT cache)
-        uses: actions/setup-java@v4
+      - name: SBT coverage run
+        uses: ./.github/actions/sbt
         with:
-          distribution: temurin
           java-version: '17'
-          cache: 'sbt'
-
-      - name: Run coverage (unit scope)
-        run: |
-          # Unit-coverage scope: generate reports without hard-failing on totals.
-          # Gating now handled by Codecov patch/project statuses (see codecov.yml).
-          sbt -batch -DwithSparkIT=false \
+          distribution: temurin
+          commands: |
             clean coverage \
             "core/test" "infrastructure/test" "connectors/test" "contracts/test" \
             coverageReport coverageAggregate
 
-      - name: Upload coverage to Codecov
+      - name: Upload coverage (umbrella)
         if: ${{ !env.ACT }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: |
             ./target/scala-2.13/scoverage-report/scoverage.xml
             ./modules/*/target/scala-2.13/scoverage-report/scoverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
+          name: umbrella
           fail_ci_if_error: false
           verbose: true
+
+      # Per-module uploads with flags for README badges
+      - name: Upload coverage (core flag)
+        if: ${{ !env.ACT }}
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./modules/core/target/scala-2.13/scoverage-report/scoverage.xml
+          flags: core
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          verbose: true
+          handle_no_reports_found: true
+
+      - name: Upload coverage (contracts flag)
+        if: ${{ !env.ACT }}
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./modules/contracts/target/scala-2.13/scoverage-report/scoverage.xml
+          flags: contracts
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          verbose: true
+          handle_no_reports_found: true
+
+      - name: Upload coverage (connectors flag)
+        if: ${{ !env.ACT }}
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./modules/connectors/target/scala-2.13/scoverage-report/scoverage.xml
+          flags: connectors
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          verbose: true
+          handle_no_reports_found: true
+
+      - name: Upload coverage (infrastructure flag)
+        if: ${{ !env.ACT }}
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./modules/infrastructure/target/scala-2.13/scoverage-report/scoverage.xml
+          flags: infrastructure
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          verbose: true
+          handle_no_reports_found: true

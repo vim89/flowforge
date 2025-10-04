@@ -1,0 +1,38 @@
+name: "sbt run (checkout + setup + cache)"
+description: "Composite action to run sbt with pinned actions and coursier cache"
+inputs:
+  java-version:
+    description: "Java version"
+    default: '17'
+    required: false
+  distribution:
+    description: "JDK distribution"
+    default: 'temurin'
+    required: false
+  commands:
+    description: "sbt commands to run (space or newline separated)"
+    required: true
+  cache-coursier:
+    description: "Enable coursier cache"
+    default: 'true'
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    - name: Setup Java
+      uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
+      with:
+        distribution: ${{ inputs.distribution }}
+        java-version: ${{ inputs.java-version }}
+        cache: 'sbt'
+    - name: Coursier cache
+      if: ${{ inputs.cache-coursier == 'true' }}
+      uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+    - name: Run sbt
+      shell: bash
+      run: |
+        set -euo pipefail
+        sbt -batch ${{ inputs.commands }}
+

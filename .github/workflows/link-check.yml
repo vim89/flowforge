@@ -5,22 +5,29 @@ on:
   schedule:
     - cron: '15 3 * * 1'  # Mondays 03:15 UTC
 
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lychee:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Install lychee (link checker)
         id: lychee
-        uses: lycheeverse/lychee-action@v1.10.0
+        uses: lycheeverse/lychee-action@2b973e8092c16d8baeba8ecb7d20a62118b02d65 # v1.10.0
         with:
           args: --config .lychee.toml "README.md" "docs/**/*.md"
           fail: true
       - name: Create issue on failure
         if: failure()
-        uses: peter-evans/create-issue-from-file@v5
+        uses: peter-evans/create-issue-from-file@e8ef13276a1b9a863a3d917b4f95b52528610c54 # v5.0.1
         with:
           title: "Markdown Link Check failures"
           content-filepath: ./lychee/out.md
