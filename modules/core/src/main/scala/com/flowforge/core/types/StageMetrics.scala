@@ -28,7 +28,11 @@ case class StageMetrics(
     recordsFiltered = recordsFiltered + other.recordsFiltered,
     processingTimeMs = processingTimeMs + other.processingTimeMs,
     errors = errors + other.errors,
-    lastExecuted = (lastExecuted ++ other.lastExecuted).maxOption,
+    lastExecuted = {
+      val both = lastExecuted.toList ++ other.lastExecuted.toList
+      if (both.isEmpty) None
+      else Some(both.maxBy(_.toEpochMilli))
+    },
   )
 }
 

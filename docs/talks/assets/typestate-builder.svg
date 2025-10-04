@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="260" viewBox="0 0 880 260">
+  <style>
+    .title { font: 700 20px Inter, Segoe UI, Arial, sans-serif; }
+    .node { fill: #eef6ff; stroke: #7fb3ff; stroke-width: 1.2; }
+    .node-ok { fill: #e6f7ee; stroke: #3aa65a; }
+    .label { font: 600 15px Inter, Segoe UI, Arial, sans-serif; fill: #0b1f33; }
+    .hint { font: 14px Inter, Segoe UI, Arial, sans-serif; fill: #355; }
+    .arrow { stroke: #333; stroke-width: 1.6; marker-end: url(#arrow); fill: none; }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333"/>
+    </marker>
+  </defs>
+
+  <text x="20" y="28" class="title">Typestate Builder (Concept)</text>
+
+  <!-- Nodes -->
+  <g transform="translate(40,80)">
+    <rect class="node" x="0" y="0" width="160" height="60" rx="10"/>
+    <text class="label" x="40" y="36">Empty</text>
+
+    <rect class="node" x="220" y="0" width="200" height="60" rx="10"/>
+    <text class="label" x="238" y="36">WithContract</text>
+
+    <rect class="node" x="480" y="0" width="200" height="60" rx="10"/>
+    <text class="label" x="500" y="36">WithTransform</text>
+
+    <rect class="node-ok" x="740" y="0" width="120" height="60" rx="10"/>
+    <text class="label" x="760" y="36">Complete</text>
+
+    <!-- arrows -->
+    <line class="arrow" x1="160" y1="30" x2="220" y2="30"/>
+    <line class="arrow" x1="420" y1="30" x2="480" y2="30"/>
+    <line class="arrow" x1="680" y1="30" x2="740" y2="30"/>
+  </g>
+
+  <text class="hint" x="60" y="200">addSource → addTransform → addSink → build()</text>
+  <text class="hint" x="60" y="224">build() only exists from Complete; illegal states are unrepresentable</text>
+</svg>
+

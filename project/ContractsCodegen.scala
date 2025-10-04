@@ -33,16 +33,13 @@ object ContractsCodegen {
       s"""
          |package %s
          |
-         |import shapeless.LabelledGeneric
+         |// Generated from Avro by FlowForge ContractsCodegen
+         |// NOTE: Keep this minimal and macro-friendly; compile-time conformance uses SchemaConforms
          |
          |final case class %s(
          |  %s
          |)
-         |
-         |object %sContract {
-         |  type Repr = LabelledGeneric[%s]#Repr
-         |}
-         |""".stripMargin.format(pkg, cls, params, cls, cls)
+         |""".stripMargin.format(pkg, cls, params)
 
     val relOut = pkg.replace('.', '/') + s"/$cls.scala"
     Right(Codegen(relOut, code))

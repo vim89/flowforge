@@ -41,8 +41,16 @@ case class FlowForgePipeline[F[_]: EffectSystem, A, B](
 
     // Validate after transformations; accumulate all validation errors
     transformedF.map { data =>
-      val results = validations.map(_(data))
-      results.sequence.map(_ => data)
+      import cats.data.{ NonEmptyList, Validated }
+      val start: Validated[NonEmptyList[FlowForgeError], Unit] = Validated.valid(())
+      val combined = validations.foldLeft(start) { (acc, f) =>
+        (acc, f(data)) match {
+          case (Validated.Valid(_), v)                          => v
+          case (i @ Validated.Invalid(_), Validated.Valid(_))   => i
+          case (Validated.Invalid(e1), Validated.Invalid(e2))   => Validated.Invalid(e1.concatNel(e2))
+        }
+      }
+      combined.map(_ => data)
     }
   }
 
@@ -66,7 +74,7 @@ case class FlowForgePipeline[F[_]: EffectSystem, A, B](
   /**
    * Validate the pipeline configuration.
    */
-  def validate: ConfigValidation[Unit] =
+  def validate: com.flowforge.core.syntax.ValidationSyntax.ConfigValidation[Unit] =
     // Pipeline-level validation logic would go here
     ().validNel
 }

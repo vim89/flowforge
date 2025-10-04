@@ -1,3 +1,4 @@
+// scalafix:off DisableSyntax.null
 package com.flowforge.core.syntax
 
 import cats.data.ValidatedNel

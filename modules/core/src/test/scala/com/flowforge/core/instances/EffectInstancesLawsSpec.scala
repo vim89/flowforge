@@ -1,3 +1,4 @@
+// scalafix:off DisableSyntax.var DisableSyntax.throw DisableSyntax.null DisableSyntax.noUnsafeRunSync
 /**
  * Property-based tests for EffectSystem instances to verify Monad laws.
  *

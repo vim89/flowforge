@@ -1,4 +1,8 @@
-# Compile‑Time Contracts & Fiber‑Safe Data Pipelines (Scala)
+# Archived — Compile‑Time Contracts & Fiber‑Safe Data Pipelines (Scala)
+
+> This deck is archived. Use the concept‑only talks instead:
+> - docs/talks/talk-a-api-migration.md
+> - docs/talks/talk-b-types-validation.md
 
 > 45‑minute conference talk deck (Markdown). Brand‑agnostic; focuses on design, philosophy, and patterns. Code snippets are illustrative and trimmed for clarity. Speaker notes are comprehensive for rehearsal.
 

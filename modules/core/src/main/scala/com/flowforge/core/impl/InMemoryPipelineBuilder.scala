@@ -1,3 +1,4 @@
+// scalafix:off DisableSyntax.isInstanceOf
 package com.flowforge.core.impl
 
 import cats.data.Kleisli

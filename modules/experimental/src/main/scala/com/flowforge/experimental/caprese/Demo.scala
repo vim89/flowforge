@@ -1,5 +1,6 @@
 package com.flowforge.experimental.caprese
 
+/*
 import scala.language.experimental.captureChecking
 
 object Demo:
@@ -26,3 +27,4 @@ object Demo:
   //     c // error: capability C^ escapes its scope
   //   }
 
+ */

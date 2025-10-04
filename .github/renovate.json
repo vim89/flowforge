@@ -1,0 +1,75 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":preserveSemverRanges"
+  ],
+  "labels": ["dependencies"],
+  "assignees": ["@vim89"],
+  "schedule": ["before 6am on monday"],
+  "packageRules": [
+    {
+      "description": "Group Scala dependencies",
+      "groupName": "Scala core",
+      "matchPackagePatterns": ["^org\\.scala-lang"],
+      "schedule": ["before 6am on the first day of the month"]
+    },
+    {
+      "description": "Group Spark dependencies",
+      "groupName": "Apache Spark",
+      "matchPackagePatterns": ["^org\\.apache\\.spark"],
+      "schedule": ["before 6am on the first day of the month"]
+    },
+    {
+      "description": "Group Cats Effect ecosystem",
+      "groupName": "Cats Effect",
+      "matchPackagePatterns": ["^org\\.typelevel"],
+      "schedule": ["before 6am on monday"]
+    },
+    {
+      "description": "Group testing libraries",
+      "groupName": "Testing",
+      "matchPackagePatterns": ["scalatest", "scalacheck", "munit"],
+      "schedule": ["before 6am on monday"]
+    },
+    {
+      "description": "Auto-merge patch updates",
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash"
+    },
+    {
+      "description": "Auto-merge minor updates for dev dependencies",
+      "matchUpdateTypes": ["minor"],
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash"
+    },
+    {
+      "description": "Pin GitHub Actions to commit SHA",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true
+    },
+    {
+      "description": "Separate PR for major updates",
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "major-update"],
+      "automerge": false
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "assignees": ["@vim89"],
+    "stabilityDays": 0,
+    "automerge": true
+  },
+  "sbt": {
+    "fileMatch": ["(^|/)build\\.sbt$", "(^|/)project/.*\\.scala$", "(^|/)project/.*\\.sbt$"]
+  },
+  "ignoreDeps": [],
+  "postUpdateOptions": ["goModTidy"]
+}

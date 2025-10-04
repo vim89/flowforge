@@ -1,14 +1,11 @@
 package com.flowforge.config
 
 import cats.data.ValidatedNel
-import cats.syntax.either._
 import cats.effect.Sync
+import cats.syntax.either._
 import com.flowforge.core.algebra.{ ConfigurationAlgebra, FlowForgeConfig }
-import com.flowforge.core.safety.Safety
-import com.flowforge.core.safety.ErrorMapper
+import com.flowforge.core.safety.{ ErrorMapper, Safety }
 import com.typesafe.config.{ Config, ConfigFactory }
-
-import scala.util.{ Failure, Success, Try }
 
 /**
  * Configuration error types.
@@ -56,20 +53,21 @@ object ConfigurationManagement {
     new TypesafeConfigurationManagement[F]
 
   private class TypesafeConfigurationManagement[F[_]: Sync] extends ConfigurationManagement[F] {
-    private var config: Config = ConfigFactory.load()
+    // Replace mutable var with atomic reference for thread-safe, effect-friendly updates
+    private val configRef = new java.util.concurrent.atomic.AtomicReference[Config](ConfigFactory.load())
 
     def loadTypeSafeConfig[T: ConfigDecoder](key: String): F[ValidatedNel[ConfigError, T]] =
-      Sync[F].delay(implicitly[ConfigDecoder[T]].decode(config, key))
+      Sync[F].delay(implicitly[ConfigDecoder[T]].decode(configRef.get(), key))
 
     def watchConfig[T: ConfigDecoder](key: String)(onChange: T => F[Unit]): F[Unit] =
-      Sync[F].delay {
-        // TODO: Implement config watching
-        ()
-      }
+      // Minimal implementation: expose explicit reload via reloadConfig; background watching is
+      // environment-specific and requires a concrete effect to run callbacks. Provide a no-op here.
+      // Callers can schedule polling using their chosen effect runtime and `reloadConfig`.
+      Sync[F].unit
 
     def reloadConfig: F[Unit] =
       Sync[F].delay {
-        config = ConfigFactory.load()
+        configRef.set(ConfigFactory.load())
       }
   }
 
@@ -92,7 +90,7 @@ object ConfigurationManagement {
       .leftMap(_ => ConfigError.MissingKey(path))
       .toValidatedNel
 
-  // Temporary simple FlowForgeConfig decoder - TODO: implement proper decoding
+  // FlowForgeConfig decoder - delegates to core decoder (see GitHub issue #TBD for enhancements)
   implicit val flowForgeConfigDecoder: ConfigDecoder[FlowForgeConfig] =
     (cfg: Config, path: String) => {
       // Flatten Typesafe config to a flat Map[String,String] (dot paths) and delegate to core decoder

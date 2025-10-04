@@ -1,8 +1,12 @@
-# flowforge - How Data contract validation fails
+# FlowForge - How Data Contract Validation Fails
 
-**A complete guide to understanding FlowForge's compile-time contract validation error messages.**  See diagrams in `docs/diagrams/compile-time-contracts/` for the derivation and evidence flow referenced here. As of Scala 2.13 strong alignment, errors are produced by deep structural comparison of normalized `SchemaAST` for producer vs. contract, with path-aware diffs.
+**A complete guide to understanding FlowForge's compile-time contract validation error messages.**
 
-This document shows exactly how each schema policy behaves with examples and **verbatim error diffs** as specified in the End-to-End Compile-time plan.
+See diagrams in `docs/diagrams/compile-time-contracts/` for the derivation and evidence flow referenced here.
+
+**✅ UPDATED**: Errors are now produced by our superior improved `TypeShape` ADT system with policy-based comparison strategies, providing cleaner, more maintainable contract validation than the previous SchemaAST approach.
+
+This document shows exactly how each schema policy behaves with examples and **verbatim error diffs** from our improved contract system.
 
 ## 🎯 Core principle
 
@@ -17,11 +21,10 @@ All validation happens at **compile time** with zero runtime overhead.
 | Policy | Missing Fields | Extra Fields | Type Mismatches | Field Order | Use Case |
 |--------|---------------|--------------|-----------------|-------------|----------|
 | **`Exact`** | ❌ Reject | ❌ Reject | ❌ Reject | ❌ Must match | Strict compatibility |
-| **`ExactUnordered`** | ❌ Reject | ❌ Reject | ❌ Reject | ✅ Flexible | Field order flexible |
-| **`ExactOrdered`** | ❌ Reject | ❌ Reject | ❌ Reject | ✅ Enforced | Names and order must match |
-| **`ExactUnorderedCI`** | ❌ Reject | ❌ Reject | ❌ Reject | ✅ Flexible | Case-insensitive names |
-| **`ExactOrderedCI`** | ❌ Reject | ❌ Reject | ❌ Reject | ✅ Enforced | Case-insensitive names + order |
-| **`ExactByPosition`** | ❌ Reject | ❌ Reject | ❌ Reject | ✅ By position | Types must match by index |
+| **`ExactUnorderedCI`** | ❌ Reject | ❌ Reject | ❌ Reject | ✅ Flexible | Case-insensitive field names |
+| **`ExactOrdered`** | ❌ Reject | ❌ Reject | ❌ Reject | ❌ Must match order | Names + order enforced |
+| **`ExactOrderedCI`** | ❌ Reject | ❌ Reject | ❌ Reject | ❌ Must match order | Case-insensitive + order |
+| **`ExactByPosition`** | ❌ Reject | ❌ Reject | ❌ Reject | ✅ By position | Types match by index |
 | **`Backward`** | ⚠️ Allow if Optional/Default | ✅ Allow | ❌ Reject | ✅ Flexible | Schema evolution |
 | **`Forward`** | ✅ Allow | ❌ Reject | ❌ Reject | ✅ Flexible | Flexible compatibility |
 | **`Full`** | ✅ Allow | ✅ Allow | ✅ Allow | ✅ Flexible | Development/testing |
@@ -101,6 +104,44 @@ case class UserReordered(name: String, id: Long, email: String) // Different ord
 
 val valid: SchemaConforms[UserReordered, User, SchemaPolicy.ExactUnordered] = implicitly // ✅ Works!
 ```
+
+---
+
+### Nested optionality inside collections
+
+Under Exact (and ExactUnordered) policies, element optionality is part of the schema. A producer changing
+`List[Option[Int]]` to `List[Int]` (or vice‑versa) is a breaking change.
+
+Code that should NOT compile:
+
+```
+import com.flowforge.core.contracts._
+
+type Out      = List[Option[Int]]
+type Contract = List[Int]
+
+// Compile-time error: element optionality mismatch
+implicitly[SchemaConforms[Out, Contract, SchemaPolicy.Exact]]
+```
+
+Indicative error message shape:
+
+```
+Compile-time contract drift (policy: com.flowforge.core.contracts.SchemaPolicy.Exact).
+Out: List[Option[Int]] vs Contract: List[Int]
+Mismatch attributes: []? expected Int, found optional Int
+```
+
+Similarly, for maps:
+
+```
+type Out2      = Map[String, Option[Int]]
+type Contract2 = Map[String, Int]
+implicitly[SchemaConforms[Out2, Contract2, SchemaPolicy.Exact]] // fails
+```
+
+This guards against silently dropping optionality in deeply nested structures. See also the diagram:
+`docs/diagrams/compile-time-contracts/optionality.md` (Field vs Element Optionality).
 
 ---
 

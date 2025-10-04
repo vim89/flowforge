@@ -52,13 +52,16 @@ This index maps original documents to their canonical ADRs. Use this as the chec
 - Safe, Generic Error Handling
   - ADR: docs/adr/022-safe-generic-error-handling.md
 
+- Guardrail Against Shadowing Cats Syntax
+  - ADR: docs/adr/025-guardrail-against-shadowing-cats-syntax.md
+
 Coverage and Known Gaps
 - Rules_Notes.md: House rules overlap with CONTRIBUTING.md; some nuances may not be duplicated in ADRs. Action: keep archived; cross-link from CONTRIBUTING.md.
 - design.md: Diagrams and narrative; ADRs capture decisions, but not all diagrams. Action: keep archived for context.
 - IMPLEMENTATION_TODO.md: Detailed to-dos not fully itemized into PLAN.md. Action: import top items into PLAN or a tracked issue list before archiving.
 - Findings.md: Historical assessments with numbers/dates; ADR-016 summarizes governance but not every historical datapoint. Action: keep archived.
 - Reference docs (docs/reference/*): Visionary material; ADRs/Evidence reflect current truth, but references contain context/value propositions. Action: archive with banners, don’t delete.
-- backups/AGENTS.2025-09-03.md and previous-chats/previous-conv1.txt: Historical; keep.
+- backups/ASSISTANTS.2025-09-03.md and previous-chats/previous-conv1.txt: Historical; keep.
 
 Archive Recommendation
 - Do NOT hard-delete. Archive the listed sources under docs/archive/ with a “Superseded by ADR-XXX” banner at top and keep links alive for context/history.

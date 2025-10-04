@@ -117,11 +117,11 @@ This pair of changes resolves the “need `join`” error **and** the macro `eva
 
 If you paste your current `Shape.scala` and the failing lines from the macro, I’ll tailor the exact diff to your tree.
 
-[1]: https://github.com/softwaremill/magnolia?utm_source=chatgpt.com "softwaremill/magnolia: Easy, fast, transparent generic ..."
-[2]: https://jdriven.com/blog/2022/11/Generic-Derivation-Comparison?utm_source=chatgpt.com "Generic Derivation - a comparison"
-[3]: https://javadoc.io/doc/com.propensive/magnolia_2.13/0.17.0/magnolia/CaseClass.html?utm_source=chatgpt.com "CaseClass - magnolia_2.13 0.17.0 javadoc"
-[4]: https://docs.scala-lang.org/overviews/macros/overview.html?utm_source=chatgpt.com "Def Macros"
-[5]: https://stackoverflow.com/questions/56935330/scala-what-can-code-in-context-eval-reference?utm_source=chatgpt.com "macros - Scala: what can code in Context.eval reference?"
-[6]: https://xuwei-k.github.io/scala-compiler-sxr/scala-compiler-2.10.0/scala/reflect/api/Symbols.scala.html?utm_source=chatgpt.com "scala/reflect/api/Symbols.scala"
-[7]: https://www.scala-lang.org/api/2.12.8/scala-reflect/scala/reflect/api/Symbols%24TermSymbol.html?utm_source=chatgpt.com "scala.reflect.api.Symbols.TermSymbol"
-[8]: https://docs.scala-lang.org/scala3/reference/contextual/derivation.html?utm_source=chatgpt.com "Type Class Derivation"
+[1]: https://github.com/softwaremill/magnolia "softwaremill/magnolia: Easy, fast, transparent generic ..."
+[2]: https://jdriven.com/blog/2022/11/Generic-Derivation-Comparison "Generic Derivation - a comparison"
+[3]: https://javadoc.io/doc/com.propensive/magnolia_2.13/0.17.0/magnolia/CaseClass.html "CaseClass - magnolia_2.13 0.17.0 javadoc"
+[4]: https://docs.scala-lang.org/overviews/macros/overview.html "Def Macros"
+[5]: https://stackoverflow.com/questions/56935330/scala-what-can-code-in-context-eval-reference "macros - Scala: what can code in Context.eval reference?"
+[6]: https://xuwei-k.github.io/scala-compiler-sxr/scala-compiler-2.10.0/scala/reflect/api/Symbols.scala.html "scala/reflect/api/Symbols.scala"
+[7]: https://www.scala-lang.org/api/2.12.8/scala-reflect/scala/reflect/api/Symbols%24TermSymbol.html "scala.reflect.api.Symbols.TermSymbol"
+[8]: https://docs.scala-lang.org/scala3/reference/contextual/derivation.html "Type Class Derivation"

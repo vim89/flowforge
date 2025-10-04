@@ -79,20 +79,17 @@ case class ContractBuilder(name: String) {
 case class FieldBuilder(name: String, parent: ContractBuilder) {
   private var fieldType: Option[FieldType] = None
 
-  private var isRequired: Boolean                = false
   private var isOptional: Boolean                = false
   private var constraints: List[FieldConstraint] = List.empty
   private var descriptionOpt: Option[String]     = None
 
   // Type specification methods
   def required: TypedFieldBuilder = {
-    isRequired = true
     isOptional = false
     TypedFieldBuilder(this)
   }
 
   def optional: TypedFieldBuilder = {
-    isRequired = false
     isOptional = true
     TypedFieldBuilder(this)
   }

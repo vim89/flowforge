@@ -10,6 +10,7 @@ sealed trait PipelineStage[F[_], -A, B] extends Product with Serializable {
   def description: String
   def execute: Kleisli[F, A, B]
   def metrics: StageMetrics
+  def isTransform: Boolean = false
 }
 
 object PipelineStage {
@@ -33,7 +34,9 @@ object PipelineStage {
     description: String,
     execute: Kleisli[F, A, B],
     metrics: StageMetrics = StageMetrics.empty)
-      extends PipelineStage[F, A, B]
+      extends PipelineStage[F, A, B] {
+    override val isTransform: Boolean = true
+  }
 
   /**
    * Filter stage - removes unwanted records

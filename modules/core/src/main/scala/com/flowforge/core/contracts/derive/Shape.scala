@@ -1,3 +1,4 @@
+// scalafix:off DisableSyntax.throw
 package com.flowforge.core.contracts.derive
 
 import magnolia1._

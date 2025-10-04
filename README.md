@@ -1,8 +1,16 @@
-# flowforge
+# flowforge - Type‑safe-first Data Engineering
 
 ![Build](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/ci.yml?branch=main&label=build)
+[![Nightly](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/nightly.yml?branch=main&label=nightly)](https://github.com/vim89/flowforge/actions/workflows/nightly.yml)
 [![Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?label=coverage)](https://app.codecov.io/gh/vim89/flowforge)
+[![Core Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=core&label=core)](https://app.codecov.io/gh/vim89/flowforge/flags/core)
+[![Contracts Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=contracts&label=contracts)](https://app.codecov.io/gh/vim89/flowforge/flags/contracts)
+[![Connectors Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=connectors&label=connectors)](https://app.codecov.io/gh/vim89/flowforge/flags/connectors)
+[![Infrastructure Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=infrastructure&label=infrastructure)](https://app.codecov.io/gh/vim89/flowforge/flags/infrastructure)
 [![Scaladoc](https://img.shields.io/badge/api-Scaladoc-informational)](https://vim89.github.io/flowforge/api/)
+[![Docs Lint](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/docs-lint.yml?branch=main&label=docs%20lint)](https://github.com/vim89/flowforge/actions/workflows/docs-lint.yml)
+[![Link Check](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/link-check.yml?branch=main&label=links)](https://github.com/vim89/flowforge/actions/workflows/link-check.yml)
+[![Security](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/security.yml?branch=main&label=security)](https://github.com/vim89/flowforge/actions/workflows/security.yml)
 [![Changelog](https://img.shields.io/badge/changelog-Release%20Please-blue)](CHANGELOG.md)
 ![Release](https://img.shields.io/github/v/release/vim89/flowforge?include_prereleases&label=release)
 ![License](https://img.shields.io/github/license/vim89/flowforge)
@@ -11,121 +19,188 @@
 ![JDK](https://img.shields.io/badge/JDK-17%2B-orange)
 [![Docs](https://img.shields.io/badge/docs-start--here-blue)](docs/start-here.md)
 
-Build data pipelines that fail at compile time when contracts drift, keep business logic pure, and manage IO safely. FlowForge is a Scala (2.13) framework that adds strong typing and predictable effects to Spark‑based data engineering.
+> Build pipelines that won’t even compile when contracts drift. Keep transformations pure, put effects at the edges, and run on Spark and Flink.
 
-Highlights
-- Contracts first: schemas + evolution policies enforced at compile time via `SchemaConforms`.
-- Pure transforms: pipeline logic is ordinary, testable Scala; IO is explicit via `F[_]`.
-- Effect/resource safety: all connectors and engines use `FlowforgeResource[F, _]` and an `EffectSystem`.
-- Built‑in quality: multi‑rule validation with aggregated errors (no fail‑fast surprises).
-- Optional lineage: emit OpenLineage events; see runs in Marquez with one docker compose.
+## Why (beliefs)
 
-Quick links: docs/getting-started-quick.md, docs/getting-started.md, docs/start-here.md
+- Runtime schema drift burns weekends. We believe failures should move left - into the compiler.
+- Side‑effects inside transforms amplify retries/speculation. We believe effects belong at the edges and must be idempotent.
+- Engineers deserve fast, local feedback. We believe pure transformations and compile‑fail tests make data engineering joyful again.
 
-## Why flowforge
+### _A story:_ 
+"A partner team removed a nullable column late Friday. We couldn’t roll back in time; both teams were up all night. If that change had been a compile error, we would have slept."
 
-Most frameworks surface schema issues at runtime. FlowForge catches them during `sbt compile` using typed contracts and policies. Pure transformations keep tests fast and deterministic, while effect‑safe connectors make IO boundaries deliberate and maintainable.
+### For Python/ETL folks (dbt/Airflow/Informatica/Talend): 
+Think "contracts like Pydantic/Avro — but enforced before jobs run," "pure functions you can test without a cluster," and "connectors/engines that make IO explicit and safe."
 
-When to use it
-- You want end‑to‑end type safety for batch/streaming pipelines on the JVM.
-- You like PySpark/Scala flexibility but need guardrails around schema evolution.
-- You deploy with Airflow/Prefect and need a reliable pipeline core to schedule.
+### For EMs / Staff Data Architects: 
+You get compile‑time guarantees (not CI or runtime heuristics), a small opinionated surface, and batteries‑included defaults with escape hatches.
 
-How it compares (high level)
-- dbt: excellent SQL lineage/testing; FlowForge targets typed Scala pipelines beyond SQL, with compile‑time contracts and effect safety.
-- Airflow/Prefect: orchestration; FlowForge sits underneath as the pipeline runtime.
-- PySpark/Scala UDFs: powerful but runtime‑typed; FlowForge adds compile‑time shape checks and typed connectors.
+## How (principles)
 
-## Architecture at a glance
+- **Compile‑time contracts:** `SchemaConforms[Out, Contract, Policy]` proves compatibility; policies include **Exact**, **Backward**, **Forward** (+ Ordered/CI/ByPosition). See [docs/how-it-fails.md](docs/how-it-fails.md).
+- **Typestate builder:** `build()` exists only when source, transforms, and sink are present. Incomplete pipelines are unbuildable.
+- **Pure vs effect boundary:** transforms are pure functions; `F[_]` only at IO edges; engines plug into a single algebra.
+- **Pictures over prose:** see [flowchart.svg](docs/diagrams/compile-time-contracts/flowchart.svg) and [optionality.md](docs/diagrams/compile-time-contracts/optionality.md).
 
-- core: algebras, builders, `EffectSystem`, compile‑time contract evidence.
-- contracts + contracts‑sdk: author contracts and generate types from Avro.
-- engines‑spark (and engines‑flink): pure transforms that return `Dataset[...]` for Spark.
-- connectors‑*: S3, GCS, Kafka, JDBC, BigQuery (all effect‑safe).
-- quality + quality‑deequ: rules with optional Deequ mapping.
-- CLIs: validation‑cli, contracts‑extractor‑cli.
-- examples: minimal runnable demos under `modules/examples`.
+## What (The framework)
 
-## 5‑minute quick start
+- Core: contracts, builder, EffectSystem, DataAlgebra.
+- Engines: Spark (primary 1.0), Flink (2.12 only).
+- Connectors: filesystem, JDBC, GCS (more coming).
+- Data Quality: native checks by default; optional Deequ when present.
+- Template: flowforge.g8 for new projects.
 
-Prereqs: Java 17+, sbt 1.9+, Docker (optional for Marquez).
+## Diagrams (pictures > words)
 
-1) Build the repo
+![Compile‑time contracts flow](docs/diagrams/compile-time-contracts/flowchart.svg)
+
+![Field vs Element Optionality](docs/diagrams/compile-time-contracts/optionality.svg)
+
+![Scala 2 Magnolia UML](docs/diagrams/compile-time-contracts/scala2-uml.svg)
+
+![Scala 3 Mirrors UML](docs/diagrams/compile-time-contracts/scala3-uml.svg)
+
+## Quick links
+- Getting started quick: [docs/getting-started.md](docs/getting-started.md)
+- Full start: [docs/getting-started.md](docs/getting-started.md)
+- Public API: [docs/public-api.md](docs/public-api.md)
+- How it fails (error anatomy): [docs/how-it-fails.md](docs/how-it-fails.md)
+- Framework behaviors (non‑negotiables): [docs/design/framework-behaviors.md](docs/design/framework-behaviors.md)
+- Cut a release: [docs/release/how-to-cut-a-release.md](docs/release/how-to-cut-a-release.md)
+
+### Module status (coverage)
+
+>Nightly runs provide broader integration coverage.
+
+- Core: [![Core Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=core&label=core)](https://app.codecov.io/gh/vim89/flowforge/flags/core)
+- Contracts: [![Contracts Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=contracts&label=contracts)](https://app.codecov.io/gh/vim89/flowforge/flags/contracts)
+- Connectors: [![Connectors Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=connectors&label=connectors)](https://app.codecov.io/gh/vim89/flowforge/flags/connectors)
+- Infrastructure: [![Infrastructure Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=infrastructure&label=infrastructure)](https://app.codecov.io/gh/vim89/flowforge/flags/infrastructure)
+
+## Guarantees (Non‑negotiables)
+
+- Compile‑fail contracts for typed endpoints under policy lattice
+- Typestate builder: `build()` only when complete — incomplete pipelines can’t compile
+- Pure transforms; effectful edges; idempotent side‑effects by design
+- See: docs/design/framework-behaviors.md
+
+## 10‑Minute quickstart
+
+Prereq: JDK 17+, sbt 1.9+
+
+**1) Clone & build**
 ```bash
-sbt fmtCheck && sbt compile
+git clone https://github.com/vim89/flowforge.git && cd flowforge
+sbt compile
 ```
 
-2) Run a pipeline demo
-```bash
-sbt "examples/test:runMain com.flowforge.examples.spark.UsersPipeline"
-```
-
-3) See lineage (optional)
-```bash
-docker compose -f ops/marquez/docker-compose.yml up -d
-# open http://localhost:3000 and watch runs appear
-```
-
-## Contracts 101 (compile‑time)
-
-- Put Avro schemas under `modules/contracts-inputs/avro/...`.
-- FlowForge generates a small “contracts‑sdk” at build time (see `modules/contracts-sdk`).
-- The compiler requires evidence that your output type conforms to the declared contract and policy.
-
-Sketch
+**2) See a compile‑time contract failure (red → green)**
 ```scala
+// Paste in REPL or a scratch test to feel it
 import com.flowforge.core.contracts._
-final case class User(id: Long, email: String, age: Int)
-
-object UserContract {
-  import SchemaPolicy._
-  implicit val conforms: SchemaConforms[User, User, Exact] = implicitly
-}
+final case class Out(id: Long)
+final case class Contract(id: Long, email: String)
+implicitly[SchemaConforms[Out, Contract, SchemaPolicy.Exact]] // ❌ compile‑time error (missing email)
 ```
-If `User` and the Avro contract diverge (extra/missing/mismatched fields), `sbt compile` fails with a precise message.
+Relax the policy to Backward (allows extra producer fields and missing optional/defaults):
+```scala
+implicitly[SchemaConforms[Out, Contract, SchemaPolicy.Backward]] // ✅
+```
 
-## For Python/Java engineers
+**3) Build a pipeline — typestate forbids incomplete builds**
+```scala
+import cats.effect.IO
+import com.flowforge.core.PipelineBuilder
+import com.flowforge.core.types._
+import com.flowforge.core.contracts._
 
-- Think of contracts like Pydantic/Avro models—except enforced before the job runs.
-- Transforms are just functions; you can test them without a cluster.
-- Connectors expose clear, parameterized sources/sinks—no hidden globals.
+final case class User(id: Long, email: String)
+val src  = TypedSource[User](LocalDataSource("/tmp/in", DataFormat.Parquet))
+val sink = TypedSink[User](LocalDataSink("/tmp/out", DataFormat.Parquet))
 
-## Modules overview
+PipelineBuilder[IO]("demo")
+  .addTypedSource[User, User, SchemaPolicy.Exact](src, _ => IO.pure(User(1, "a@b")))
+  .noTransform
+  .addTypedSink[User, SchemaPolicy.Exact](sink, (_, _) => IO.unit)
+  .build() // ✅ build is available only now
+```
 
-- modules/core: EffectSystem, builders, contract evidence, syntax helpers.
-- modules/contracts: contract types and DSL; modules/contracts‑sdk: generated types.
-- modules/contracts‑inputs: place Avro and metadata here (codegen source of truth).
-- modules/engines‑spark: Spark transforms returning `Dataset[...]`.
-- modules/connectors‑*: S3, GCS, Kafka, JDBC, BigQuery.
-- modules/quality | modules/quality‑deequ: validation rules and Deequ adapter.
-- modules/validation‑cli | modules/contracts‑extractor‑cli | modules/maintenance‑cli.
-- modules/examples: runnable demos (`com.flowforge.examples.*`).
+**4) Explore diagrams and failure messages**
+- Diagrams: [flowchart.svg](docs/diagrams/compile-time-contracts/flowchart.svg), [optionality.md](docs/diagrams/compile-time-contracts/optionality.md)
+- Failure anatomy: [docs/how-it-fails.md](docs/how-it-fails.md)
 
-## Development workflow
+### Quickstart paths
 
-- Build: `sbt compile`
-- Tests: `sbt test` (non‑parallel)
-- Format/lint: `sbt fmt` / `sbt fmtCheck`, `sbt fix` / `sbt fixCheck`
-- Focused runs: `sbt core/test`, `sbt engines-spark/compile`
-- Contributor guide: `CONTRIBUTING.md`
+| Path | Goal | Commands |
+|------|------|----------|
+| A — Examples | Try locally (no cluster) | `sbt ffDev` (compile + focused tests), `sbt ffRunSpark` (Spark local[*]) |
+| B — Red→Green | See compile‑time error then fix | Use the snippet above; run `sbt compile` |
+| C — New project | Scaffold with g8 | `sbt new flowforge.g8 --name="ff-demo" --organization="com.acme"` then `sbt test` / `sbt run` |
+
+## Compatibility
+
+| Component | Version | Notes |
+|-----------|---------|-------|
+| JDK | 17+ | CI pinned to 17; Spark 3.5.x compatibility |
+| sbt | 1.9+ |  |
+| Scala | 2.13 (primary) | Scala 3 for core only (no Spark deps) |
+| Spark | 3.5.x | Runs on Java 17 |
+| Flink | Scala 2.12 only | Scala API constraints |
+
+### Flink (2.12)
+
+Flink’s Scala API is 2.12‑only. The root build excludes Flink from the default aggregate so that `+compile`, `+test:compile`, and `+test` stay green for 2.13 (and Scala 3 where applicable). Build/test Flink explicitly when you need it:
+
+```
+# Compile Flink (Scala 2.12)
+sbt "++2.12.* enginesFlink/compile"
+
+# Run Flink tests (Scala 2.12)
+sbt "++2.12.* enginesFlink/test"
+```
+
+References: Flink documents binary incompatibility across Scala lines and the need to select the matching `_2.12` artifacts for the Scala API. See Flink’s docs on Scala versions and sbt cross‑build guidance. 
+
+## Architecture (at a glance)
+
+The diagrams above summarize derivation and policy checks; see also [docs/diagrams/compile-time-contracts/guide.md](docs/diagrams/compile-time-contracts/guide.md) for narrative.
+
+## Examples & demos
+
+- Examples module: [modules/examples](modules/examples) (runnable demos)
+- Optional Deequ mode: add `-Dff.quality.mode=deequ` (auto‑enables when on classpath)
 
 ## Documentation map
 
-- Start here: `docs/start-here.md`, quick starts in `docs/getting-started*.md`.
-- Decisions (ADRs): `docs/adr` (index: `docs/adr/INDEX.md`).
-- Failure anatomy: `docs/how-it-fails.md` (explains compiler messages from contract drift).
-- Public API: `docs/public-api.md`.
-- Bring Your Own Effect System (BYO‑F): `docs/effects/bring-your-own-effect.md` (EffectSystem and FlowforgeResource primer).
+- Start here: [docs/start-here.md](docs/start-here.md); quick: [docs/getting-started.md](docs/getting-started.md)
+- Why compile‑time: [docs/why-compile-time.md](docs/why-compile-time.md)
+- How it fails: [docs/how-it-fails.md](docs/how-it-fails.md)
+- Public API: [docs/public-api.md](docs/public-api.md)
+- ADR index: [docs/adr/INDEX.md](docs/adr/INDEX.md)
+- Evidence: [docs/evidence](docs/evidence) (e.g., [scala3-alignment.md](docs/evidence/scala3-alignment.md))
+- Plan & Readiness: [docs/plan/v1.0-readiness.md](docs/plan/v1.0-readiness.md), [docs/quality/release-criteria.md](docs/quality/release-criteria.md)
+- Talks: [docs/talks](docs/talks) (WHY→HOW→WHAT outline)
+
+## Release & versioning
+
+- CHANGELOG: [CHANGELOG.md](CHANGELOG.md)
+- Security: [SECURITY.md](SECURITY.md)
+- v1.0 Plan/Readiness: [docs/plan/v1.0-readiness.md](docs/plan/v1.0-readiness.md), [docs/quality/release-criteria.md](docs/quality/release-criteria.md)
 
 ## FAQ
 
-- Does it require Scala knowledge?
-  - You can start by treating contracts like schemas and using the examples. For deeper work, a small amount of Scala goes a long way; the code is intentionally idiomatic and test‑friendly.
-- Can I use different effect systems?
-  - Yes. The core uses an `EffectSystem` abstraction; Cats‑Effect is provided and ZIO interop is available.
-- Where do contracts live?
-  - Under `modules/contracts-inputs/avro` (and `metadata` if used). The `contracts-sdk` module is generated from there.
+- Scala 3?
+  - Core compiles on Scala 3; engines depend on Spark/Flink ecosystem (Spark 3.x limits Scala 3 today).
+- Why compile‑time vs tests?
+  - Tests are sampled; compile‑time proofs are exhaustive for shapes and policy compatibility.
+- How does this compare to Databricks DLT/Dagster/dbt?
+  - They perform runtime/CI checks; FlowForge enforces compile‑time gates and typestate builder. See docs/evidence for deeper comparisons.
+
+## Contributing
+
+We welcome folks from Python/ETL backgrounds and JVM veterans alike. Start with [docs/contributing/HANDBOOK.md](docs/contributing/HANDBOOK.md), then pick an issue. Please run `sbt scalafmtAll` and `sbt "scalafixAll"` before submitting.
 
 ## License
 
-Apache 2.0 — see `LICENSE`.
+[Apache 2.0](LICENSE)

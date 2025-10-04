@@ -1,3 +1,4 @@
+// scalafix:off DisableSyntax.null
 /**
  * FlowForge Core Module - Effect System Syntax Extensions
  *

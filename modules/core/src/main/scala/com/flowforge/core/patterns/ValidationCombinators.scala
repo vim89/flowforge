@@ -2,7 +2,7 @@ package com.flowforge.core.patterns
 
 import cats.data.ValidatedNel
 import cats.syntax.all._
-import com.flowforge.core.patterns.ValidationTypes.{ invalid, valid, ConfigValidationResult }
+import com.flowforge.core.patterns.ValidationTypes.{ConfigValidationResult, invalid, valid}
 import com.flowforge.core.types.ConfigError
 
 import scala.util.matching.Regex
@@ -17,12 +17,12 @@ object ValidationCombinators {
    * Validate that a string is not null or empty.
    */
   def nonEmpty(fieldName: String, value: String): ConfigValidationResult[String] =
-    if (value != null && value.trim.nonEmpty) {
-      valid(value)
-    } else {
-      invalid(
-        ConfigError.InvalidValue(fieldName, Option(value).getOrElse("null"), "non-empty string"),
-      )
+    Option(value).filter(_.trim.nonEmpty) match {
+      case Some(v) => valid(v)
+      case None =>
+        invalid(
+          ConfigError.InvalidValue(fieldName, Option(value).getOrElse("null"), "non-empty string"),
+        )
     }
 
   /**

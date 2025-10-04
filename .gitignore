@@ -29,7 +29,7 @@ Thumbs.db
 # Logs
 logs/
 *.log
-/.claude/
+/.llm/
 /.idea/
 /.ivy2/
 /.sbt-boot/
@@ -37,7 +37,5 @@ logs/
 /.coursier/
 /.bsp/
 /.home/
-examples/
-flowforge-docs/
-benchmarks/
-integration-tests/
+
+AGENTS.md

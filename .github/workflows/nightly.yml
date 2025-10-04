@@ -1,32 +1,158 @@
-name: Nightly
+name: Nightly Extended Tests
 
 on:
   schedule:
     - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_OPTS: -Xmx4G -XX:+UseG1GC
+  SBT_OPTS: -Xmx4G -XX:+UseG1GC
 
 jobs:
-  nightly-build:
+  nightly-full-suite:
+    name: Full test suite (all modules)
     runs-on: ubuntu-22.04
     strategy:
+      fail-fast: false
       matrix:
-        spark: [ '3.5.0' ]
+        java: ['17', '21']
+        scala: ['2.13']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
         with:
           distribution: temurin
-          java-version: '21'
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.ivy2/cache
-            ~/.cache/coursier
-            ~/.sbt
-            **/target
-          key: ${{ runner.os }}-nightly-${{ hashFiles('**/build.sbt', '**/project/**/*.sbt', '**/project/**/*.scala') }}
-          restore-keys: |
-            ${{ runner.os }}-nightly-
-      - name: Build
+          java-version: ${{ matrix.java }}
+          cache: 'sbt'
+      - name: Coursier cache
+        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+
+      - name: Check formatting and linting
         run: |
           sbt -batch scalafmtCheckAll
-          sbt -batch compile Test/compile
+          sbt -batch "scalafixAll --check"
+
+      - name: Run full test suite
+        run: |
+          sbt -batch clean coverage test coverageReport coverageAggregate
+
+      - name: Run compile-fail tests
+        run: sbt -batch "compile-fail-tests/test"
+
+      - name: Upload coverage to Codecov
+        if: matrix.java == '17' && matrix.scala == '2.13'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+  nightly-integration-tests:
+    name: Integration tests
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: 'sbt'
+      - name: Coursier cache
+        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+
+      - name: Run Spark integration tests
+        run: |
+          sbt -batch -DwithSparkIT=true "enginesSpark/testOnly *SparkDeltaSCD2IT"
+
+      - name: Run Flink integration tests
+        run: |
+          sbt -batch "enginesFlink/testOnly *EngineAbstractionSpec"
+
+  nightly-cross-scala:
+    name: Cross-Scala build (2.12, 2.13, 3.x)
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        scala: ['2.12', '2.13', '3.3']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: 'sbt'
+      - name: Coursier cache
+        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+
+      - name: Build with Scala ${{ matrix.scala }}
+        run: |
+          # Cross-compile core modules
+          sbt -batch "++${{ matrix.scala }}.* core/compile core/test"
+          sbt -batch "++${{ matrix.scala }}.* infrastructure/compile infrastructure/test"
+
+  nightly-benchmarks:
+    name: Performance benchmarks
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: 'sbt'
+      - name: Coursier cache
+        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+
+      - name: Run benchmarks
+        run: |
+          if [ -d "modules/performance-benchmarks" ]; then
+            sbt -batch "performance-benchmarks/Jmh/run -i 3 -wi 3 -f1 -t1"
+          else
+            echo "⚠️ No benchmark module found, skipping"
+          fi
+
+      - name: Upload benchmark results
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: modules/performance-benchmarks/target/jmh-results*.json
+          retention-days: 30
+
+  nightly-template-validation:
+    name: Validate g8 template
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: 'sbt'
+      - name: Coursier cache
+        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+
+      - name: Test g8 template generation
+        run: |
+          cd /tmp
+          sbt new file://${{ github.workspace }}/flowforge.g8 --name="nightly-test" --organization="com.flowforge.nightly"
+          cd nightly-test
+          sbt compile test

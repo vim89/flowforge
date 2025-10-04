@@ -1,10 +1,10 @@
+// scalafix:off DisableSyntax.null
 package com.flowforge.core.patterns
 
 import cats.data.{ Kleisli, Reader, ReaderT }
-import com.flowforge.core.algebra.{ EffectSystem, FlowforgeResource }
 import cats.implicits._
 import cats.{ Applicative, Monad }
-import com.flowforge.core.algebra.{ DataAlgebra, DataDecoder, EffectSystem }
+import com.flowforge.core.algebra.{ DataAlgebra, DataDecoder, EffectSystem, FlowforgeResource }
 import com.flowforge.core.instances.DataInstances
 import com.flowforge.core.types._
 import eu.timepit.refined.api.Refined

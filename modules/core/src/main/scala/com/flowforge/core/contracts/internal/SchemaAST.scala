@@ -1,48 +1,82 @@
 package com.flowforge.core.contracts.internal
 
 /**
- * Normalized, engine-agnostic schema shape for deep structural comparison at compile time.
+ * Normalized structural shape for compile-time comparison.
+ *
+ * Clean, minimal ADT focused on the essentials needed for deep schema comparison.
  */
-sealed trait SchemaAST extends Product with Serializable
+sealed trait TypeShape
 
-object SchemaAST {
-  final case class Record(name: String, fields: List[Field]) extends SchemaAST
-  final case class Field(
+object TypeShape {
+  final case class PrimitiveShape(name: String)                    extends TypeShape
+  final case class SequenceShape(elem: TypeShape)                  extends TypeShape
+  final case class MapShape(key: PrimitiveShape, value: TypeShape) extends TypeShape
+  // Represents nested optionality (e.g., List[Option[A]]). Field-level optionality remains on FieldShape.
+  final case class OptionalShape(inner: TypeShape) extends TypeShape
+  final case class FieldShape(
     name: String,
-    tpe: SchemaAST,
+    shape: TypeShape,
     hasDefault: Boolean,
     isOptional: Boolean)
-      extends SchemaAST
+      extends TypeShape
+  final case class StructShape(fields: List[FieldShape]) extends TypeShape
 
-  final case class Primitive(tag: String)                 extends SchemaAST
-  final case class OptionT(value: SchemaAST)              extends SchemaAST
-  final case class ArrayT(elem: SchemaAST)                extends SchemaAST
-  final case class MapT(key: SchemaAST, value: SchemaAST) extends SchemaAST
+  def pretty(shape: TypeShape): String = shape match {
+    case PrimitiveShape(name) => name
+    case SequenceShape(elem)  => s"List[${pretty(elem)}]"
+    case MapShape(key, value) => s"Map[${pretty(key)}, ${pretty(value)}]"
+    case OptionalShape(inner) => s"Option[${pretty(inner)}]"
+    case FieldShape(name, tpe, hasDefault, isOptional) =>
+      val opt  = if (isOptional) " (optional)" else ""
+      val dflt = if (hasDefault) " (default)" else ""
+      s"$name: ${pretty(tpe)}$opt$dflt"
+    case StructShape(fields) =>
+      fields.map(f => f.name + ":" + pretty(f.shape)).mkString("{", ",", "}")
+  }
+}
+
+// Legacy compatibility - keep SchemaAST as alias until migration complete
+
+@deprecated("Use TypeShape instead", "0.2.0")
+object SchemaAST {
+  // Legacy type aliases for backward compatibility
+  type Record    = TypeShape.StructShape
+  type Field     = TypeShape.FieldShape
+  type Primitive = TypeShape.PrimitiveShape
+  type OptionT   = TypeShape.OptionalShape
+  type ArrayT    = TypeShape.SequenceShape
+  type MapT      = TypeShape.MapShape
+
+  // Factory methods for backward compatibility
+  def Record(name: String, fields: List[TypeShape.FieldShape]): TypeShape.StructShape =
+    TypeShape.StructShape(fields)
+  def Field(
+    name: String,
+    tpe: TypeShape,
+    hasDefault: Boolean,
+    isOptional: Boolean,
+  ): TypeShape.FieldShape =
+    TypeShape.FieldShape(name, tpe, hasDefault, isOptional)
+  def Primitive(tag: String): TypeShape.PrimitiveShape =
+    TypeShape.PrimitiveShape(tag)
+  def OptionT(value: TypeShape): TypeShape.OptionalShape =
+    TypeShape.OptionalShape(value)
+  def ArrayT(elem: TypeShape): TypeShape.SequenceShape =
+    TypeShape.SequenceShape(elem)
+  def MapT(key: TypeShape.PrimitiveShape, value: TypeShape): TypeShape.MapShape =
+    TypeShape.MapShape(key, value)
 
   object PrimitiveTags {
-    val Str     = "string"
-    val Int     = "int"
-    val Long    = "long"
-    val Double  = "double"
-    val Float   = "float"
-    val Boolean = "boolean"
-    val Instant = "timestamp"
-    val Decimal = "decimal"
-    val Unknown = "unknown"
+    val Str     = "String"
+    val Int     = "Int"
+    val Long    = "Long"
+    val Double  = "Double"
+    val Float   = "Float"
+    val Boolean = "Boolean"
+    val Instant = "Instant"
+    val Decimal = "BigDecimal"
+    val Unknown = "Unknown"
   }
 
-  def pretty(ast: SchemaAST, indent: Int = 0): String = {
-    val pad = "  " * indent
-    ast match {
-      case Primitive(tag) => s"$pad$tag"
-      case OptionT(v)     => s"$pad? ${pretty(v, indent)}"
-      case ArrayT(e)      => s"$pad[ ${pretty(e, indent)} ]"
-      case MapT(k, v)     => s"$pad{ ${pretty(k, indent)} -> ${pretty(v, indent)} }"
-      case Field(n, t, d, o) =>
-        s"$pad$n: ${pretty(t, indent)}${if (o) " (opt)" else ""}${if (d) " (def)" else ""}"
-      case Record(n, fs) =>
-        val inner = fs.map(f => pretty(f, indent + 1)).mkString("\n")
-        s"$pad$n {\n$inner\n$pad}"
-    }
-  }
+  def pretty(shape: TypeShape, indent: Int = 0): String = TypeShape.pretty(shape)
 }

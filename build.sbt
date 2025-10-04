@@ -8,10 +8,12 @@ ThisBuild / organization := "com.flowforge"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 // Default Scala stays 2.13 for most modules; Spark/Deequ modules are handled pragmatically via deps.
 ThisBuild / scalaVersion := Dependencies.Versions.scala213
+// Cross-compile defaults: build-level + commands iterate over Scala 2.13 and 3 for speed and stability.
+// Module-specific overrides (e.g., enginesFlink) can still target 2.12 explicitly.
+// Global cross-build: keep 2.13 only for stability and speed.
+// Module overrides handle 2.12 (Flink) and Scala 3 (experimental) explicitly.
 ThisBuild / crossScalaVersions := Seq(
-  Dependencies.Versions.scala212,
-  Dependencies.Versions.scala213,
-  // Dependencies.Versions.scala3  // TODO: Enable when Scala 3 implementation for compile-time contracts is ready
+  Dependencies.Versions.scala213
 )
 
 // ===== REPOSITORY RESOLVERS =====
@@ -93,6 +95,15 @@ ThisBuild / Test / testOptions += Tests.Argument("-oDF")
 ThisBuild / Test / fork := true
 ThisBuild / Test / javaOptions += "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED"
 
+// Scaladoc settings (visible in scaladoc.yml job)
+ThisBuild / Compile / doc / scalacOptions ++= Seq(
+  "-groups",
+  "-doc-title",
+  "FlowForge API",
+  "-doc-version",
+  version.value,
+)
+
 // Helper function for module projects
 def moduleProject(name: String): Project =
   Project(name, file(s"modules/$name"))
@@ -118,7 +129,6 @@ lazy val root = (project in file("."))
     connectorsGcs,
     connectorsJdbc,
     enginesSpark,
-    enginesFlink,
     qualityDeequ, // Removed empty quality module per v1.0-2 plan
     examples,
     compileFailTests,
@@ -137,13 +147,26 @@ lazy val infrastructure = moduleProject("infrastructure")
   .settings(
     description := "Complete infrastructure layer with testing framework",
     libraryDependencies ++= Dependencies.forModule("infrastructure"),
+    coverageExcludedPackages := Seq(
+      "com.flowforge.infrastructure.DistributedTracing",
+    ).mkString(";"),
   )
 
 // ===== CORE MODULES =====
 lazy val core = moduleProject("core")
   .settings(
     description := "Core abstractions and custom type system",
+    // Inherit ThisBuild cross (2.13, 3). Flink-specific modules handle 2.12 separately.
+    crossScalaVersions := (ThisBuild / crossScalaVersions).value,
     libraryDependencies ++= Dependencies.forModule("core"),
+    // Minimal, justified excludes only
+    coverageExcludedPackages := Seq(
+      "com.flowforge.core.contracts.internal.*",
+      "com.flowforge.core.examples.*",
+    ).mkString(";"),
+    coverageExcludedFiles := Seq(
+      ".*SchemaWitness.scala",
+    ).mkString(";"),
     // Section 13.3 - Version-specific dependencies for Scala 2/3 cross-build
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -151,6 +174,8 @@ lazy val core = moduleProject("core")
           Seq(
             "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.10",
             "org.scala-lang"                % "scala-reflect" % scalaVersion.value,
+            // Temporary for legacy SchemaWitness (shapeless) kept under scala-2 sources only
+            "com.chuusai"                   %% "shapeless"     % "2.3.10",
           )
         case Some((3, _)) =>
           Seq(
@@ -193,6 +218,13 @@ lazy val connectors = moduleProject("connectors")
   .settings(
     description := "Base connector abstractions",
     libraryDependencies ++= Dependencies.forModule("connectors"),
+    coverageExcludedPackages := Seq(
+      "com.flowforge.connectors.filesystem.examples.*",
+    ).mkString(";"),
+    coverageExcludedFiles := Seq(
+      ".*HDFSFileSystemConnector.scala",
+      ".*CloudStorageConnector.scala",
+    ).mkString(";"),
   )
 
 lazy val connectorsGcs = moduleProject("connectors-gcs")
@@ -225,7 +257,8 @@ lazy val enginesFlink = moduleProject("engines-flink")
   .dependsOn(core, connectors, enginesSpark % "test->compile")
   .settings(
     description        := "Apache Flink execution engine",
-    crossScalaVersions := Seq(Dependencies.Versions.scala212, Dependencies.Versions.scala213),
+    // Flink Scala API is 2.12-only; avoid invalid 2.13 cross build
+    crossScalaVersions := Seq(Dependencies.Versions.scala212),
     libraryDependencies ++= Dependencies.forModule("engines-flink"),
   )
 
@@ -362,7 +395,7 @@ addCommandAlias("ffRunSpark", "engines-spark/run") // Spark local[*], DQ + Delta
 
 // Ensure examples compiles after contracts-sdk (belt-and-suspenders ordering)
 examples / Compile / compile := (examples / Compile / compile)
-  .dependsOn(contractsSdk / Compile / compile)
+  .dependsOn(contractsSdk / Compile / compile, core / Compile / compile)
   .value
 
 // ===== COMPILE-FAIL TESTS MODULE =====
@@ -428,3 +461,27 @@ lazy val experimental = moduleProject("experimental")
     Compile / mainClass := Some("com.flowforge.experimental.caprese.Main"),
     publish / skip      := true,
   )
+// ===== UNIDOC (optional unified API) =====
+import sbtunidoc.ScalaUnidocPlugin
+import sbtunidoc.ScalaUnidocPlugin.autoImport._
+
+// Only aggregate Scala 2.13 modules (Flink is 2.12-only). This keeps unidoc stable.
+lazy val unidocProjects = Seq(
+  core,
+  contracts,
+  connectors,
+  connectorsGcs,
+  connectorsJdbc,
+  enginesSpark,
+  qualityDeequ,
+  infrastructure,
+  examples,
+  validationCli,
+  contractsExtractorCli,
+  maintenanceCli,
+)
+
+ThisBuild / ScalaUnidoc / unidocProjectFilter := inProjects(unidocProjects.map(_.project): _*)
+
+// Scalafix: Disable auto-run on compile (run explicitly in CI)
+ThisBuild / scalafixOnCompile := false

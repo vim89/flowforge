@@ -15,14 +15,14 @@ Status: In progress
 
 ## 📋 Table of Contents
 
-1. [🏗 Architecture & Design](https://claude.ai/chat/8136fccb-2335-4a85-9c68-9eeac2708242#architecture--design)
-2. [⚙️ Technical Implementation](https://claude.ai/chat/8136fccb-2335-4a85-9c68-9eeac2708242#technical-implementation)
-3. [🚀 Business Strategy & Market Analysis](https://claude.ai/chat/8136fccb-2335-4a85-9c68-9eeac2708242#business-strategy--market-analysis)
-4. [🧪 Testing & Quality Assurance](https://claude.ai/chat/8136fccb-2335-4a85-9c68-9eeac2708242#testing--quality-assurance)
-5. [📚 Documentation & Resources](https://claude.ai/chat/8136fccb-2335-4a85-9c68-9eeac2708242#documentation--resources)
-6. [🌍 Community & Adoption](https://claude.ai/chat/8136fccb-2335-4a85-9c68-9eeac2708242#community--adoption)
-7. [🔬 Research & Experimental Features](https://claude.ai/chat/8136fccb-2335-4a85-9c68-9eeac2708242#research--experimental-features)
-8. [🛠 Setup & Installation](https://claude.ai/chat/8136fccb-2335-4a85-9c68-9eeac2708242#setup--installation)
+1. [🏗 Architecture & Design](#architecture--design)
+2. [⚙️ Technical Implementation](#technical-implementation)
+3. [🚀 Business Strategy & Market Analysis](#business-strategy--market-analysis)
+4. [🧪 Testing & Quality Assurance](#testing--quality-assurance)
+5. [📚 Documentation & Resources](#documentation--resources)
+6. [🌍 Community & Adoption](#community--adoption)
+7. [🔬 Research & Experimental Features](#research--experimental-features)
+8. [🛠 Setup & Installation](#setup--installation)
 
 ---
 

@@ -60,6 +60,18 @@ object SparkDataAlgebra {
   /**
    * Simple wrapper to track SparkSession for resource management
    */
+  /**
+   * Pair of a concrete [[com.flowforge.core.algebra.DataAlgebra]] implementation and the
+   * [[org.apache.spark.sql.SparkSession]] it was created with. Returned by [[createSparkDataAlgebra]] to make
+   * resource handling (e.g. closing the session) explicit at call sites.
+   *
+   * @tparam F
+   *   effect type (e.g., cats.effect.IO)
+   * @param algebra
+   *   concrete DataAlgebra backed by Spark
+   * @param sparkSession
+   *   the Spark session used to perform operations
+   */
   case class DataAlgebraWithSession[F[_]](
     algebra: DataAlgebra[F],
     sparkSession: SparkSession)
@@ -69,6 +81,21 @@ object SparkDataAlgebra {
    *
    * Features real Spark Dataset operations, Delta Lake integration, and proper CDC. Returns a trackable
    * algebra for resource management.
+   */
+  /**
+   * Create a production‑ready Spark‑backed [[com.flowforge.core.algebra.DataAlgebra]].
+   *
+   * Features:
+   *   - Real Spark Dataset operations for read/write/transform
+   *   - Optional Delta Lake integration where applicable
+   *   - Native quality checks (with reflective Deequ enablement when present)
+   *
+   * @param sparkSession
+   *   an existing SparkSession (caller controls its lifecycle)
+   * @tparam F
+   *   effect type with an [[com.flowforge.core.algebra.EffectSystem]] instance
+   * @return
+   *   the algebra paired with the session for explicit lifecycle
    */
   def createSparkDataAlgebra[F[_]: EffectSystem](
     sparkSession: SparkSession,

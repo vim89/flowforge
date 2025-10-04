@@ -1,3 +1,4 @@
+// scalafix:off DisableSyntax.var DisableSyntax.throw DisableSyntax.null DisableSyntax.noUnsafeRunSync
 /**
  * Integration tests for complete data pipeline scenarios.
  *

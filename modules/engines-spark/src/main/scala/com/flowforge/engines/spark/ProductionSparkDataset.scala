@@ -107,9 +107,20 @@ object ProductionSparkDataset {
    */
 
   /**
-   * Create ProductionSparkDataset from DataFrame with MEMORY-SAFE lazy decoding
+   * Create ProductionSparkDataset from an existing Spark [[org.apache.spark.sql.DataFrame]] while avoiding
+   * driver OOMs.
    *
-   * CRITICAL FIX: No longer loads entire DataFrame into driver memory
+   * Uses a small JSON sample for compatibility with FlowForge’s decoders and keeps the full dataset lazily
+   * evaluated on the cluster.
+   *
+   * @param df
+   *   the input DataFrame
+   * @param spark
+   *   the SparkSession used for auxiliary operations
+   * @tparam A
+   *   element type with a FlowForge [[com.flowforge.core.algebra.DataDecoder]] instance
+   * @return
+   *   a ProductionSparkDataset[A] backed by the given DataFrame
    */
   def fromDataFrame[A: DataDecoder](
     df: DataFrame,
@@ -155,9 +166,7 @@ object ProductionSparkDataset {
     ProductionSparkDataset(sampleData, df, schema, metadata)
   }
 
-  /**
-   * Map Spark DataType to FlowForge DataType
-   */
+  /** Map Spark SQL DataType to FlowForge [[com.flowforge.core.types.DataType]]. */
   private def mapSparkTypeToFlowForgeType(
     sparkType: org.apache.spark.sql.types.DataType,
   ): DataType = {

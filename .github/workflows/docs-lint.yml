@@ -3,19 +3,40 @@ name: Docs Lint
 on:
   pull_request:
   push:
-    branches: [ main, "feature/**", "mvp-0.0.1-snapshot" ]
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   docs-lint:
-    runs-on: ubuntu-latest
+    name: Documentation Structure & Scaladoc
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Set up ripgrep
         run: |
           sudo apt-get update
           sudo apt-get install -y ripgrep
 
-      - name: Run docs lint
+      - name: Run docs structure lint
         run: bash scripts/lint-docs.sh
+
+      - name: Run Scaladoc coverage check
+        run: |
+          chmod +x scripts/doclint.sh
+          ./scripts/doclint.sh | tee doclint-report.txt
+
+      - name: Upload Scaladoc report
+        if: always()
+        uses: actions/upload-artifact@ea165f8a2d59903357f237d72ff6efea362c5f70 # v4.6.2
+        with:
+          name: doclint-report
+          path: doclint-report.txt
+          retention-days: 7

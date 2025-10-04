@@ -1,0 +1,1777 @@
+# Advanced FlowForge Patterns
+
+This tutorial covers sophisticated FlowForge patterns for users who have mastered the basics and want to explore advanced capabilities. We'll dive into multi-engine pipelines, complex schema evolution, streaming CDC, multi-cloud integration, custom quality rules, and production-scale performance optimization.
+
+## Prerequisites
+
+Before starting this tutorial, ensure you have:
+- Completed the [First Contract](first-contract.md) tutorial
+- Understanding of FlowForge's contract validation system
+- Familiarity with either Spark or Flink
+- Basic knowledge of data engineering concepts
+
+## Setup
+
+Generate a new FlowForge project with advanced examples:
+
+```bash
+sbt new flowforge/flowforge.g8
+# Choose project name: advanced-patterns-demo
+# Include advanced examples: yes
+```
+
+## 1. Multi-Engine Pipelines: Engine-Agnostic Business Logic
+
+FlowForge's engine abstraction allows you to write business logic once and run it on different execution engines. Let's explore this with a real-world customer analytics pipeline.
+
+### Defining Engine-Agnostic Contracts
+
+First, let's define our data contracts that work across all engines:
+
+```scala mdoc:silent
+import com.flowforge.core.contracts._
+import com.flowforge.core.contracts.policies._
+
+// Customer event contract - works on both Spark and Flink
+case class CustomerEvent(
+  customerId: Long,
+  eventType: String,
+  timestamp: Long,
+  properties: Map[String, String]
+)
+
+// Aggregated customer metrics contract
+case class CustomerMetrics(
+  customerId: Long,
+  totalEvents: Long,
+  uniqueEventTypes: Int,
+  lastActivity: Long,
+  engagementScore: Double
+)
+
+// Define schema policies for evolution
+object CustomerContracts {
+  implicit val eventPolicy: SchemaPolicy[CustomerEvent] = Backward
+  implicit val metricsPolicy: SchemaPolicy[CustomerMetrics] = Forward
+}
+```
+
+### Engine-Agnostic Business Logic
+
+Now let's implement the core business logic using FlowForge's algebra:
+
+```scala mdoc:silent
+import com.flowforge.core.algebra._
+import com.flowforge.core.contracts.validation._
+
+class CustomerAnalytics[F[_]: EffectSystem, D[_]: DataAlgebra] {
+  
+  def processCustomerEvents(
+    events: D[CustomerEvent]
+  ): F[D[CustomerMetrics]] = {
+    
+    // Validate input contracts at compile time
+    val validatedEvents = DataContract.validate(events)
+    
+    // Core business logic - engine agnostic
+    val aggregated = DataAlgebra[D].groupBy(validatedEvents)(_.customerId)
+      .aggregate { group =>
+        val totalEvents = DataAlgebra[D].count(group)
+        val uniqueTypes = DataAlgebra[D].distinct(
+          DataAlgebra[D].select(group)(_.eventType)
+        ).count
+        val lastActivity = DataAlgebra[D].max(
+          DataAlgebra[D].select(group)(_.timestamp)
+        )
+        
+        // Calculate engagement score based on recency and frequency
+        val engagementScore = calculateEngagementScore(totalEvents, lastActivity)
+        
+        CustomerMetrics(
+          customerId = group.key,
+          totalEvents = totalEvents,
+          uniqueEventTypes = uniqueTypes,
+          lastActivity = lastActivity,
+          engagementScore = engagementScore
+        )
+      }
+    
+    // Validate output contracts
+    EffectSystem[F].pure(DataContract.validate(aggregated))
+  }
+  
+  private def calculateEngagementScore(events: Long, lastActivity: Long): Double = {
+    val recencyWeight = 0.6
+    val frequencyWeight = 0.4
+    val now = System.currentTimeMillis()
+    val daysSinceActivity = (now - lastActivity) / (1000 * 60 * 60 * 24)
+    val recencyScore = math.max(0, 1.0 - (daysSinceActivity / 30.0))
+    val frequencyScore = math.min(1.0, events / 100.0)
+    
+    recencyWeight * recencyScore + frequencyWeight * frequencyScore
+  }
+}
+```
+
+### Spark Implementation
+
+```scala mdoc:silent
+import com.flowforge.engines.spark._
+import org.apache.spark.sql.SparkSession
+import cats.effect.IO
+
+class SparkCustomerAnalytics(implicit spark: SparkSession) 
+  extends CustomerAnalytics[IO, SparkData] {
+  
+  def runPipeline(inputPath: String, outputPath: String): IO[Unit] = {
+    for {
+      // Read events with automatic schema validation
+      events <- SparkData.read[CustomerEvent](inputPath)
+      
+      // Process using engine-agnostic logic
+      metrics <- processCustomerEvents(events)
+      
+      // Write with contract validation
+      _ <- SparkData.write(metrics, outputPath)
+      
+      // Emit lineage information
+      _ <- emitLineage("customer-analytics-spark", inputPath, outputPath)
+      
+    } yield ()
+  }
+  
+  private def emitLineage(jobName: String, input: String, output: String): IO[Unit] = {
+    // OpenLineage emission for Spark
+    IO.delay {
+      val lineageEvent = OpenLineageEvent(
+        jobName = jobName,
+        inputs = List(input),
+        outputs = List(output),
+        engine = "spark"
+      )
+      OpenLineageEmitter.emit(lineageEvent)
+    }
+  }
+}
+```
+
+### Flink Implementation
+
+```scala mdoc:silent
+import com.flowforge.engines.flink._
+import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import zio.Task
+
+class FlinkCustomerAnalytics(implicit env: StreamExecutionEnvironment)
+  extends CustomerAnalytics[Task, FlinkStream] {
+  
+  def runStreamingPipeline(kafkaTopic: String, outputTopic: String): Task[Unit] = {
+    for {
+      // Read streaming events with schema validation
+      events <- FlinkStream.readFromKafka[CustomerEvent](kafkaTopic)
+      
+      // Apply windowing for streaming aggregation
+      windowedEvents = FlinkStream.window(events, 
+        windowSize = Duration.ofMinutes(5),
+        slideSize = Duration.ofMinutes(1)
+      )
+      
+      // Process using the same business logic
+      metrics <- processCustomerEvents(windowedEvents)
+      
+      // Write to output with contract validation
+      _ <- FlinkStream.writeToKafka(metrics, outputTopic)
+      
+      // Start the streaming job
+      _ <- Task.delay(env.execute("customer-analytics-flink"))
+      
+    } yield ()
+  }
+}
+```
+
+### Testing Engine Equivalence
+
+Verify that both engines produce identical results:
+
+```scala mdoc:silent
+import com.flowforge.testing._
+
+class EngineEquivalenceTest extends FlowForgeSpec {
+  
+  "Customer analytics" should "produce identical results on Spark and Flink" in {
+    val testEvents = List(
+      CustomerEvent(1L, "login", 1000L, Map("device" -> "mobile")),
+      CustomerEvent(1L, "purchase", 2000L, Map("amount" -> "99.99")),
+      CustomerEvent(2L, "login", 1500L, Map("device" -> "desktop"))
+    )
+    
+    // Run on Spark
+    val sparkResults = withSparkSession { implicit spark =>
+      val analytics = new SparkCustomerAnalytics()
+      val events = SparkData.fromSeq(testEvents)
+      analytics.processCustomerEvents(events).unsafeRunSync()
+    }
+    
+    // Run on Flink (batch mode for testing)
+    val flinkResults = withFlinkEnvironment { implicit env =>
+      val analytics = new FlinkCustomerAnalytics()
+      val events = FlinkStream.fromSeq(testEvents)
+      analytics.processCustomerEvents(events).unsafeRun()
+    }
+    
+    // Results should be identical
+    sparkResults.collect() should contain theSameElementsAs flinkResults.collect()
+  }
+}
+```
+
+## 2. Complex Schema Evolution: Managing Breaking Changes
+
+Real-world data evolves constantly. FlowForge's schema policies help manage this evolution gracefully. Let's explore advanced schema evolution patterns.
+
+### Schema Evolution Scenarios
+
+```scala mdoc:silent
+// Version 1: Initial customer schema
+case class CustomerV1(
+  id: Long,
+  name: String,
+  email: String
+)
+
+// Version 2: Added optional phone field (Backward compatible)
+case class CustomerV2(
+  id: Long,
+  name: String,
+  email: String,
+  phone: Option[String] = None
+)
+
+// Version 3: Split name into first/last (Breaking change)
+case class CustomerV3(
+  id: Long,
+  firstName: String,
+  lastName: String,
+  email: String,
+  phone: Option[String] = None
+)
+
+// Version 4: Made email optional (Forward compatible)
+case class CustomerV4(
+  id: Long,
+  firstName: String,
+  lastName: String,
+  email: Option[String] = None,
+  phone: Option[String] = None
+)
+```
+
+### Policy-Based Evolution Strategy
+
+```scala mdoc:silent
+import com.flowforge.core.contracts.policies._
+
+object CustomerEvolution {
+  
+  // Backward policy: Allow new optional fields
+  implicit val v1ToV2Policy: SchemaPolicy[CustomerV2] = Backward
+  
+  // Full policy: Handle breaking changes with transformation
+  implicit val v2ToV3Policy: SchemaPolicy[CustomerV3] = Full
+  
+  // Forward policy: Allow field removal
+  implicit val v3ToV4Policy: SchemaPolicy[CustomerV4] = Forward
+  
+  // Custom transformation for breaking changes
+  def transformV2ToV3(v2: CustomerV2): CustomerV3 = {
+    val nameParts = v2.name.split(" ", 2)
+    CustomerV3(
+      id = v2.id,
+      firstName = nameParts.headOption.getOrElse(""),
+      lastName = nameParts.lift(1).getOrElse(""),
+      email = v2.email,
+      phone = v2.phone
+    )
+  }
+}
+```
+
+### Schema Migration Pipeline
+
+```scala mdoc:silent
+class SchemaMigrationPipeline[F[_]: EffectSystem, D[_]: DataAlgebra] {
+  
+  def migrateCustomerData(
+    inputPath: String,
+    outputPath: String,
+    sourceVersion: String,
+    targetVersion: String
+  ): F[Unit] = {
+    
+    (sourceVersion, targetVersion) match {
+      case ("v1", "v2") => migrateV1ToV2(inputPath, outputPath)
+      case ("v2", "v3") => migrateV2ToV3(inputPath, outputPath)
+      case ("v3", "v4") => migrateV3ToV4(inputPath, outputPath)
+      case _ => EffectSystem[F].raiseError(
+        new IllegalArgumentException(s"Unsupported migration: $sourceVersion -> $targetVersion")
+      )
+    }
+  }
+  
+  private def migrateV1ToV2(inputPath: String, outputPath: String): F[Unit] = {
+    for {
+      // Read V1 data
+      v1Data <- DataAlgebra[D].read[CustomerV1](inputPath)
+      
+      // Transform to V2 (automatic with Backward policy)
+      v2Data = DataAlgebra[D].map(v1Data) { v1 =>
+        CustomerV2(v1.id, v1.name, v1.email, None)
+      }
+      
+      // Validate contracts
+      validated = DataContract.validate(v2Data)
+      
+      // Write V2 data
+      _ <- DataAlgebra[D].write(validated, outputPath)
+      
+    } yield ()
+  }
+  
+  private def migrateV2ToV3(inputPath: String, outputPath: String): F[Unit] = {
+    for {
+      // Read V2 data
+      v2Data <- DataAlgebra[D].read[CustomerV2](inputPath)
+      
+      // Transform with custom logic for breaking change
+      v3Data = DataAlgebra[D].map(v2Data)(CustomerEvolution.transformV2ToV3)
+      
+      // Validate contracts with Full policy
+      validated = DataContract.validate(v3Data)
+      
+      // Write V3 data
+      _ <- DataAlgebra[D].write(validated, outputPath)
+      
+    } yield ()
+  }
+  
+  private def migrateV3ToV4(inputPath: String, outputPath: String): F[Unit] = {
+    for {
+      // Read V3 data
+      v3Data <- DataAlgebra[D].read[CustomerV3](inputPath)
+      
+      // Transform to V4 (automatic with Forward policy)
+      v4Data = DataAlgebra[D].map(v3Data) { v3 =>
+        CustomerV4(v3.id, v3.firstName, v3.lastName, Some(v3.email), v3.phone)
+      }
+      
+      // Validate contracts
+      validated = DataContract.validate(v4Data)
+      
+      // Write V4 data
+      _ <- DataAlgebra[D].write(validated, outputPath)
+      
+    } yield ()
+  }
+}
+```
+
+### Schema Evolution Testing
+
+```scala mdoc:silent
+class SchemaEvolutionTest extends FlowForgeSpec {
+  
+  "Schema migration" should "preserve data integrity across versions" in {
+    val originalV1 = CustomerV1(1L, "John Doe", "john@example.com")
+    
+    // Test V1 -> V2 migration
+    val v2Result = CustomerV2(originalV1.id, originalV1.name, originalV1.email, None)
+    v2Result.id shouldBe originalV1.id
+    v2Result.email shouldBe originalV1.email
+    
+    // Test V2 -> V3 migration with name splitting
+    val v3Result = CustomerEvolution.transformV2ToV3(v2Result)
+    v3Result.firstName shouldBe "John"
+    v3Result.lastName shouldBe "Doe"
+    v3Result.email shouldBe originalV1.email
+    
+    // Test V3 -> V4 migration
+    val v4Result = CustomerV4(
+      v3Result.id, v3Result.firstName, v3Result.lastName, 
+      Some(v3Result.email), v3Result.phone
+    )
+    v4Result.email shouldBe Some(originalV1.email)
+  }
+  
+  "Schema policies" should "catch incompatible changes at compile time" in {
+    // This should fail to compile with Exact policy
+    """
+    implicit val exactPolicy: SchemaPolicy[CustomerV2] = Exact
+    val v1Data: Dataset[CustomerV1] = ???
+    val v2Data: Dataset[CustomerV2] = DataContract.validate(v1Data)
+    """ shouldNot compile
+  }
+}
+```
+
+## 3. Streaming CDC: Real-Time Change Data Capture
+
+Change Data Capture (CDC) is crucial for real-time data synchronization. Let's build a sophisticated CDC pipeline with FlowForge.
+
+### CDC Event Contracts
+
+```scala mdoc:silent
+import java.time.Instant
+
+// CDC operation types
+sealed trait CDCOperation
+case object Insert extends CDCOperation
+case object Update extends CDCOperation
+case object Delete extends CDCOperation
+
+// Generic CDC event structure
+case class CDCEvent[T](
+  operation: CDCOperation,
+  timestamp: Instant,
+  before: Option[T],
+  after: Option[T],
+  source: CDCSource
+)
+
+case class CDCSource(
+  database: String,
+  table: String,
+  lsn: Long // Log Sequence Number
+)
+
+// Customer CDC events
+case class CustomerCDC(
+  customerId: Long,
+  name: String,
+  email: String,
+  status: String,
+  updatedAt: Instant
+)
+
+object CDCContracts {
+  implicit val customerCDCPolicy: SchemaPolicy[CustomerCDC] = Backward
+  implicit val cdcEventPolicy: SchemaPolicy[CDCEvent[CustomerCDC]] = Full
+}
+```
+
+### Streaming CDC Processor
+
+```scala mdoc:silent
+import com.flowforge.streaming._
+import com.flowforge.quality._
+
+class StreamingCDCProcessor[F[_]: EffectSystem, S[_]: StreamAlgebra] {
+  
+  def processCDCStream(
+    kafkaTopic: String,
+    deltaTablePath: String
+  ): F[Unit] = {
+    
+    for {
+      // Read CDC events from Kafka
+      cdcStream <- StreamAlgebra[S].readFromKafka[CDCEvent[CustomerCDC]](kafkaTopic)
+      
+      // Validate CDC events
+      validatedStream = StreamAlgebra[S].filter(cdcStream)(validateCDCEvent)
+      
+      // Apply quality checks
+      qualityCheckedStream <- applyQualityChecks(validatedStream)
+      
+      // Process CDC operations
+      processedStream = StreamAlgebra[S].map(qualityCheckedStream)(processCDCOperation)
+      
+      // Write to Delta Lake with SCD2 pattern
+      _ <- writeToDeltaWithSCD2(processedStream, deltaTablePath)
+      
+    } yield ()
+  }
+  
+  private def validateCDCEvent(event: CDCEvent[CustomerCDC]): Boolean = {
+    event.operation match {
+      case Insert => event.after.isDefined && event.before.isEmpty
+      case Update => event.after.isDefined && event.before.isDefined
+      case Delete => event.before.isDefined && event.after.isEmpty
+    }
+  }
+  
+  private def applyQualityChecks(
+    stream: S[CDCEvent[CustomerCDC]]
+  ): F[S[CDCEvent[CustomerCDC]]] = {
+    
+    val qualityRules = List(
+      QualityRule("email_format", "Email must be valid format") { event =>
+        event.after.forall(_.email.contains("@"))
+      },
+      QualityRule("customer_id_positive", "Customer ID must be positive") { event =>
+        event.after.forall(_.customerId > 0)
+      },
+      QualityRule("status_valid", "Status must be valid") { event =>
+        event.after.forall(c => Set("active", "inactive", "suspended").contains(c.status))
+      }
+    )
+    
+    EffectSystem[F].pure(
+      StreamAlgebra[S].filter(stream) { event =>
+        qualityRules.forall(_.validate(event))
+      }
+    )
+  }
+  
+  private def processCDCOperation(event: CDCEvent[CustomerCDC]): DeltaOperation = {
+    event.operation match {
+      case Insert => DeltaInsert(event.after.get, event.timestamp)
+      case Update => DeltaUpdate(
+        event.before.get, 
+        event.after.get, 
+        event.timestamp
+      )
+      case Delete => DeltaDelete(event.before.get, event.timestamp)
+    }
+  }
+  
+  private def writeToDeltaWithSCD2(
+    stream: S[DeltaOperation],
+    deltaPath: String
+  ): F[Unit] = {
+    // Implement SCD2 (Slowly Changing Dimensions Type 2) pattern
+    // This maintains historical versions of records
+    EffectSystem[F].delay {
+      StreamAlgebra[S].writeStream(stream) { operations =>
+        operations.foreach { op =>
+          op match {
+            case DeltaInsert(record, timestamp) =>
+              insertWithSCD2(record, timestamp, deltaPath)
+            case DeltaUpdate(before, after, timestamp) =>
+              updateWithSCD2(before, after, timestamp, deltaPath)
+            case DeltaDelete(record, timestamp) =>
+              deleteWithSCD2(record, timestamp, deltaPath)
+          }
+        }
+      }
+    }
+  }
+  
+  private def insertWithSCD2(record: CustomerCDC, timestamp: Instant, path: String): Unit = {
+    // Insert new record with effective dates
+    val scd2Record = CustomerSCD2(
+      customerId = record.customerId,
+      name = record.name,
+      email = record.email,
+      status = record.status,
+      effectiveFrom = timestamp,
+      effectiveTo = None,
+      isCurrent = true,
+      version = 1
+    )
+    // Write to Delta table
+  }
+  
+  private def updateWithSCD2(
+    before: CustomerCDC, 
+    after: CustomerCDC, 
+    timestamp: Instant, 
+    path: String
+  ): Unit = {
+    // Close current record and insert new version
+    // 1. Update current record: set effectiveTo = timestamp, isCurrent = false
+    // 2. Insert new record: effectiveFrom = timestamp, isCurrent = true, version++
+  }
+  
+  private def deleteWithSCD2(record: CustomerCDC, timestamp: Instant, path: String): Unit = {
+    // Soft delete: set effectiveTo = timestamp, isCurrent = false
+  }
+}
+
+// SCD2 record structure
+case class CustomerSCD2(
+  customerId: Long,
+  name: String,
+  email: String,
+  status: String,
+  effectiveFrom: Instant,
+  effectiveTo: Option[Instant],
+  isCurrent: Boolean,
+  version: Int
+)
+
+// Delta operations
+sealed trait DeltaOperation
+case class DeltaInsert(record: CustomerCDC, timestamp: Instant) extends DeltaOperation
+case class DeltaUpdate(before: CustomerCDC, after: CustomerCDC, timestamp: Instant) extends DeltaOperation
+case class DeltaDelete(record: CustomerCDC, timestamp: Instant) extends DeltaOperation
+```
+
+### CDC Pipeline Testing
+
+```scala mdoc:silent
+class CDCPipelineTest extends FlowForgeSpec {
+  
+  "CDC processor" should "handle all operation types correctly" in {
+    val processor = new StreamingCDCProcessor[IO, TestStream]()
+    
+    val insertEvent = CDCEvent(
+      operation = Insert,
+      timestamp = Instant.now(),
+      before = None,
+      after = Some(CustomerCDC(1L, "John Doe", "john@example.com", "active", Instant.now())),
+      source = CDCSource("prod_db", "customers", 12345L)
+    )
+    
+    val updateEvent = CDCEvent(
+      operation = Update,
+      timestamp = Instant.now(),
+      before = Some(CustomerCDC(1L, "John Doe", "john@example.com", "active", Instant.now())),
+      after = Some(CustomerCDC(1L, "John Smith", "john.smith@example.com", "active", Instant.now())),
+      source = CDCSource("prod_db", "customers", 12346L)
+    )
+    
+    val deleteEvent = CDCEvent(
+      operation = Delete,
+      timestamp = Instant.now(),
+      before = Some(CustomerCDC(1L, "John Smith", "john.smith@example.com", "active", Instant.now())),
+      after = None,
+      source = CDCSource("prod_db", "customers", 12347L)
+    )
+    
+    // Test validation
+    processor.validateCDCEvent(insertEvent) shouldBe true
+    processor.validateCDCEvent(updateEvent) shouldBe true
+    processor.validateCDCEvent(deleteEvent) shouldBe true
+    
+    // Test invalid events
+    val invalidInsert = insertEvent.copy(before = Some(insertEvent.after.get))
+    processor.validateCDCEvent(invalidInsert) shouldBe false
+  }
+}
+```
+
+## 4. Multi-Cloud Integration: Unified Data Processing
+
+Modern data architectures span multiple cloud providers. FlowForge's unified connector interface simplifies multi-cloud data processing.
+
+### Multi-Cloud Data Sources
+
+```scala mdoc:silent
+import com.flowforge.connectors._
+
+// Unified cloud storage configuration
+sealed trait CloudStorage
+case class S3Storage(bucket: String, region: String, accessKey: String, secretKey: String) extends CloudStorage
+case class AzureStorage(account: String, container: String, sasToken: String) extends CloudStorage
+case class GCSStorage(bucket: String, projectId: String, serviceAccountKey: String) extends CloudStorage
+
+// Multi-cloud data source configuration
+case class MultiCloudSource(
+  name: String,
+  storage: CloudStorage,
+  path: String,
+  format: String,
+  schema: String
+)
+
+// Customer data distributed across clouds
+case class CustomerProfile(
+  customerId: Long,
+  personalInfo: PersonalInfo,
+  preferences: CustomerPreferences,
+  activitySummary: ActivitySummary
+)
+
+case class PersonalInfo(
+  firstName: String,
+  lastName: String,
+  email: String,
+  phone: Option[String]
+)
+
+case class CustomerPreferences(
+  language: String,
+  timezone: String,
+  marketingOptIn: Boolean,
+  categories: List[String]
+)
+
+case class ActivitySummary(
+  totalOrders: Long,
+  totalSpent: Double,
+  lastOrderDate: Option[Instant],
+  averageOrderValue: Double
+)
+```
+
+### Multi-Cloud Data Lake Pipeline
+
+```scala mdoc:silent
+class MultiCloudDataLakePipeline[F[_]: EffectSystem, D[_]: DataAlgebra] {
+  
+  def consolidateCustomerData(
+    sources: List[MultiCloudSource],
+    outputPath: String
+  ): F[Unit] = {
+    
+    for {
+      // Read from multiple cloud sources
+      datasets <- EffectSystem[F].parTraverse(sources)(readFromCloudSource)
+      
+      // Apply data quality checks
+      qualityCheckedDatasets <- EffectSystem[F].parTraverse(datasets)(applyDataQuality)
+      
+      // Consolidate data with schema evolution handling
+      consolidatedData <- consolidateDatasets(qualityCheckedDatasets)
+      
+      // Apply final validation
+      validatedData = DataContract.validate(consolidatedData)
+      
+      // Write to unified output
+      _ <- DataAlgebra[D].write(validatedData, outputPath)
+      
+      // Emit lineage across clouds
+      _ <- emitMultiCloudLineage(sources, outputPath)
+      
+    } yield ()
+  }
+  
+  private def readFromCloudSource(source: MultiCloudSource): F[D[CustomerProfile]] = {
+    source.storage match {
+      case s3: S3Storage =>
+        readFromS3(s3, source.path, source.format)
+      case azure: AzureStorage =>
+        readFromAzure(azure, source.path, source.format)
+      case gcs: GCSStorage =>
+        readFromGCS(gcs, source.path, source.format)
+    }
+  }
+  
+  private def readFromS3(
+    s3: S3Storage, 
+    path: String, 
+    format: String
+  ): F[D[CustomerProfile]] = {
+    EffectSystem[F].delay {
+      // Configure S3 connector
+      val s3Config = S3Config(
+        bucket = s3.bucket,
+        region = s3.region,
+        credentials = S3Credentials(s3.accessKey, s3.secretKey)
+      )
+      
+      // Read with automatic schema validation
+      DataAlgebra[D].read[CustomerProfile](s"s3://${s3.bucket}/$path")
+        .withConfig(s3Config)
+        .withFormat(format)
+    }
+  }
+  
+  private def readFromAzure(
+    azure: AzureStorage, 
+    path: String, 
+    format: String
+  ): F[D[CustomerProfile]] = {
+    EffectSystem[F].delay {
+      // Configure Azure Data Lake connector
+      val azureConfig = AzureConfig(
+        account = azure.account,
+        container = azure.container,
+        sasToken = azure.sasToken
+      )
+      
+      DataAlgebra[D].read[CustomerProfile](s"abfss://${azure.container}@${azure.account}.dfs.core.windows.net/$path")
+        .withConfig(azureConfig)
+        .withFormat(format)
+    }
+  }
+  
+  private def readFromGCS(
+    gcs: GCSStorage, 
+    path: String, 
+    format: String
+  ): F[D[CustomerProfile]] = {
+    EffectSystem[F].delay {
+      // Configure GCS connector
+      val gcsConfig = GCSConfig(
+        bucket = gcs.bucket,
+        projectId = gcs.projectId,
+        serviceAccountKey = gcs.serviceAccountKey
+      )
+      
+      DataAlgebra[D].read[CustomerProfile](s"gs://${gcs.bucket}/$path")
+        .withConfig(gcsConfig)
+        .withFormat(format)
+    }
+  }
+  
+  private def applyDataQuality(dataset: D[CustomerProfile]): F[D[CustomerProfile]] = {
+    // Apply comprehensive data quality checks
+    val qualityRules = List(
+      // Personal info validation
+      QualityRule("email_valid", "Email must be valid") { profile =>
+        profile.personalInfo.email.contains("@") && 
+        profile.personalInfo.email.contains(".")
+      },
+      
+      // Activity validation
+      QualityRule("activity_consistent", "Activity data must be consistent") { profile =>
+        profile.activitySummary.totalOrders >= 0 &&
+        profile.activitySummary.totalSpent >= 0 &&
+        profile.activitySummary.averageOrderValue >= 0
+      },
+      
+      // Preferences validation
+      QualityRule("preferences_valid", "Preferences must be valid") { profile =>
+        Set("en", "es", "fr", "de").contains(profile.preferences.language) &&
+        profile.preferences.categories.nonEmpty
+      }
+    )
+    
+    EffectSystem[F].pure(
+      DataAlgebra[D].filter(dataset) { profile =>
+        qualityRules.forall(_.validate(profile))
+      }
+    )
+  }
+  
+  private def consolidateDatasets(
+    datasets: List[D[CustomerProfile]]
+  ): F[D[CustomerProfile]] = {
+    // Merge datasets with deduplication and conflict resolution
+    EffectSystem[F].pure {
+      datasets.reduce { (ds1, ds2) =>
+        DataAlgebra[D].union(ds1, ds2)
+          .groupBy(_.customerId)
+          .aggregate(resolveConflicts)
+      }
+    }
+  }
+  
+  private def resolveConflicts(profiles: D[CustomerProfile]): CustomerProfile = {
+    // Implement conflict resolution logic
+    // For example: take the most recent data based on activity
+    val sortedProfiles = DataAlgebra[D].sortBy(profiles)(
+      _.activitySummary.lastOrderDate.getOrElse(Instant.MIN)
+    )(Ordering[Instant].reverse)
+    
+    DataAlgebra[D].head(sortedProfiles)
+  }
+  
+  private def emitMultiCloudLineage(
+    sources: List[MultiCloudSource], 
+    output: String
+  ): F[Unit] = {
+    EffectSystem[F].delay {
+      val lineageEvent = OpenLineageEvent(
+        jobName = "multi-cloud-consolidation",
+        inputs = sources.map(s => s"${s.storage}/${s.path}"),
+        outputs = List(output),
+        engine = "multi-cloud",
+        metadata = Map(
+          "clouds" -> sources.map(_.storage.getClass.getSimpleName).mkString(","),
+          "sources_count" -> sources.length.toString
+        )
+      )
+      OpenLineageEmitter.emit(lineageEvent)
+    }
+  }
+}
+```
+
+### Multi-Cloud Testing
+
+```scala mdoc:silent
+class MultiCloudIntegrationTest extends FlowForgeSpec {
+  
+  "Multi-cloud pipeline" should "consolidate data from different cloud providers" in {
+    val s3Source = MultiCloudSource(
+      name = "s3-customers",
+      storage = S3Storage("customer-bucket", "us-east-1", "access-key", "secret-key"),
+      path = "customers/profiles",
+      format = "parquet",
+      schema = "customer_profile_v1"
+    )
+    
+    val azureSource = MultiCloudSource(
+      name = "azure-customers",
+      storage = AzureStorage("storageaccount", "customers", "sas-token"),
+      path = "profiles/latest",
+      format = "delta",
+      schema = "customer_profile_v2"
+    )
+    
+    val gcsSource = MultiCloudSource(
+      name = "gcs-customers",
+      storage = GCSStorage("customer-data", "project-id", "service-account-key"),
+      path = "customer_profiles",
+      format = "avro",
+      schema = "customer_profile_v1"
+    )
+    
+    val pipeline = new MultiCloudDataLakePipeline[IO, TestData]()
+    val sources = List(s3Source, azureSource, gcsSource)
+    
+    // Test pipeline execution
+    val result = pipeline.consolidateCustomerData(sources, "output/consolidated")
+    result.unsafeRunSync()
+    
+    // Verify lineage emission
+    val emittedEvents = OpenLineageEmitter.getEmittedEvents()
+    emittedEvents should have size 1
+    emittedEvents.head.inputs should have size 3
+  }
+}
+```
+
+## 5. Custom Quality Rules: Domain-Specific Validation
+
+FlowForge's dual-mode quality framework allows you to build sophisticated, domain-specific validation logic.
+
+### Advanced Quality Rule Framework
+
+```scala mdoc:silent
+import com.flowforge.quality._
+import com.flowforge.quality.deequ._
+
+// Custom quality rule types
+sealed trait QualityRuleType
+case object BusinessRule extends QualityRuleType
+case object DataIntegrity extends QualityRuleType
+case object ReferentialIntegrity extends QualityRuleType
+case object StatisticalAnomaly extends QualityRuleType
+
+// Enhanced quality rule with metadata
+case class EnhancedQualityRule[T](
+  name: String,
+  description: String,
+  ruleType: QualityRuleType,
+  severity: QualitySeverity,
+  validator: T => Boolean,
+  fixer: Option[T => T] = None,
+  metadata: Map[String, String] = Map.empty
+)
+
+sealed trait QualitySeverity
+case object Critical extends QualitySeverity
+case object Warning extends QualitySeverity
+case object Info extends QualitySeverity
+
+// Financial domain-specific rules
+object FinancialQualityRules {
+  
+  def transactionAmountRule: EnhancedQualityRule[Transaction] = 
+    EnhancedQualityRule(
+      name = "transaction_amount_valid",
+      description = "Transaction amount must be positive and within reasonable limits",
+      ruleType = BusinessRule,
+      severity = Critical,
+      validator = { tx =>
+        tx.amount > 0 && tx.amount <= 1000000
+      },
+      metadata = Map(
+        "domain" -> "financial",
+        "regulation" -> "PCI-DSS"
+      )
+    )
+  
+  def accountBalanceConsistencyRule: EnhancedQualityRule[Account] =
+    EnhancedQualityRule(
+      name = "account_balance_consistency",
+      description = "Account balance must equal sum of transactions",
+      ruleType = DataIntegrity,
+      severity = Critical,
+      validator = { account =>
+        val calculatedBalance = account.transactions.map(_.amount).sum
+        math.abs(account.balance - calculatedBalance) < 0.01
+      }
+    )
+  
+  def fraudDetectionRule: EnhancedQualityRule[Transaction] =
+    EnhancedQualityRule(
+      name = "fraud_detection",
+      description = "Detect potentially fraudulent transactions",
+      ruleType = StatisticalAnomaly,
+      severity = Warning,
+      validator = { tx =>
+        // Simple fraud detection logic
+        val isHighAmount = tx.amount > 10000
+        val isUnusualTime = tx.timestamp.getHour < 6 || tx.timestamp.getHour > 22
+        val isUnusualLocation = tx.location.exists(_.country != tx.account.homeCountry)
+        
+        !(isHighAmount && isUnusualTime && isUnusualLocation)
+      },
+      metadata = Map(
+        "ml_model" -> "fraud_detector_v2.1",
+        "threshold" -> "0.85"
+      )
+    )
+}
+
+// Domain models
+case class Transaction(
+  id: String,
+  accountId: String,
+  amount: Double,
+  timestamp: Instant,
+  location: Option[Location],
+  account: Account
+)
+
+case class Account(
+  id: String,
+  balance: Double,
+  homeCountry: String,
+  transactions: List[Transaction]
+)
+
+case class Location(
+  country: String,
+  city: String,
+  coordinates: (Double, Double)
+)
+```
+
+### Dual-Mode Quality Engine
+
+```scala mdoc:silent
+class DualModeQualityEngine[F[_]: EffectSystem, D[_]: DataAlgebra] {
+  
+  def validateWithDualMode[T](
+    dataset: D[T],
+    nativeRules: List[EnhancedQualityRule[T]],
+    deequChecks: List[Check] = List.empty
+  ): F[QualityReport[T]] = {
+    
+    for {
+      // Run native FlowForge validation
+      nativeResults <- runNativeValidation(dataset, nativeRules)
+      
+      // Run Deequ validation if configured
+      deequResults <- if (deequChecks.nonEmpty) {
+        runDeequValidation(dataset, deequChecks)
+      } else {
+        EffectSystem[F].pure(DeequResults.empty)
+      }
+      
+      // Combine results
+      combinedReport = combineQualityResults(nativeResults, deequResults)
+      
+      // Apply auto-fixing for fixable issues
+      fixedDataset <- applyAutoFixes(dataset, nativeRules, nativeResults)
+      
+    } yield QualityReport(
+      originalDataset = dataset,
+      fixedDataset = fixedDataset,
+      nativeResults = nativeResults,
+      deequResults = deequResults,
+      combinedReport = combinedReport
+    )
+  }
+  
+  private def runNativeValidation[T](
+    dataset: D[T],
+    rules: List[EnhancedQualityRule[T]]
+  ): F[NativeQualityResults[T]] = {
+    
+    EffectSystem[F].delay {
+      val results = rules.map { rule =>
+        val validRecords = DataAlgebra[D].filter(dataset)(rule.validator)
+        val invalidRecords = DataAlgebra[D].filter(dataset)(record => !rule.validator(record))
+        
+        val validCount = DataAlgebra[D].count(validRecords)
+        val invalidCount = DataAlgebra[D].count(invalidRecords)
+        val totalCount = validCount + invalidCount
+        
+        val successRate = if (totalCount > 0) validCount.toDouble / totalCount else 1.0
+        
+        NativeRuleResult(
+          rule = rule,
+          successRate = successRate,
+          validCount = validCount,
+          invalidCount = invalidCount,
+          invalidRecords = invalidRecords
+        )
+      }
+      
+      NativeQualityResults(results)
+    }
+  }
+  
+  private def runDeequValidation[T](
+    dataset: D[T],
+    checks: List[Check]
+  ): F[DeequResults] = {
+    EffectSystem[F].delay {
+      // Convert FlowForge dataset to Spark DataFrame for Deequ
+      val sparkDF = DataAlgebra[D].toSparkDataFrame(dataset)
+      
+      // Run Deequ verification
+      val verificationResult = VerificationSuite()
+        .onData(sparkDF)
+        .addChecks(checks)
+        .run()
+      
+      DeequResults(verificationResult)
+    }
+  }
+  
+  private def combineQualityResults[T](
+    nativeResults: NativeQualityResults[T],
+    deequResults: DeequResults
+  ): CombinedQualityReport = {
+    
+    val criticalIssues = nativeResults.results.filter(_.rule.severity == Critical)
+    val warningIssues = nativeResults.results.filter(_.rule.severity == Warning)
+    
+    val overallSuccessRate = nativeResults.results.map(_.successRate).sum / nativeResults.results.length
+    
+    CombinedQualityReport(
+      overallSuccessRate = overallSuccessRate,
+      criticalIssues = criticalIssues.length,
+      warningIssues = warningIssues.length,
+      deequConstraintViolations = deequResults.constraintResults.count(!_.status.isSuccess),
+      recommendations = generateRecommendations(nativeResults, deequResults)
+    )
+  }
+  
+  private def applyAutoFixes[T](
+    dataset: D[T],
+    rules: List[EnhancedQualityRule[T]],
+    results: NativeQualityResults[T]
+  ): F[D[T]] = {
+    
+    val fixableRules = rules.filter(_.fixer.isDefined)
+    
+    EffectSystem[F].pure {
+      fixableRules.foldLeft(dataset) { (currentDataset, rule) =>
+        DataAlgebra[D].map(currentDataset) { record =>
+          if (!rule.validator(record) && rule.fixer.isDefined) {
+            rule.fixer.get(record)
+          } else {
+            record
+          }
+        }
+      }
+    }
+  }
+  
+  private def generateRecommendations(
+    nativeResults: NativeQualityResults[_],
+    deequResults: DeequResults
+  ): List[QualityRecommendation] = {
+    
+    val recommendations = scala.collection.mutable.ListBuffer[QualityRecommendation]()
+    
+    // Analyze native results
+    nativeResults.results.foreach { result =>
+      if (result.successRate < 0.95) {
+        recommendations += QualityRecommendation(
+          priority = if (result.rule.severity == Critical) "HIGH" else "MEDIUM",
+          message = s"Rule '${result.rule.name}' has low success rate: ${(result.successRate * 100).toInt}%",
+          action = "Review data quality processes and consider data cleansing",
+          affectedRecords = result.invalidCount
+        )
+      }
+    }
+    
+    // Analyze Deequ results
+    deequResults.constraintResults.foreach { constraint =>
+      if (!constraint.status.isSuccess) {
+        recommendations += QualityRecommendation(
+          priority = "HIGH",
+          message = s"Deequ constraint failed: ${constraint.constraint}",
+          action = "Investigate data source and implement data validation",
+          affectedRecords = 0 // Deequ doesn't provide this directly
+        )
+      }
+    }
+    
+    recommendations.toList
+  }
+}
+
+// Quality result types
+case class QualityReport[T](
+  originalDataset: D[T],
+  fixedDataset: D[T],
+  nativeResults: NativeQualityResults[T],
+  deequResults: DeequResults,
+  combinedReport: CombinedQualityReport
+)
+
+case class NativeQualityResults[T](results: List[NativeRuleResult[T]])
+
+case class NativeRuleResult[T](
+  rule: EnhancedQualityRule[T],
+  successRate: Double,
+  validCount: Long,
+  invalidCount: Long,
+  invalidRecords: D[T]
+)
+
+case class CombinedQualityReport(
+  overallSuccessRate: Double,
+  criticalIssues: Int,
+  warningIssues: Int,
+  deequConstraintViolations: Int,
+  recommendations: List[QualityRecommendation]
+)
+
+case class QualityRecommendation(
+  priority: String,
+  message: String,
+  action: String,
+  affectedRecords: Long
+)
+```
+
+### Quality Pipeline Integration
+
+```scala mdoc:silent
+class QualityAwareDataPipeline[F[_]: EffectSystem, D[_]: DataAlgebra] {
+  
+  def processWithQuality[T](
+    inputPath: String,
+    outputPath: String,
+    qualityRules: List[EnhancedQualityRule[T]],
+    qualityThreshold: Double = 0.95
+  ): F[Unit] = {
+    
+    val qualityEngine = new DualModeQualityEngine[F, D]()
+    
+    for {
+      // Read input data
+      dataset <- DataAlgebra[D].read[T](inputPath)
+      
+      // Run quality validation
+      qualityReport <- qualityEngine.validateWithDualMode(
+        dataset, 
+        qualityRules,
+        buildDeequChecks[T]()
+      )
+      
+      // Check if quality meets threshold
+      _ <- if (qualityReport.combinedReport.overallSuccessRate >= qualityThreshold) {
+        EffectSystem[F].pure(())
+      } else {
+        EffectSystem[F].raiseError(
+          QualityThresholdException(
+            s"Quality threshold not met: ${qualityReport.combinedReport.overallSuccessRate} < $qualityThreshold"
+          )
+        )
+      }
+      
+      // Use fixed dataset if auto-fixes were applied
+      finalDataset = qualityReport.fixedDataset
+      
+      // Write output
+      _ <- DataAlgebra[D].write(finalDataset, outputPath)
+      
+      // Emit quality metrics
+      _ <- emitQualityMetrics(qualityReport)
+      
+    } yield ()
+  }
+  
+  private def buildDeequChecks[T](): List[Check] = {
+    // Build Deequ checks based on data type
+    List(
+      Check(CheckLevel.Error, "Basic Data Quality")
+        .hasSize(_ > 0)
+        .isComplete("id")
+        .hasUniqueness("id", _ == 1.0)
+    )
+  }
+  
+  private def emitQualityMetrics[T](report: QualityReport[T]): F[Unit] = {
+    EffectSystem[F].delay {
+      // Emit metrics to monitoring system
+      val metrics = Map(
+        "quality.success_rate" -> report.combinedReport.overallSuccessRate,
+        "quality.critical_issues" -> report.combinedReport.criticalIssues.toDouble,
+        "quality.warning_issues" -> report.combinedReport.warningIssues.toDouble,
+        "quality.deequ_violations" -> report.combinedReport.deequConstraintViolations.toDouble
+      )
+      
+      MetricsEmitter.emit("data_quality", metrics)
+    }
+  }
+}
+
+case class QualityThresholdException(message: String) extends Exception(message)
+```
+
+## 6. Performance Optimization: Production-Scale Tuning
+
+Performance is critical for production data pipelines. Let's explore FlowForge's performance optimization techniques.
+
+### Performance Monitoring and Benchmarking
+
+```scala mdoc:silent
+import com.flowforge.performance._
+import java.util.concurrent.TimeUnit
+
+class PerformanceOptimizedPipeline[F[_]: EffectSystem, D[_]: DataAlgebra] {
+  
+  def runWithPerformanceMonitoring[T](
+    operation: D[T] => F[D[T]],
+    dataset: D[T],
+    operationName: String
+  ): F[PerformanceResult[T]] = {
+    
+    for {
+      // Start performance monitoring
+      startTime <- EffectSystem[F].delay(System.nanoTime())
+      startMemory <- EffectSystem[F].delay(getMemoryUsage())
+      
+      // Run operation with resource monitoring
+      result <- EffectSystem[F].bracket(
+        acquire = EffectSystem[F].delay(startResourceMonitoring(operationName))
+      )(
+        use = _ => operation(dataset)
+      )(
+        release = monitor => EffectSystem[F].delay(stopResourceMonitoring(monitor))
+      )
+      
+      // Capture end metrics
+      endTime <- EffectSystem[F].delay(System.nanoTime())
+      endMemory <- EffectSystem[F].delay(getMemoryUsage())
+      
+      // Calculate performance metrics
+      duration = TimeUnit.NANOSECONDS.toMillis(endTime - startTime)
+      memoryDelta = endMemory - startMemory
+      recordCount = DataAlgebra[D].count(result)
+      throughput = if (duration > 0) recordCount * 1000.0 / duration else 0.0
+      
+      performanceMetrics = PerformanceMetrics(
+        operationName = operationName,
+        duration = duration,
+        memoryUsage = memoryDelta,
+        recordCount = recordCount,
+        throughput = throughput,
+        timestamp = Instant.now()
+      )
+      
+      // Emit performance metrics
+      _ <- emitPerformanceMetrics(performanceMetrics)
+      
+    } yield PerformanceResult(result, performanceMetrics)
+  }
+  
+  private def getMemoryUsage(): Long = {
+    val runtime = Runtime.getRuntime
+    runtime.totalMemory() - runtime.freeMemory()
+  }
+  
+  private def startResourceMonitoring(operationName: String): ResourceMonitor = {
+    ResourceMonitor.start(operationName)
+  }
+  
+  private def stopResourceMonitoring(monitor: ResourceMonitor): Unit = {
+    monitor.stop()
+  }
+  
+  private def emitPerformanceMetrics(metrics: PerformanceMetrics): F[Unit] = {
+    EffectSystem[F].delay {
+      MetricsEmitter.emit("performance", Map(
+        "operation" -> metrics.operationName,
+        "duration_ms" -> metrics.duration.toDouble,
+        "memory_mb" -> (metrics.memoryUsage / 1024.0 / 1024.0),
+        "record_count" -> metrics.recordCount.toDouble,
+        "throughput_records_per_sec" -> metrics.throughput
+      ))
+    }
+  }
+}
+
+case class PerformanceResult[T](
+  result: D[T],
+  metrics: PerformanceMetrics
+)
+
+case class PerformanceMetrics(
+  operationName: String,
+  duration: Long,
+  memoryUsage: Long,
+  recordCount: Long,
+  throughput: Double,
+  timestamp: Instant
+)
+```
+
+### Optimization Strategies
+
+```scala mdoc:silent
+object OptimizationStrategies {
+  
+  // 1. Schema Optimization
+  def optimizeSchemaForPerformance[T](implicit evidence: DataContract[T]): SchemaOptimization = {
+    val schema = evidence.schema
+    
+    SchemaOptimization(
+      recommendations = List(
+        // Suggest primitive types over complex types
+        if (schema.fields.exists(_.dataType.isInstanceOf[StructType])) {
+          "Consider flattening nested structures for better performance"
+        } else "",
+        
+        // Suggest appropriate partitioning
+        if (schema.fields.exists(_.name.contains("date"))) {
+          "Consider partitioning by date fields for better query performance"
+        } else "",
+        
+        // Suggest column ordering
+        "Order frequently accessed columns first in the schema"
+      ).filter(_.nonEmpty),
+      
+      estimatedImprovementPercent = calculateEstimatedImprovement(schema)
+    )
+  }
+  
+  // 2. Caching Strategy
+  def applyCachingStrategy[F[_]: EffectSystem, D[_]: DataAlgebra, T](
+    dataset: D[T],
+    accessPattern: AccessPattern
+  ): F[D[T]] = {
+    accessPattern match {
+      case MultipleAccess(count) if count > 3 =>
+        EffectSystem[F].delay(DataAlgebra[D].cache(dataset))
+      case LargeDataset(sizeGB) if sizeGB > 10 =>
+        EffectSystem[F].delay(DataAlgebra[D].persist(dataset, StorageLevel.MEMORY_AND_DISK_SER))
+      case _ =>
+        EffectSystem[F].pure(dataset)
+    }
+  }
+  
+  // 3. Partitioning Optimization
+  def optimizePartitioning[F[_]: EffectSystem, D[_]: DataAlgebra, T](
+    dataset: D[T],
+    partitionColumns: List[String],
+    targetPartitionSize: Long = 128 * 1024 * 1024 // 128MB
+  ): F[D[T]] = {
+    
+    for {
+      // Analyze current partitioning
+      currentPartitions <- EffectSystem[F].delay(DataAlgebra[D].getNumPartitions(dataset))
+      datasetSize <- EffectSystem[F].delay(DataAlgebra[D].estimateSize(dataset))
+      
+      // Calculate optimal partition count
+      optimalPartitions = math.max(1, (datasetSize / targetPartitionSize).toInt)
+      
+      // Repartition if needed
+      optimizedDataset <- if (math.abs(currentPartitions - optimalPartitions) > currentPartitions * 0.2) {
+        EffectSystem[F].delay {
+          if (partitionColumns.nonEmpty) {
+            DataAlgebra[D].repartition(dataset, optimalPartitions, partitionColumns)
+          } else {
+            DataAlgebra[D].repartition(dataset, optimalPartitions)
+          }
+        }
+      } else {
+        EffectSystem[F].pure(dataset)
+      }
+      
+    } yield optimizedDataset
+  }
+  
+  // 4. Join Optimization
+  def optimizeJoin[F[_]: EffectSystem, D[_]: DataAlgebra, T, U, V](
+    left: D[T],
+    right: D[U],
+    joinCondition: (T, U) => Boolean,
+    joinType: JoinType = InnerJoin
+  ): F[D[V]] = {
+    
+    for {
+      // Analyze join characteristics
+      leftSize <- EffectSystem[F].delay(DataAlgebra[D].estimateSize(left))
+      rightSize <- EffectSystem[F].delay(DataAlgebra[D].estimateSize(right))
+      
+      // Choose optimal join strategy
+      optimizedJoin <- if (rightSize < leftSize * 0.1) {
+        // Broadcast join for small right dataset
+        EffectSystem[F].delay(DataAlgebra[D].broadcastJoin(left, right, joinCondition, joinType))
+      } else if (leftSize < rightSize * 0.1) {
+        // Broadcast join for small left dataset
+        EffectSystem[F].delay(DataAlgebra[D].broadcastJoin(right, left, joinCondition.flip, joinType))
+      } else {
+        // Sort-merge join for large datasets
+        EffectSystem[F].delay(DataAlgebra[D].sortMergeJoin(left, right, joinCondition, joinType))
+      }
+      
+    } yield optimizedJoin
+  }
+  
+  private def calculateEstimatedImprovement(schema: StructType): Double = {
+    // Simple heuristic for performance improvement estimation
+    val complexityScore = schema.fields.map { field =>
+      field.dataType match {
+        case _: StringType => 1.0
+        case _: IntegerType => 0.5
+        case _: LongType => 0.5
+        case _: DoubleType => 0.5
+        case _: StructType => 3.0
+        case _: ArrayType => 2.0
+        case _: MapType => 2.5
+        case _ => 1.0
+      }
+    }.sum
+    
+    math.min(50.0, complexityScore * 2.0) // Cap at 50% improvement
+  }
+}
+
+// Supporting types
+case class SchemaOptimization(
+  recommendations: List[String],
+  estimatedImprovementPercent: Double
+)
+
+sealed trait AccessPattern
+case class MultipleAccess(count: Int) extends AccessPattern
+case class LargeDataset(sizeGB: Double) extends AccessPattern
+case object SingleAccess extends AccessPattern
+
+sealed trait JoinType
+case object InnerJoin extends JoinType
+case object LeftJoin extends JoinType
+case object RightJoin extends JoinType
+case object FullJoin extends JoinType
+
+sealed trait StorageLevel
+case object MEMORY_ONLY extends StorageLevel
+case object MEMORY_AND_DISK extends StorageLevel
+case object MEMORY_AND_DISK_SER extends StorageLevel
+```
+
+### Production Deployment Patterns
+
+```scala mdoc:silent
+class ProductionPipelineTemplate[F[_]: EffectSystem, D[_]: DataAlgebra] {
+  
+  def runProductionPipeline[T](
+    config: ProductionConfig,
+    operation: D[T] => F[D[T]]
+  ): F[PipelineResult] = {
+    
+    for {
+      // Initialize monitoring
+      _ <- initializeMonitoring(config)
+      
+      // Setup error handling
+      result <- EffectSystem[F].handleErrorWith(
+        runPipelineWithRetries(config, operation)
+      )(handlePipelineFailure)
+      
+      // Cleanup resources
+      _ <- cleanupResources(config)
+      
+    } yield result
+  }
+  
+  private def runPipelineWithRetries[T](
+    config: ProductionConfig,
+    operation: D[T] => F[D[T]]
+  ): F[PipelineResult] = {
+    
+    def attemptPipeline(attempt: Int): F[PipelineResult] = {
+      for {
+        // Load data with validation
+        dataset <- loadDataWithValidation[T](config.inputPath)
+        
+        // Apply performance optimizations
+        optimizedDataset <- applyOptimizations(dataset, config.optimizations)
+        
+        // Run the operation
+        result <- operation(optimizedDataset)
+        
+        // Validate output
+        validatedResult <- validateOutput(result, config.qualityRules)
+        
+        // Save with atomic write
+        _ <- atomicWrite(validatedResult, config.outputPath)
+        
+        // Update metadata
+        _ <- updatePipelineMetadata(config, success = true)
+        
+      } yield PipelineResult.success(validatedResult)
+    }
+    
+    def retryLogic(attempt: Int, error: Throwable): F[PipelineResult] = {
+      if (attempt < config.maxRetries && isRetryableError(error)) {
+        for {
+          _ <- EffectSystem[F].delay(Thread.sleep(config.retryDelay * attempt))
+          _ <- logRetryAttempt(attempt, error)
+          result <- attemptPipeline(attempt + 1)
+        } yield result
+      } else {
+        EffectSystem[F].raiseError(error)
+      }
+    }
+    
+    EffectSystem[F].handleErrorWith(attemptPipeline(1))(retryLogic(1, _))
+  }
+  
+  private def loadDataWithValidation[T](path: String): F[D[T]] = {
+    for {
+      // Load data
+      dataset <- DataAlgebra[D].read[T](path)
+      
+      // Validate schema contracts
+      validatedDataset = DataContract.validate(dataset)
+      
+      // Check data freshness
+      _ <- validateDataFreshness(dataset)
+      
+    } yield validatedDataset
+  }
+  
+  private def applyOptimizations[T](
+    dataset: D[T],
+    optimizations: OptimizationConfig
+  ): F[D[T]] = {
+    
+    for {
+      // Apply caching if configured
+      cached <- if (optimizations.enableCaching) {
+        OptimizationStrategies.applyCachingStrategy(dataset, optimizations.accessPattern)
+      } else {
+        EffectSystem[F].pure(dataset)
+      }
+      
+      // Optimize partitioning
+      partitioned <- if (optimizations.optimizePartitioning) {
+        OptimizationStrategies.optimizePartitioning(
+          cached, 
+          optimizations.partitionColumns,
+          optimizations.targetPartitionSize
+        )
+      } else {
+        EffectSystem[F].pure(cached)
+      }
+      
+    } yield partitioned
+  }
+  
+  private def atomicWrite[T](dataset: D[T], path: String): F[Unit] = {
+    val tempPath = s"${path}_temp_${System.currentTimeMillis()}"
+    
+    for {
+      // Write to temporary location
+      _ <- DataAlgebra[D].write(dataset, tempPath)
+      
+      // Atomic move to final location
+      _ <- EffectSystem[F].delay {
+        // Implementation depends on storage system
+        // For HDFS/S3: rename operation
+        // For Delta Lake: commit transaction
+        atomicMove(tempPath, path)
+      }
+      
+    } yield ()
+  }
+  
+  private def handlePipelineFailure(error: Throwable): F[PipelineResult] = {
+    for {
+      // Log error details
+      _ <- logPipelineError(error)
+      
+      // Send alerts
+      _ <- sendFailureAlert(error)
+      
+      // Update metadata
+      _ <- updatePipelineMetadata(ProductionConfig.default, success = false)
+      
+    } yield PipelineResult.failure(error)
+  }
+  
+  // Helper methods
+  private def initializeMonitoring(config: ProductionConfig): F[Unit] = ???
+  private def cleanupResources(config: ProductionConfig): F[Unit] = ???
+  private def validateDataFreshness[T](dataset: D[T]): F[Unit] = ???
+  private def validateOutput[T](dataset: D[T], rules: List[QualityRule]): F[D[T]] = ???
+  private def updatePipelineMetadata(config: ProductionConfig, success: Boolean): F[Unit] = ???
+  private def isRetryableError(error: Throwable): Boolean = ???
+  private def logRetryAttempt(attempt: Int, error: Throwable): F[Unit] = ???
+  private def logPipelineError(error: Throwable): F[Unit] = ???
+  private def sendFailureAlert(error: Throwable): F[Unit] = ???
+  private def atomicMove(from: String, to: String): Unit = ???
+}
+
+// Configuration types
+case class ProductionConfig(
+  inputPath: String,
+  outputPath: String,
+  maxRetries: Int = 3,
+  retryDelay: Long = 5000,
+  optimizations: OptimizationConfig = OptimizationConfig.default,
+  qualityRules: List[QualityRule] = List.empty,
+  monitoring: MonitoringConfig = MonitoringConfig.default
+)
+
+case class OptimizationConfig(
+  enableCaching: Boolean = true,
+  optimizePartitioning: Boolean = true,
+  partitionColumns: List[String] = List.empty,
+  targetPartitionSize: Long = 128 * 1024 * 1024,
+  accessPattern: AccessPattern = SingleAccess
+)
+
+object OptimizationConfig {
+  def default: OptimizationConfig = OptimizationConfig()
+}
+
+case class MonitoringConfig(
+  enableMetrics: Boolean = true,
+  enableLineage: Boolean = true,
+  alertingEnabled: Boolean = true
+)
+
+object MonitoringConfig {
+  def default: MonitoringConfig = MonitoringConfig()
+}
+
+object ProductionConfig {
+  def default: ProductionConfig = ProductionConfig("", "")
+}
+
+sealed trait PipelineResult
+object PipelineResult {
+  case class Success[T](data: D[T]) extends PipelineResult
+  case class Failure(error: Throwable) extends PipelineResult
+  
+  def success[T](data: D[T]): PipelineResult = Success(data)
+  def failure(error: Throwable): PipelineResult = Failure(error)
+}
+```
+
+## Conclusion
+
+This tutorial covered advanced FlowForge patterns that enable sophisticated data engineering at scale:
+
+1. **Multi-Engine Pipelines**: Write business logic once, run on Spark or Flink
+2. **Complex Schema Evolution**: Handle breaking changes gracefully with policy-based evolution
+3. **Streaming CDC**: Real-time change data capture with schema validation and SCD2 patterns
+4. **Multi-Cloud Integration**: Unified data processing across AWS, Azure, and GCP
+5. **Custom Quality Rules**: Domain-specific validation with dual-mode quality framework
+6. **Performance Optimization**: Production-scale tuning with monitoring and benchmarking
+
+### Next Steps
+
+- Explore the [Performance Benchmarks](../performance-benchmarks/README.md) for detailed optimization guidance
+- Review the [Migration Guides](../migration/) for transitioning from other tools
+- Check out the [Advanced Examples](https://github.com/flowforge/flowforge.g8) in the project template
+- Join the [FlowForge Community](https://discord.gg/flowforge) for discussions and support
+
+### Performance Considerations
+
+When implementing these patterns in production:
+
+1. **Monitor Compilation Time**: Complex schemas can increase compilation time
+2. **Optimize for Your Use Case**: Choose the right schema policies and optimization strategies
+3. **Test at Scale**: Validate performance with production-sized datasets
+4. **Implement Gradual Rollouts**: Use feature flags for new optimizations
+5. **Monitor Resource Usage**: Track memory, CPU, and network utilization
+
+Remember that FlowForge's compile-time contract validation provides safety guarantees that traditional runtime validation cannot match, making these advanced patterns both powerful and reliable for production use.

@@ -1,3 +1,4 @@
+// scalafix:off DisableSyntax.var DisableSyntax.throw DisableSyntax.null DisableSyntax.noUnsafeRunSync
 package com.flowforge.engines.flink
 
 import org.scalatest.matchers.should.Matchers

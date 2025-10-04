@@ -1,0 +1,583 @@
+# Data Quality and Lineage Tutorial
+
+This interactive tutorial walks you through FlowForge's data quality validation and lineage tracking capabilities. You'll learn how to set up quality checks, configure lineage emission, and see how everything works together in production.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- FlowForge project generated from the g8 template
+- Docker and Docker Compose installed
+- Java 11+ and sbt
+
+## Part 1: Setting Up the Environment
+
+### 1.1 Start the Lineage Stack
+
+FlowForge includes a complete lineage stack with Marquez for OpenLineage compatibility. Let's start it:
+
+```bash
+# From your FlowForge project root
+docker compose -f ops/marquez/docker-compose.yml up -d
+
+# Verify services are running
+docker compose -f ops/marquez/docker-compose.yml ps
+```
+
+This starts:
+- **PostgreSQL** (port 5432): Marquez metadata storage
+- **Marquez API** (port 5000): OpenLineage endpoint
+- **Marquez Web UI** (port 3000): Lineage visualization
+
+Open http://localhost:3000 to see the Marquez Web UI. It will be empty initially - we'll populate it with lineage data.
+
+### 1.2 Prepare Sample Data
+
+Create a sample dataset for our quality and lineage demo:
+
+```bash
+mkdir -p data
+cat > data/customers.csv << 'EOF'
+id,email,age,country,signup_date
+1,alice@example.com,25,US,2023-01-15
+2,bob@company.org,35,CA,2023-02-20
+3,charlie@test.com,45,UK,2023-03-10
+4,,30,US,2023-04-05
+5,eve@domain.com,200,FR,2023-05-12
+6,frank@site.net,28,DE,2023-06-18
+7,grace@email.com,32,AU,2023-07-22
+8,alice@example.com,26,US,2023-08-14
+EOF
+```
+
+Notice the data quality issues:
+- Row 4: Missing email (null value)
+- Row 5: Invalid age (200 years old)
+- Row 8: Duplicate email (alice@example.com)
+
+## Part 2: Dual-Mode Quality Validation
+
+FlowForge supports two quality validation modes:
+1. **Native Spark** (default): Zero dependencies, fast performance
+2. **Deequ Enhanced** (optional): Advanced statistical profiling
+
+### 2.1 Define Your Data Contract
+
+First, let's define a data contract with quality constraints:
+
+```scala mdoc:silent
+import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
+import com.flowforge.core.contracts.derive.Shape
+import com.flowforge.core.types._
+
+case class Customer(
+  id: Long,
+  email: String, 
+  age: Int,
+  country: String,
+  signupDate: String
+)
+
+implicit val customerShape: Shape[Customer] = Shape.gen[Customer]
+implicit val conformsExact: SchemaConforms[Customer, Customer, SchemaPolicy.Exact] = implicitly
+```
+
+### 2.2 Native Spark Quality Checks
+
+Let's create comprehensive quality constraints using FlowForge's native validation:
+
+```scala mdoc:silent
+import com.flowforge.core.types.QualityConstraint
+import com.flowforge.core.types.RefinedTypes.FieldName
+
+val qualityConstraints = List(
+  // Data completeness
+  QualityConstraint.NotNull(FieldName.unsafeFrom("id")),
+  QualityConstraint.NotNull(FieldName.unsafeFrom("email")),
+  QualityConstraint.NullRateBelow(FieldName.unsafeFrom("email"), 0.05), // Max 5% nulls
+  
+  // Data uniqueness
+  QualityConstraint.Unique(FieldName.unsafeFrom("id")),
+  QualityConstraint.Distinctness(FieldName.unsafeFrom("email"), 0.95), // Min 95% distinct
+  
+  // Data validity
+  QualityConstraint.Pattern(
+    FieldName.unsafeFrom("email"),
+    "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+  ),
+  QualityConstraint.Range(FieldName.unsafeFrom("age"), Some(0.0), Some(120.0)),
+  
+  // Business rules
+  QualityConstraint.Compliance(
+    "valid_countries",
+    "country IN ('US', 'CA', 'UK', 'FR', 'DE', 'AU')"
+  ),
+  QualityConstraint.Compliance(
+    "recent_signups", 
+    "signup_date >= '2023-01-01'"
+  )
+)
+```
+
+### 2.3 Running Quality Validation
+
+Now let's run the quality checks and see the results:
+
+```scala mdoc:silent
+import cats.effect.{ IO, Resource }
+import com.flowforge.engines.spark.SparkDataAlgebra
+import com.flowforge.quality.deequ.DeequAdapter
+import org.apache.spark.sql.SparkSession
+
+def runQualityDemo(): IO[Unit] = {
+  val sparkResource = Resource.make(IO {
+    SparkSession.builder()
+      .appName("QualityLineageDemo")
+      .master("local[*]")
+      .config("spark.ui.enabled", "false")
+      .getOrCreate()
+  })(spark => IO(spark.stop()).void)
+  
+  sparkResource.use { spark =>
+    val dao = SparkDataAlgebra.createSparkDataAlgebra[IO](spark).algebra
+    val src = DataSource.local("data/customers.csv", DataFormat.CSV)
+    
+    for {
+      dataset <- dao.read[Customer](src)
+      
+      // Run native Spark quality checks (default mode)
+      nativeResult = DeequAdapter.runChecks(spark, dataset, qualityConstraints)
+      
+      _ <- IO.println(s"=== Native Spark Quality Results ===")
+      _ <- IO.println(s"Passed: ${nativeResult.passed}")
+      _ <- IO.println(s"Score: ${nativeResult.score}")
+      _ <- IO.println(s"Violations: ${nativeResult.violations.size}")
+      
+      _ <- nativeResult.violations.traverse { violation =>
+        IO.println(s"❌ ${violation.rule}: ${violation.message} (${violation.recordsAffected} records)")
+      }
+      
+      // Run Deequ enhanced checks (if available)
+      _ <- IO.println(s"\n=== Deequ Enhanced Mode ===")
+      _ <- IO {
+        System.setProperty("ff.quality.mode", "deequ")
+      }
+      
+      deequResult = DeequAdapter.runChecks(spark, dataset, qualityConstraints)
+      
+      _ <- IO.println(s"Passed: ${deequResult.passed}")
+      _ <- IO.println(s"Score: ${deequResult.score}")
+      _ <- IO.println(s"Violations: ${deequResult.violations.size}")
+      
+      _ <- deequResult.violations.traverse { violation =>
+        IO.println(s"❌ ${violation.rule}: ${violation.message}")
+      }
+      
+    } yield ()
+  }
+}
+```
+
+Expected output:
+```
+=== Native Spark Quality Results ===
+Passed: false
+Score: 0.67
+Violations: 3
+
+❌ NotNull(email): NotNull(email) failed (1 violations)
+❌ Range(age,Some(0.0),Some(120.0)): Range(age,Some(0.0),Some(120.0)) failed (1 violations)  
+❌ Distinctness(email,0.95): Distinctness(email,0.95) failed (1 violations)
+
+=== Deequ Enhanced Mode ===
+Passed: false
+Score: 0.67
+Violations: 3
+```
+
+### 2.4 Understanding Quality Results
+
+The quality validation reveals several issues in our sample data:
+
+1. **Completeness Issue**: Row 4 has a null email
+2. **Validity Issue**: Row 5 has age=200 (outside 0-120 range)  
+3. **Uniqueness Issue**: Email distinctness is 87.5% (7/8), below our 95% threshold
+
+## Part 3: Lineage Configuration
+
+### 3.1 Enable OpenLineage Emission
+
+FlowForge automatically emits lineage events to OpenLineage-compatible systems. Configure the endpoint:
+
+```bash
+export OPENLINEAGE_URL=http://localhost:5000/api/v1/lineage
+export OPENLINEAGE_NAMESPACE=tutorial
+```
+
+### 3.2 Pipeline with Lineage Tracking
+
+Let's create a pipeline that processes our customer data and emits lineage:
+
+```scala mdoc:silent
+import com.flowforge.core.PipelineBuilder
+import com.flowforge.core.lineage.OpenLineageEmitter
+import com.flowforge.framework.PipelineExecution
+
+def runPipelineWithLineage(): IO[Unit] = {
+  val sparkResource = Resource.make(IO {
+    SparkSession.builder()
+      .appName("CustomerProcessingPipeline")
+      .master("local[*]")
+      .config("spark.ui.enabled", "false")
+      .getOrCreate()
+  })(spark => IO(spark.stop()).void)
+  
+  sparkResource.use { spark =>
+    val dao = SparkDataAlgebra.createSparkDataAlgebra[IO](spark).algebra
+    val emitter = OpenLineageEmitter.http[IO]
+    val runId = OpenLineageEmitter.generateRunId("customer-processing")
+    
+    val src = DataSource.local("data/customers.csv", DataFormat.CSV)
+    val sink = DataSink.local("target/processed-customers", DataFormat.Parquet)
+    
+    val typedSrc = TypedSource[Customer](src)
+    val typedSink = TypedSink[Customer](sink)
+    
+    for {
+      // Emit pipeline start event
+      _ <- OpenLineageEmitter.emitPipelineStart(emitter, "customer-processing", runId)
+      
+      // Read and validate data
+      dataset <- dao.read[Customer](src)
+      qualityResult = DeequAdapter.runChecks(spark, dataset, qualityConstraints)
+      
+      _ <- if (qualityResult.passed) {
+        IO.println("✅ Quality validation passed - proceeding with pipeline")
+      } else {
+        IO.println("⚠️  Quality issues detected - pipeline will continue with warnings") *>
+        qualityResult.violations.traverse { v =>
+          IO.println(s"   Warning: ${v.message}")
+        }.void
+      }
+      
+      // Build and execute pipeline
+      pipeline = PipelineBuilder[IO]("customer-processing")
+        .addTypedSource[Customer, Customer, SchemaPolicy.Exact](
+          typedSrc,
+          _ => IO.pure(Customer(0L, "sample@example.com", 25, "US", "2023-01-01"))
+        )
+        .addTransform[Customer] { customer =>
+          // Data cleansing transformations
+          IO.pure(customer.copy(
+            email = customer.email.toLowerCase.trim,
+            age = Math.max(0, Math.min(120, customer.age)), // Clamp age to valid range
+            country = customer.country.toUpperCase
+          ))
+        }
+        .addTypedSink[Customer, SchemaPolicy.Exact](
+          typedSink,
+          (_, _) => dao.write(dataset, sink).void
+        )
+        .build()
+      
+      _ <- PipelineExecution.execute(pipeline)(())
+      
+      // Emit pipeline completion
+      _ <- if (qualityResult.passed) {
+        OpenLineageEmitter.emitPipelineComplete(emitter, "customer-processing", runId)
+      } else {
+        OpenLineageEmitter.emitPipelineFail(
+          emitter, 
+          "customer-processing", 
+          runId,
+          s"Quality validation failed: ${qualityResult.violations.size} violations"
+        )
+      }
+      
+      _ <- IO.println(s"Pipeline completed. Check lineage at http://localhost:3000")
+      _ <- IO.println(s"Run ID: $runId")
+      
+    } yield ()
+  }
+}
+```
+
+### 3.3 Viewing Lineage in Marquez
+
+After running the pipeline:
+
+1. Open http://localhost:3000 in your browser
+2. Navigate to the "tutorial" namespace
+3. Find the "customer-processing" job
+4. Explore the lineage graph showing:
+   - Input: `data/customers.csv`
+   - Job: `customer-processing` 
+   - Output: `target/processed-customers`
+   - Run details with start/completion times
+
+## Part 4: End-to-End Observability
+
+### 4.1 Contracts + Quality + Lineage Integration
+
+FlowForge's power comes from integrating all three observability pillars:
+
+```scala mdoc:silent
+import com.flowforge.core.algebra.EffectSystem
+
+def demonstrateIntegration(): IO[Unit] = {
+  implicit val es: EffectSystem[IO] = com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
+  
+  val sparkResource = Resource.make(IO {
+    SparkSession.builder()
+      .appName("IntegratedObservabilityDemo")
+      .master("local[*]")
+      .config("spark.ui.enabled", "false")
+      .getOrCreate()
+  })(spark => IO(spark.stop()).void)
+  
+  sparkResource.use { spark =>
+    val dao = SparkDataAlgebra.createSparkDataAlgebra[IO](spark).algebra
+    val emitter = OpenLineageEmitter.http[IO]
+    val runId = OpenLineageEmitter.generateRunId("observability-demo")
+    
+    for {
+      _ <- IO.println("=== FlowForge End-to-End Observability Demo ===\n")
+      
+      // 1. Contract Validation (Compile-time)
+      _ <- IO.println("1️⃣  Contract Validation")
+      _ <- IO.println("   ✅ Customer schema validated at compile-time")
+      _ <- IO.println("   ✅ SchemaPolicy.Exact enforced")
+      _ <- IO.println("   ✅ Type safety guaranteed\n")
+      
+      // 2. Quality Validation (Runtime)
+      _ <- IO.println("2️⃣  Quality Validation")
+      dataset <- dao.read[Customer](DataSource.local("data/customers.csv", DataFormat.CSV))
+      qualityResult = DeequAdapter.runChecks(spark, dataset, qualityConstraints)
+      
+      _ <- IO.println(s"   📊 Quality Score: ${(qualityResult.score * 100).round}%")
+      _ <- IO.println(s"   🔍 Constraints Checked: ${qualityConstraints.size}")
+      _ <- IO.println(s"   ❌ Violations Found: ${qualityResult.violations.size}")
+      
+      _ <- qualityResult.violations.take(3).traverse { v =>
+        IO.println(s"      • ${v.rule}")
+      }
+      
+      _ <- IO.println()
+      
+      // 3. Lineage Tracking (Automatic)
+      _ <- IO.println("3️⃣  Lineage Tracking")
+      _ <- OpenLineageEmitter.emitPipelineStart(emitter, "observability-demo", runId)
+      _ <- IO.println(s"   📈 Lineage events emitted to Marquez")
+      _ <- IO.println(s"   🔗 Run ID: $runId")
+      _ <- IO.println(s"   🌐 View at: http://localhost:3000\n")
+      
+      // 4. Integration Benefits
+      _ <- IO.println("4️⃣  Integration Benefits")
+      _ <- IO.println("   🛡️  Contracts prevent schema drift at build time")
+      _ <- IO.println("   🔍 Quality catches data issues at runtime")
+      _ <- IO.println("   📊 Lineage provides end-to-end visibility")
+      _ <- IO.println("   🚀 All three work together automatically")
+      
+      _ <- OpenLineageEmitter.emitPipelineComplete(emitter, "observability-demo", runId)
+      
+    } yield ()
+  }
+}
+```
+
+### 4.2 Quality-Driven Pipeline Decisions
+
+FlowForge enables quality-driven pipeline logic:
+
+```scala mdoc:silent
+def qualityDrivenPipeline(): IO[Unit] = {
+  val sparkResource = Resource.make(IO {
+    SparkSession.builder()
+      .appName("QualityDrivenPipeline")
+      .master("local[*]")
+      .getOrCreate()
+  })(spark => IO(spark.stop()).void)
+  
+  sparkResource.use { spark =>
+    val dao = SparkDataAlgebra.createSparkDataAlgebra[IO](spark).algebra
+    
+    for {
+      dataset <- dao.read[Customer](DataSource.local("data/customers.csv", DataFormat.CSV))
+      qualityResult = DeequAdapter.runChecks(spark, dataset, qualityConstraints)
+      
+      _ <- qualityResult.score match {
+        case score if score >= 0.95 =>
+          IO.println("🟢 High quality data - proceeding to production") *>
+          dao.write(dataset, DataSink.local("target/production", DataFormat.Parquet)).void
+          
+        case score if score >= 0.80 =>
+          IO.println("🟡 Medium quality data - applying corrections") *>
+          // Apply data cleansing logic here
+          dao.write(dataset, DataSink.local("target/corrected", DataFormat.Parquet)).void
+          
+        case score =>
+          IO.println(s"🔴 Low quality data (${(score * 100).round}%) - routing to quarantine") *>
+          dao.write(dataset, DataSink.local("target/quarantine", DataFormat.Parquet)).void
+      }
+      
+    } yield ()
+  }
+}
+```
+
+## Part 5: Production Patterns
+
+### 5.1 Quality Monitoring Setup
+
+For production deployments, set up continuous quality monitoring:
+
+```scala mdoc:silent
+case class QualityMetrics(
+  timestamp: Long,
+  pipelineName: String,
+  qualityScore: Double,
+  violationCount: Int,
+  recordCount: Long
+)
+
+def setupQualityMonitoring(): IO[Unit] = {
+  // This would integrate with your metrics system (Prometheus, DataDog, etc.)
+  IO.println("Setting up quality monitoring...") *>
+  IO.println("📊 Metrics exported to /metrics endpoint") *>
+  IO.println("🚨 Alerts configured for quality score < 0.8") *>
+  IO.println("📈 Dashboards available in Grafana")
+}
+```
+
+### 5.2 Lineage in CI/CD
+
+Integrate lineage tracking in your CI/CD pipeline:
+
+```yaml
+# .github/workflows/data-pipeline.yml
+name: Data Pipeline
+on:
+  push:
+    branches: [main]
+
+jobs:
+  validate-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Validate FlowForge Contracts
+        run: sbt compile
+        # Contracts are validated at compile time!
+        
+  run-quality-checks:
+    needs: validate-contracts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start Marquez
+        run: docker compose -f ops/marquez/docker-compose.yml up -d
+      - name: Run Pipeline with Quality Checks
+        run: sbt "runMain com.flowforge.app.PipelineApp"
+        env:
+          OPENLINEAGE_URL: http://localhost:5000/api/v1/lineage
+          OPENLINEAGE_NAMESPACE: ci-cd
+```
+
+### 5.3 Best Practices Summary
+
+**Contract Validation:**
+- ✅ Use `SchemaPolicy.Exact` for critical data contracts
+- ✅ Use `SchemaPolicy.Backward` for evolving schemas
+- ✅ Validate contracts in CI/CD before deployment
+
+**Quality Validation:**
+- ✅ Start with native Spark checks (zero dependencies)
+- ✅ Add Deequ for advanced statistical profiling
+- ✅ Set quality thresholds based on business requirements
+- ✅ Route low-quality data to quarantine for investigation
+
+**Lineage Tracking:**
+- ✅ Use environment variables for zero-config setup
+- ✅ Generate deterministic run IDs for reproducible lineage
+- ✅ Emit events at pipeline start, completion, and failure
+- ✅ Integrate with existing observability stack (Marquez, DataHub, etc.)
+
+## Part 6: Running the Complete Demo
+
+Let's put it all together in a complete runnable example:
+
+```scala mdoc:silent
+def runCompleteDemo(): IO[Unit] = {
+  for {
+    _ <- IO.println("🚀 Starting FlowForge Quality & Lineage Demo\n")
+    
+    // Run quality validation demo
+    _ <- IO.println("Running quality validation...")
+    _ <- runQualityDemo()
+    _ <- IO.println()
+    
+    // Run pipeline with lineage
+    _ <- IO.println("Running pipeline with lineage...")
+    _ <- runPipelineWithLineage()
+    _ <- IO.println()
+    
+    // Demonstrate integration
+    _ <- IO.println("Demonstrating integration...")
+    _ <- demonstrateIntegration()
+    _ <- IO.println()
+    
+    // Run quality-driven pipeline
+    _ <- IO.println("Running quality-driven pipeline...")
+    _ <- qualityDrivenPipeline()
+    _ <- IO.println()
+    
+    _ <- IO.println("✅ Demo completed!")
+    _ <- IO.println("🌐 View lineage at: http://localhost:3000")
+    _ <- IO.println("📊 Check quality results in console output")
+    
+  } yield ()
+}
+```
+
+To run this demo:
+
+```bash
+# 1. Start the lineage stack
+docker compose -f ops/marquez/docker-compose.yml up -d
+
+# 2. Set environment variables
+export OPENLINEAGE_URL=http://localhost:5000/api/v1/lineage
+export OPENLINEAGE_NAMESPACE=tutorial
+
+# 3. Run the demo
+sbt "runMain QualityLineageDemo"
+
+# 4. View results
+open http://localhost:3000  # Marquez Web UI
+```
+
+## Next Steps
+
+Now that you understand FlowForge's quality and lineage capabilities:
+
+1. **Explore Advanced Patterns**: Check out the [Advanced Patterns Tutorial](advanced-patterns.md)
+2. **Production Deployment**: Read the [Production Deployment Guide](../operating/production-deployment.md)
+3. **Custom Quality Rules**: Learn about [Custom Quality Constraints](../quality/custom-constraints.md)
+4. **Lineage Integration**: Set up [DataHub Integration](../lineage/datahub-integration.md)
+
+## Troubleshooting
+
+**Marquez not starting?**
+```bash
+docker compose -f ops/marquez/docker-compose.yml logs marquez
+```
+
+**Quality checks failing unexpectedly?**
+- Verify your data format matches the schema
+- Check for hidden characters in CSV files
+- Ensure numeric fields don't contain strings
+
+**Lineage events not appearing?**
+- Verify `OPENLINEAGE_URL` is accessible
+- Check Marquez logs for ingestion errors
+- Ensure namespace matches between emission and UI
+
+**Need help?** Join our [Discord community](https://discord.gg/flowforge) or check the [FAQ](../faq.md).

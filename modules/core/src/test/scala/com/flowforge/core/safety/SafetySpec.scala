@@ -1,3 +1,4 @@
+// scalafix:off DisableSyntax.var DisableSyntax.throw DisableSyntax.null DisableSyntax.noUnsafeRunSync
 package com.flowforge.core.safety
 
 import cats.data.NonEmptyList
@@ -25,14 +26,20 @@ class SafetySpec extends AnyFunSuite with Matchers {
     v.isValid shouldBe false
   }
 
-  test("sequenceV accumulates errors from Results") {
-    val e1: Safety.Result[Int] = Left(FlowForgeError.ValidationError("e1"))
-    val e2: Safety.Result[Int] = Left(FlowForgeError.ValidationError("e2"))
-    val ok: Safety.Result[Int] = Right(42)
+  test("sequenceV accumulates errors from Results (bounded)") {
+    val e1: Safety.Result[Int]  = Left(FlowForgeError.ValidationError("e1"))
+    val e2: Safety.Result[Int]  = Left(FlowForgeError.ValidationError("e2"))
+    val ok1: Safety.Result[Int] = Right(1)
+    val ok2: Safety.Result[Int] = Right(2)
 
-    val v = Safety.sequenceV(List(e1, ok, e2))
-    v.isValid shouldBe false
-    val errs = v.swap.getOrElse(NonEmptyList.one(FlowForgeError.ValidationError("missing")))
+    // all valid -> valid list
+    val v1 = Safety.sequenceV(List(ok1, ok2))
+    v1.isValid shouldBe true
+
+    // mixed -> accumulate
+    val v2 = Safety.sequenceV(List(e1, ok1, e2))
+    v2.isValid shouldBe false
+    val errs = v2.swap.getOrElse(NonEmptyList.one(FlowForgeError.ValidationError("missing")))
     errs.toList.map(_.message).toSet shouldBe Set("e1", "e2")
   }
 }
