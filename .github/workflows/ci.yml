@@ -61,24 +61,43 @@ jobs:
     runs-on: ubuntu-22.04
     if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
     steps:
-      - name: SBT (build matrix)
-        uses: ./.github/actions/sbt
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
         with:
-          java-version: '17'
           distribution: temurin
-          commands: ${{ matrix.commands }}
+          java-version: '17'
+          cache: 'sbt'
+
+      - name: Cache Coursier
+        uses: coursier/cache-action@v6
+
+      - name: Run SBT commands
+        run: sbt -batch ${{ matrix.commands }}
 
   refactor-lint:
     name: Refactor lint & Unsafe cast gate
     runs-on: ubuntu-22.04
     if: ${{ !github.event.pull_request.draft }}
     steps:
-      - name: Scalafmt check
-        uses: ./.github/actions/sbt
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
         with:
-          java-version: '17'
           distribution: temurin
-          commands: scalafmtCheckAll
+          java-version: '17'
+          cache: 'sbt'
+
+      - name: Cache Coursier
+        uses: coursier/cache-action@v6
+
+      - name: Scalafmt check
+        run: sbt -batch scalafmtCheckAll
+
       - name: Scalafix check (production code only - test/examples excluded)
         run: |
           # Run scalafix on production sources (excluding tests, examples, CLIs)
