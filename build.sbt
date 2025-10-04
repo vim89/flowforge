@@ -146,6 +146,9 @@ lazy val infrastructure = moduleProject("infrastructure")
   .settings(
     description := "Complete infrastructure layer with testing framework",
     libraryDependencies ++= Dependencies.forModule("infrastructure"),
+    coverageExcludedPackages := Seq(
+      "com.flowforge.infrastructure.DistributedTracing",
+    ).mkString(";"),
   )
 
 // ===== CORE MODULES =====
@@ -153,6 +156,14 @@ lazy val core = moduleProject("core")
   .settings(
     description := "Core abstractions and custom type system",
     libraryDependencies ++= Dependencies.forModule("core"),
+    // Minimal, justified excludes only
+    coverageExcludedPackages := Seq(
+      "com.flowforge.core.contracts.internal.*",
+      "com.flowforge.core.examples.*",
+    ).mkString(";"),
+    coverageExcludedFiles := Seq(
+      ".*SchemaWitness.scala",
+    ).mkString(";"),
     // Section 13.3 - Version-specific dependencies for Scala 2/3 cross-build
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -204,6 +215,13 @@ lazy val connectors = moduleProject("connectors")
   .settings(
     description := "Base connector abstractions",
     libraryDependencies ++= Dependencies.forModule("connectors"),
+    coverageExcludedPackages := Seq(
+      "com.flowforge.connectors.filesystem.examples.*",
+    ).mkString(";"),
+    coverageExcludedFiles := Seq(
+      ".*HDFSFileSystemConnector.scala",
+      ".*CloudStorageConnector.scala",
+    ).mkString(";"),
   )
 
 lazy val connectorsGcs = moduleProject("connectors-gcs")

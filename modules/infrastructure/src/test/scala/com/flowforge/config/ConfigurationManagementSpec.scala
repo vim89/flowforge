@@ -15,5 +15,22 @@ class ConfigurationManagementSpec extends AnyWordSpec with Matchers {
       v.isInvalid shouldBe true
       noException should be thrownBy cm.reloadConfig.unsafeRunSync()
     }
+
+    "decode valid values and reload without error" in {
+      import ConfigurationManagement._
+      val cfg = com.typesafe.config.ConfigFactory.parseString(
+        """
+        |flowforge.ok.str = "v"
+        |flowforge.ok.int = 42
+        |flowforge.ok.bool = true
+        |""".stripMargin,
+      )
+      stringDecoder.decode(cfg, "flowforge.ok.str").isValid shouldBe true
+      intDecoder.decode(cfg, "flowforge.ok.int").isValid shouldBe true
+      booleanDecoder.decode(cfg, "flowforge.ok.bool").isValid shouldBe true
+
+      val cm = ConfigurationManagement.forTypesafeConfig[IO]
+      noException should be thrownBy cm.reloadConfig.unsafeRunSync()
+    }
   }
 }

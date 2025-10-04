@@ -21,20 +21,11 @@ jobs:
           java-version: '17'
           cache: 'sbt'
 
-      - name: Run coverage (core modules only)
+      - name: Run coverage (unit scope)
         run: |
-          # Limit coverage to fast unit-test modules to avoid exhausting minutes.
-          # Exclude heavy Spark/Deequ/examples ITs; run those in nightly.
-          sbt -batch \
-            -DwithSparkIT=false \
-            "set core / coverageMinimumStmtTotal := 90" \
-            "set core / coverageMinimumBranchTotal := 85" \
-            "set core / coverageFailOnMinimum := true" \
-            "set infrastructure / coverageMinimumStmtTotal := 80" \
-            "set infrastructure / coverageMinimumBranchTotal := 75" \
-            "set infrastructure / coverageFailOnMinimum := true" \
-            "set connectors / coverageMinimumStmtTotal := 85" \
-            "set connectors / coverageFailOnMinimum := true" \
+          # Unit-coverage scope: generate reports without hard-failing on totals.
+          # Gating now handled by Codecov patch/project statuses (see codecov.yml).
+          sbt -batch -DwithSparkIT=false \
             clean coverage \
             "core/test" "infrastructure/test" "connectors/test" "contracts/test" \
             coverageReport coverageAggregate

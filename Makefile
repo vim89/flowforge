@@ -7,13 +7,13 @@ test:
 
 coverage:
 	sbt -batch -DwithSparkIT=false \
-	  "set core / coverageMinimumStmtTotal := 80" \
-	  "set core / coverageMinimumBranchTotal := 75" \
+	  "set core / coverageMinimumStmtTotal := 90" \
+	  "set core / coverageMinimumBranchTotal := 85" \
 	  "set core / coverageFailOnMinimum := true" \
-	  "set infrastructure / coverageMinimumStmtTotal := 70" \
-	  "set infrastructure / coverageMinimumBranchTotal := 65" \
+	  "set infrastructure / coverageMinimumStmtTotal := 80" \
+	  "set infrastructure / coverageMinimumBranchTotal := 75" \
 	  "set infrastructure / coverageFailOnMinimum := true" \
-	  "set connectors / coverageMinimumStmtTotal := 70" \
+	  "set connectors / coverageMinimumStmtTotal := 80" \
 	  "set connectors / coverageFailOnMinimum := true" \
 	  clean coverage core/test infrastructure/test connectors/test coverageReport coverageAggregate
 

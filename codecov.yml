@@ -1,0 +1,32 @@
+coverage:
+  status:
+    patch:
+      default:
+        # Enforce high coverage on changed lines (no dilution by legacy code)
+        target: 90%
+        threshold: 0%
+        informational: false
+    project:
+      default: false
+      core:
+        paths:
+          - modules/core/
+        target: auto
+        threshold: 0.25%
+        informational: false
+      connectors:
+        paths:
+          - modules/connectors/
+        target: auto
+        threshold: 0.25%
+        informational: false
+      infrastructure:
+        paths:
+          - modules/infrastructure/
+        target: auto
+        threshold: 0.25%
+        informational: false
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false
