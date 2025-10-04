@@ -35,7 +35,7 @@ jobs:
 
       - name: Upload Scaladoc report
         if: always()
-        uses: actions/upload-artifact@ea165f8a2d59903357f237d72ff6efea362c5f70 # v4.6.2
+        uses: actions/upload-artifact@v4
         with:
           name: doclint-report
           path: doclint-report.txt

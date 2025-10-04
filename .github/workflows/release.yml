@@ -16,16 +16,6 @@ on:
         description: 'target_commitish (branch name or commit SHA). Defaults to the triggering commit.'
         required: false
         type: string
-    inputs:
-      version:
-        description: 'Release version (e.g., 0.1.0)'
-        required: true
-        type: string
-      prerelease:
-        description: 'Mark as pre-release'
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: write
