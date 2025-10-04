@@ -20,6 +20,7 @@ jobs:
   nightly-full-suite:
     name: Full test suite (all modules)
     runs-on: ubuntu-22.04
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -84,12 +85,13 @@ jobs:
           sbt -batch "enginesFlink/testOnly *EngineAbstractionSpec"
 
   nightly-cross-scala:
-    name: Cross-Scala build (2.12, 2.13, 3.x)
+    timeout-minutes: 30
+    name: Cross-Scala build (2.13 only)
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
-        scala: ['2.12', '2.13', '3.3']
+        scala: ['2.13']
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
 
@@ -104,11 +106,12 @@ jobs:
 
       - name: Build with Scala ${{ matrix.scala }}
         run: |
-          # Cross-compile core modules
+          # Cross-compile core modules (2.12 and 3.3 unsupported - removed)
           sbt -batch "++${{ matrix.scala }}.* core/compile core/test"
           sbt -batch "++${{ matrix.scala }}.* infrastructure/compile infrastructure/test"
 
   nightly-benchmarks:
+    timeout-minutes: 30
     name: Performance benchmarks
     runs-on: ubuntu-22.04
     steps:
@@ -156,7 +159,7 @@ jobs:
 
       - name: Test g8 template generation
         run: |
-          cd /tmp
+          cd ${{ runner.temp }}
           sbt new file://${{ github.workspace }}/flowforge.g8 --name="nightly-test" --organization="com.flowforge.nightly"
           cd nightly-test
           sbt compile test

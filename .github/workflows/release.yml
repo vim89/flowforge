@@ -120,7 +120,7 @@ jobs:
       - name: Validate g8 template for release
         run: |
           echo "📋 Validating g8 template for release"
-          cd /tmp
+          cd ${{ runner.temp }}
           sbt new file://${{ github.workspace }}/flowforge.g8 --name="release-test-pipeline" --organization="com.flowforge.release"
           cd release-test-pipeline
           echo "🔨 Testing template compilation"
@@ -163,8 +163,9 @@ jobs:
       - name: Build JAR artifacts
         run: |
           sbt clean compile
-          sbt "validation-cli / assembly"
-          sbt "contracts-extractor-cli / assembly"
+          sbt "validationCli/assembly"
+          sbt "contractsExtractorCli/assembly"
+          sbt "maintenanceCli/assembly"
 
       - name: Create release directory
         run: mkdir -p release-artifacts
@@ -174,6 +175,39 @@ jobs:
           find . -name "*assembly*.jar" -exec cp {} release-artifacts/ \;
           ls -la release-artifacts/
 
+      - name: Generate checksums
+        run: |
+          cd release-artifacts
+          sha256sum -- *.jar > SHA256SUMS
+          sha512sum -- *.jar > SHA512SUMS
+
+      - name: Sign artifacts
+        if: ${{ env.GPG_PRIVATE_KEY != '' }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          cd release-artifacts
+          for jar in *.jar; do
+            gpg --batch --detach-sign --armor "$jar"
+          done
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: ./
+          artifact-name: flowforge-sbom-${{ needs.validate-release.outputs.version }}.spdx.json
+          output-file: release-artifacts/sbom.spdx.json
+
+      - name: Publish to Maven Central
+        if: ${{ !env.ACT && env.SONATYPE_USERNAME != '' }}
+        run: sbt publishSigned sonatypeBundleRelease
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -181,74 +215,9 @@ jobs:
           path: release-artifacts/
           retention-days: 30
 
-  publish-docs:
-    name: Publish Scaladoc to GitHub Pages
-    needs: [validate-release, pre-release-tests]
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
-        with:
-          fetch-depth: 0
-      - name: Setup Java 17
-        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-      - name: Coursier cache (sbt/ivy)
-        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
-      - name: Generate Scaladoc for all modules
-        run: |
-          sbt -batch doc
-          # Try unified docs for Scala 2.13 modules; don't fail release if unidoc fails
-          sbt -batch unidoc || echo "unidoc failed (non-fatal)"
-      - name: Assemble site folder
-        run: |
-          mkdir -p public/api
-          for m in modules/*; do
-            mod=$(basename "$m")
-            api_dir="$m/target/scala-2.13/api"
-            if [ -d "$api_dir" ]; then
-              mkdir -p "public/api/$mod"
-              cp -R "$api_dir"/* "public/api/$mod"/
-            fi
-          done
-          # Root module (if any aggregated docs exist)
-          if [ -d target/scala-2.13/api ]; then
-            mkdir -p public/api/root && cp -R target/scala-2.13/api/* public/api/root/
-          fi
-          # Unified docs (if present)
-          if [ -d target/scala-2.13/unidoc ] || [ -d target/scala-2.13/api-unidoc ]; then
-            UNIDOC_DIR="$(find target/scala-2.13 -maxdepth 1 -name '*unidoc' -type d 2>/dev/null | head -n1)"
-            if [ -n "$UNIDOC_DIR" ]; then
-              mkdir -p public/api/unified && cp -R "$UNIDOC_DIR"/* public/api/unified/
-            fi
-          fi
-          # Add index
-          cat > public/index.html << 'EOF'
-          <!doctype html>
-          <html><head><meta charset="utf-8"><title>FlowForge API</title></head>
-          <body>
-            <h1>FlowForge API (Scaladoc)</h1>
-            <ul>
-              $(for d in api/*; do echo "<li><a href=\"$d/index.html\">$(basename "$d")</a></li>"; done)
-            </ul>
-          </body></html>
-          EOF
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
-        with:
-          path: public
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
-
   create-release:
     name: Create GitHub Release
-    needs: [validate-release, pre-release-tests, build-artifacts, publish-docs]
+    needs: [validate-release, build-artifacts]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -326,3 +295,168 @@ jobs:
           echo "  1. Delete failed release: gh release delete v${{ needs.validate-release.outputs.version }} -y"
           echo "  2. Delete tag: git push --delete origin v${{ needs.validate-release.outputs.version }}"
           echo "  3. Fix issues and re-tag when ready"
+
+  publish-docker:
+    name: Publish Docker Images
+    needs: [validate-release, create-release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts-${{ needs.validate-release.outputs.version }}
+          path: release-artifacts/
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta-validation
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/validation-cli
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.validate-release.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.validate-release.outputs.version }}
+
+      - name: Build and push validation-cli
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.validation-cli
+          push: true
+          tags: ${{ steps.meta-validation.outputs.tags }}
+          labels: ${{ steps.meta-validation.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract metadata (contracts-extractor-cli)
+        id: meta-extractor
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/contracts-extractor-cli
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.validate-release.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.validate-release.outputs.version }}
+
+      - name: Build and push contracts-extractor-cli
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.contracts-extractor-cli
+          push: true
+          tags: ${{ steps.meta-extractor.outputs.tags }}
+          labels: ${{ steps.meta-extractor.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract metadata (maintenance-cli)
+        id: meta-maintenance
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/maintenance-cli
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.validate-release.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.validate-release.outputs.version }}
+
+      - name: Build and push maintenance-cli
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.maintenance-cli
+          push: true
+          tags: ${{ steps.meta-maintenance.outputs.tags }}
+          labels: ${{ steps.meta-maintenance.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish-docs:
+    name: Publish Scaladoc to GitHub Pages
+    needs: [validate-release, create-release]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          fetch-depth: 0
+      - name: Setup Java 17
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Coursier cache (sbt/ivy)
+        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+      - name: Generate Scaladoc for all modules
+        run: |
+          sbt -batch doc
+          # Try unified docs for Scala 2.13 modules; don't fail release if unidoc fails
+          sbt -batch unidoc || echo "unidoc failed (non-fatal)"
+      - name: Assemble site folder
+        run: |
+          mkdir -p public/api
+          for m in modules/*; do
+            mod=$(basename "$m")
+            api_dir="$m/target/scala-2.13/api"
+            if [ -d "$api_dir" ]; then
+              mkdir -p "public/api/$mod"
+              cp -R "$api_dir"/* "public/api/$mod"/
+            fi
+          done
+          # Root module (if any aggregated docs exist)
+          if [ -d target/scala-2.13/api ]; then
+            mkdir -p public/api/root && cp -R target/scala-2.13/api/* public/api/root/
+          fi
+          # Unified docs (if present)
+          if [ -d target/scala-2.13/unidoc ] || [ -d target/scala-2.13/api-unidoc ]; then
+            UNIDOC_DIR="$(find target/scala-2.13 -maxdepth 1 -name '*unidoc' -type d 2>/dev/null | head -n1)"
+            if [ -n "$UNIDOC_DIR" ]; then
+              mkdir -p public/api/unified && cp -R "$UNIDOC_DIR"/* public/api/unified/
+            fi
+          fi
+          # Add index
+          cat > public/index.html << 'EOF'
+          <!doctype html>
+          <html><head><meta charset="utf-8"><title>FlowForge API</title></head>
+          <body>
+            <h1>FlowForge API (Scaladoc)</h1>
+            <ul>
+              $(for d in api/*; do echo "<li><a href=\"$d/index.html\">$(basename "$d")</a></li>"; done)
+            </ul>
+          </body></html>
+          EOF
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
+        with:
+          path: public
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying release artifacts..."
+          VERSION="${{ needs.validate-release.outputs.version }}"
+          curl -f "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/validation-cli-assembly-${VERSION}.jar" || echo "⚠️  validation-cli JAR not found"
+          curl -f "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/contracts-extractor-cli-assembly-${VERSION}.jar" || echo "⚠️  contracts-extractor-cli JAR not found"
+          curl -f "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/maintenance-cli-assembly-${VERSION}.jar" || echo "⚠️  maintenance-cli JAR not found"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Documentation deployment failed for release v${{ needs.validate-release.outputs.version }}"

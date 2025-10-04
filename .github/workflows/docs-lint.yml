@@ -2,8 +2,16 @@ name: Docs Lint
 
 on:
   pull_request:
+    paths:
+      - 'docs/**'
+      - '**/*.md'
+      - '.github/workflows/docs-lint.yml'
   push:
     branches: [ main ]
+    paths:
+      - 'docs/**'
+      - '**/*.md'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,6 +24,7 @@ jobs:
   docs-lint:
     name: Documentation Structure & Scaladoc
     runs-on: ubuntu-22.04
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8

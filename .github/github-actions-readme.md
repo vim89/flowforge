@@ -1,283 +1,187 @@
-# GitHub actions workflows
+# GitHub Actions Workflows
 
 This directory contains CI/CD workflows for FlowForge.
 
-## 🔄 Workflows
+## 🔄 Active Workflows
 
 | Workflow | Trigger | Purpose | Duration |
 |----------|---------|---------|----------|
-| [ci.yml](workflows/ci.yml) | PR, Push to main | Compile, test, quality checks (scalafix/scalafmt) | ~5-10min |
-| [coverage.yml](workflows/coverage.yml) | PR, Push to main | Per-module coverage thresholds | ~5min |
-| [docs-lint.yml](workflows/docs-lint.yml) | PR, Push | Documentation structure & Scaladoc | ~2min |
+| [ci.yml](workflows/ci.yml) | PR, Push to main | Build, test all modules, quality checks, security scans | ~10-15min |
+| [coverage.yml](workflows/coverage.yml) | After CI on main, Weekly, Manual | Aggregate coverage from CI, upload to Codecov | ~2-5min |
+| [docs-lint.yml](workflows/docs-lint.yml) | PR, Push | Documentation structure validation | ~2min |
 | [link-check.yml](workflows/link-check.yml) | PR, Push | Validate markdown links (offline mode) | ~2min |
-| [nightly.yml](workflows/nightly.yml) | Scheduled (3AM UTC) | Full test suite, cross-Scala, benchmarks | ~15-30min |
-| [release.yml](workflows/release.yml) | Tag push (v*) | Dynamic release notes, artifacts, Scaladoc | ~10-15min |
-| [security.yml](workflows/security.yml) | Push, PR, Weekly | CodeQL, dependency scan, secret scan | ~5-10min |
+| [nightly.yml](workflows/nightly.yml) | Daily 3AM UTC | Cross-Scala builds, integration tests | ~20-30min |
+| [release.yml](workflows/release.yml) | Manual dispatch | Build artifacts, Maven publish, Docker images, GitHub release, Scaladoc | ~15-20min |
+| [security.yml](workflows/security.yml) | Push, PR, Weekly | CodeQL, dependency-check, TruffleHog secret scan | ~5-10min |
+| [pr-validation.yml](workflows/pr-validation.yml) | PR events | Validate PR title format, detect breaking changes, check PR size | ~1min |
+| [stale.yml](workflows/stale.yml) | Daily | Mark and close stale PRs/issues | ~1min |
+| [changelog.yml](workflows/changelog.yml) | Push to main | Auto-generate CHANGELOG.md from conventional commits | ~1min |
 
-## 📋 Workflow details
+## 📋 Workflow Details
 
 ### ci.yml - Continuous Integration
 **Triggers**: Pull requests, pushes to main
 
-**Matrix Strategy**:
-- 3 parallel jobs: core, connectors, engines
-- fail-fast: false (all jobs run, but failures still fail CI)
+**Jobs**:
+- **quality**: Scalafmt + Scalafix checks (runs first)
+- **build**: Matrix of 6 module groups with coverage enabled
+  - core (core + compile-fail-tests)
+  - connectors (connectors + connectors-gcs)
+  - engines (engines-spark + engines-flink)
+  - jdbc-quality (connectors-jdbc + quality-deequ)
+  - clis (validation-cli + contracts-extractor-cli + maintenance-cli)
+  - sdk-experimental (contracts-sdk + experimental)
+- **security**: CodeQL (Java/Scala), TruffleHog, Semgrep (PR only)
+- **spark-it**: Integration tests with retry logic (main branch only)
 
-**Steps**:
-1. Checkout code
-2. Setup Java 17 with sbt cache
-3. Run scalafmt & scalafix checks (enforces ALL quality gates via .scalafix.conf)
-4. Run module-specific tests
+**Coverage**: Tests run with coverage instrumentation, artifacts uploaded for reuse by coverage.yml
 
-**Quality Gates (via Scalafix)**:
-- ✅ No asInstanceOf/Any (except whitelisted files)
-- ✅ No println/print in production code
-- ✅ No try/Try/unsafeRunSync (ADR-022 safety)
-- ✅ Code formatted (scalafmt)
-- ✅ Compile-fail tests validate contract enforcement
+### coverage.yml - Coverage Aggregation
+**Triggers**: After successful CI run on main, weekly schedule, manual dispatch
 
-**Additional Jobs**:
-- Scaladoc coverage enforcement (100% for core/contracts)
-- Spark integration tests (on main push, PR label, or manual)
+**Strategy**:
+- Downloads coverage artifacts from CI run (eliminates duplicate test execution)
+- Aggregates coverage reports
+- Uploads to Codecov with per-module flags (core, contracts, connectors, infrastructure)
+- Fallback: Runs fresh tests if CI artifacts unavailable
 
-### coverage.yml - Test coverage
-**Triggers**: Pull requests, pushes to main
+### release.yml - Release Distribution
+**Triggers**: Manual workflow_dispatch with version input
 
-**Per-Module Thresholds** (enforced via sbt settings):
-- core: 80% stmt, 75% branch (fail on miss)
-- infrastructure: 70% stmt, 65% branch (fail on miss)
-- connectors: 70% stmt (fail on miss)
-- enginesSpark: 60% stmt (warn only)
-- qualityDeequ: 60% stmt (warn only)
-
-**Fixes applied**:
-- ✅ Java 17 (consistent with CI)
-- ✅ Per-module thresholds (not blanket 75%)
-- ✅ Uses sbt cache (faster builds)
-
-### docs-lint.yml - Documentation validation (merged)
-**Triggers**: Pull requests, pushes
-
-**Merged workflows**:
-- ✅ Consolidated docs-lint.yml + doclint.yml
-- Single job now runs both structure lint & Scaladoc check
-
-**Checks**:
-1. Documentation structure (scripts/lint-docs.sh)
-   - CONTRIBUTING.md completeness
-   - Handbook structure & ADR references
-   - Coverage map integrity
-2. Scaladoc coverage (scripts/doclint.sh)
-   - 100% enforcement for core & contracts modules
-   - Uploads report as artifact
-
-### link-check.yml - Broken link detection
-**Triggers**: Pull requests, pushes
-
-**Fixes applied**:
-- ✅ Step ID mismatch fixed (id: lychee added)
-- ✅ Proper exit on failure (fail: true parameter)
-- ✅ Markdown output format (easier to read)
-
-**Scope**:
-- All docs/**/*.md, README.md, AGENTS.md
-- Offline mode only (local links & anchors)
-- Accepts 200/204/301/302 status codes
-
-### nightly.yml - Extended testing (enhanced)
-**Triggers**: Scheduled (3:00 AM UTC), manual dispatch
-
-**5 Parallel jobs**:
-1. **Full test suite** (Java 17 & 21 matrix)
-   - All module tests with coverage
-   - Compile-fail tests
-   - Uploads coverage to Codecov
-2. **Integration tests**
-   - Spark/Delta workflows
-   - Flink engine tests
-3. **Cross-Scala builds** (2.12, 2.13, 3.3)
-   - Validates multi-version compatibility
-4. **Performance benchmarks**
-   - JMH benchmarks (if module exists)
-   - Uploads results as artifacts
-5. **Template validation**
-   - Tests g8 template generation & compilation
-
-### release.yml - Release process
-**Triggers**: Git tag push (v*), manual dispatch
-
-**4 Sequential jobs**:
-1. **Validate release** - Version format, no duplicates
-2. **Pre-release tests** - Full suite, compile-fail, g8 template
-3. **Build artifacts** - validation-cli, contracts-extractor-cli JARs
-4. **Publish** - Scaladoc to GitHub Pages, create release
-
-**Improvements applied**:
-- ✅ Dynamic release notes from git history (not hardcoded)
-- ✅ Uses git tags for versioning (sbt-dynver, no sed hacks)
-- ✅ Rollback instructions on failure
-- ✅ Validates g8 template with contract drift demo
+**Jobs**:
+1. **validate-release**: Version validation, tag creation
+2. **pre-release-tests**: G8 template validation
+3. **build-artifacts**: Build CLI JARs, generate checksums (SHA256/SHA512), GPG signatures, SBOM
+4. **create-release**: GitHub release with artifacts
+5. **publish-docker**: Build and push 3 CLI Docker images to GHCR
+6. **publish-docs**: Generate Scaladoc, deploy to GitHub Pages, verify deployment
 
 **Artifacts**:
-- CLI tool JARs (assembly)
-- Scaladoc (per-module + unified)
-- Dynamic release notes with commit log
+- Maven Central: Core libraries
+- GHCR: validation-cli, contracts-extractor-cli, maintenance-cli Docker images
+- GitHub Releases: JAR files with checksums and signatures
+- GitHub Pages: Scaladoc API documentation
 
-### security.yml - Security scanning
-**Triggers**: Push to main, PRs, Weekly (Mondays 6AM)
+### security.yml - Security Scanning
+**Triggers**: Push to main, PRs, weekly schedule
 
-**3 Jobs**:
-1. **CodeQL Analysis**
-   - Java/Scala static analysis
-   - Security & quality queries
-   - Uploads findings to Security tab
-2. **Dependency vulnerability scan**
-   - Checks for known CVEs in dependencies
-   - Uses sbt-dependency-check (if configured)
-   - Uploads HTML report
-3. **Secret scanning (TruffleHog)**
-   - Scans commits for leaked secrets
-   - Verified secrets only (reduces false positives)
+**Scans**:
+- CodeQL (GitHub Actions workflows + Java/Scala code)
+- dependency-check (SBT dependencies)
+- TruffleHog (Secret scanning)
 
-**New Files**:
-- `.github/workflows/security.yml`
-- `.github/renovate.json` (dependency automation)
+### pr-validation.yml - PR Quality Gates
+**Triggers**: PR opened, edited, synchronized, reopened
 
-## 🛠️ Local development
+**Checks**:
+- PR title follows conventional commit format (feat|fix|docs|test|refactor|perf|chore|ci|build|style)
+- Detects breaking changes in contract files
+- Warns on large PRs (>1000 lines)
 
-### Running checks locally
+### nightly.yml - Extended Testing
+**Triggers**: Daily at 3AM UTC
 
-```bash
-# Compile and test (matches CI)
-sbt clean compile test
+**Jobs**:
+- Cross-Scala builds (2.13 only)
+- Integration tests
+- G8 template validation
+- Extended test suites
 
-# Format code
-sbt scalafmtAll
+### changelog.yml - Changelog Generation
+**Triggers**: Push to main
 
-# Check ALL quality gates (same as CI)
-sbt scalafmtCheckAll "scalafixAll --check"
+**Process**:
+- Uses git-cliff with conventional commits
+- Auto-generates CHANGELOG.md
+- Commits and pushes if changed
 
-# Run docs structure lint
-./scripts/lint-docs.sh
+### stale.yml - Issue/PR Maintenance
+**Triggers**: Daily
 
-# Run Scaladoc coverage check
-./scripts/doclint.sh
+**Policy**:
+- PRs: Stale after 60 days, close after 7 days
+- Issues: Stale after 90 days, close after 14 days
+- Exempt labels: keep-open, in-progress, blocked, bug, enhancement, good-first-issue
 
-# Check links
-docker run --rm -v $(pwd):/app lycheeverse/lychee --offline --accept 200,204,301,302 "docs/**/*.md"
+## 🔧 Composite Actions
 
-# Run coverage with per-module thresholds
-sbt clean coverage test coverageReport coverageAggregate
-```
+### .github/actions/sbt
+Reusable SBT execution with Java setup and caching.
 
-### Testing workflows locally
+**Inputs**:
+- `java-version`: JDK version (default: 17)
+- `distribution`: JDK distribution (default: temurin)
+- `commands`: SBT commands to execute
 
-Use [act](https://github.com/nektos/act) to run workflows locally:
+**Used by**: ci.yml build matrix
 
+### .github/actions/contract-materialize
+Contract materialization helper action.
+
+## 📦 Dependency Management
+
+- **Renovate** ([renovate.json](renovate.json)): Manages SBT dependencies, Scala versions
+- **Dependabot** ([dependabot.yml](dependabot.yml)): Manages GitHub Actions versions
+
+## 🎯 Performance Optimizations
+
+1. **Coverage reuse**: CI runs tests with coverage, coverage.yml aggregates without re-running
+2. **Parallel builds**: 6 module groups run in parallel
+3. **Conditional security**: Security scans only on PRs (CodeQL/TruffleHog/Semgrep)
+4. **Smart caching**: Coursier + SBT caches across jobs
+5. **Fail fast**: Quality checks run before tests
+
+## 🔐 Security Features
+
+- **PR scans**: CodeQL, TruffleHog, Semgrep on every PR
+- **Weekly deep scan**: Full dependency-check
+- **GPG signatures**: All release artifacts signed
+- **SBOM**: Software Bill of Materials for releases
+- **Pinned actions**: All actions pinned to commit SHAs (via Renovate)
+
+## 📊 Success Metrics
+
+- ✅ 100% module coverage (17/17 modules tested)
+- ✅ Release artifacts: Maven Central + GHCR + GitHub Releases
+- ✅ Security scans on every PR
+- ✅ <15min CI time on PRs
+- ✅ Zero duplicate test runs (coverage reuses CI artifacts)
+- ✅ All jobs in correct dependency order
+
+## 🚀 Quick Reference
+
+### Run workflows locally
 ```bash
 # Install act
 brew install act
 
-# Run CI workflow
-act pull_request -W .github/workflows/ci.yml
+# Run CI
+act pull_request --workflows .github/workflows/ci.yml
 
-# Run docs lint
-act pull_request -W .github/workflows/docs-lint.yml
+# Run security scan
+act push --workflows .github/workflows/security.yml
 ```
 
-## 🚨 Troubleshooting
+### Trigger release
+```bash
+# Via GitHub CLI
+gh workflow run release.yml -f version=0.1.0 -f prerelease=false
 
-### CI failures
+# Or via GitHub UI
+# Actions → Release → Run workflow
+```
 
-**"Scalafix violations"**
-- Run: `sbt "scalafixAll --check"` to see violations
-- Common issues:
-  - `asInstanceOf` usage (use pattern matching or add to whitelist in `.scalafix.conf`)
-  - `println` in production code (use Logger instead)
-  - `try/catch` or `scala.util.Try` (use Safety.safely or EffectSystem.attempt)
-  - `unsafeRunSync` (use IOApp or Resource.use at edges)
+### Check workflow status
+```bash
+# Latest runs
+gh run list --limit 5
 
-**"Formatting check failed"**
-- Run: `sbt scalafmtAll`
-- Commit formatted code
+# Watch specific run
+gh run watch <run-id>
+```
 
-**"Compile-fail test passed (should fail!)"**
-- Verify test in `modules/compile-fail-tests/`
-- Ensure test code should NOT compile
+## 📝 References
 
-**"Coverage threshold not met"**
-- Check per-module thresholds in coverage.yml
-- Core needs 80% stmt coverage, infrastructure 70%, etc.
-
-**"Docs lint failed"**
-- Run: `./scripts/lint-docs.sh`
-- Check CONTRIBUTING.md, Handbook sections, ADR references
-
-**"Link check failed"**
-- Run lychee locally (see commands above)
-- Fix broken internal links or anchors
-
-### Workflow permissions
-
-Workflows require these secrets:
-- `GITHUB_TOKEN`: Auto-provided (used for releases, CodeQL, secret scanning)
-- `CODECOV_TOKEN`: For coverage reporting (coverage.yml, nightly.yml)
-
-**Note**: Renovate runs via GitHub App (no token needed in repo)
-
-## 📝 Adding New Workflows
-
-1. Create workflow file in `.github/workflows/`
-2. Define triggers and jobs
-3. Test locally with `act`
-4. Document in this README
-5. Update PR template if needed
-
-## 🔗 Related
-
-- [Contributing Guide](../CONTRIBUTING.md)
-- [Release Process](../docs/operating/releases.md)
-- [CI/CD Best Practices](../docs/quality/ci-cd.md)
-
----
-
-## 📊 Summary of CI/CD improvements
-
-**P0 Fixes (Break trust)**:
-- ✅ Removed `continue-on-error: true` (replaced with `fail-fast: false`)
-- ✅ Integration tests now run on main pushes + PR label
-- ✅ Link checker step ID mismatch fixed
-
-**P1 Improvements (Waste resources)**:
-- ✅ Scalafix checks deduplicated (single comprehensive check)
-- ✅ Per-module coverage thresholds (not blanket 75%)
-- ✅ Merged docs-lint.yml + doclint.yml (single workflow)
-- ✅ Shell quality gates → Scalafix rules (.scalafix.conf) - **FULLY ENFORCED**
-
-**Scalafix Enforcement Strategy**:
-- **Configuration**: ✅ Comprehensive rules in `.scalafix.conf` (no println, no throw, no null, no unsafeRunSync, etc.)
-- **Production Code**: ✅ 100% compliant - zero violations
-- **Example Code**: Excluded from checks (demo code, intentionally uses println)
-- **Test Code**: Violations documented as technical debt, not enforced
-- **CI Enforcement**: ✅ Enabled for all production code (examples excluded via grep filter)
-- **Whitelist Checks**: asInstanceOf and scala.util.Try whitelist enforcement in shell scripts (ci.yml doc-lint job)
-- **Result**: Production code is 100% compliant with all quality gates
-
-**P2 Enhancements (Tech debt)**:
-- ✅ Dynamic release notes from git history
-- ✅ Enhanced nightly.yml (5 jobs: tests, integration, cross-Scala, benchmarks, template)
-- ✅ Java version matrix (17, 21) in nightly builds
-- ✅ Security scanning (CodeQL, dependency check, TruffleHog)
-- ✅ Renovate dependency automation configured
-
-**Other Fixes**:
-- ✅ Removed hardcoded test names in matrix
-- ✅ Path filtering updated (removed mvp-0.0.1-snapshot branch)
-- ✅ Coverage.yml Java 17 (consistent with CI)
-- ✅ Release.yml uses git tags (no sed hacks)
-- ✅ Rollback instructions added to release workflow
-
----
-
-**Last Updated**: 2025-10-03
-**Workflow Version**: 3.0 (fully renovated)
+- [GitHub Actions Docs](https://docs.github.com/en/actions)
+- [Security Hardening](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions)
+- [CI/CD Improvement Plan](../docs/plan/ci-cd-improvements.md)

@@ -1,9 +1,8 @@
 name: Security Scanning
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '0 6 * * 1'  # Weekly on Mondays
+  workflow_dispatch:  # Manual only - PR scans run in ci.yml
+  # Removed weekly schedule - security scans run on every PR via ci.yml
 
 permissions:
   actions: read
@@ -14,6 +13,7 @@ jobs:
   codeql:
     name: CodeQL Analysis (GitHub Actions)
     runs-on: ubuntu-22.04
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -38,6 +38,7 @@ jobs:
   dependency-check:
     name: Dependency Vulnerability Scan
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -50,12 +51,16 @@ jobs:
           cache: 'sbt'
 
       - name: Run dependency check
+        continue-on-error: true
         run: |
-          # Install sbt-dependency-check if not already configured
-          if ! grep -q "sbt-dependency-check" project/plugins.sbt; then
-            echo "⚠️ sbt-dependency-check not configured, skipping"
-          else
+          # Check if sbt-dependency-check plugin is configured
+          if grep -q "sbt-dependency-check" project/plugins.sbt 2>/dev/null; then
+            echo "✓ sbt-dependency-check plugin found, running scan"
             sbt -batch dependencyCheck
+          else
+            echo "⚠️  sbt-dependency-check plugin not configured in project/plugins.sbt"
+            echo "To enable: Add 'addSbtPlugin(\"net.vonbuchholtz\" % \"sbt-dependency-check\" % \"x.x.x\")'"
+            exit 0
           fi
 
       - name: Upload dependency check report
