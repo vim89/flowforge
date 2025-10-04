@@ -1,4 +1,8 @@
-# 2) Talk: Review + Improvements + Revised Deck (brand-agnostic)
+# Archived — 2) Talk: Review + Improvements + Revised Deck (brand-agnostic)
+
+> This file is archived. See the new concept‑only decks:
+> - docs/talks/talk-a-api-migration.md
+> - docs/talks/talk-b-types-validation.md
 
 **Scope reviewed:** `docs/talks/ScalaIO-2025-Compile-Time-Contracts-Fiber-Safe-Pipelines.md` (brand-agnostic), plus ScalaIO event blurb doc. The structure is strong: narrative pain → compile-time contracts → typestate builder → effect boundaries → engines → DQ → DX. Below are improvements and a consolidated, revised deck.
 

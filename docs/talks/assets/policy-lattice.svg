@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="340" viewBox="0 0 1100 340">
+  <style>
+    .title { font: 700 20px Inter, Segoe UI, Arial, sans-serif; }
+    .hdr { font: 600 16px Inter, Segoe UI, Arial, sans-serif; fill: #0b1f33; }
+    .cell { font: 15px Inter, Segoe UI, Arial, sans-serif; fill: #233; }
+    .box { fill: #f8fbff; stroke: #b7d2f0; stroke-width: 1; }
+    .ok { fill: #e8f6ee; stroke: #3aa65a; }
+    .warn { fill: #fff6e5; stroke: #d99a00; }
+    .bad { fill: #feecec; stroke: #db3a3a; }
+  </style>
+  <text x="20" y="28" class="title">Policy Lattice (Concept)</text>
+
+  <!-- column headers -->
+  <g transform="translate(20,50)">
+    <rect class="box" x="0" y="0" width="200" height="40" rx="6"/>
+    <text class="hdr" x="16" y="26">Policy</text>
+    <rect class="box" x="200" y="0" width="220" height="40" rx="6"/>
+    <text class="hdr" x="216" y="26">Missing Fields</text>
+    <rect class="box" x="420" y="0" width="160" height="40" rx="6"/>
+    <text class="hdr" x="436" y="26">Extra Fields</text>
+    <rect class="box" x="580" y="0" width="180" height="40" rx="6"/>
+    <text class="hdr" x="596" y="26">Type Mismatch</text>
+    <rect class="box" x="760" y="0" width="170" height="40" rx="6"/>
+    <text class="hdr" x="776" y="26">Field Order</text>
+    <rect class="box" x="930" y="0" width="150" height="40" rx="6"/>
+    <text class="hdr" x="946" y="26">Name Case</text>
+
+    <!-- rows: Exact, Backward, Forward, Full -->
+    <!-- Exact -->
+    <rect class="box" x="0" y="50" width="200" height="48" rx="6"/>
+    <text class="cell" x="16" y="80">Exact</text>
+    <rect class="bad" x="200" y="50" width="220" height="48" rx="6"/>
+    <text class="cell" x="216" y="80">❌ reject</text>
+    <rect class="bad" x="420" y="50" width="160" height="48" rx="6"/>
+    <text class="cell" x="436" y="80">❌ reject</text>
+    <rect class="bad" x="580" y="50" width="180" height="48" rx="6"/>
+    <text class="cell" x="596" y="80">❌ reject</text>
+    <rect class="box" x="760" y="50" width="170" height="48" rx="6"/>
+    <text class="cell" x="776" y="80">As configured</text>
+    <rect class="box" x="930" y="50" width="150" height="48" rx="6"/>
+    <text class="cell" x="946" y="80">As is</text>
+
+    <!-- Backward -->
+    <rect class="box" x="0" y="108" width="200" height="48" rx="6"/>
+    <text class="cell" x="16" y="138">Backward</text>
+    <rect class="warn" x="200" y="108" width="220" height="48" rx="6"/>
+    <text class="cell" x="216" y="138">⚠ allow if optional/defaulted</text>
+    <rect class="ok" x="420" y="108" width="160" height="48" rx="6"/>
+    <text class="cell" x="436" y="138">✅ allow</text>
+    <rect class="bad" x="580" y="108" width="180" height="48" rx="6"/>
+    <text class="cell" x="596" y="138">❌ reject</text>
+    <rect class="box" x="760" y="108" width="170" height="48" rx="6"/>
+    <text class="cell" x="776" y="138">Flexible</text>
+    <rect class="box" x="930" y="108" width="150" height="48" rx="6"/>
+    <text class="cell" x="946" y="138">As is</text>
+
+    <!-- Forward -->
+    <rect class="box" x="0" y="166" width="200" height="48" rx="6"/>
+    <text class="cell" x="16" y="196">Forward</text>
+    <rect class="ok" x="200" y="166" width="220" height="48" rx="6"/>
+    <text class="cell" x="216" y="196">✅ allow</text>
+    <rect class="bad" x="420" y="166" width="160" height="48" rx="6"/>
+    <text class="cell" x="436" y="196">❌ reject</text>
+    <rect class="bad" x="580" y="166" width="180" height="48" rx="6"/>
+    <text class="cell" x="596" y="196">❌ reject</text>
+    <rect class="box" x="760" y="166" width="170" height="48" rx="6"/>
+    <text class="cell" x="776" y="196">Flexible</text>
+    <rect class="box" x="930" y="166" width="150" height="48" rx="6"/>
+    <text class="cell" x="946" y="196">As is</text>
+
+    <!-- Full -->
+    <rect class="box" x="0" y="224" width="200" height="48" rx="6"/>
+    <text class="cell" x="16" y="254">Full</text>
+    <rect class="ok" x="200" y="224" width="220" height="48" rx="6"/>
+    <text class="cell" x="216" y="254">✅ allow</text>
+    <rect class="ok" x="420" y="224" width="160" height="48" rx="6"/>
+    <text class="cell" x="436" y="254">✅ allow</text>
+    <rect class="ok" x="580" y="224" width="180" height="48" rx="6"/>
+    <text class="cell" x="596" y="254">✅ allow</text>
+    <rect class="box" x="760" y="224" width="170" height="48" rx="6"/>
+    <text class="cell" x="776" y="254">Flexible</text>
+    <rect class="box" x="930" y="224" width="150" height="48" rx="6"/>
+    <text class="cell" x="946" y="254">Flexible</text>
+  </g>
+
+  <text class="cell" x="20" y="320">Modifiers: Ordered (enforce index), CI (ignore name case), By‑Position (ignore names; match types by index)</text>
+</svg>
+
