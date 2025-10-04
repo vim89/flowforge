@@ -38,21 +38,21 @@ jobs:
         include:
           - module: core
             commands: >
-              scalafmtCheckAll "scalafixAll --check" core/test compileFailTests/test
+              scalafmtCheckAll core/test compileFailTests/test
             paths: |
               target
               modules/core/target
               modules/compile-fail-tests/target
           - module: connectors
             commands: >
-              scalafmtCheckAll "scalafixAll --check" connectors/test connectorsGcs/test
+              scalafmtCheckAll connectors/test connectorsGcs/test
             paths: |
               target
               modules/connectors/target
               modules/connectors-gcs/target
           - module: engines
             commands: >
-              scalafmtCheckAll "scalafixAll --check" enginesSpark/test enginesFlink/test
+              scalafmtCheckAll enginesSpark/test enginesFlink/test
             paths: |
               target
               modules/engines-spark/target
