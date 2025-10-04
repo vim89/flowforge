@@ -15,17 +15,17 @@ class SafetyLogLeftSpec extends AnyFunSuite with Matchers {
 
   class TestLogger extends CoreLogger[IO] {
     @volatile var errors: List[String] = Nil
-    def info(msg: String): IO[Unit]  = IO.unit
-    def warn(msg: String): IO[Unit]  = IO.unit
-    def error(msg: String): IO[Unit] = IO.delay { errors = msg :: errors }
+    def info(msg: String): IO[Unit]    = IO.unit
+    def warn(msg: String): IO[Unit]    = IO.unit
+    def error(msg: String): IO[Unit]   = IO.delay { errors = msg :: errors }
   }
 
   test("logLeft logs error messages for Left results") {
-    val R  = Safety.in[IO]
-    val tl = new TestLogger
+    val R                          = Safety.in[IO]
+    val tl                         = new TestLogger
     implicit val L: CoreLogger[IO] = tl
-    val fr = IO.pure[Safety.Result[Int]](Left(FlowForgeError.ValidationError("bad")))
-    val _ = R.logLeft(fr).unsafeRunSync()
-    tl.errors.headOption.getOrElse("").toLowerCase should include ("bad")
+    val fr                         = IO.pure[Safety.Result[Int]](Left(FlowForgeError.ValidationError("bad")))
+    val _                          = R.logLeft(fr).unsafeRunSync()
+    tl.errors.headOption.getOrElse("").toLowerCase should include("bad")
   }
 }

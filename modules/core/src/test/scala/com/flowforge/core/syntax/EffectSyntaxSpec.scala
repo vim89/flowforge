@@ -40,4 +40,3 @@ class EffectSyntaxSpec extends AnyFunSuite with Matchers {
     ran shouldBe true
   }
 }
-

@@ -15,4 +15,3 @@ class StructuredLoggerSpec extends AnyFunSuite with Matchers {
     noException should be thrownBy L2.error("oops", new RuntimeException("x")).unsafeRunSync()
   }
 }
-

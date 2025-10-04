@@ -32,4 +32,3 @@ class ResourceSafetySpec extends AnyFunSuite {
     assert(out == "hello res" && released.get())
   }
 }
-

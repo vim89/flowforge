@@ -16,8 +16,14 @@ class PolicyValidationTest extends AnyWordSpec {
     email: String,
     age: Option[Int] = None)
   case class UserMissingEmail(id: Long, name: String)
-  case class UserReordered(name: String, id: Long, email: String)
-  case class UserCaseDiff(Id: Long, Name: String, Email: String)
+  case class UserReordered(
+    name: String,
+    id: Long,
+    email: String)
+  case class UserCaseDiff(
+    Id: Long,
+    Name: String,
+    Email: String)
 
   // Shape instances
   implicit val userShape: Shape[User]                         = Shape.gen[User]

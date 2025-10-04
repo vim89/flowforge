@@ -20,10 +20,10 @@ class ConfigurationManagementSpec extends AnyWordSpec with Matchers {
       import ConfigurationManagement._
       val cfg = com.typesafe.config.ConfigFactory.parseString(
         """
-        |flowforge.ok.str = "v"
-        |flowforge.ok.int = 42
-        |flowforge.ok.bool = true
-        |""".stripMargin,
+          |flowforge.ok.str = "v"
+          |flowforge.ok.int = 42
+          |flowforge.ok.bool = true
+          |""".stripMargin,
       )
       stringDecoder.decode(cfg, "flowforge.ok.str").isValid shouldBe true
       intDecoder.decode(cfg, "flowforge.ok.int").isValid shouldBe true

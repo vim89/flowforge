@@ -18,4 +18,3 @@ class ValidatedResultOpsSpec extends AnyFunSuite {
     assert(comp.errors.toList.contains(e1) && comp.errors.toList.contains(e2))
   }
 }
-

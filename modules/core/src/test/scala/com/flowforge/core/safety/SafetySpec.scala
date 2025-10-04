@@ -27,8 +27,8 @@ class SafetySpec extends AnyFunSuite with Matchers {
   }
 
   test("sequenceV accumulates errors from Results (bounded)") {
-    val e1: Safety.Result[Int] = Left(FlowForgeError.ValidationError("e1"))
-    val e2: Safety.Result[Int] = Left(FlowForgeError.ValidationError("e2"))
+    val e1: Safety.Result[Int]  = Left(FlowForgeError.ValidationError("e1"))
+    val e2: Safety.Result[Int]  = Left(FlowForgeError.ValidationError("e2"))
     val ok1: Safety.Result[Int] = Right(1)
     val ok2: Safety.Result[Int] = Right(2)
 

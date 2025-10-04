@@ -26,9 +26,8 @@ class PipelineExecutionSpec extends AnyFunSuite with Matchers {
   }
 
   test("executeBatch preserves order and runs in parallel") {
-    val q = Pipeline.lift[IO, Int, Int](n => IO.pure(n * 2), name = "double")
+    val q   = Pipeline.lift[IO, Int, Int](n => IO.pure(n * 2), name = "double")
     val out = PipelineExecution.executeBatch(q)((1 to 5).toList).unsafeRunSync()
     out shouldBe List(2, 4, 6, 8, 10)
   }
 }
-

@@ -50,7 +50,7 @@ class LocalFileSystemConnectorSpec extends AnyFunSuite {
       case com.flowforge.connectors.FileSystemResult.Success(v) => v
       case other                                                => fail(s"expected success, got $other"); Nil
     }
-    val fm    = files.map(_.format).toSet
+    val fm = files.map(_.format).toSet
     assert(fm.contains(DataFormat.JSON) && fm.contains(DataFormat.Parquet))
   }
 
@@ -92,19 +92,21 @@ class LocalFileSystemConnectorSpec extends AnyFunSuite {
 
   test("write to read-only directory returns WRITE_ERROR") {
     import java.nio.file.attribute.PosixFilePermissions
-    val dir       = tmpDir()
-    val roDir     = java.nio.file.Paths.get(dir, "ro"); Files.createDirectories(roDir)
+    val dir   = tmpDir()
+    val roDir = java.nio.file.Paths.get(dir, "ro"); Files.createDirectories(roDir)
     // Try to set read-only permissions where supported
     val perms = PosixFilePermissions.fromString("r-xr-xr-x")
-    try Files.setPosixFilePermissions(roDir, perms) catch { case _: Throwable => () }
+    try Files.setPosixFilePermissions(roDir, perms)
+    catch { case _: Throwable => () }
 
     val file      = roDir.resolve("blocked.json").toString
     val connector = FileSystemConnector.local[IO]
     val sink      = DataSink.local(file, DataFormat.JSON)
     val res       = connector.write(sink, "{}".getBytes("UTF-8")).unsafeRunSync()
     res match {
-      case com.flowforge.connectors.FileSystemResult.Failure(err) => assert(err.code == "WRITE_ERROR" || err.code == "ACCESS_DENIED")
-      case _                                                      => succeed // some FS allow write in CI; don't fail build
+      case com.flowforge.connectors.FileSystemResult.Failure(err) =>
+        assert(err.code == "WRITE_ERROR" || err.code == "ACCESS_DENIED")
+      case _ => succeed // some FS allow write in CI; don't fail build
     }
   }
 

@@ -16,8 +16,8 @@ class PipelineCombinatorsSpec extends AnyFunSuite with Matchers {
   implicit val F: EffectSystem[IO] = EffectInstances.catsEffectSystemInstance
 
   test("sequence composes steps in order") {
-    val p1 = Pipeline.pure[IO, Int, Int](_ + 1, "inc")
-    val p2 = Pipeline.pure[IO, Int, Int](_ * 2, "double")
+    val p1  = Pipeline.pure[IO, Int, Int](_ + 1, "inc")
+    val p2  = Pipeline.pure[IO, Int, Int](_ * 2, "double")
     val seq = PipelineCombinators.sequence(NonEmptyList.of(p1, p2))
     val out = seq.execute(10).unsafeRunSync()
     out shouldBe 22
@@ -57,4 +57,3 @@ class PipelineCombinatorsSpec extends AnyFunSuite with Matchers {
     out shouldBe (1 to 10).map(_ * 2).toList
   }
 }
-

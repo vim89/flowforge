@@ -51,4 +51,3 @@ class EffectSystemBehaviorSpec extends AnyFunSuite with Matchers {
     elapsed should be < 120L
   }
 }
-

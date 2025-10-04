@@ -12,16 +12,16 @@ class EffectSystemBracketCaseSpec extends AnyFunSuite with Matchers {
 
   test("bracketCase release runs on success") {
     @volatile var ran = false
-    val out = F.bracketCase(IO.pure(1))(_ => IO.pure(2)) { (_, _) => IO.delay { ran = true } }.unsafeRunSync()
+    val out = F.bracketCase(IO.pure(1))(_ => IO.pure(2))((_, _) => IO.delay { ran = true }).unsafeRunSync()
     out shouldBe 2
     ran shouldBe true
   }
 
   test("bracketCase release gets Error on failure") {
     @volatile var isError = false
-    val ex = new RuntimeException("boom")
+    val ex                = new RuntimeException("boom")
     val res = F
-      .bracketCase(IO.pure(1))(_ => IO.raiseError[Int](ex)) { (_, _) => IO.delay { isError = true } }
+      .bracketCase(IO.pure(1))(_ => IO.raiseError[Int](ex))((_, _) => IO.delay { isError = true })
       .attempt
       .unsafeRunSync()
     res.isLeft shouldBe true
@@ -32,9 +32,10 @@ class EffectSystemBracketCaseSpec extends AnyFunSuite with Matchers {
 
   test("guarantee runs finalizer on success and failure") {
     @volatile var ran = 0
-    val ok  = F.guarantee(IO.pure(1))(IO.delay { ran += 1 }).unsafeRunSync()
+    val ok            = F.guarantee(IO.pure(1))(IO.delay(ran += 1)).unsafeRunSync()
     ok shouldBe 1
-    val err = F.guarantee(IO.raiseError[Int](new RuntimeException("x")))(IO.delay { ran += 1 }).attempt.unsafeRunSync()
+    val err =
+      F.guarantee(IO.raiseError[Int](new RuntimeException("x")))(IO.delay(ran += 1)).attempt.unsafeRunSync()
     err.isLeft shouldBe true
     ran shouldBe 2
   }
