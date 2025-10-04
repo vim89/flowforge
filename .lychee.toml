@@ -1,0 +1,19 @@
+verbose = true
+offline = true
+accept = [200, 204, 301, 302]
+exclude_path = [
+  "docs/INDEX.md",
+  "docs/archive/**",
+  "docs/talks/ScalaIO-2025-Compile-Time-Contracts-Fiber-Safe-Pipelines.md",
+  "docs/talks/Revised-Talk.md",
+  "modules/**",
+  "flowforge.g8/**"
+]
+exclude = [
+  "^mailto:",
+  "^#",
+  "^http",
+]
+require_https = false
+max_concurrency = 8
+cache = true

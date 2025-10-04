@@ -52,6 +52,9 @@ This index maps original documents to their canonical ADRs. Use this as the chec
 - Safe, Generic Error Handling
   - ADR: docs/adr/022-safe-generic-error-handling.md
 
+- Guardrail Against Shadowing Cats Syntax
+  - ADR: docs/adr/025-guardrail-against-shadowing-cats-syntax.md
+
 Coverage and Known Gaps
 - Rules_Notes.md: House rules overlap with CONTRIBUTING.md; some nuances may not be duplicated in ADRs. Action: keep archived; cross-link from CONTRIBUTING.md.
 - design.md: Diagrams and narrative; ADRs capture decisions, but not all diagrams. Action: keep archived for context.

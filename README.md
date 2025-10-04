@@ -54,7 +54,7 @@ You get compile‑time guarantees (not CI or runtime heuristics), a small opinio
 ![Scala 3 Mirrors UML](docs/diagrams/compile-time-contracts/scala3-uml.svg)
 
 ## Quick links
-- Getting started quick: [docs/getting-started-quick.md](docs/getting-started-quick.md)
+- Getting started quick: [docs/getting-started.md](docs/getting-started.md)
 - Full start: [docs/getting-started.md](docs/getting-started.md)
 - Public API: [docs/public-api.md](docs/public-api.md)
 - How it fails (error anatomy): [docs/how-it-fails.md](docs/how-it-fails.md)
@@ -141,7 +141,7 @@ The diagrams above summarize derivation and policy checks; see also [docs/diagra
 
 ## Documentation map
 
-- Start here: [docs/start-here.md](docs/start-here.md); quick: [docs/getting-started-quick.md](docs/getting-started-quick.md)
+- Start here: [docs/start-here.md](docs/start-here.md); quick: [docs/getting-started.md](docs/getting-started.md)
 - Why compile‑time: [docs/why-compile-time.md](docs/why-compile-time.md)
 - How it fails: [docs/how-it-fails.md](docs/how-it-fails.md)
 - Public API: [docs/public-api.md](docs/public-api.md)

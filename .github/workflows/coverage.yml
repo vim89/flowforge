@@ -1,15 +1,15 @@
 name: Coverage
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    - cron: '45 2 * * 1'  # Mondays 02:45 UTC
 
 jobs:
   coverage:
-    name: Scoverage + Codecov
+    name: Scoverage + Codecov (unit modules)
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,28 +21,31 @@ jobs:
           java-version: '17'
           cache: 'sbt'
 
-      - name: Run coverage with per-module thresholds
+      - name: Run coverage (core modules only)
         run: |
+          # Limit coverage to fast unit-test modules to avoid exhausting minutes.
+          # Exclude heavy Spark/Deequ/examples ITs; run those in nightly.
           sbt -batch \
-            "set core / coverageMinimumStmtTotal := 80" \
-            "set core / coverageMinimumBranchTotal := 75" \
+            -DwithSparkIT=false \
+            "set core / coverageMinimumStmtTotal := 90" \
+            "set core / coverageMinimumBranchTotal := 85" \
             "set core / coverageFailOnMinimum := true" \
-            "set infrastructure / coverageMinimumStmtTotal := 70" \
-            "set infrastructure / coverageMinimumBranchTotal := 65" \
+            "set infrastructure / coverageMinimumStmtTotal := 80" \
+            "set infrastructure / coverageMinimumBranchTotal := 75" \
             "set infrastructure / coverageFailOnMinimum := true" \
-            "set connectors / coverageMinimumStmtTotal := 70" \
+            "set connectors / coverageMinimumStmtTotal := 85" \
             "set connectors / coverageFailOnMinimum := true" \
-            "set enginesSpark / coverageMinimumStmtTotal := 60" \
-            "set enginesSpark / coverageFailOnMinimum := false" \
-            "set qualityDeequ / coverageMinimumStmtTotal := 60" \
-            "set qualityDeequ / coverageFailOnMinimum := false" \
-            clean coverage test coverageReport coverageAggregate
+            clean coverage \
+            "core/test" "infrastructure/test" "connectors/test" "contracts/test" \
+            coverageReport coverageAggregate
 
       - name: Upload coverage to Codecov
         if: ${{ !env.ACT }}
         uses: codecov/codecov-action@v4
         with:
-          files: ./target/scala-2.13/scoverage-report/scoverage.xml
+          files: |
+            ./target/scala-2.13/scoverage-report/scoverage.xml
+            ./modules/*/target/scala-2.13/scoverage-report/scoverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
           verbose: true

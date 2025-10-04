@@ -249,3 +249,11 @@ This project values clear plans, small scoped pull requests, and reliable build 
 ## References
 - ADR Index `docs/adr/INDEX.md`
 - Developer Handbook `docs/contributing/HANDBOOK.md`
+
+## Session Workflow
+- See: docs/talks/presenter-cheatsheet.md
+- See: docs/talks/timed-outline.md
+
+## Condensed Pipeline Checklist
+- See: docs/design/framework-behaviors.md
+- See: docs/quality/release-criteria.md

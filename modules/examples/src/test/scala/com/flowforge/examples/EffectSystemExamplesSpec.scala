@@ -13,7 +13,7 @@ class EffectSystemExamplesSpec extends AnyFunSuite with Matchers {
   test("parallel word count works") {
     val texts = List("hello world", "flowforge effect system", "is quite neat")
     val count = EffectSystemExamples.parallelWordCount[IO](texts).unsafeRunSync()
-    count shouldBe 6
+    count shouldBe 8
   }
 
   test("resource example closes resource") {

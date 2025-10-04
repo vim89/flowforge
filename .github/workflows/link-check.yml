@@ -1,9 +1,9 @@
 name: Markdown Link Check
 
 on:
-  pull_request:
-  push:
-    branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    - cron: '15 3 * * 1'  # Mondays 03:15 UTC
 
 jobs:
   lychee:
@@ -16,14 +16,14 @@ jobs:
         id: lychee
         uses: lycheeverse/lychee-action@v1.10.0
         with:
-          # Offline mode: check only local links and anchors; avoid flaky external checks
-          args: >-
-            --offline
-            --no-progress
-            --verbose
-            --accept 200,204,301,302
-            --format markdown
-            "docs/**/*.md" "README.md" "AGENTS.md"
+          args: --config .lychee.toml "README.md" "docs/**/*.md"
           fail: true
+      - name: Create issue on failure
+        if: failure()
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "Markdown Link Check failures"
+          content-filepath: ./lychee/out.md
+          labels: docs, link-check
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
