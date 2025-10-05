@@ -71,8 +71,7 @@ jobs:
       matrix:
         include:
           - module: core
-            commands: >
-              core/test compile-fail-tests/test
+            commands: core/test compile-fail-tests/test
             paths: |
               target
               modules/core/target
@@ -121,24 +120,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: SBT (build matrix with coverage)
+      - name: SBT (build matrix)
         uses: ./.github/actions/sbt
         with:
           java-version: '17'
           distribution: temurin
-          commands: coverage ${{ matrix.commands }} ; coverageReport
-
-      - name: Upload coverage data
-        if: always() && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ matrix.module }}
-          path: |
-            target/scala-*/scoverage-data
-            modules/*/target/scala-*/scoverage-data
-            modules/*/target/scala-*/scoverage-report
-          retention-days: 1
-          if-no-files-found: warn
+          commands: ${{ matrix.commands }}
 
   security:
     name: Security Scans
