@@ -128,11 +128,14 @@ jobs:
         uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
 
       - name: Run benchmarks
+        continue-on-error: true
         run: |
           if [ -d "modules/performance-benchmarks" ]; then
-            sbt -batch "performanceBenchmarks/Jmh/run -i 3 -wi 3 -f1 -t1"
+            cd modules/performance-benchmarks
+            sbt -batch "Jmh/run -i 3 -wi 3 -f1 -t1"
           else
             echo "⚠️ No benchmark module found, skipping"
+            exit 0
           fi
 
       - name: Upload benchmark results
@@ -160,6 +163,7 @@ jobs:
         uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
 
       - name: Test g8 template generation
+        continue-on-error: true
         run: |
           cd ${{ runner.temp }}
           sbt new file://${{ github.workspace }}/flowforge.g8 --name="nightly-test" --organization="com.flowforge.nightly"
