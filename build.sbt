@@ -17,7 +17,7 @@ ThisBuild / crossScalaVersions := Seq(
 )
 
 // ===== CODE COVERAGE THRESHOLDS =====
-// Industry benchmarks: Microsoft/Google/Facebook 70-80%, Data Engineering 75-85%
+// Industry benchmarks: 70-80%, Data Engineering 75-85%
 // FlowForge targets: Core/Contracts 90%+, Connectors/Engines 80%+, Infrastructure 75%+
 //
 // FLAG-BASED ENFORCEMENT:

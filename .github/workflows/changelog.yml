@@ -23,13 +23,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install git-cliff
+        run: |
+          curl -fsSL https://github.com/orhun/git-cliff/releases/download/v2.4.0/git-cliff-2.4.0-x86_64-unknown-linux-gnu.tar.gz -o git-cliff.tar.gz
+          tar -xzf git-cliff.tar.gz
+          sudo mv git-cliff-*/git-cliff /usr/local/bin/
+          git-cliff --version
+
       - name: Generate changelog
-        uses: orhun/git-cliff-action@v3
-        with:
-          config: cliff.toml
-          args: --verbose --unreleased --tag unreleased
-        env:
-          OUTPUT: CHANGELOG.md
+        run: |
+          git-cliff --config cliff.toml --verbose --unreleased --tag unreleased -o CHANGELOG.md
 
       - name: Commit changelog
         run: |

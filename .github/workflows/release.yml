@@ -107,10 +107,10 @@ jobs:
           echo "🧪 Running full test suite for release"
           sbt coverage test
           echo "🔥 Running compile-fail tests - proving contract enforcement"
-          sbt "compileFailTests/test"
+          sbt "compile-fail-tests/test"
           echo "🚀 Running engine smoke tests"
-          sbt "enginesSpark/testOnly *StreamingCDCSpec"
-          sbt "enginesFlink/testOnly *EngineAbstractionSpec" 
+          sbt "engines-spark/testOnly *StreamingCDCSpec"
+          sbt "engines-flink/testOnly *EngineAbstractionSpec" 
           sbt coverageReport
           echo "✅ All release tests passed!"
 
@@ -163,9 +163,9 @@ jobs:
       - name: Build JAR artifacts
         run: |
           sbt clean compile
-          sbt "validationCli/assembly"
-          sbt "contractsExtractorCli/assembly"
-          sbt "maintenanceCli/assembly"
+          sbt "validation-cli/assembly"
+          sbt "contracts-extractor-cli/assembly"
+          sbt "maintenance-cli/assembly"
 
       - name: Create release directory
         run: mkdir -p release-artifacts

@@ -58,11 +58,11 @@ jobs:
           sbt -batch \
             "core/compile:scalafix --check" \
             "connectors/compile:scalafix --check" \
-            "connectorsGcs/compile:scalafix --check" \
+            "connectors-gcs/compile:scalafix --check" \
             "infrastructure/compile:scalafix --check" \
-            "enginesSpark/compile:scalafix --check" \
-            "enginesFlink/compile:scalafix --check" \
-            "qualityDeequ/compile:scalafix --check"
+            "engines-spark/compile:scalafix --check" \
+            "engines-flink/compile:scalafix --check" \
+            "quality-deequ/compile:scalafix --check"
 
   build:
     needs: [quality]
@@ -72,35 +72,35 @@ jobs:
         include:
           - module: core
             commands: >
-              scalafmtCheckAll core/test compileFailTests/test
+              scalafmtCheckAll core/test compile-fail-tests/test
             paths: |
               target
               modules/core/target
               modules/compile-fail-tests/target
           - module: connectors
             commands: >
-              scalafmtCheckAll connectors/test connectorsGcs/test
+              scalafmtCheckAll connectors/test connectors-gcs/test
             paths: |
               target
               modules/connectors/target
               modules/connectors-gcs/target
           - module: engines
             commands: >
-              scalafmtCheckAll enginesSpark/test enginesFlink/test
+              scalafmtCheckAll engines-spark/test engines-flink/test
             paths: |
               target
               modules/engines-spark/target
               modules/engines-flink/target
           - module: jdbc-quality
             commands: >
-              scalafmtCheckAll connectorsJdbc/test qualityDeequ/test
+              scalafmtCheckAll connectors-jdbc/test quality-deequ/test
             paths: |
               target
               modules/connectors-jdbc/target
               modules/quality-deequ/target
           - module: clis
             commands: >
-              scalafmtCheckAll validationCli/test contractsExtractorCli/test maintenanceCli/test
+              scalafmtCheckAll validation-cli/test contracts-extractor-cli/test maintenance-cli/test
             paths: |
               target
               modules/validation-cli/target
@@ -108,7 +108,7 @@ jobs:
               modules/maintenance-cli/target
           - module: sdk-experimental
             commands: >
-              scalafmtCheckAll contractsSdk/test experimental/test
+              scalafmtCheckAll contracts-sdk/test experimental/test
             paths: |
               target
               modules/contracts-sdk/target
@@ -207,4 +207,4 @@ jobs:
           timeout_minutes: 30
           max_attempts: 3
           retry_on: error
-          command: sbt -batch -DwithSparkIT=true "enginesSpark/testOnly *SparkDeltaSCD2IT"
+          command: sbt -batch -DwithSparkIT=true "engines-spark/testOnly *SparkDeltaSCD2IT"

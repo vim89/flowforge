@@ -52,7 +52,7 @@ jobs:
           sbt -batch clean coverage test coverageReport coverageAggregate
 
       - name: Run compile-fail tests
-        run: sbt -batch "compileFailTests/test"
+        run: sbt -batch "compile-fail-tests/test"
 
       - name: Upload coverage to Codecov
         if: matrix.java == '17' && matrix.scala == '2.13'
@@ -78,11 +78,11 @@ jobs:
 
       - name: Run Spark integration tests
         run: |
-          sbt -batch -DwithSparkIT=true "enginesSpark/testOnly *SparkDeltaSCD2IT"
+          sbt -batch -DwithSparkIT=true "engines-spark/testOnly *SparkDeltaSCD2IT"
 
       - name: Run Flink integration tests
         run: |
-          sbt -batch "enginesFlink/testOnly *EngineAbstractionSpec"
+          sbt -batch "engines-flink/testOnly *EngineAbstractionSpec"
 
   nightly-cross-scala:
     timeout-minutes: 30
