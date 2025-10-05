@@ -108,8 +108,8 @@ jobs:
       - name: Build with Scala ${{ matrix.scala }}
         run: |
           # Cross-compile core modules (2.12 and 3.3 unsupported - removed)
-          sbt -batch "++${{ matrix.scala }}.* core/compile core/test"
-          sbt -batch "++${{ matrix.scala }}.* infrastructure/compile infrastructure/test"
+          sbt -batch ++${{ matrix.scala }}.* core/compile core/test
+          sbt -batch ++${{ matrix.scala }}.* infrastructure/compile infrastructure/test
 
   nightly-benchmarks:
     timeout-minutes: 30
@@ -130,7 +130,7 @@ jobs:
       - name: Run benchmarks
         run: |
           if [ -d "modules/performance-benchmarks" ]; then
-            sbt -batch "performance-benchmarks/Jmh/run -i 3 -wi 3 -f1 -t1"
+            sbt -batch "performanceBenchmarks/Jmh/run -i 3 -wi 3 -f1 -t1"
           else
             echo "⚠️ No benchmark module found, skipping"
           fi

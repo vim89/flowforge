@@ -32,9 +32,9 @@ lineage-status:
 	docker compose -f docker-compose.yml ps
 	@echo ""
 	@echo "Service Health Checks:"
-	@echo "• PostgreSQL: $$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5432 2>/dev/null || echo 'DOWN')"
-	@echo "• Marquez API: $$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/api/v1/namespaces 2>/dev/null || echo 'DOWN')"
-	@echo "• Marquez Web: $$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000 2>/dev/null || echo 'DOWN')"
+	@echo "• PostgreSQL: $$(curl -s -o /dev/null -w \'%{http_code}\' http://localhost:5432 2>/dev/null || echo \'DOWN\')"
+	@echo "• Marquez API: $$(curl -s -o /dev/null -w \'%{http_code}\' http://localhost:5000/api/v1/namespaces 2>/dev/null || echo \'DOWN\')"
+	@echo "• Marquez Web: $$(curl -s -o /dev/null -w \'%{http_code}\' http://localhost:3000 2>/dev/null || echo \'DOWN\')"
 
 # Clean up all data (removes PostgreSQL volume)
 lineage-clean:
