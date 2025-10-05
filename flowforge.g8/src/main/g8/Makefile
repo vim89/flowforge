@@ -5,7 +5,7 @@
 
 # Default target
 help:
-	@echo "FlowForge Pipeline"
+	@echo "flowforge pipeline"
 	@echo "================================="
 	@echo "Available commands:"
 	@echo ""
@@ -25,7 +25,7 @@ build:
 	@echo "🔨 Building FlowForge pipeline..."
 	sbt compile
 
-test: 
+test:
 	@echo "🧪 Running tests..."
 	sbt test
 
@@ -56,7 +56,7 @@ demo-contract-drift:
 	@make build
 	@echo ""
 	@echo "2. Now edit Contract.scala and change 'id: Long' to 'id: String'"
-	@echo "3. Run 'make build' again to see compile failure"  
+	@echo "3. Run 'make build' again to see compile failure"
 	@echo "4. Revert the change to fix compilation"
 	@echo ""
-	@echo "This proves FlowForge's core USP: Pipelines won't build if contracts drift!"
+	@echo "This proves flowforge's core USP: Pipelines won't build if contracts drift!"

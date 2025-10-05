@@ -21,11 +21,11 @@ import scala.concurrent.duration._
 
 /**
  * Comprehensive Flink streaming example demonstrating FlowForge's engine-agnostic capabilities.
- * 
+ *
  * This example shows how the same business logic can run on both Spark and Flink engines
  * without modification, while leveraging streaming-specific features like windowing,
  * watermarks, and event-time processing.
- * 
+ *
  * Key Features Demonstrated:
  * - Engine abstraction: Same pipeline logic works on Spark and Flink
  * - Streaming semantics: Windowing, watermarks, event-time processing
@@ -105,39 +105,40 @@ object FlinkStreamingExample {
 
   // ========== FlowForge Data Encoders/Decoders ==========
 
-  implicit val userEventFFDecoder: com.flowforge.core.algebra.DataDecoder[UserEvent] = 
+  implicit val userEventFFDecoder: com.flowforge.core.algebra.DataDecoder[UserEvent] = {
     new com.flowforge.core.algebra.DataDecoder[UserEvent] {
       def decode(ed: com.flowforge.core.algebra.EncodedData, format: DataFormat) = format match {
         case DataFormat.JSON | DataFormat.JSONL =>
           parse(new String(ed.data, "UTF-8"))
             .flatMap(_.as[UserEvent])
             .left.map(e => com.flowforge.core.algebra.CorruptedData(e.getMessage))
-        case other => 
-          Left(com.flowforge.core.algebra.CorruptedData(s"Unsupported format: $other"))
+        case other =>
+          Left(com.flowforge.core.algebra.CorruptedData(s"Unsupported format: "+other))
       }
       def validateSchema(ed: com.flowforge.core.algebra.EncodedData, expected: DataSchema) = Right(())
-      def decodeWithEvolution(ed: com.flowforge.core.algebra.EncodedData, format: DataFormat, target: DataSchema) = 
+      def decodeWithEvolution(ed: com.flowforge.core.algebra.EncodedData, format: DataFormat, target: DataSchema) =
         decode(ed, format)
-      def supportsFormat(format: DataFormat) = 
+      def supportsFormat(format: DataFormat) =
         format == DataFormat.JSON || format == DataFormat.JSONL
     }
+  }
 
-  implicit val sessionMetricsFFEncoder: com.flowforge.core.algebra.DataEncoder[SessionMetrics] = 
+  implicit val sessionMetricsFFEncoder: com.flowforge.core.algebra.DataEncoder[SessionMetrics] = {
     com.flowforge.core.algebra.DataEncoder.instance[SessionMetrics](
       (metrics, format) => format match {
         case DataFormat.JSON | DataFormat.JSONL =>
           Right(com.flowforge.core.algebra.EncodedData(
-            sessionMetricsEncoder(metrics).noSpaces.getBytes("UTF-8"), 
+            sessionMetricsEncoder(metrics).noSpaces.getBytes("UTF-8"),
             format
           ))
         case DataFormat.Parquet =>
           // Simplified parquet encoding for demo
           Right(com.flowforge.core.algebra.EncodedData(
-            sessionMetricsEncoder(metrics).noSpaces.getBytes("UTF-8"), 
+            sessionMetricsEncoder(metrics).noSpaces.getBytes("UTF-8"),
             format
           ))
-        case other => 
-          Left(com.flowforge.core.algebra.CorruptedData(s"Unsupported format: $other"))
+        case other =>
+          Left(com.flowforge.core.algebra.CorruptedData(s"Unsupported format: "+other))
       },
       _ => DataSchema.builder
         .addField("userId", DataType.Long)
@@ -151,23 +152,24 @@ object FlinkStreamingExample {
         .addField("windowEnd", DataType.Long)
         .build
     )
+  }
 
-  implicit val userProfileFFEncoder: com.flowforge.core.algebra.DataEncoder[UserProfile] = 
+  implicit val userProfileFFEncoder: com.flowforge.core.algebra.DataEncoder[UserProfile] = {
     com.flowforge.core.algebra.DataEncoder.instance[UserProfile](
       (profile, format) => format match {
         case DataFormat.JSON | DataFormat.JSONL =>
           Right(com.flowforge.core.algebra.EncodedData(
-            userProfileEncoder(profile).noSpaces.getBytes("UTF-8"), 
+            userProfileEncoder(profile).noSpaces.getBytes("UTF-8"),
             format
           ))
         case DataFormat.Delta =>
           // Delta format encoding for CDC operations
           Right(com.flowforge.core.algebra.EncodedData(
-            userProfileEncoder(profile).noSpaces.getBytes("UTF-8"), 
+            userProfileEncoder(profile).noSpaces.getBytes("UTF-8"),
             format
           ))
-        case other => 
-          Left(com.flowforge.core.algebra.CorruptedData(s"Unsupported format: $other"))
+        case other =>
+          Left(com.flowforge.core.algebra.CorruptedData(s"Unsupported format: "+other))
       },
       _ => DataSchema.builder
         .addField("userId", DataType.Long)
@@ -179,6 +181,7 @@ object FlinkStreamingExample {
         .addField("profileVersion", DataType.Integer)
         .build
     )
+  }
 
   // ========== Engine-Agnostic Business Logic ==========
 
@@ -201,15 +204,15 @@ object FlinkStreamingExample {
       for {
         // Read streaming events with contract validation
         eventStream <- algebra.stream[UserEvent](eventSource)
-        
+
         // Apply watermark for event-time processing (engine handles implementation)
         watermarkedStream = eventStream.withWatermark("timestamp", watermarkDelay)
-        
+
         // Window events by session and time
         windowedEvents = watermarkedStream
           .groupBy(event => (event.userId, event.sessionId))
           .window(windowDuration)
-        
+
         // Compute session metrics (same logic on both engines)
         sessionMetrics = windowedEvents.aggregate { events =>
           val eventList = events.toList
@@ -218,7 +221,7 @@ object FlinkStreamingExample {
           val lastEvent = sortedByTime.last
           val windowStart = (firstEvent.timestamp / windowDuration.toMillis) * windowDuration.toMillis
           val windowEnd = windowStart + windowDuration.toMillis
-          
+
           SessionMetrics(
             userId = firstEvent.userId,
             sessionId = firstEvent.sessionId,
@@ -231,7 +234,7 @@ object FlinkStreamingExample {
             windowEnd = windowEnd
           )
         }
-        
+
         // Write metrics with schema validation
         _ <- algebra.writeWithValidation(
           sessionMetrics.toDataset,
@@ -246,12 +249,12 @@ object FlinkStreamingExample {
             )
             .build
         ).flatMap {
-          case cats.data.Validated.Valid(result) => 
+          case cats.data.Validated.Valid(result) =>
             EffectSystem[F].pure(())
-          case cats.data.Validated.Invalid(errors) => 
-            EffectSystem[F].raiseError(new RuntimeException(s"Quality validation failed: ${errors.toList.mkString(", ")}"))
+          case cats.data.Validated.Invalid(errors) =>
+            EffectSystem[F].raiseError(new RuntimeException(s"Quality validation failed: "+errors.toList.mkString(", ")))
         }
-        
+
       } yield ()
     }
 
@@ -267,15 +270,15 @@ object FlinkStreamingExample {
       for {
         // Read session metrics stream
         metricsStream <- algebra.stream[SessionMetrics](sessionMetricsSource)
-        
+
         // Read existing user profiles for CDC operations
         existingProfiles <- algebra.read[UserProfile](
           DataSource.table("user_profiles", DataFormat.Delta)
         )
-        
+
         // Group metrics by user for profile updates
         userMetrics = metricsStream.groupBy(_.userId)
-        
+
         // Compute profile updates (engine-agnostic aggregation logic)
         profileUpdates = userMetrics.aggregate { metrics =>
           val metricsList = metrics.toList
@@ -287,7 +290,7 @@ object FlinkStreamingExample {
           val favoriteTypes = allEventTypes.groupBy(identity).mapValues(_.size).toList
             .sortBy(-_._2).take(3).map(_._1)
           val lastActive = metricsList.map(_.lastEventTime).max
-          
+
           UserProfile(
             userId = userId,
             totalSessions = totalSessions,
@@ -298,7 +301,7 @@ object FlinkStreamingExample {
             profileVersion = 1 // Will be incremented during CDC merge
           )
         }
-        
+
         // Perform CDC operations to merge profile updates
         cdcResult <- algebra.performDelta(
           source = profileUpdates.toDataset,
@@ -310,10 +313,10 @@ object FlinkStreamingExample {
             deleteCondition = None // No deletes for user profiles
           )
         )
-        
+
         // Apply CDC operations to the target table
         _ <- algebra.applyCDCOperations(cdcResult.operations, profilesTable)
-        
+
         // Record lineage for the streaming update
         _ <- algebra.recordLineage(
           profileUpdates.toDataset,
@@ -329,10 +332,9 @@ object FlinkStreamingExample {
             )
           )
         )
-        
+
       } yield ()
     }
-  }
 
   // ========== Engine-Specific Implementations ==========
 
@@ -360,7 +362,7 @@ object FlinkStreamingExample {
    */
   def crossEngineTest(spark: SparkSession): IO[Boolean] = {
     implicit val ioEffectSystem: EffectSystem[IO] = com.flowforge.core.instances.EffectInstances.catsIOEffectSystemInstance
-    
+
     val testEvents = List(
       UserEvent(1L, "login", System.currentTimeMillis(), "session1"),
       UserEvent(1L, "view_page", System.currentTimeMillis() + 1000, "session1"),
@@ -368,30 +370,30 @@ object FlinkStreamingExample {
       UserEvent(2L, "login", System.currentTimeMillis(), "session2"),
       UserEvent(2L, "purchase", System.currentTimeMillis() + 1500, "session2")
     )
-    
+
     for {
       // Create test data source
-      testSource = DataSource.memory(testEvents, DataFormat.JSON)
-      testSink = DataSink.memory("test_output", DataFormat.JSON)
-      
+      testSource <- DataSource.memory(testEvents, DataFormat.JSON)
+      testSink <- DataSink.memory("test_output", DataFormat.JSON)
+
       // Run on Flink
       flinkPipeline <- createFlinkPipeline[IO]
       _ <- flinkPipeline.processEventStream(testSource, testSink)
       flinkResults <- flinkPipeline.algebra.read[SessionMetrics](
         DataSource.memory("test_output", DataFormat.JSON)
       )
-      
-      // Run on Spark  
+
+      // Run on Spark
       sparkPipeline <- createSparkPipeline[IO](spark)
       _ <- sparkPipeline.processEventStream(testSource, testSink)
       sparkResults <- sparkPipeline.algebra.read[SessionMetrics](
         DataSource.memory("test_output", DataFormat.JSON)
       )
-      
+
       // Compare results (should be identical)
       flinkMetrics = flinkResults.collect().sortBy(_.userId)
       sparkMetrics = sparkResults.collect().sortBy(_.userId)
-      
+
       resultsMatch = flinkMetrics.zip(sparkMetrics).forall { case (f, s) =>
         f.userId == s.userId &&
         f.sessionId == s.sessionId &&
@@ -399,7 +401,7 @@ object FlinkStreamingExample {
         f.sessionDurationMs == s.sessionDurationMs &&
         f.eventTypes == s.eventTypes
       }
-      
+
     } yield resultsMatch
   }
 
@@ -411,32 +413,32 @@ object FlinkStreamingExample {
    */
   def main(args: Array[String]): Unit = {
     implicit val ioEffectSystem: EffectSystem[IO] = com.flowforge.core.instances.EffectInstances.catsIOEffectSystemInstance
-    
+
     val program: IO[Unit] = for {
       // Create Flink streaming pipeline
       pipeline <- createFlinkPipeline[IO]
-      
+
       // Configure data sources and sinks
       eventSource = DataSource.kafka(
         topic = "user_events",
         brokers = "localhost:9092",
         format = DataFormat.JSON
       )
-      
+
       metricssink = DataSink.kafka(
-        topic = "session_metrics", 
+        topic = "session_metrics",
         brokers = "localhost:9092",
         format = DataFormat.JSON
       )
-      
+
       profilesSink = DataSink.delta(
         path = "s3://data-lake/user_profiles",
         mode = WriteMode.Merge
       )
-      
+
       // Start streaming pipeline
       _ <- IO.println("Starting Flink streaming pipeline...")
-      
+
       // Process event stream into session metrics
       _ <- pipeline.processEventStream(
         eventSource = eventSource,
@@ -444,19 +446,19 @@ object FlinkStreamingExample {
         windowDuration = 5.minutes,
         watermarkDelay = 30.seconds
       )
-      
+
       // Update user profiles with CDC operations
       _ <- pipeline.updateUserProfiles(
         sessionMetricsSource = DataSource.kafka("session_metrics", "localhost:9092", DataFormat.JSON),
         profilesTable = profilesSink,
         checkpointInterval = 1.minute
       )
-      
+
       _ <- IO.println("Streaming pipeline started successfully!")
       _ <- IO.println("Pipeline will run continuously. Press Ctrl+C to stop.")
-      
+
     } yield ()
-    
+
     program.unsafeRunSync()
   }
 
@@ -469,15 +471,15 @@ object FlinkStreamingExample {
     val random = new scala.util.Random()
     val eventTypes = List("login", "logout", "view_page", "purchase", "search", "click")
     val baseTime = System.currentTimeMillis()
-    
+
     (1 to count).map { i =>
       UserEvent(
         userId = random.nextLong(1000) + 1,
         eventType = eventTypes(random.nextInt(eventTypes.length)),
         timestamp = baseTime + (i * 1000) + random.nextInt(5000),
-        sessionId = s"session_${random.nextInt(100)}",
+        sessionId = s"session_"+random.nextInt(100)},
         properties = Map(
-          "page" -> s"page_${random.nextInt(10)}",
+          "page" -> s"page_"+random.nextInt(10),
           "source" -> List("web", "mobile", "api")(random.nextInt(3))
         )
       )

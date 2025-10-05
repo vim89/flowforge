@@ -6,6 +6,6 @@ package com.flowforge.sample.advanced
  */
 object SparkCsvToParquet {
   def main(args: Array[String]): Unit = {
-    println("SparkCsvToParquet demo: enable FlowForge deps for a full example.")
+    println("SparkCsvToParquet demo: enable flowforge deps for a full example.")
   }
 }

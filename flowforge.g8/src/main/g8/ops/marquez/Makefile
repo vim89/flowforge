@@ -27,14 +27,14 @@ lineage-logs:
 
 # Check status of lineage services
 lineage-status:
-	@echo "FlowForge Lineage Stack Status:"
+	@echo "flowforge lineage stack status:"
 	@echo "================================"
 	docker compose -f docker-compose.yml ps
 	@echo ""
 	@echo "Service Health Checks:"
-	@echo "• PostgreSQL: $$(curl -s -o /dev/null -w \'%{http_code}\' http://localhost:5432 2>/dev/null || echo \'DOWN\')"
-	@echo "• Marquez API: $$(curl -s -o /dev/null -w \'%{http_code}\' http://localhost:5000/api/v1/namespaces 2>/dev/null || echo \'DOWN\')"
-	@echo "• Marquez Web: $$(curl -s -o /dev/null -w \'%{http_code}\' http://localhost:3000 2>/dev/null || echo \'DOWN\')"
+	@echo "• PostgreSQL: \$(curl -s -o /dev/null -w \'%{http_code}\' http://localhost:5432 2>/dev/null || echo \'DOWN\')"
+	@echo "• Marquez API: \$(curl -s -o /dev/null -w \'%{http_code}\' http://localhost:5000/api/v1/namespaces 2>/dev/null || echo \'DOWN\')"
+	@echo "• Marquez Web: \$(curl -s -o /dev/null -w \'%{http_code}\' http://localhost:3000 2>/dev/null || echo \'DOWN\')"
 
 # Clean up all data (removes PostgreSQL volume)
 lineage-clean:
@@ -48,7 +48,7 @@ lineage-reset: lineage-clean lineage-up
 	@echo "✓ Lineage stack reset complete"
 
 help:
-	@echo "FlowForge Lineage Management Commands:"
+	@echo "flowforge lineage management commands:"
 	@echo "====================================="
 	@echo "  make lineage-up     - Start the lineage stack"
 	@echo "  make lineage-down   - Stop the lineage stack"
@@ -57,5 +57,5 @@ help:
 	@echo "  make lineage-clean  - Clean up all data"
 	@echo "  make lineage-reset  - Reset (clean + restart)"
 	@echo ""
-	@echo "After starting, run your FlowForge pipelines and view lineage at:"
+	@echo "After starting, run your flowforge pipelines and view lineage at:"
 	@echo "http://localhost:3000"

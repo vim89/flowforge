@@ -106,7 +106,7 @@ object PipelineApp extends IOApp.Simple {
           QualityConstraint.NullRateBelow(RefinedTypes.FieldName.unsafeFrom("email"), 0.0),
           QualityConstraint.Pattern(
             RefinedTypes.FieldName.unsafeFrom("email"),
-            "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}",
+            "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}",
           ),
           QualityConstraint.Min(RefinedTypes.FieldName.unsafeFrom("age"), 0.0),
           QualityConstraint.Max(RefinedTypes.FieldName.unsafeFrom("age"), 120.0),

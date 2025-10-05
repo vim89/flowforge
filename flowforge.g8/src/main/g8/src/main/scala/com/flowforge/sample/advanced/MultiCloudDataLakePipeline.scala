@@ -25,20 +25,20 @@ import scala.util.{ Try, Success, Failure }
 
 /**
  * Multi-Cloud Data Lake Pipeline Example
- * 
+ *
  * Demonstrates FlowForge's capabilities for:
  * 1. Multi-Cloud Sources: S3, Azure Data Lake, GCS unified access
  * 2. Data Quality Integration: Dual-mode validation (native Spark + Deequ)
  * 3. Schema Evolution: Different policies (Backward, Forward, Full) with practical use cases
  * 4. Lineage Tracking: Automatic OpenLineage emission across cloud boundaries
  * 5. Resource Management: Proper cleanup and error handling
- * 
+ *
  * Scenario: Customer data consolidation across cloud providers for a global e-commerce platform
  */
 object MultiCloudDataLakePipeline extends IOApp.Simple {
 
   // === DOMAIN MODELS ===
-  
+
   /**
    * Customer data from legacy system (S3) - original schema
    */
@@ -99,29 +99,29 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
   )
 
   // === SHAPE DERIVATIONS ===
-  
+
   implicit val legacyCustomerShape: Shape[LegacyCustomer] = Shape.gen[LegacyCustomer]
   implicit val crmCustomerShape: Shape[CrmCustomer] = Shape.gen[CrmCustomer]
   implicit val mobileCustomerShape: Shape[MobileCustomer] = Shape.gen[MobileCustomer]
   implicit val unifiedCustomerShape: Shape[UnifiedCustomer] = Shape.gen[UnifiedCustomer]
 
   // === SCHEMA CONFORMANCE POLICIES ===
-  
+
   // Legacy system: Use Backward policy to allow new fields in target
   implicit val legacyConforms: SchemaConforms[LegacyCustomer, UnifiedCustomer, SchemaPolicy.Backward] = implicitly
-  
+
   // CRM system: Use Forward policy to allow missing fields in source
   implicit val crmConforms: SchemaConforms[CrmCustomer, UnifiedCustomer, SchemaPolicy.Forward] = implicitly
-  
+
   // Mobile system: Use Full policy for complete flexibility during migration
   implicit val mobileConforms: SchemaConforms[MobileCustomer, UnifiedCustomer, SchemaPolicy.Full] = implicitly
 
   // === EFFECT SYSTEM ===
-  
+
   implicit val es: EffectSystem[IO] = com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
 
   // === ENCODERS/DECODERS ===
-  
+
   implicit val legacyDecoder: FFDecoder[LegacyCustomer] = createJsonDecoder[LegacyCustomer]
   implicit val crmDecoder: FFDecoder[CrmCustomer] = createJsonDecoder[CrmCustomer]
   implicit val mobileDecoder: FFDecoder[MobileCustomer] = createJsonDecoder[MobileCustomer]
@@ -136,29 +136,29 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
     def decode(ed: FFEncodedData, format: DataFormat): Either[FFCorruptedData, T] = format match {
       case DataFormat.JSON | DataFormat.JSONL =>
         parse(new String(ed.data, "UTF-8"))
-          .left.map(e => FFCorruptedData(s"JSON parse error: ${e.getMessage}"))
-          .flatMap(_.as[T].left.map(e => FFCorruptedData(s"JSON decode error: ${e.getMessage}")))
-      case other => Left(FFCorruptedData(s"Unsupported format: $other"))
+          .left.map(e => FFCorruptedData(s"JSON parse error: "+e.getMessage))
+          .flatMap(_.as[T].left.map(e => FFCorruptedData(s"JSON decode error: "+e.getMessage)))
+      case other => Left(FFCorruptedData(s"Unsupported format: "+other))
     }
     def validateSchema(ed: FFEncodedData, expected: DataSchema): Either[FFCorruptedData, Unit] = Right(())
-    def decodeWithEvolution(ed: FFEncodedData, format: DataFormat, target: DataSchema): Either[FFCorruptedData, T] = 
+    def decodeWithEvolution(ed: FFEncodedData, format: DataFormat, target: DataSchema): Either[FFCorruptedData, T] =
       decode(ed, format)
-    def supportsFormat(format: DataFormat): Boolean = 
+    def supportsFormat(format: DataFormat): Boolean =
       format == DataFormat.JSON || format == DataFormat.JSONL
   }
 
-  private def createJsonEncoder[T: io.circe.Encoder]: FFEncoder[T] = 
+  private def createJsonEncoder[T: io.circe.Encoder]: FFEncoder[T] =
     com.flowforge.core.algebra.DataEncoder.instance[T](
       (value, format) => format match {
         case DataFormat.JSON | DataFormat.JSONL =>
           Right(FFEncodedData(value.asJson.noSpaces.getBytes("UTF-8"), format))
-        case other => Left(s"Unsupported format: $other")
+        case other => Left(s"Unsupported format: "+other)
       },
       _ => DataSchema.builder.build // Simplified schema for demo
     )
 
   // === SPARK RESOURCES ===
-  
+
   private def sparkR: Resource[IO, SparkSession] =
     Resource.make(IO {
       SparkSession
@@ -179,60 +179,60 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
     Resource.pure(SparkDataAlgebra.createSparkDataAlgebra[IO](spark).algebra)
 
   // === MAIN PIPELINE ===
-  
+
   def run: IO[Unit] = sparkR.use { spark =>
     daoR(spark).use { dao =>
       val log = org.slf4j.LoggerFactory.getLogger("multi-cloud-pipeline")
-      
+
       for {
         _ <- AuditDb.init()
         _ <- AuditDb.log("multi_cloud_pipeline_started")
         _ <- log.info("Starting multi-cloud customer data consolidation pipeline").pure[IO]
-        
+
         // === PHASE 1: MULTI-CLOUD DATA INGESTION ===
         _ <- AuditDb.log("phase_1_ingestion_started")
-        
+
         // S3 Source (Legacy System) - Backward compatibility
         legacyResult <- processLegacyCustomers(dao, log)
-        _ <- AuditDb.log(s"legacy_customers_processed_count=${legacyResult._2}")
-        
-        // Azure Data Lake Source (CRM System) - Forward compatibility  
+        _ <- AuditDb.log(s"legacy_customers_processed_count="+legacyResult._2)
+
+        // Azure Data Lake Source (CRM System) - Forward compatibility
         crmResult <- processCrmCustomers(dao, log)
-        _ <- AuditDb.log(s"crm_customers_processed_count=${crmResult._2}")
-        
+        _ <- AuditDb.log(s"crm_customers_processed_count="+crmResult._2)
+
         // GCS Source (Mobile App) - Full flexibility
         mobileResult <- processMobileCustomers(dao, log)
-        _ <- AuditDb.log(s"mobile_customers_processed_count=${mobileResult._2}")
-        
+        _ <- AuditDb.log(s"mobile_customers_processed_count="+mobileResult._2)
+
         // === PHASE 2: DATA QUALITY VALIDATION ===
         _ <- AuditDb.log("phase_2_quality_validation_started")
-        
+
         // Combine all datasets for unified quality checks
         allCustomers = List(legacyResult._1, crmResult._1, mobileResult._1).flatten
         qualityResult <- runUnifiedQualityChecks(spark, allCustomers, log)
-        _ <- AuditDb.log(s"quality_validation_passed=${qualityResult.passed}")
-        
+        _ <- AuditDb.log(s"quality_validation_passed="+qualityResult.passed)
+
         // === PHASE 3: UNIFIED DATA LAKE WRITE ===
         _ <- AuditDb.log("phase_3_unified_write_started")
-        
+
         finalResult <- if (qualityResult.passed) {
           writeToDataLake(dao, allCustomers, log)
         } else {
-          IO(log.warn(s"Quality validation failed with ${qualityResult.violations.size} violations")) *>
+          IO(log.warn(s"Quality validation failed with "+qualityResult.violations.size+" violations")) *>
           AuditDb.log("pipeline_failed_quality_validation") *>
-          IO.raiseError(new RuntimeException(s"Quality validation failed: ${qualityResult.violations}"))
+          IO.raiseError(new RuntimeException(s"Quality validation failed: "+qualityResult.violations))
         }
-        
-        _ <- AuditDb.log(s"unified_customers_written_count=${finalResult}")
+
+        _ <- AuditDb.log(s"unified_customers_written_count="+finalResult)
         _ <- AuditDb.log("multi_cloud_pipeline_completed")
-        _ <- log.info(s"Pipeline completed successfully. Processed ${finalResult} unified customer records").pure[IO]
-        
+        _ <- log.info(s"Pipeline completed successfully. Processed "+finalResult+" unified customer records").pure[IO]
+
       } yield ()
     }
   }
 
   // === LEGACY CUSTOMERS PROCESSING (S3) ===
-  
+
   private def processLegacyCustomers(dao: DataAlgebra[IO], log: org.slf4j.Logger): IO[(List[UnifiedCustomer], Int)] = {
     val s3Source = DataSource.cloud(
       provider = "s3",
@@ -245,26 +245,26 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
         "aws.region" -> "us-east-1"
       )
     )
-    
+
     for {
       _ <- IO(log.info("Processing legacy customers from S3"))
       _ <- AuditDb.log("legacy_s3_read_started")
-      
+
       // Simulate reading legacy data (in real scenario, this would read from S3)
       legacyCustomers = generateSampleLegacyCustomers()
-      
+
       // Transform to unified model with Backward schema policy
       unifiedCustomers <- legacyCustomers.traverse(transformLegacyToUnified)
-      
+
       _ <- AuditDb.log("legacy_transformation_completed")
-      _ <- IO(log.info(s"Transformed ${unifiedCustomers.size} legacy customers"))
-      
+      _ <- IO(log.info(s"Transformed "+unifiedCustomers.size+" legacy customers"))
+
     } yield (unifiedCustomers, unifiedCustomers.size)
   }
 
   private def transformLegacyToUnified(legacy: LegacyCustomer): IO[UnifiedCustomer] = IO {
     val registrationDate = Try(LocalDate.parse(legacy.registrationDate)).getOrElse(LocalDate.now())
-    
+
     UnifiedCustomer(
       customerId = legacy.customerId,
       firstName = legacy.firstName,
@@ -283,7 +283,7 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
   }
 
   // === CRM CUSTOMERS PROCESSING (Azure) ===
-  
+
   private def processCrmCustomers(dao: DataAlgebra[IO], log: org.slf4j.Logger): IO[(List[UnifiedCustomer], Int)] = {
     val azureSource = DataSource.cloud(
       provider = "azure",
@@ -296,27 +296,27 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
         "azure.container.name" -> "crm-data"
       )
     )
-    
+
     for {
       _ <- IO(log.info("Processing CRM customers from Azure Data Lake"))
       _ <- AuditDb.log("crm_azure_read_started")
-      
+
       // Simulate reading CRM data (in real scenario, this would read from Azure)
       crmCustomers = generateSampleCrmCustomers()
-      
+
       // Transform to unified model with Forward schema policy
       unifiedCustomers <- crmCustomers.traverse(transformCrmToUnified)
-      
+
       _ <- AuditDb.log("crm_transformation_completed")
-      _ <- IO(log.info(s"Transformed ${unifiedCustomers.size} CRM customers"))
-      
+      _ <- IO(log.info(s"Transformed "+unifiedCustomers.size+" CRM customers"))
+
     } yield (unifiedCustomers, unifiedCustomers.size)
   }
 
   private def transformCrmToUnified(crm: CrmCustomer): IO[UnifiedCustomer] = IO {
     val registrationDate = Try(LocalDate.parse(crm.registrationDate)).getOrElse(LocalDate.now())
     val lastLoginDate = crm.lastLoginDate.flatMap(d => Try(LocalDate.parse(d)).toOption)
-    
+
     UnifiedCustomer(
       customerId = crm.customerId,
       firstName = crm.firstName,
@@ -335,7 +335,7 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
   }
 
   // === MOBILE CUSTOMERS PROCESSING (GCS) ===
-  
+
   private def processMobileCustomers(dao: DataAlgebra[IO], log: org.slf4j.Logger): IO[(List[UnifiedCustomer], Int)] = {
     val gcsSource = DataSource.cloud(
       provider = "gcs",
@@ -347,20 +347,20 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
         "google.cloud.service.account.key" -> sys.env.getOrElse("GCP_SERVICE_ACCOUNT_KEY", "demo-key")
       )
     )
-    
+
     for {
       _ <- IO(log.info("Processing mobile customers from GCS"))
       _ <- AuditDb.log("mobile_gcs_read_started")
-      
+
       // Simulate reading mobile data (in real scenario, this would read from GCS)
       mobileCustomers = generateSampleMobileCustomers()
-      
+
       // Transform to unified model with Full schema policy
       unifiedCustomers <- mobileCustomers.traverse(transformMobileToUnified)
-      
+
       _ <- AuditDb.log("mobile_transformation_completed")
-      _ <- IO(log.info(s"Transformed ${unifiedCustomers.size} mobile customers"))
-      
+      _ <- IO(log.info(s"Transformed "+unifiedCustomers.size+" mobile customers"))
+
     } yield (unifiedCustomers, unifiedCustomers.size)
   }
 
@@ -368,12 +368,12 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
     val registrationDate = Try(
       Instant.ofEpochSecond(mobile.signupTimestamp).atZone(java.time.ZoneOffset.UTC).toLocalDate()
     ).getOrElse(LocalDate.now())
-    
+
     // Parse full name into first and last name (simplified logic)
     val nameParts = mobile.fullName.split(" ", 2)
     val firstName = nameParts.headOption.getOrElse("Unknown")
     val lastName = if (nameParts.length > 1) nameParts(1) else ""
-    
+
     UnifiedCustomer(
       customerId = mobile.id,
       firstName = firstName,
@@ -392,30 +392,30 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
   }
 
   // === DATA QUALITY VALIDATION ===
-  
+
   private def runUnifiedQualityChecks(
-    spark: SparkSession, 
-    customers: List[UnifiedCustomer], 
+    spark: SparkSession,
+    customers: List[UnifiedCustomer],
     log: org.slf4j.Logger
   ): IO[DataAlgebra.QualityResult[List[UnifiedCustomer]]] = {
-    
+
     val qualityConstraints = List(
       // Core identity constraints
       QualityConstraint.NotNull(RefinedTypes.FieldName.unsafeFrom("customerId")),
       QualityConstraint.Unique(RefinedTypes.FieldName.unsafeFrom("customerId")),
-      
+
       // Contact information constraints
       QualityConstraint.NotNull(RefinedTypes.FieldName.unsafeFrom("email")),
       QualityConstraint.Pattern(
         RefinedTypes.FieldName.unsafeFrom("email"),
-        "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+        "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}\$"
       ),
       QualityConstraint.Distinctness(RefinedTypes.FieldName.unsafeFrom("email"), 0.95), // Allow some duplicates
-      
+
       // Name constraints
       QualityConstraint.NotNull(RefinedTypes.FieldName.unsafeFrom("firstName")),
       QualityConstraint.NullRateBelow(RefinedTypes.FieldName.unsafeFrom("lastName"), 0.1), // Allow some missing last names
-      
+
       // Regional data constraints
       QualityConstraint.NotNull(RefinedTypes.FieldName.unsafeFrom("region")),
       QualityConstraint.Compliance(
@@ -423,7 +423,7 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
         "region IN ('US', 'EU', 'APAC', 'LATAM', 'us-east-1', 'europe-west1', 'asia-southeast1')",
         0.95
       ),
-      
+
       // Source system tracking
       QualityConstraint.NotNull(RefinedTypes.FieldName.unsafeFrom("sourceSystem")),
       QualityConstraint.Compliance(
@@ -431,7 +431,7 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
         "sourceSystem IN ('legacy-s3', 'crm-azure', 'mobile-gcs')",
         1.0
       ),
-      
+
       // Temporal constraints
       QualityConstraint.NotNull(RefinedTypes.FieldName.unsafeFrom("ingestionTimestamp")),
       QualityConstraint.Compliance(
@@ -440,11 +440,11 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
         1.0
       )
     )
-    
+
     for {
       _ <- IO(log.info("Running unified data quality validation"))
       _ <- AuditDb.log("quality_validation_started")
-      
+
       // Convert to Spark DataFrame for Deequ validation
       // In real implementation, this would use the actual DataAlgebra dataset
       result <- IO {
@@ -454,7 +454,7 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
         val violations = if (score < 1.0) {
           List("Minor email distinctness violation: 94% vs required 95%")
         } else List.empty
-        
+
         DataAlgebra.QualityResult(
           data = customers,
           passed = score >= 0.9, // Accept if 90% of checks pass
@@ -467,25 +467,25 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
           )
         )
       }
-      
-      _ <- AuditDb.log(s"quality_score=${result.score}")
+
+      _ <- AuditDb.log(s"quality_score="+result.score)
       _ <- if (result.passed) {
-        IO(log.info(s"Quality validation passed with score ${result.score}"))
+        IO(log.info(s"Quality validation passed with score "+result.score))
       } else {
-        IO(log.warn(s"Quality validation failed with score ${result.score}, violations: ${result.violations}"))
+        IO(log.warn(s"Quality validation failed with score "+result.score+", violations: "+result.violations))
       }
-      
+
     } yield result
   }
 
   // === DATA LAKE WRITE WITH LINEAGE ===
-  
+
   private def writeToDataLake(
-    dao: DataAlgebra[IO], 
-    customers: List[UnifiedCustomer], 
+    dao: DataAlgebra[IO],
+    customers: List[UnifiedCustomer],
     log: org.slf4j.Logger
   ): IO[Int] = {
-    
+
     val deltaLakeSink = DataSink.cloud(
       provider = "s3", // Could be any cloud provider
       bucket = "unified-data-lake",
@@ -502,14 +502,14 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
         "partitionBy" -> "sourceSystem,region"
       )
     )
-    
+
     for {
       _ <- IO(log.info("Writing unified customer data to Delta Lake"))
       _ <- AuditDb.log("delta_write_started")
-      
+
       // Emit OpenLineage events for data lineage tracking
       _ <- emitLineageEvents(customers)
-      
+
       // Build and execute pipeline with contract validation
       pipeline = PipelineBuilder[IO]("unified-customer-pipeline")
         .addTypedSource[UnifiedCustomer, UnifiedCustomer, SchemaPolicy.Exact](
@@ -528,11 +528,11 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
           (_, _) => IO(log.info("Writing to Delta Lake")) // Simplified write operation
         )
         .build()
-      
+
       _ <- PipelineExecution.execute(pipeline)(())
       _ <- AuditDb.log("delta_write_completed")
-      _ <- IO(log.info(s"Successfully wrote ${customers.size} unified customer records to Delta Lake"))
-      
+      _ <- IO(log.info(s"Successfully wrote "+customers.size+" unified customer records to Delta Lake"))
+
     } yield customers.size
   }
 
@@ -545,7 +545,7 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
   }
 
   // === LINEAGE TRACKING ===
-  
+
   private def emitLineageEvents(customers: List[UnifiedCustomer]): IO[Unit] = {
     val lineageEvents = List(
       OpenLineageEvent(
@@ -579,15 +579,15 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
         ))
       )
     )
-    
-    lineageEvents.traverse_(event => 
-      AuditDb.log(s"lineage_event_${event.eventType.toLowerCase}_emitted") *>
-      IO(println(s"OpenLineage Event: ${event.eventType} for job ${event.job.name}"))
+
+    lineageEvents.traverse_(event =>
+      AuditDb.log(s"lineage_event_"+event.eventType.toLowerCase+"_emitted") *>
+      IO(println(s"OpenLineage Event: "+event.eventType+" for job "+event.job.name))
     )
   }
 
   // === SAMPLE DATA GENERATION ===
-  
+
   private def generateSampleLegacyCustomers(): List[LegacyCustomer] = List(
     LegacyCustomer(1001L, "John", "Doe", "john.doe@example.com", "2020-01-15", "US"),
     LegacyCustomer(1002L, "Jane", "Smith", "jane.smith@example.com", "2020-02-20", "EU"),
@@ -595,11 +595,11 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
   )
 
   private def generateSampleCrmCustomers(): List[CrmCustomer] = List(
-    CrmCustomer(2001L, "Alice", "Brown", "alice.brown@example.com", "2021-01-15", "US", 
+    CrmCustomer(2001L, "Alice", "Brown", "alice.brown@example.com", "2021-01-15", "US",
                 Some("+1-555-0101"), Some("Gold"), Some("2023-12-01")),
-    CrmCustomer(2002L, "Charlie", "Wilson", "charlie.wilson@example.com", "2021-02-20", "EU", 
+    CrmCustomer(2002L, "Charlie", "Wilson", "charlie.wilson@example.com", "2021-02-20", "EU",
                 Some("+44-20-7946-0958"), Some("Silver"), Some("2023-11-28")),
-    CrmCustomer(2003L, "Diana", "Davis", "diana.davis@example.com", "2021-03-10", "APAC", 
+    CrmCustomer(2003L, "Diana", "Davis", "diana.davis@example.com", "2021-03-10", "APAC",
                 None, Some("Bronze"), Some("2023-12-02"))
   )
 
@@ -610,7 +610,7 @@ object MultiCloudDataLakePipeline extends IOApp.Simple {
   )
 
   // === HELPER CASE CLASSES FOR LINEAGE ===
-  
+
   case class OpenLineageEvent(
     eventType: String,
     job: OpenLineageJob,

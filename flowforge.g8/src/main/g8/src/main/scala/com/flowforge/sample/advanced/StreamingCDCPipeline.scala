@@ -26,28 +26,28 @@ import java.util.UUID
 
 /**
  * STREAMING CDC PIPELINE EXAMPLE
- * 
+ *
  * This advanced example demonstrates FlowForge's streaming capabilities with Change Data Capture (CDC)
  * patterns, showcasing real-time data processing with compile-time contract validation.
- * 
+ *
  * KEY FEATURES DEMONSTRATED:
  * 1. **Kafka Source Integration**: Read CDC events from Kafka topics with schema validation
- * 2. **Real-time Processing**: Transform CDC events using FlowForge's streaming capabilities  
+ * 2. **Real-time Processing**: Transform CDC events using FlowForge's streaming capabilities
  * 3. **Delta Lake Integration**: Write processed events to Delta tables with SCD2 patterns
  * 4. **Contract Validation**: Show how schema policies work with streaming data
  * 5. **Error Handling**: Demonstrate proper error handling for malformed CDC events
- * 
+ *
  * BUSINESS SCENARIO:
  * A customer management system publishes CDC events to Kafka whenever customer records
  * are inserted, updated, or deleted. This pipeline processes these events in real-time,
  * maintaining a slowly changing dimension (SCD2) table in Delta Lake that preserves
  * the complete history of customer changes.
- * 
+ *
  * CDC EVENT STRUCTURE:
  * - INSERT: New customer record created
  * - UPDATE: Existing customer record modified (before/after values)
  * - DELETE: Customer record marked as deleted
- * 
+ *
  * SCD2 PATTERN:
  * - Each customer record has effective_from and effective_to timestamps
  * - Current records have effective_to = null
@@ -66,12 +66,12 @@ object StreamingCDCPipeline extends IOApp.Simple {
   sealed trait CDCOperation
   object CDCOperation {
     case object Insert extends CDCOperation
-    case object Update extends CDCOperation  
+    case object Update extends CDCOperation
     case object Delete extends CDCOperation
 
     implicit val encoder: Encoder[CDCOperation] = Encoder.encodeString.contramap {
       case Insert => "INSERT"
-      case Update => "UPDATE" 
+      case Update => "UPDATE"
       case Delete => "DELETE"
     }
 
@@ -79,7 +79,7 @@ object StreamingCDCPipeline extends IOApp.Simple {
       case "INSERT" => Right(Insert)
       case "UPDATE" => Right(Update)
       case "DELETE" => Right(Delete)
-      case other => Left(s"Unknown CDC operation: $other")
+      case other => Left(s"Unknown CDC operation: "+other)
     }
   }
 
@@ -150,13 +150,13 @@ object StreamingCDCPipeline extends IOApp.Simple {
 
   implicit val customerDataEncoder: Encoder[CustomerData] = deriveEncoder[CustomerData]
   implicit val customerDataDecoder: Decoder[CustomerData] = deriveDecoder[CustomerData]
-  
+
   implicit val cdcEventEncoder: Encoder[CDCEvent] = deriveEncoder[CDCEvent]
   implicit val cdcEventDecoder: Decoder[CDCEvent] = deriveDecoder[CDCEvent]
-  
+
   implicit val customerSCD2Encoder: Encoder[CustomerSCD2] = deriveEncoder[CustomerSCD2]
   implicit val customerSCD2Decoder: Decoder[CustomerSCD2] = deriveDecoder[CustomerSCD2]
-  
+
   implicit val cdcErrorRecordEncoder: Encoder[CDCErrorRecord] = deriveEncoder[CDCErrorRecord]
   implicit val cdcErrorRecordDecoder: Decoder[CDCErrorRecord] = deriveDecoder[CDCErrorRecord]
 
@@ -181,18 +181,18 @@ object StreamingCDCPipeline extends IOApp.Simple {
       case DataFormat.JSON | DataFormat.JSONL =>
         val jsonString = new String(ed.data, "UTF-8")
         parse(jsonString)
-          .left.map(e => FFCorruptedData(s"JSON parse error: ${e.getMessage}"))
-          .flatMap(_.as[CDCEvent].left.map(e => FFCorruptedData(s"CDC event decode error: ${e.getMessage}")))
-      case other => 
-        Left(FFCorruptedData(s"Unsupported format for CDC events: $other"))
+          .left.map(e => FFCorruptedData(s"JSON parse error: "+e.getMessage))
+          .flatMap(_.as[CDCEvent].left.map(e => FFCorruptedData(s"CDC event decode error: "+e.getMessage)))
+      case other =>
+        Left(FFCorruptedData(s"Unsupported format for CDC events: "+other))
     }
-    
+
     def validateSchema(ed: FFEncodedData, expected: DataSchema): Either[FFCorruptedData, Unit] = Right(())
-    
-    def decodeWithEvolution(ed: FFEncodedData, format: DataFormat, target: DataSchema): Either[FFCorruptedData, CDCEvent] = 
+
+    def decodeWithEvolution(ed: FFEncodedData, format: DataFormat, target: DataSchema): Either[FFCorruptedData, CDCEvent] =
       decode(ed, format)
-    
-    def supportsFormat(format: DataFormat): Boolean = 
+
+    def supportsFormat(format: DataFormat): Boolean =
       format == DataFormat.JSON || format == DataFormat.JSONL
   }
 
@@ -207,7 +207,7 @@ object StreamingCDCPipeline extends IOApp.Simple {
         // For Parquet/Delta, Spark will handle the encoding
         Right(FFEncodedData(customer.asJson.noSpaces.getBytes("UTF-8"), DataFormat.JSON))
       case other =>
-        Left(FFCorruptedData(s"Unsupported format for SCD2 records: $other"))
+        Left(FFCorruptedData(s"Unsupported format for SCD2 records: "+other))
     },
     _ => DataSchema.builder
       .addField("id", DataType.Long)
@@ -382,36 +382,36 @@ object StreamingCDCPipeline extends IOApp.Simple {
   def validateCDCEvent(event: CDCEvent): IO[Either[String, CDCEvent]] = {
     val validations = List(
       // Validate required fields based on operation type
-      if (event.operation == CDCOperation.Insert && event.after.isEmpty) 
+      if (event.operation == CDCOperation.Insert && event.after.isEmpty)
         Some("INSERT operations must have 'after' data")
       else None,
-      
+
       if (event.operation == CDCOperation.Delete && event.before.isEmpty)
-        Some("DELETE operations must have 'before' data") 
+        Some("DELETE operations must have 'before' data")
       else None,
-      
+
       if (event.operation == CDCOperation.Update && (event.before.isEmpty || event.after.isEmpty))
         Some("UPDATE operations must have both 'before' and 'after' data")
       else None,
-      
+
       // Validate customer data fields
       event.after.flatMap { customer =>
         if (customer.email.isEmpty || !customer.email.contains("@"))
           Some("Customer email must be valid")
         else None
       },
-      
+
       event.after.flatMap { customer =>
         if (customer.firstName.trim.isEmpty || customer.lastName.trim.isEmpty)
           Some("Customer first and last names are required")
         else None
       },
-      
+
       // Validate timestamp format
       if (event.timestamp.isEmpty)
         Some("CDC event timestamp is required")
       else None,
-      
+
       // Validate transaction ID
       if (event.transactionId.isEmpty)
         Some("CDC transaction ID is required")
@@ -436,26 +436,26 @@ object StreamingCDCPipeline extends IOApp.Simple {
   object StreamingAuditLog {
     private val logger = org.slf4j.LoggerFactory.getLogger("streaming-cdc-pipeline")
 
-    def logPipelineStart(): IO[Unit] = 
+    def logPipelineStart(): IO[Unit] =
       IO(logger.info("🚀 Streaming CDC Pipeline started"))
 
-    def logEventProcessed(event: CDCEvent): IO[Unit] = 
-      IO(logger.info(s"✅ Processed CDC event: ${event.operation} for customer ${event.after.orElse(event.before).map(_.id).getOrElse("unknown")}"))
+    def logEventProcessed(event: CDCEvent): IO[Unit] =
+      IO(logger.info(s"✅ Processed CDC event: "+event.operation+"  for customer "+event.after.orElse(event.before).map(_.id).getOrElse("unknown")))
 
-    def logEventError(error: CDCErrorRecord): IO[Unit] = 
-      IO(logger.warn(s"❌ CDC event error: ${error.errorType} - ${error.errorMessage}"))
+    def logEventError(error: CDCErrorRecord): IO[Unit] =
+      IO(logger.warn(s"❌ CDC event error: "+error.errorType+" - "+error.errorMessage))
 
-    def logQualityCheck(passed: Boolean, score: Double): IO[Unit] = 
+    def logQualityCheck(passed: Boolean, score: Double): IO[Unit] =
       if (passed) {
-        IO(logger.info(s"✅ Data quality check passed with score: $score"))
+        IO(logger.info(s"✅ Data quality check passed with score: "+score))
       } else {
-        IO(logger.warn(s"❌ Data quality check failed with score: $score"))
+        IO(logger.warn(s"❌ Data quality check failed with score: "+score))
       }
 
-    def logBatchProcessed(batchId: Long, recordCount: Int, errorCount: Int): IO[Unit] = 
-      IO(logger.info(s"📊 Batch $batchId processed: $recordCount records, $errorCount errors"))
+    def logBatchProcessed(batchId: Long, recordCount: Int, errorCount: Int): IO[Unit] =
+      IO(logger.info("📊 Batch "+batchId+" processed: "+ recordCount +" records, "+ errorCount +" errors"))
 
-    def logPipelineStop(): IO[Unit] = 
+    def logPipelineStop(): IO[Unit] =
       IO(logger.info("🛑 Streaming CDC Pipeline stopped"))
   }
 
@@ -531,14 +531,14 @@ object StreamingCDCPipeline extends IOApp.Simple {
 
           // Dead letter queue for error records
           errorSink = DataSink.delta(
-            path = "/tmp/flowforge-demo/cdc-errors", 
+            path = "/tmp/flowforge-demo/cdc-errors",
             format = DataFormat.Delta,
             mode = WriteMode.Append
           )
 
-          _ <- IO.println(s"   ✓ Kafka source: ${kafkaSource.location}")
-          _ <- IO.println(s"   ✓ Delta Lake sink: ${deltaLakeSink.location}")
-          _ <- IO.println(s"   ✓ Error sink: ${errorSink.location}")
+          _ <- IO.println(s"   ✓ Kafka source: "+kafkaSource.location)
+          _ <- IO.println(s"   ✓ Delta Lake sink: "+deltaLakeSink.location)
+          _ <- IO.println(s"   ✓ Error sink: "+errorSink.location)
 
           // ========================================================================================
           // STEP 2: Build Contract-Validated Streaming Pipeline
@@ -570,7 +570,7 @@ object StreamingCDCPipeline extends IOApp.Simple {
             QualityConstraint.NotNull(RefinedTypes.FieldName.unsafeFrom("transactionId")),
             QualityConstraint.Pattern(
               RefinedTypes.FieldName.unsafeFrom("operation"),
-              "^(INSERT|UPDATE|DELETE)$"
+              "^(INSERT|UPDATE|DELETE)\$"
             )
           )
 
@@ -578,18 +578,18 @@ object StreamingCDCPipeline extends IOApp.Simple {
           customerQualityRules = List(
             QualityConstraint.Pattern(
               RefinedTypes.FieldName.unsafeFrom("email"),
-              "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+              "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}\$"
             ),
             QualityConstraint.NotNull(RefinedTypes.FieldName.unsafeFrom("firstName")),
             QualityConstraint.NotNull(RefinedTypes.FieldName.unsafeFrom("lastName")),
             QualityConstraint.Pattern(
               RefinedTypes.FieldName.unsafeFrom("status"),
-              "^(ACTIVE|INACTIVE|SUSPENDED)$"
+              "^(ACTIVE|INACTIVE|SUSPENDED)\$"
             )
           )
 
-          _ <- IO.println(s"   ✓ Defined ${cdcQualityRules.length} CDC event quality rules")
-          _ <- IO.println(s"   ✓ Defined ${customerQualityRules.length} customer data quality rules")
+          _ <- IO.println(s"   ✓ Defined "+cdcQualityRules.length+" CDC event quality rules")
+          _ <- IO.println(s"   ✓ Defined "+customerQualityRules.length+" customer data quality rules")
 
           // ========================================================================================
           // STEP 4: Build Main Processing Pipeline
@@ -627,7 +627,7 @@ object StreamingCDCPipeline extends IOApp.Simple {
               for {
                 // Step 4a: Validate CDC event
                 validationResult <- validateCDCEvent(cdcEvent)
-                
+
                 // Step 4b: Process valid events or handle errors
                 result <- validationResult match {
                   case Right(validEvent) =>
@@ -635,7 +635,7 @@ object StreamingCDCPipeline extends IOApp.Simple {
                       _ <- StreamingAuditLog.logEventProcessed(validEvent)
                       scd2Records <- processCDCEvent(validEvent)
                     } yield scd2Records
-                    
+
                   case Left(errorMessage) =>
                     for {
                       errorRecord <- handleCDCError(cdcEvent.asJson.noSpaces, new IllegalArgumentException(errorMessage))
@@ -651,7 +651,7 @@ object StreamingCDCPipeline extends IOApp.Simple {
                 // Write each SCD2 record to Delta Lake
                 scd2Records.traverse_ { record =>
                   for {
-                    _ <- IO.println(s"   💾 Writing SCD2 record: Customer ${record.id} (${record.operation})")
+                    _ <- IO.println(s"   💾 Writing SCD2 record: Customer "+record.id+" - "+record.operation)
                     // In production: dao.write(deltaDataset, record)
                   } yield ()
                 }
@@ -662,7 +662,7 @@ object StreamingCDCPipeline extends IOApp.Simple {
           _ <- IO.println("   ✓ Main processing pipeline built successfully")
 
           // ========================================================================================
-          // STEP 5: Build Error Handling Pipeline  
+          // STEP 5: Build Error Handling Pipeline
           // ========================================================================================
 
           _ <- IO.println("")
@@ -684,7 +684,7 @@ object StreamingCDCPipeline extends IOApp.Simple {
             .addTypedSink[CDCErrorRecord, SchemaPolicy.Exact](
               typedErrorSink,
               (errorRecord, _) => {
-                IO.println(s"   💀 Writing error record: ${errorRecord.errorType}")
+                IO.println(s"   💀 Writing error record: "+errorRecord.errorType)
                 // In production: dao.write(errorDataset, errorRecord)
               }
             )
@@ -704,8 +704,8 @@ object StreamingCDCPipeline extends IOApp.Simple {
 
           // Execute main pipeline
           _ <- PipelineExecution.execute(mainPipeline)(())
-          
-          // Execute error pipeline  
+
+          // Execute error pipeline
           _ <- PipelineExecution.execute(errorPipeline)(())
 
           // Simulate batch processing metrics
@@ -789,7 +789,7 @@ object StreamingCDCPipeline extends IOApp.Simple {
           status = "ACTIVE"
         ))
       ),
-      
+
       // UPDATE event
       CDCEvent(
         operation = CDCOperation.Update,
@@ -818,7 +818,7 @@ object StreamingCDCPipeline extends IOApp.Simple {
           status = "ACTIVE"
         ))
       ),
-      
+
       // DELETE event
       CDCEvent(
         operation = CDCOperation.Delete,
