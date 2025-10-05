@@ -85,6 +85,7 @@ jobs:
         run: |
           sbt -batch "engines-flink/testOnly *EngineAbstractionSpec"
 
+
   nightly-cross-scala:
     timeout-minutes: 30
     name: Cross-Scala build (2.13 only)
@@ -110,6 +111,7 @@ jobs:
           # Cross-compile core modules (2.12 and 3.3 unsupported - removed)
           sbt -batch ++${{ matrix.scala }}.* core/compile core/test
           sbt -batch ++${{ matrix.scala }}.* infrastructure/compile infrastructure/test
+
 
   nightly-benchmarks:
     timeout-minutes: 30

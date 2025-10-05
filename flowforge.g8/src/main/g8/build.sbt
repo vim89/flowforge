@@ -62,3 +62,5 @@ lazy val root = (project in file("."))
     ),
     libraryDependencies ++= ffDeps ++ sparkDeps ++ loggingDeps ++ jdbcDeps ++ zioDeps ++ testDeps,
   )
+
+// TODO: Not compiling, check & fix
