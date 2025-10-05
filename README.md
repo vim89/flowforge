@@ -213,4 +213,18 @@ We welcome folks from Python/ETL backgrounds and JVM veterans alike. Start with 
 
 ## License
 
+
 [Apache 2.0](LICENSE)
+
+---
+### Flowforge Hybrid Licensing Model
+
+Flowforge adopts a hybrid licensing structure combining open innovation and IP protection.
+
+- **Legacy / historical releases** remain under MIT (for transparency and ecosystem continuity).
+- **Active and future releases** (v1.0 and onward) are licensed under **AGPLv3** with additional Flowforge terms (“RESTRICTED COMMERCIAL & DERIVATIVE TERMS FOR FLOWFORGE” in `LICENSE`).
+- **Commercial usage** (offering as SaaS, embedding in proprietary systems, or internal closed-source deployments) requires a separate **commercial license**. See `COMMERCIAL_LICENSE.md` for template.
+- **Contributor License Agreement (CLA)** in `CLA.md` governs contribution terms, ensuring compatibility with the hybrid licensing framework.
+- **Commercial exceptions** and **dual-licensing** are handled directly by Vitthal Mirji for partners and enterprise use.
+
+The goal: protect Flowforge’s compile-time innovation while keeping community use free and open.

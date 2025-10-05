@@ -1,21 +1,62 @@
-MIT License
+GNU AFFERO GENERAL PUBLIC LICENSE
+Version 3, 19 November 2007
 
-Copyright (c) 2025 Vitthal Mirji
+Copyright (C) 2025 Vitthal Mirji
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+You should have received a copy of the GNU Affero General Public License
+along with this project. If not, see <https://www.gnu.org/licenses/agpl-3.0.txt>
+
+-------------------------------------------------------------
+# RESTRICTED COMMERCIAL & DERIVATIVE TERMS FOR FLOWFORGE
+
+## 1. Non‑Commercial Use Only (Default)
+Except as otherwise agreed in writing with Vitthal Mirji, this software is licensed **only for non‑commercial use**.
+You may use, modify, and distribute Flowforge or derivatives for research, educational, personal, or non‑profit use.
+Any commercial use, including offering it as a service, embedding it in a paid product, or providing access to third parties, requires a **separate commercial license**.
+
+## 2. No Override / Closed Forks Prohibited
+You may not relicense, override, or distribute derivative works under proprietary or closed terms.
+Any attempt to convert Flowforge or derivatives into a proprietary or closed product without prior written consent constitutes a license breach.
+
+## 3. Commercial License Option
+A commercial license may be granted by the copyright holder under separate terms.
+Only a written and signed license from Vitthal Mirji supersedes the default non‑commercial restriction.
+
+## 4. Modification and Attribution
+All redistributions or public deployments must clearly indicate that they are derived from Flowforge, including modification date and author.
+You must not remove or obscure these licensing terms or any copyright notices.
+
+## 5. Jurisdiction and Enforcement
+Governed by the laws of India. Venue for disputes shall be Mumbai, Maharashtra, India.
+Invalidity of any clause shall not affect enforceability of the remainder.
+NOTICE AND ADDITIONAL TERMS FOR FLOWFORGE PROJECT
+
+Copyright (C) 2025 VITTAL MIRJI
+
+This project ("Flowforge") is released under the GNU Affero General Public License, version 3 (AGPLv3), or (at your option) any later version.
+
+Additional Permissions:
+- You may link Flowforge components with separate modules licensed under more permissive open-source licenses, provided that the resulting combination does not violate AGPLv3.
+- If you wish to use Flowforge in a commercial or proprietary context without sharing source code of derivative works, please contact Vitthal Mirji for a commercial license.
+
+Contributions:
+- By contributing to Flowforge, you agree to the Contributor License Agreement (CLA.md).
+- All accepted contributions are incorporated under Flowforge’s AGPL license, unless explicitly covered by a separate written agreement.
+
+Modification Notice:
+- If you modify and publicly deploy Flowforge or derivative works, you must include a clear notice stating that modifications were made, along with the date and author of the modification.
+
+Jurisdiction:
+- This license shall be governed by and interpreted under the laws of India. Legal venue for disputes shall be Mumbai, Maharashtra, India.
+
+-------------------------------------------------------------
