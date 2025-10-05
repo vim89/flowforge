@@ -300,6 +300,7 @@ jobs:
     name: Publish Docker Images
     needs: [validate-release, create-release]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
@@ -387,6 +388,7 @@ jobs:
     name: Publish Scaladoc to GitHub Pages
     needs: [validate-release, create-release]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

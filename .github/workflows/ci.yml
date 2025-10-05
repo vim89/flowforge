@@ -126,7 +126,7 @@ jobs:
         with:
           java-version: '17'
           distribution: temurin
-          commands: coverage ${{ matrix.commands }} coverageReport
+          commands: coverage ${{ matrix.commands }} ; coverageReport
 
       - name: Upload coverage data
         if: always() && github.ref == 'refs/heads/main'
