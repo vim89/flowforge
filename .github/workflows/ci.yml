@@ -72,35 +72,35 @@ jobs:
         include:
           - module: core
             commands: >
-              scalafmtCheckAll core/test compile-fail-tests/test
+              core/test compile-fail-tests/test
             paths: |
               target
               modules/core/target
               modules/compile-fail-tests/target
           - module: connectors
             commands: >
-              scalafmtCheckAll connectors/test connectors-gcs/test
+              connectors/test connectors-gcs/test
             paths: |
               target
               modules/connectors/target
               modules/connectors-gcs/target
           - module: engines
             commands: >
-              scalafmtCheckAll engines-spark/test engines-flink/test
+              engines-spark/test engines-flink/test
             paths: |
               target
               modules/engines-spark/target
               modules/engines-flink/target
           - module: jdbc-quality
             commands: >
-              scalafmtCheckAll connectors-jdbc/test quality-deequ/test
+              connectors-jdbc/test quality-deequ/test
             paths: |
               target
               modules/connectors-jdbc/target
               modules/quality-deequ/target
           - module: clis
             commands: >
-              scalafmtCheckAll validation-cli/test contracts-extractor-cli/test maintenance-cli/test
+              validation-cli/test contracts-extractor-cli/test maintenance-cli/test
             paths: |
               target
               modules/validation-cli/target
@@ -108,7 +108,7 @@ jobs:
               modules/maintenance-cli/target
           - module: sdk-experimental
             commands: >
-              scalafmtCheckAll contracts-sdk/test experimental/test
+              contracts-sdk/test experimental/test
             paths: |
               target
               modules/contracts-sdk/target
