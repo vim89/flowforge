@@ -3,7 +3,7 @@
 > This file maps contributor guidance to current canonical locations.
 
 ## Sources
-- Canonical: handbook `docs/contributing/HANDBOOK.md`, ADRs under `docs/adr/*`.
+- Canonical: handbook `docs/contributing/HANDBOOK.md`, `docs/contributing/contributors/HANDBOOK.md`  ADRs under `docs/adr/*`.
 
 ## Crosswalk (Selected Headings → Canonical)
 - Teaser / Brutal truth / Targets vs Today → Handbook §1; ADR‑018; ADR‑016

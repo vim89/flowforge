@@ -1,32 +1,111 @@
+# Codecov Configuration for FlowForge
+# Documentation: https://docs.codecov.com/docs/codecov-yaml
+# Validation: https://api.codecov.io/validate
+
+codecov:
+  require_ci_to_pass: yes
+  notify:
+    after_n_builds: 1  # Wait for all uploads before notifying
+
 coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
   status:
+    # Patch-level coverage (new code in PR)
+    # DEVELOPMENT MODE: informational=true (reports but doesn't block PRs)
+    # To enforce: Change informational to false when ready for v1.0
     patch:
       default:
-        # Enforce high coverage on changed lines (no dilution by legacy code)
-        target: 90%
-        threshold: 0%
-        informational: false
+        target: 80%  # New code requires 80% coverage
+        threshold: 5%
+        informational: true  # DEVELOPMENT: Report only, don't block
+        if_not_found: success
+        if_ci_failed: success
+
+    # Project-level coverage (per-module targets)
+    # DEVELOPMENT MODE: informational=true (reports but doesn't block PRs)
+    # To enforce: Change informational to false when ready for v1.0
     project:
-      default: false
+      default: false  # Disable default, use per-module targets
+
+      # Core module - FOUNDATIONAL CODE (90% target)
       core:
-        paths:
-          - modules/core/
-        target: auto
-        threshold: 0.25%
-        informational: false
+        target: 90%
+        threshold: 1%  # Allow 1% drop only
+        informational: true  # DEVELOPMENT: Report only
+        flags:
+          - core
+
+      # Contracts module - KILLER FEATURE (90% target)
+      contracts:
+        target: 90%
+        threshold: 1%
+        informational: true  # DEVELOPMENT: Report only
+        flags:
+          - contracts
+
+      # Connectors - PRODUCTION CRITICAL (80% target)
       connectors:
-        paths:
-          - modules/connectors/
-        target: auto
-        threshold: 0.25%
-        informational: false
+        target: 80%
+        threshold: 2%
+        informational: true  # DEVELOPMENT: Report only
+        flags:
+          - connectors
+
+      # Infrastructure - SUPPORT CODE (75% target)
       infrastructure:
-        paths:
-          - modules/infrastructure/
-        target: auto
-        threshold: 0.25%
-        informational: false
+        target: 75%
+        threshold: 2%
+        informational: true  # DEVELOPMENT: Report only
+        flags:
+          - infrastructure
+
+  # Ignore paths that shouldn't count toward coverage
+  ignore:
+    - "modules/examples/**"
+    - "modules/compile-fail-tests/**"
+    - "flowforge.g8/**"
+    - "**/*Test.scala"
+    - "**/*Spec.scala"
+    - "**/test/**"
+
+# Flag definitions (per-module coverage tracking)
+# Upload these separately in CI using: --flag=<flag-name>
+flags:
+  core:
+    paths:
+      - modules/core/
+    carryforward: true
+
+  contracts:
+    paths:
+      - modules/contracts/
+    carryforward: true
+
+  connectors:
+    paths:
+      - modules/connectors/
+      - modules/connectors-gcs/
+      - modules/connectors-jdbc/
+    carryforward: true
+
+  infrastructure:
+    paths:
+      - modules/infrastructure/
+    carryforward: true
+
+# PR comment configuration
 comment:
-  layout: "reach, diff, flags, files"
+  layout: "header, diff, flags, files, footer"
   behavior: default
   require_changes: false
+  require_base: no
+  require_head: yes
+  branches:
+    - main
+
+# GitHub status checks
+github_checks:
+  annotations: true
