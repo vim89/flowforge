@@ -5,7 +5,7 @@ All notable changes to FlowForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [unreleased] - 2025-10-05
+## [unreleased] - 2025-10-09
 
 ### Documentation
 
@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Move sbt-test under docs/archive/sbt-test; remove empty src/ ([d7fda55](d7fda55418050d7647f3ee318f7744d08cd217cd))
 - Update plans, quality, and how-it-fails ([7ef826f](7ef826f0fd76982320d7e4d50e86b24622d51cde))
 - Cleanup & de-clutter ([4e48127](4e48127147325fd0eafec8d76ec16fb7ab682622))
-- Update CHANGELOG.md [skip ci] ([1ee9efe](1ee9efe735ee20c75f96ea3d702b4acfd2b9f07e))
+- Consolidate coverage governance and release readiness ([762bdb0](762bdb073cebcf84a208b16a0fa50b2faa590364))
 
 ### Miscellaneous Tasks
 
@@ -25,27 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update ([5ae713b](5ae713b921e157b617156ee735120699ac1035ae))
 - Update ([d8cbd6a](d8cbd6a024a8978c829f974bd074aa4b753b3b72))
 - Tests bug fixes ([ff4f3b7](ff4f3b77c7a0ec07d849d9d08c66e142b4d59ce4))
-- Bug-fixes ([9828f5b](9828f5b521654974579dd8d03608926a47a77d2f))
-- Bug-fixes ([0b87616](0b87616ee33e109637905363fda3d84cfeb47760))
 
 ### Testing
 
 - Improve coverage ([a84df55](a84df55ca1003ee3b73c54a5bc3336e2f25e439f))
 - Improve coverage ([8a89a2e](8a89a2e801c5140d4da6ff17cedf31429481d933))
 
+### Build
+
+- Enforce coverage thresholds and changelog tooling ([6bd7a84](6bd7a842e7a55f49ca7fa55a5ca9e341172c8057))
+
 ### Ci
 
-- Improved flows ([3b44251](3b44251819d1ee6c922c65bd7c8f1c3e018aa136))
-- Improved flows ([26bd884](26bd884076b7c3719177a8f82504ee673a6d4714))
-- Improved flows ([24a5c51](24a5c5108462ee8d45d3a66952c73c8f1ed09e68))
-- Improved flows ([026e160](026e16066e4876c4b22a1bbb6eba62015e7786e5))
-- Improved flows ([5b80956](5b8095629e055b35945cbc714dabae176c978c6c))
-- Improved flows ([90724e9](90724e9883fa013f9c75a30622d9a20f1cc0e821))
-- Improved flows ([8f53d2d](8f53d2d4e3521ec3374c82ad5a02055c31a48063))
-- Improved flows ([0383bc5](0383bc576f05a34261e1caf3c5fda54fafe9ba68))
-- Improved flows ([07d742c](07d742c241cdcefd25f0e4c12d7644f1ba34ea42))
-- Improved flows ([b79a899](b79a899375642de4b7c220ed89e42cfc1e097874))
-- Improved flows ([ab3a005](ab3a005729eca446bf24d81b059b754987d2e6b5))
+- Harden workflows with reusable sbt action ([5157465](5157465c664104b11d04e1d041a115e8582ca381))
 
 ### Core
 
@@ -55,6 +47,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deps
 
 - Bump the gh-actions group with 5 updates ([c1a2e01](c1a2e011334f7217ec760099b5a05a4fbdfad38e))
+
+### License
+
+- Adopt hybrid AGPL model with CLA and README updates ([975bbf8](975bbf800e7682700fce2364dfd4a9072d9bd077))
+
+### Template
+
+- Sync giter8 example pipelines and tooling ([4303467](4303467ab098300970a9d7218820364b7111d396))
 
 ## [0.9.0] - 2025-09-17
 
