@@ -55,8 +55,7 @@ for adr in 002 011 012 013 014 018 019 020; do
 done
 
 # 4) Coverage crosswalk must reference backup and handbook
-if ! rg -n "ASSISTANTS\.backup\.2025\-09\-04\.md" docs/contributing/COVERAGE.md >/dev/null 2>&1; then err "Coverage map missing backup reference"; else ok "Coverage references backup"; fi
-if ! rg -n "docs/contributing/HANDBOOK\.md" docs/contributing/COVERAGE.md >/dev/null 2>&1; then err "Coverage map missing handbook reference"; else ok "Coverage references handbook"; fi
+if ! rg -n "docs/contributing/HANDBOOK\.md" docs/contributing/contributors/COVERAGE.md >/dev/null 2>&1; then err "Coverage map missing handbook reference"; else ok "Coverage references handbook"; fi
 
 $pass || exit 1
 ok "Docs lint passed"

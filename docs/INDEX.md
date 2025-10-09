@@ -110,7 +110,7 @@
 - **Strategy**: [ADR-014](adr/014-qa-strategy.md)
 - **Deequ Integration**: [ADR-005](adr/005-quality-and-deequ-adapter.md), [Evidence](evidence/quality-deequ.md)
 - **Error Handling**: [ADR-022](adr/022-safe-generic-error-handling.md)
-- **Release Criteria**: [Quality Standards](quality/release-criteria.md)
+- **Release Criteria**: [Quality Standards](plan/release-criteria.md)
 
 ### Infrastructure & Platform
 - **Infrastructure**: [ADR-013](adr/013-infrastructure-layer.md), [Evidence](evidence/infrastructure-layer.md)
@@ -171,7 +171,7 @@ Understanding document authority:
 → [Bring Your Own Effect](effects/bring-your-own-effect.md)
 
 **Q: Is FlowForge v1.0 ready?**
-→ [v1.0 Readiness](plan/v1.0-readiness.md), [Release Criteria](quality/release-criteria.md)
+→ [v1.0 Readiness](plan/v1.0-readiness.md), [Release Criteria](plan/release-criteria.md)
 
 **Q: How do I contribute?**
 → [CONTRIBUTING.md](../CONTRIBUTING.md), [Developer Handbook](contributing/HANDBOOK.md)

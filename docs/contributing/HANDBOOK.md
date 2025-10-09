@@ -91,3 +91,6 @@ This bridge indexes the canonical documents while preserving legacy anchors requ
 
 ## ADR-002, ADR-011, ADR-012, ADR-013, ADR-014, ADR-018, ADR-019, ADR-020
 - See: docs/adr/README.md and docs/adr
+
+## Contributing
+- See: docs/contributing/contributors/COVERAGE.md and docs/contributing/contributors/HANDBOOK.md
