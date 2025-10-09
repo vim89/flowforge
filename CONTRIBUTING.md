@@ -1,5 +1,33 @@
 # Repository guidelines
 
+## Contributing & Legal Terms
+
+We welcome contributions. Before submitting a pull request, please review the following:
+
+### Contributor License Agreement (CLA)
+By submitting a pull request, you agree to the Contributor License Agreement (`CLA.md`).  
+This grants the project the rights needed to use your contribution under Flowforge’s licensing model (copyright and relevant patent rights).  
+If you have concerns about the CLA, open an issue to discuss before contributing.
+
+### Commit Sign-off / DCO (optional)
+You may include a `Signed-off-by: Your Name <you@example.com>` line in each commit message to certify that you have the right to submit the work and that it adheres to the CLA/DCO terms.
+
+### Licensing of Contributions
+All accepted contributions are incorporated under Flowforge’s license policy as described in the repository (and the CLA).  
+The project may request changes or decline contributions that conflict with the technical direction or IP strategy.
+
+### Pull Request checklist
+1. Fork and create a feature branch.  
+2. Follow code style and structure rules in this file.  
+3. Ensure local checks pass: `sbt fmt`, `sbt fmtCheck`, `sbt compile`, `sbt test`.  
+4. Add or update tests as needed; target ≥ 80% coverage on changed code where practical.  
+5. Open a PR with a concise summary, ADR references (e.g., `docs/adr/INDEX.md`), and a brief test plan.  
+6. Keep scope tight; avoid bundling refactors with features.
+
+### Major or architectural changes
+For large refactors, new core abstractions, or cross-cutting changes, start a design discussion (issue/RFC) before implementing.  
+This avoids rework and helps maintain consistent architecture.
+
 ## Project structure & Module organization
 
 - Multi‑module SBT repo: sources in `modules/*`, tests under `src/test/scala` mirroring packages.
