@@ -45,9 +45,6 @@ This template ships with a starter CI at `.github/workflows/ci.yml`.
 ### 6. Switch to Deequ (optional)
 Set `-Dff.quality.mode=deequ` to use Deequ for DQ; otherwise native Spark checks are used.
 
-### Notes
-- Template avoids `$` in source files to prevent giter8 escaping problems.
-
 ## What you just proved
 
 🎯 **flowforge's Core USP**: "Data pipelines will not even build if source or target schema do not match or align!"
@@ -81,4 +78,4 @@ flowforge supports 5 schema evolution policies:
 - [GitHub Issues](https://github.com/flowforge/flowforge/issues)
 
 ---
-*Generated with flowforge Giter8 Template | 100% Compile-Time Contracts*
+*Generated with flowforge giter8 template | 100% compile-time contracts*

@@ -6,6 +6,6 @@ package com.flowforge.sample
  */
 object DemoPipeline {
   def main(args: Array[String]): Unit = {
-    println("DemoPipeline: add FlowForge libs and your pipeline when ready.")
+    println("DemoPipeline: add flowforge libs and your pipeline when ready.")
   }
 }
