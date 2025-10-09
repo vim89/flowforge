@@ -1,5 +1,5 @@
 ```markdown
-# ADR 016 — Ground Reality & Alignment Governance
+# ADR 016 - Ground Reality & Alignment Governance
 
 - Status: Accepted
 - Date: 2025-09-04

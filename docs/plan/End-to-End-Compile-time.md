@@ -1,4 +1,4 @@
-# FlowForge — 100% Compile-Time Contracts: End-to-End Implementation Plan
+# FlowForge - 100% Compile-Time Contracts: End-to-End Implementation Plan
 _This is a precise, do-once, keep-forever plan. Follow the steps in order; each has clear deliverables and acceptance checks._
 
 ---
@@ -76,7 +76,7 @@ object SchemaConforms {
 
 ### 1.2 Choose derivation for record “shape”
 
-You have two viable lanes—pick one and stick to it:
+You have two viable lanes-pick one and stick to it:
 
 **Lane A (recommended on Scala 2): Magnolia-based shape**
 
@@ -421,7 +421,7 @@ We must design FlowForge’s derivation layer so the **public API stays macro-ag
 [2]: https://docs.scala-lang.org/toolkit/testing-suite.html "How to write tests? | The Scala Toolkit"
 [3]: https://github.com/scalameta/munit "scalameta/munit: Scala testing library with actionable ..."
 [4]: https://scalameta.org/munit/blog/2021/01/05/macromix.html "Publish Scala 2 and Scala 3 macros together · MUnit"
-[5]: https://www.scala-sbt.org/1.x/docs/Testing-sbt-plugins.html "sbt Reference Manual — Testing sbt plugins"
+[5]: https://www.scala-sbt.org/1.x/docs/Testing-sbt-plugins.html "sbt Reference Manual - Testing sbt plugins"
 [6]: https://stackoverflow.com/questions/20114298/how-do-i-write-a-scala-unit-test-that-ensures-compliation-fails "How do I write a scala unit test that ensures compliation fails?"
 
 

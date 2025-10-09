@@ -1,5 +1,5 @@
 ```markdown
-# ADR 005 — Quality and Deequ Adapter MVP
+# ADR 005 - Quality and Deequ Adapter MVP
 
 - Status: Proposed
 - Date: 2025-09-04

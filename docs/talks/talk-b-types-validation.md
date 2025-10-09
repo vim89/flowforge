@@ -1,4 +1,4 @@
-# Talk B — Types for Interface Representation & Validation (Concept‑Only)
+# Talk B - Types for Interface Representation & Validation (Concept‑Only)
 
 > WHY → HOW → WHAT. Inside‑out. No product names until the last page.
 
@@ -112,11 +112,11 @@ Speaker notes [Category: WHAT]: Keep it short and move to takeaways; this is rei
 ---
 
 ## Speaker Notes (brief prompts)
-- WHY: “exhaustive for structures, sampled for behavior”—repeat once later.
+- WHY: “exhaustive for structures, sampled for behavior”-repeat once later.
 - Optionality: call out List[Option[A]] ≠ List[A]; people remember this example.
 - Typestate: name the state you need (“Complete”) when reading the error.
 - Effect boundary: say “pure inside; effects at edges” verbatim; it sticks.
-- Engine abstraction: no deep dive—just the seam exists; portability proven.
+- Engine abstraction: no deep dive-just the seam exists; portability proven.
 ---
 
 ## Presenter Cheatsheet (condensed)

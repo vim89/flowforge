@@ -1,5 +1,5 @@
 ```markdown
-# ADR 000 — <Title>
+# ADR 000 - <Title>
 
 - **Status**: Proposed / Accepted / Superseded by ADR-XXX
 - **Date**: <YYYY-MM-DD>
@@ -22,8 +22,8 @@
 - Operational: <perf, observability, testing>
 
 ## Alternatives Considered
-- Option A — <why rejected>
-- Option B — <why rejected>
+- Option A - <why rejected>
+- Option B - <why rejected>
 
 ## Verification
 - Build/test steps (sbt compile/scalafmtAll/test).

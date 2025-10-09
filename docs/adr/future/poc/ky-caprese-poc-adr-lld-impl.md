@@ -1,4 +1,4 @@
-# ADR-010: Kyo POC — Cancellation-Safe Cloud Upload Sink (S3 Multipart / GCS Resumable)
+# ADR-010: Kyo POC - Cancellation-Safe Cloud Upload Sink (S3 Multipart / GCS Resumable)
 
 - **Status**: Proposed (Opt-in, Experimental module)
 - **Date**: 2025-09-10
@@ -128,7 +128,7 @@ final class GcsUploadSink[F[_]: cats.effect.Async](gcs: Storage) extends CloudUp
 * OpenTelemetry **metrics** (counters/histograms). ([OpenTelemetry][3])
 
 
-# ADR-011: Kyo POC — Stage-Scoped OpenTelemetry Metrics (Zero-Boilerplate via kyo-stats-otel)
+# ADR-011: Kyo POC - Stage-Scoped OpenTelemetry Metrics (Zero-Boilerplate via kyo-stats-otel)
 
 - **Status**: Proposed (Opt-in, Experimental module)
 - **Date**: 2025-09-10
@@ -205,7 +205,7 @@ At the boundary, use **kyo-cats** to produce `IO` so FlowForge pipelines remain 
 * OpenTelemetry **metrics data model** & perf notes. ([OpenTelemetry][3])
 
 
-# ADR-012: Caprese POC — Safe UDF Slots (Compile-time Non-Capturing Closures)
+# ADR-012: Caprese POC - Safe UDF Slots (Compile-time Non-Capturing Closures)
 
 - **Status**: Proposed (Opt-in, Experimental module)
 - **Date**: 2025-09-10
@@ -281,7 +281,7 @@ val bad: PureFn[User, User] = u => { client.prepareStatement("..."); u }
 * Hands-on capture checking (non-capturing functions). ([Nicolas Rinaudo][7])
 * Spark UDF serialization pitfalls (motivation). ([Stack Overflow][9])
 
-# ADR-013: Caprese POC — Scoped Cloud Credentials (No-Escape Capabilities)
+# ADR-013: Caprese POC - Scoped Cloud Credentials (No-Escape Capabilities)
 
 - **Status**: Proposed (Opt-in, Experimental module)
 - **Date**: 2025-09-10
@@ -290,7 +290,7 @@ val bad: PureFn[User, User] = u => { client.prepareStatement("..."); u }
 
 ## Context
 
-Security best practices recommend **short-lived** credentials and **workload identity** (no embedded keys). AWS IAM roles issue temporary credentials; GCP **Workload Identity Federation** exchanges external identities for **short-lived** tokens. We want to **guarantee** these credentials **cannot escape** the scope where they are valid—at **compile time**. :contentReference[oaicite:27]{index=27} :contentReference[oaicite:28]{index=28} :contentReference[oaicite:29]{index=29} :contentReference[oaicite:30]{index=30} :contentReference[oaicite:31]{index=31}
+Security best practices recommend **short-lived** credentials and **workload identity** (no embedded keys). AWS IAM roles issue temporary credentials; GCP **Workload Identity Federation** exchanges external identities for **short-lived** tokens. We want to **guarantee** these credentials **cannot escape** the scope where they are valid-at **compile time**. :contentReference[oaicite:27]{index=27} :contentReference[oaicite:28]{index=28} :contentReference[oaicite:29]{index=29} :contentReference[oaicite:30]{index=30} :contentReference[oaicite:31]{index=31}
 
 ## Decision
 

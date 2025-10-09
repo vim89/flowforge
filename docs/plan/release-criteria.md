@@ -1,4 +1,4 @@
-# Release Criteria — FlowForge v1.0.0
+# Release Criteria - FlowForge v1.0.0
 
 This page defines the objective, testable criteria for shipping v1.0.0.
 

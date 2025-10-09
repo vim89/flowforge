@@ -41,7 +41,7 @@
 "A partner team removed a nullable column late Friday. We couldn’t roll back in time; both teams were up all night. If that change had been a compile error, we would have slept."
 
 ### For Python/ETL folks (dbt/Airflow/Informatica/Talend): 
-Think "contracts like Pydantic/Avro — but enforced before jobs run," "pure functions you can test without a cluster," and "connectors/engines that make IO explicit and safe."
+Think "contracts like Pydantic/Avro - but enforced before jobs run," "pure functions you can test without a cluster," and "connectors/engines that make IO explicit and safe."
 
 ### For EMs / Staff Data Architects: 
 You get compile‑time guarantees (not CI or runtime heuristics), a small opinionated surface, and batteries‑included defaults with escape hatches.
@@ -91,7 +91,7 @@ You get compile‑time guarantees (not CI or runtime heuristics), a small opinio
 ## Guarantees (Non‑negotiables)
 
 - Compile‑fail contracts for typed endpoints under policy lattice
-- Typestate builder: `build()` only when complete — incomplete pipelines can’t compile
+- Typestate builder: `build()` only when complete - incomplete pipelines can’t compile
 - Pure transforms; effectful edges; idempotent side‑effects by design
 - See: docs/design/framework-behaviors.md
 
@@ -118,7 +118,7 @@ Relax the policy to Backward (allows extra producer fields and missing optional/
 implicitly[SchemaConforms[Out, Contract, SchemaPolicy.Backward]] // ✅
 ```
 
-**3) Build a pipeline — typestate forbids incomplete builds**
+**3) Build a pipeline - typestate forbids incomplete builds**
 ```scala
 import cats.effect.IO
 import com.flowforge.core.PipelineBuilder
@@ -144,9 +144,9 @@ PipelineBuilder[IO]("demo")
 
 | Path | Goal | Commands |
 |------|------|----------|
-| A — Examples | Try locally (no cluster) | `sbt ffDev` (compile + focused tests), `sbt ffRunSpark` (Spark local[*]) |
-| B — Red→Green | See compile‑time error then fix | Use the snippet above; run `sbt compile` |
-| C — New project | Scaffold with g8 | `sbt new flowforge.g8 --name="ff-demo" --organization="com.acme"` then `sbt test` / `sbt run` |
+| A - Examples | Try locally (no cluster) | `sbt ffDev` (compile + focused tests), `sbt ffRunSpark` (Spark local[*]) |
+| B - Red→Green | See compile‑time error then fix | Use the snippet above; run `sbt compile` |
+| C - New project | Scaffold with g8 | `sbt new flowforge.g8 --name="ff-demo" --organization="com.acme"` then `sbt test` / `sbt run` |
 
 ## Compatibility
 

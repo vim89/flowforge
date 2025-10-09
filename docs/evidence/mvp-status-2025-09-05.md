@@ -1,4 +1,4 @@
-# MVP Status — 2025-09-05 (GCS‑only)
+# MVP Status - 2025-09-05 (GCS‑only)
 
 ## Achieved
 - CI‑first schema gates:

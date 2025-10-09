@@ -1,4 +1,4 @@
-# PLAN — Connectors: GCS
+# PLAN - Connectors: GCS
 
 ## Scope
 - Add minimal Google Cloud Storage connector with effect safety and tests.

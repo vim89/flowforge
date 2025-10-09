@@ -1,5 +1,5 @@
 ```markdown
-# ADR 012 — Effect System Decision (IO/ZIO with Pure Spark)
+# ADR 012 - Effect System Decision (IO/ZIO with Pure Spark)
 
 - Status: Accepted
 - Date: 2025-09-04

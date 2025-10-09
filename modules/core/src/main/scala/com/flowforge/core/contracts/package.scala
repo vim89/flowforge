@@ -7,8 +7,8 @@ package com.flowforge.core
  * policy `P`.
  *
  * ==Key types==
- *   - [[com.flowforge.core.contracts.SchemaConforms]] — evidence that `Out` conforms to `Contract` under `P`.
- *   - [[com.flowforge.core.contracts.SchemaPolicy]] — how conformance is checked (Exact, Backward, Forward,
+ *   - [[com.flowforge.core.contracts.SchemaConforms]] - evidence that `Out` conforms to `Contract` under `P`.
+ *   - [[com.flowforge.core.contracts.SchemaPolicy]] - how conformance is checked (Exact, Backward, Forward,
  *     Ordered, By‑position, etc.).
  *
  * ==Usage==

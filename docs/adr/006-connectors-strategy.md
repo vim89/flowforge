@@ -1,5 +1,5 @@
 ```markdown
-# ADR 006 — Connectors Strategy (Local/HDFS now; Cloud later)
+# ADR 006 - Connectors Strategy (Local/HDFS now; Cloud later)
 
 - Status: Accepted
 - Date: 2025-09-04

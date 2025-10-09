@@ -57,7 +57,7 @@ Introduce a small, opt-in module `experimental-caprese`:
   - Takeaway: direct‑style APIs with effect handlers/context functions can improve ergonomics while preserving separation of description vs. action.
   - Relevance: we can prototype a facade using context functions alongside our existing tagless‑final API; this remains optional and non‑blocking.
 
-Conclusion: the article validates our direction — use Scala 3 capture checking to enforce non‑escaping capabilities and pure arrows (`A -> B`) for UDFs.
+Conclusion: the article validates our direction - use Scala 3 capture checking to enforce non‑escaping capabilities and pure arrows (`A -> B`) for UDFs.
 
 ## ADR Amendments (No deletions; clarifications and additions)
 
@@ -67,7 +67,7 @@ Conclusion: the article validates our direction — use Scala 3 capture checking
   - Pure functions use the pure arrow: `A -> B` (non‑capturing).
   - Tracked capabilities use the caret type: `C^`.
 - Keep existing aliases (for readability) but document their mapping:
-  - `type PureFn[-A,+B] = A -> B` (already planned — reaffirmed).
+  - `type PureFn[-A,+B] = A -> B` (already planned - reaffirmed).
 
 ### 2) API Shapes Informed by Capabilities Article
 
@@ -154,7 +154,7 @@ Phase 1 (pilot):
 Phase 2 (template):
 - Add a template switch that generates pipelines using `pureTransform` by default, with a documented interop path for `A => B`.
 
-### 7.1) Optional Scala 3 Facade (Direct‑Style) — Exploratory Only
+### 7.1) Optional Scala 3 Facade (Direct‑Style) - Exploratory Only
 
 - Goal: improve ergonomics for some code by expressing required resources as capabilities via context functions, while keeping core runtime unchanged.
 - Sketch (non‑binding):
@@ -193,7 +193,7 @@ def read[F[_]: EffectSystem, A](src: DataSource): F[Dataset[A]]
 
 ---
 
-## Appendix — Tiny Examples (for reviewers)
+## Appendix - Tiny Examples (for reviewers)
 
 Scala 3 source files should include:
 ```scala

@@ -258,7 +258,7 @@ def createDataAlgebra[F[_]: EffectSystem]: DataAlgebra[F] = {
 
 ---
 
-## Big Picture Status — 2025-09-02
+## Big Picture Status - 2025-09-02
 
 This addendum captures the current code reality, the 100% Core goal, and the Foundation completion plan. It is a working tracker to prevent drift during non‑working hours.
 

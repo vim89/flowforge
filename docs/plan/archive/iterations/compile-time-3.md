@@ -1,9 +1,9 @@
-# FlowForge — Revised Plan to Reach **100% Compile-Time Contracts**
+# FlowForge - Revised Plan to Reach **100% Compile-Time Contracts**
 > Implements your refactor: **`PipelineBuilder2` → `PipelineBuilder`** (canonical), legacy **`PipelineBuilder` → `LegacyPipelineBuilder`** (deprecated). Everything below drives the repo to a state where **every public path** enforces contracts at compile time and bad pipelines are literally **unbuildable**.
 
 ---
 
-## Phase 0 — Refactor & Freeze (Day 0–1)
+## Phase 0 - Refactor & Freeze (Day 0–1)
 
 - [ ] **Rename & deprecate**
     - Move `modules/core/types/PipelineBuilder2.scala` → `modules/core/PipelineBuilder.scala` (canonical).
@@ -21,7 +21,7 @@
 
 ---
 
-## Phase 1 — Evidence-Driven Builder (Week 1)
+## Phase 1 - Evidence-Driven Builder (Week 1)
 
 - [ ] **Schema policies (already present, ensure complete)**
     - `SchemaPolicy = Exact | ExactUnordered | Backward | Forward | Full`, each documented with allowed changes.
@@ -44,7 +44,7 @@
 
 ---
 
-## Phase 2 — Endpoints, Codegen & Transforms (Week 2)
+## Phase 2 - Endpoints, Codegen & Transforms (Week 2)
 
 - [ ] **Typed endpoints everywhere**
     - Public constructors yield only `TypedSource[R]` / `TypedSink[R]`.
@@ -59,7 +59,7 @@
 
 ---
 
-## Phase 3 — Templates & Docs (Week 3)
+## Phase 3 - Templates & Docs (Week 3)
 
 - [ ] **Quickstart that fails on purpose**
     - New `flowforge-quickstart.g8`:
@@ -72,12 +72,12 @@
     - Include one `Backward` policy example (optional field added) that **still compiles** under `Backward/Full`.
 
 - [ ] **Docs**
-    - `docs/how-it-fails.md` — screenshots of compile errors per policy + “1-line fix”.
-    - `docs/why-compile-time.md` — contrast with dbt/Dagster (engine/CI-time) and emphasize FlowForge’s compile-time guarantee.
+    - `docs/how-it-fails.md` - screenshots of compile errors per policy + “1-line fix”.
+    - `docs/why-compile-time.md` - contrast with dbt/Dagster (engine/CI-time) and emphasize FlowForge’s compile-time guarantee.
 
 ---
 
-## Phase 4 — Tests that Prove It (Week 3–4)
+## Phase 4 - Tests that Prove It (Week 3–4)
 
 - [ ] **Negative compilation tests (unit)**
     - MUnit/ScalaTest spec:
@@ -96,7 +96,7 @@
 
 ---
 
-## Phase 5 — Repo-Wide Lockdown (Week 4)
+## Phase 5 - Repo-Wide Lockdown (Week 4)
 
 - [ ] **Remove escape hatches**
     - Deprecate or hide any untyped source/sink constructor from public packages.
@@ -110,7 +110,7 @@
 
 ---
 
-## Phase 6 — Ergonomics (Week 5)
+## Phase 6 - Ergonomics (Week 5)
 
 - [ ] **Error message polish**
     - Pretty-print field diffs and include a “Fix:” hint (e.g., “add `zipCode: Option[String]` or use `Backward` policy”).
@@ -120,7 +120,7 @@
 
 ---
 
-## Phase 7 — Hardening & Release Prep (Week 5–6)
+## Phase 7 - Hardening & Release Prep (Week 5–6)
 
 - [ ] **Policy law tests**
     - Property tests over witness derivation to prove allowed/forbidden changes per policy.

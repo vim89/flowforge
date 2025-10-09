@@ -1,4 +1,4 @@
-# PLAN — Observability Hardening (Spark IO + DQ)
+# PLAN - Observability Hardening (Spark IO + DQ)
 
 ## 1) Scope (Minimal Viable Change)
 - Instrument engine IO boundaries and DQ runs with structured logs and metrics; keep APIs unchanged.

@@ -1,4 +1,4 @@
-# PLAN — Quality MVP Extension (Deequ: Range + Pattern)
+# PLAN - Quality MVP Extension (Deequ: Range + Pattern)
 
 ## 1) Scope (Minimal Viable Change)
 - Extend `quality-deequ` adapter to support `Range` and `Pattern` constraints; add basic metrics for DQ runs.

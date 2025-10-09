@@ -1,4 +1,4 @@
-# Manager’s Summary — Compile‑Time Contracts & Fiber‑Safe Pipelines (1‑pager)
+# Manager’s Summary - Compile‑Time Contracts & Fiber‑Safe Pipelines (1‑pager)
 
 - What it is
   - A design approach for data pipelines in Scala where schema contracts are enforced at compile time and orchestration respects effect/fiber safety at runtime.

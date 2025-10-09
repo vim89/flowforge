@@ -1,4 +1,4 @@
-# EVIDENCE — Typed Contract Pipelines Example
+# EVIDENCE - Typed Contract Pipelines Example
 
 ## 1) Problem & Constraints
 - **Goal**: Ensure a canonical typed example exists that fails to compile on schema drift and shows runtime DQ.

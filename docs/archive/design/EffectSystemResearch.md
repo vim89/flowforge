@@ -25,7 +25,7 @@ What it’s costing you
 ⸻
 
 My unbiased take
-•	If your goal is a purely Spark-native data engine (batch/stream pipelines, CDC, profiling), you don’t need a full effect system. Spark is already the effect system — it schedules, distributes, retries, checkpoints. In that case, returning plain values (Dataset[A], Long, etc.) would be simpler and more idiomatic.
+•	If your goal is a purely Spark-native data engine (batch/stream pipelines, CDC, profiling), you don’t need a full effect system. Spark is already the effect system - it schedules, distributes, retries, checkpoints. In that case, returning plain values (Dataset[A], Long, etc.) would be simpler and more idiomatic.
 •	If your goal is a general-purpose algebra (backends on Spark, Flink, local collections, maybe async IO), then F[_] is valuable. It gives you polymorphism across backends, lets you plug in IO for local runs, or test interpreters without Spark. This matches your flowforge vision of pluggable engines.
 
 ⸻
@@ -64,7 +64,7 @@ So this happens in 90% of data pipelines. You can add many others if I have miss
 
 Now tell me your unbiased thoughts ?
 
-Got it — thanks for spelling out the real-world pipeline context. This is much bigger than just Spark transformations. Let me break it down clearly and give you my blunt, unbiased take.
+Got it - thanks for spelling out the real-world pipeline context. This is much bigger than just Spark transformations. Let me break it down clearly and give you my blunt, unbiased take.
 
 ⸻
 
@@ -276,7 +276,7 @@ _      <- P.write(delta, ParquetSink("gs://bucket/customers"))
 } yield ()
 
 This shows composition, typed safety, logging, CDC, and sinks all under F[_].
-Try doing this cleanly without an effect system — it devolves into callback spaghetti.
+Try doing this cleanly without an effect system - it devolves into callback spaghetti.
 
 ⸻
 
@@ -505,7 +505,7 @@ What this example demonstrates:
 
 ⸻
 
-⚡ My take: This style gives you clarity, modularity, and guarantees. It matches your checklist perfectly. Even the hairy stuff like CDC, idempotency, audit, retries — you don’t lose type safety.
+⚡ My take: This style gives you clarity, modularity, and guarantees. It matches your checklist perfectly. Even the hairy stuff like CDC, idempotency, audit, retries - you don’t lose type safety.
 
 ⸻
 
@@ -697,7 +697,7 @@ val spark = org.apache.spark.sql.SparkSession.builder
 
 ⸻
 
-This now looks like a real pipeline skeleton — type-safe, effectful, restartable, with audit + lineage baked in.
+This now looks like a real pipeline skeleton - type-safe, effectful, restartable, with audit + lineage baked in.
 
 ⸻
 
@@ -705,7 +705,7 @@ This now looks like a real pipeline skeleton — type-safe, effectful, restartab
 
 # I'd say both. 
 
-Nice — we’ll do both: (A) Schema evolution (compile + runtime checks, migrations), and (B) Typed error channels (no Throwable leakage — explicit ADTs you can pattern-match on). Below I give a practical plan + prioritized tasks + concrete tagless-final API sketches and a runnable-ish example that ties schema evolution and typed errors into the pipeline shown earlier.
+Nice - we’ll do both: (A) Schema evolution (compile + runtime checks, migrations), and (B) Typed error channels (no Throwable leakage - explicit ADTs you can pattern-match on). Below I give a practical plan + prioritized tasks + concrete tagless-final API sketches and a runnable-ish example that ties schema evolution and typed errors into the pipeline shown earlier.
 
 I assume Scala 2.13.x and a tagless-final core (F[_]) that you can instantiate with cats-effect IO or a ZIO adapter. I also assume you want to keep public surface of core effect-polymorphic and free of runtime-specific types.
 
@@ -727,7 +727,7 @@ Sprint 1 (core runtime work, 1–2 sprints)
 Sprint 2 (engine adapters, 2–3 sprints)
 •	Wire schema checks into SparkDataAlgebra read/write & CDC
 •	Implement migration runner: apply transformations to upgrade older schema to expected schema (pluggable migrations)
-•	Add typed error handling in Spark engine — use EitherT[F, DataError, A] where appropriate and adapt to F with MonadError/ApplicativeError instances
+•	Add typed error handling in Spark engine - use EitherT[F, DataError, A] where appropriate and adapt to F with MonadError/ApplicativeError instances
 
 Sprint 3 (QA + ops)
 •	Add contract tests that fail build when schemas disagree
@@ -936,10 +936,10 @@ Tell me which step(s) you want me to apply first (I recommend 1 → 2 → 3 → 
 
 ⸻
 
-10) Quick TL;DR — Why both are necessary
+10) Quick TL;DR - Why both are necessary
     •	Schema evolution is unavoidable in real pipelines; without explicit migrations you will either duplicate code or lose data.
     •	Typed error channels are critical for predictable automation: they let you codify retry, quarantine, and alerting behaviour without exceptions or brittle string parsing.
-    •	Together they make pipelines safer, more operable, and testable — exactly what you asked for: production-ready, strongly typed, and auditable.
+    •	Together they make pipelines safer, more operable, and testable - exactly what you asked for: production-ready, strongly typed, and auditable.
 
 ⸻
 
@@ -953,7 +953,7 @@ Which item from the Next steps do you want me to implement right away?
 
 # Go
 
-Great — I’ll start immediately. I won’t change existing public core APIs (like DataDecoder) in this first conservative patch (that would be a large rip-and-replace and break many modules). Instead I’ll add safe, non-breaking building blocks you requested so we can migrate incrementally:
+Great - I’ll start immediately. I won’t change existing public core APIs (like DataDecoder) in this first conservative patch (that would be a large rip-and-replace and break many modules). Instead I’ll add safe, non-breaking building blocks you requested so we can migrate incrementally:
 •	Add a typed error ADT DataError under core.types.
 •	Add a SchemaRegistry trait and a small in-memory implementation you can wire up.
 •	Add a SafeDecode helper object that provides migration-aware decode helpers and a safeDecodeWith adapter so you can gradually adopt typed errors without changing DataDecoder signatures immediately.
@@ -963,7 +963,7 @@ Below is a single unified diff (PATCHSET.diff). Apply it in your repo root with:
 
 git apply PATCHSET.diff
 
-Then sbt core/test (or sbt test for the whole build) — the added modules are conservative and isolated, so they should compile with the codebase as-is.
+Then sbt core/test (or sbt test for the whole build) - the added modules are conservative and isolated, so they should compile with the codebase as-is.
 
 ⸻
 
@@ -1193,14 +1193,14 @@ PATCHSET.diff
 ⸻
 
 Notes, rationale & next steps
-1.	Non-breaking first step — this patch adds building blocks without changing existing decoder/encoder signatures so we can adopt incrementally.
-2.	Gradual adoption — engine code (e.g., engines-spark) can call SafeDecode.safeDecodeWith when they already have raw Map[String,Any] / JSON rows and want migration + typed errors.
-3.	Planned next step (breaking-change) — once you are ready, we can:
+1.	Non-breaking first step - this patch adds building blocks without changing existing decoder/encoder signatures so we can adopt incrementally.
+2.	Gradual adoption - engine code (e.g., engines-spark) can call SafeDecode.safeDecodeWith when they already have raw Map[String,Any] / JSON rows and want migration + typed errors.
+3.	Planned next step (breaking-change) - once you are ready, we can:
 •	modify DataDecoder.decode to return Either[DataError,A] (or F[Either[DataError,A]]), and
 •	propagate typed errors across DataAlgebra APIs (or use EitherT[F,DataError,A] in implementations).
 That will be a bigger change and I will prepare a dedicated patchset for it.
-4.	Schema migration path — current in-memory registry only supports direct single-step migrations. Next improvement: path-finding, DAG of migrations, vectorized migrations for columnar operations (DataFrame transforms).
-5.	Integrating with Spark — in engines-spark read path, map Row to generic Map[String,Any], call safeDecodeWith, then reconstitute typed records (or collect failures into a quarantine sink). I can prepare a sample patch for SparkDataAlgebra.read showing how to use SafeDecode.
+4.	Schema migration path - current in-memory registry only supports direct single-step migrations. Next improvement: path-finding, DAG of migrations, vectorized migrations for columnar operations (DataFrame transforms).
+5.	Integrating with Spark - in engines-spark read path, map Row to generic Map[String,Any], call safeDecodeWith, then reconstitute typed records (or collect failures into a quarantine sink). I can prepare a sample patch for SparkDataAlgebra.read showing how to use SafeDecode.
 
 ⸻
 
@@ -1212,7 +1212,7 @@ Tell me which option you want next (A or B). If you want Option A, I’ll open a
 
 # So now what you believe? Is effect system an overkill or a bare minimum necessity?
 
-Good question — let’s weigh it against the reality of your pipelines.
+Good question - let’s weigh it against the reality of your pipelines.
 
 ⸻
 
@@ -1228,15 +1228,15 @@ Look back at your 12+ points:
 •	Audit logging needs structured, context-aware logging (effect systems let you thread context like correlation IDs cleanly).
 •	CDC, retries, restartability, partitioned processing demand controlled evaluation (not eager side-effects) and resource safety.
 •	Typed error channels (EitherT, ADTs like DataError) compose nicely only if you’re in F[_] already. Otherwise, you’ll mix return values with side-effects.
-•	Schema evolution & migrations often fail — effect systems let you recover or branch computation explicitly.
-•	Running on multiple backends (Spark, GCP, S3, JDBC, web scraping) means you’re touching IO everywhere — without an effect system, those IOs fire eagerly and unpredictably.
-•	Monitoring, metrics, circuit breakers — libraries like Cats Effect or ZIO give you structured concurrency, cancellation, and backpressure out of the box.
+•	Schema evolution & migrations often fail - effect systems let you recover or branch computation explicitly.
+•	Running on multiple backends (Spark, GCP, S3, JDBC, web scraping) means you’re touching IO everywhere - without an effect system, those IOs fire eagerly and unpredictably.
+•	Monitoring, metrics, circuit breakers - libraries like Cats Effect or ZIO give you structured concurrency, cancellation, and backpressure out of the box.
 
 ⸻
 
 My unbiased take
 
-For the type of system you’re building — a reusable, auditable, multi-backend data platform with strong type-safety goals — an effect system isn’t luxury, it’s foundation.
+For the type of system you’re building - a reusable, auditable, multi-backend data platform with strong type-safety goals - an effect system isn’t luxury, it’s foundation.
 
 Without it, you’ll end up re-inventing:
 •	your own concurrency model,
@@ -1253,16 +1253,16 @@ With it, you get:
 
 So my answer
 
-It’s not overkill — it’s the bare minimum for what you’re aiming to do.
+It’s not overkill - it’s the bare minimum for what you’re aiming to do.
 Think of it like wearing a seatbelt: you can technically drive without it, but the day something fails (and in data pipelines something will fail), you’ll wish you had that safety harness already baked in.
 
 ⸻
 
-Do you want me to show you how your current SparkDataAlgebra (with all those ???) would look and feel different with an effect system in place — so you can actually see the contrast between “bare” and “effectful”?
+Do you want me to show you how your current SparkDataAlgebra (with all those ???) would look and feel different with an effect system in place - so you can actually see the contrast between “bare” and “effectful”?
 
 # Yes I need naked/bare and effectful with example code
 
-Perfect — let’s sketch the same pipeline in two styles:
+Perfect - let’s sketch the same pipeline in two styles:
 •	Naked / bare style (plain Spark + Scala, no F[_])
 •	Effectful / Tagless Final style (F[_]: Async etc.)
 

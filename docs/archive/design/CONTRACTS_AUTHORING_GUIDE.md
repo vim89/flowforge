@@ -143,6 +143,6 @@ On PR merge, CI performs:
   - A: Shared CI always runs validation; local builds can pass with `ff.offline=true` but can’t merge unless CI passes.
 
 See also:
-- CONTRACTS_COMPILE_AND_BUILD_GATES.md — compile/build gates & APIs
-- CONTRACTS_AUTHORING_AND_OPERATING_MODEL.md — operating model & roles
+- CONTRACTS_COMPILE_AND_BUILD_GATES.md - compile/build gates & APIs
+- CONTRACTS_AUTHORING_AND_OPERATING_MODEL.md - operating model & roles
 > Archived (2025-09-04): Superseded by ADR-010 Contracts Authoring & Operating Model. See `docs/adr/010-contracts-authoring-operating-model.md` and Evidence.

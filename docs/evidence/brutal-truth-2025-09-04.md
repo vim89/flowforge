@@ -1,9 +1,9 @@
-# Brutal Truth Assessment — 2025-09-04
+# Brutal Truth Assessment - 2025-09-04
 
 ## 1) Milestones Status (MVR/MVP/v1)
-- MVR: Partially achieved — Spark SCD1/SCD2, infra skeleton, typed builder exist; demo not turnkey.
-- MVP: Not achieved — config MVP unproven, S3 missing, Deequ adapter implemented (MVP scope: not_null, unique), CI gates not fully wired, E2E ITs minimal.
-- v1.0.0: Not achieved — API stabilization, breadth/connectors, schema evolution checks, coverage/runbooks pending.
+- MVR: Partially achieved - Spark SCD1/SCD2, infra skeleton, typed builder exist; demo not turnkey.
+- MVP: Not achieved - config MVP unproven, S3 missing, Deequ adapter implemented (MVP scope: not_null, unique), CI gates not fully wired, E2E ITs minimal.
+- v1.0.0: Not achieved - API stabilization, breadth/connectors, schema evolution checks, coverage/runbooks pending.
 
 ## 2) README Teaser vs Reality
 - “Won’t compile if schema doesn’t match”: Partially true (typed witnesses), not end‑to‑end for physical schemas.

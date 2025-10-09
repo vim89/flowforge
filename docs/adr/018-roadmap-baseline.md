@@ -1,5 +1,5 @@
 ```markdown
-# ADR 018 — Roadmap Baseline (MVR → MVP → v1)
+# ADR 018 - Roadmap Baseline (MVR → MVP → v1)
 
 - Status: Accepted
 - Date: 2025-09-04

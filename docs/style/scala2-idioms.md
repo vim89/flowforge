@@ -4,7 +4,7 @@ This document summarizes the core coding conventions used across FlowForge (Scal
 
 - Effects at edges only: pure transforms modelled as functions; external I/O wrapped in `EffectSystem[F]`.
 - For-comprehensions over long `F` chains for readability.
-- No `println` in core modules — use `CoreLogger[F]` (or infrastructure `StructuredLogger[F]`). CLIs/examples may use minimal `IO.println`.
+- No `println` in core modules - use `CoreLogger[F]` (or infrastructure `StructuredLogger[F]`). CLIs/examples may use minimal `IO.println`.
 - No `var`, `return`, `throw`, `null` in main sources. Exceptions only at integration edges.
 - Eliminate ad-hoc casts. If required for reflective integration, isolate in a private utility and document why. CI gates forbid `asInstanceOf`/`Any` outside whitelisted files.
 - Prefer `ValidatedNel` for multi-rule validation; `Either` for fail-fast.

@@ -1,4 +1,4 @@
-# Scala 3 PoC Alignment — Compile-Time Contracts (2025-10-02)
+# Scala 3 PoC Alignment - Compile-Time Contracts (2025-10-02)
 
 Source of truth for the PoC: `/Users/vim/IdeaProjects/compile-time-data-contracts`.
 

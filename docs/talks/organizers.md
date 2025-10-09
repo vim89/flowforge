@@ -2,7 +2,7 @@
 
 This packet helps CFP/organizers review and run the session smoothly. The talks are concept‑only (no product until the last slide).
 
-## Talk A — Safe API/Schema Migration with Compile‑Time Guarantees
+## Talk A - Safe API/Schema Migration with Compile‑Time Guarantees
 - Duration: 45 minutes (incl. Q&A)
 - Abstract: Migrations often fail late. This talk shows how to encode migration intent with a small policy lattice (Exact/Backward/Forward), make incomplete jobs unbuildable with typestate, and prove compatibility at compile time. Live demo: red→green migration (Exact → Backward), compile‑fail tests in PR, and where runtime guardrails (DQ/lineage/idempotent edges) still apply.
 - Learning objectives:
@@ -10,7 +10,7 @@ This packet helps CFP/organizers review and run the session smoothly. The talks 
   - Recognize the separation of compile‑time vs runtime safety
   - Apply a 3‑step migration playbook in code and CI
 
-## Talk B — Types for Interface Representation & Validation
+## Talk B - Types for Interface Representation & Validation
 - Duration: 45 minutes (incl. Q&A)
 - Abstract: Tests are sampled; types can be exhaustive for shape/policy compatibility. We derive shapes, enforce policy at compile time, keep transforms pure and effects at the edges, and encode construction rules in types. Live demo: element‑optionality drift (List[Option[A]] vs List[A]) and typestate build().
 - Learning objectives:

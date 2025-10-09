@@ -1,5 +1,5 @@
 ```markdown
-# ADR 020 — Pipeline 30‑Point Checklist (Script vs Effectful)
+# ADR 020 - Pipeline 30‑Point Checklist (Script vs Effectful)
 
 - Status: Accepted
 - Date: 2025-09-04
@@ -149,7 +149,7 @@ Adopt the following 30‑point checklist as a normative rubric for reviews, temp
 
 ---
 
-## Appendix A — Affected Partitions Strategy (Discovery Order)
+## Appendix A - Affected Partitions Strategy (Discovery Order)
 
 Goal: Minimize shuffles and IO by restricting table ops to partitions touched in a time window, without scanning data. This complements checklist item 10 (Restartability) and 11 (Partitioning).
 

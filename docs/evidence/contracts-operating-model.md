@@ -1,4 +1,4 @@
-# EVIDENCE — Contracts Authoring & Operating Model
+# EVIDENCE - Contracts Authoring & Operating Model
 
 ## 1) Problem & Constraints
 - **Goal**: Verify non-technical authoring + publisher CI + SDK JARs exist or define gaps.

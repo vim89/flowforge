@@ -15,7 +15,7 @@ PipelineBuilder.addTypedSource and addTypedSink require SchemaConforms[…, P].
 
 Engine boundaries are mostly clean. Core doesn’t import Spark; Spark-specific instances live under engines-spark.
 
-Templates/examples exist and show the intended API (good!), and there’s a compile-fail tests module (great idea) — but see gaps below.
+Templates/examples exist and show the intended API (good!), and there’s a compile-fail tests module (great idea) - but see gaps below.
 
 Legacy shapeless: a single SchemaWitness.scala remains as a clearly flagged legacy shim. It’s isolated; not used by the builder or new contracts.
 
@@ -52,7 +52,7 @@ B) Policy semantics need hardening + docs alignment
 What I see: Policy logic is implemented and sensible (Exact / ExactUnordered / Backward / Forward / Full), but nuances (e.g., Backward allowing missing only if default || Option) aren’t spelled out in a single canonical doc.
 
 Fix: A one-pager “How it fails” with 4 tables and copy-pasta snippets: for each policy show (pass/fail) nested, option, list, type mismatch.
-This maps the mental model many users know from dbt contracts, but your enforcement is Scala compile-time instead of SQL build-time—make that comparison explicit in docs.
+This maps the mental model many users know from dbt contracts, but your enforcement is Scala compile-time instead of SQL build-time-make that comparison explicit in docs.
 dbt Developer Hub
 +1
 
@@ -93,13 +93,13 @@ Bottom line for 1.0: land automated negative tests, document policy edges, add t
 
 2) Is this unique?
 
-In part—yes—and you can sharpen it.
+In part-yes-and you can sharpen it.
 
 dbt contracts block builds when the SQL model’s schema diverges; that’s build-time in the SQL stack. You’re providing compile-time gates in Scala with engine-agnostic edges. That’s distinct.
 dbt Developer Hub
 +1
 
-Dagster asset checks and Great Expectations are runtime validation—excellent complements but different points in time. Your “fail before it runs” story is compelling.
+Dagster asset checks and Great Expectations are runtime validation-excellent complements but different points in time. Your “fail before it runs” story is compelling.
 Dagster Docs
 +1
 Great Expectations
@@ -114,13 +114,13 @@ Compile-time contracts at the edges (source/sink) with clear, actionable diffs.
 
 Phantom-state builder where incomplete/invalid pipelines simply can’t be built.
 
-Engine-agnostic core, with engine adapters that supply instances—no Spark in core.
+Engine-agnostic core, with engine adapters that supply instances-no Spark in core.
 
 DX-first template: fail-then-fix in under a minute.
 
 Where it’s not “first in the world”:
 
-Schema contracts, quality checks, and lineage exist across the stack—but not with this Scala-compile-time, engine-agnostic, turnkey combo. Your angle is credible if the demo and CI gates are rock-solid.
+Schema contracts, quality checks, and lineage exist across the stack-but not with this Scala-compile-time, engine-agnostic, turnkey combo. Your angle is credible if the demo and CI gates are rock-solid.
 
 First-mover advantage: package the compile-time gate as the default experience (template + CI). Other tools make it possible; you make it unavoidable.
 
@@ -202,7 +202,7 @@ Docs polish:
 
 “Scala 3 posture” (same API, inline/Mirror backend later)
 
-(Nice-to-have, after 1.0): minimal lineage emitter + Marquez compose; runtime checks via engine adapters (e.g., null-rate, freshness) — complements your compile-time guarantees. (OpenLineage/Marquez docs have straightforward quickstarts.)
+(Nice-to-have, after 1.0): minimal lineage emitter + Marquez compose; runtime checks via engine adapters (e.g., null-rate, freshness) - complements your compile-time guarantees. (OpenLineage/Marquez docs have straightforward quickstarts.)
 scala-sbt.org
 
 Competitive context (so you can position it)
@@ -222,7 +222,7 @@ javadoc.io
 
 Final blunt take
 
-The implementation in this zip hits the right architecture and nails the core promise. What blocks 1.0 isn’t the idea—it’s the proof:
+The implementation in this zip hits the right architecture and nails the core promise. What blocks 1.0 isn’t the idea-it’s the proof:
 
 make negative tests real and required,
 
@@ -232,4 +232,4 @@ document the exact policy rules and their edge cases,
 
 lock the CI gates.
 
-Do that, and FlowForge is not just “another framework”—it’s the compiler as QA for data pipelines. That’s a message people remember.
+Do that, and FlowForge is not just “another framework”-it’s the compiler as QA for data pipelines. That’s a message people remember.

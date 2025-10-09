@@ -1,4 +1,4 @@
-# FlowForge — Final Plan for **100% Compile-Time Contracts**
+# FlowForge - Final Plan for **100% Compile-Time Contracts**
 > Targets **Scala 2.13.16** now, stays **Scala-3-ready** later.  
 > **Decisions**:  
 > • Canonical builder = `PipelineBuilder` (typed). Legacy runtime builder becomes `internal.LegacyPipelineBuilder` (deprecated).  
@@ -8,7 +8,7 @@
 
 ---
 
-## Phase 0 — Refactor & Freeze (Day 0–1)
+## Phase 0 - Refactor & Freeze (Day 0–1)
 
 - [ ] **Rename / deprecate**
     - Move `modules/core/types/PipelineBuilder2.scala` → `modules/core/PipelineBuilder.scala` (canonical).
@@ -25,7 +25,7 @@
 
 ---
 
-## Phase 1 — Type-Level Contracts (Week 1)
+## Phase 1 - Type-Level Contracts (Week 1)
 
 - [ ] **Policy algebra**
     - `SchemaPolicy = Exact | ExactUnordered | Backward | Forward | Full` with precise allowed changes.
@@ -75,7 +75,7 @@
 
 ---
 
-## Phase 2 — Typed Endpoints, Codegen, Transforms (Week 2)
+## Phase 2 - Typed Endpoints, Codegen, Transforms (Week 2)
 
 - [ ] **Typed endpoints only (public)**
     - Public constructors return **only** `TypedSource[R]` / `TypedSink[R]`.
@@ -88,7 +88,7 @@
 
 ---
 
-## Phase 3 — Capability-Typed Connectors (Week 2–3)
+## Phase 3 - Capability-Typed Connectors (Week 2–3)
 
 - [ ] **Small, local phantom types**
     - Encode sink capabilities (no runtime cost):
@@ -104,7 +104,7 @@
 
 ---
 
-## Phase 4 — DX: Quickstart + Docs That Fail (Week 3)
+## Phase 4 - DX: Quickstart + Docs That Fail (Week 3)
 
 - [ ] **Quickstart that fails then passes**
     - `flowforge-quickstart.g8`:
@@ -117,7 +117,7 @@
 
 ---
 
-## Phase 5 — Tests that Prove It (Week 3–4)
+## Phase 5 - Tests that Prove It (Week 3–4)
 
 - [ ] **Negative compilation tests (unit)**
     - ScalaTest/MUnit:
@@ -139,7 +139,7 @@
 
 ---
 
-## Phase 6 — Quality & Lineage (Week 4–5)
+## Phase 6 - Quality & Lineage (Week 4–5)
 
 - [ ] **Asset checks (first-class)**
     - Tiny API:
@@ -153,7 +153,7 @@
 
 ---
 
-## Phase 7 — Repo-Wide Lockdown (Week 5)
+## Phase 7 - Repo-Wide Lockdown (Week 5)
 
 - [ ] **Remove escape hatches**
     - No public untyped source/sink constructors; legacy builder documented only for migration.
@@ -163,7 +163,7 @@
 
 ---
 
-## Phase 8 — Ergonomics & Error Clarity (Week 5–6)
+## Phase 8 - Ergonomics & Error Clarity (Week 5–6)
 
 - [ ] **Error polish**
     - Pretty-print diffs: `Missing: name:String`, `Extra: zip:Option[String]`, `Mismatched: amount expected Long, found Int`.
@@ -173,7 +173,7 @@
 
 ---
 
-## Phase 9 — Ship Criteria (Week 6)
+## Phase 9 - Ship Criteria (Week 6)
 
 - [ ] **Definition of Done**
     - All public ways to attach sources/sinks require `SchemaConforms`/`SchemaEq`.

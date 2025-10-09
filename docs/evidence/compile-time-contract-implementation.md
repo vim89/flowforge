@@ -1,4 +1,4 @@
-# EVIDENCE — FlowForge Compile-Time Contract Implementation
+# EVIDENCE - FlowForge Compile-Time Contract Implementation
 
 ## Executive Summary
 

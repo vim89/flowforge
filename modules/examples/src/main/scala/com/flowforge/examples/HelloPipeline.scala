@@ -10,7 +10,7 @@ import com.flowforge.framework.PipelineExecution
 import org.apache.spark.sql.SparkSession
 
 /**
- * Hello Pipeline — minimal end‑to‑end example
+ * Hello Pipeline - minimal end‑to‑end example
  *
  *   - Reads a small CSV of users from resources
  *   - Applies a simple typed transform

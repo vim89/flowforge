@@ -1,5 +1,5 @@
 /**
- * FlowForge Data Contracts — core types and DSL.
+ * FlowForge Data Contracts - core types and DSL.
  *
  * This module defines the type‑safe contract system used by FlowForge:
  *   - Compile‑time: contracts are checked against output types via

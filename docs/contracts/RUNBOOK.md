@@ -1,4 +1,4 @@
-# Contracts Runbook — Local and CI
+# Contracts Runbook - Local and CI
 
 This runbook shows how to validate physical schemas against data contracts locally and in CI, aligned with ADR‑011 (CI‑first gates).
 

@@ -1,4 +1,4 @@
-# Demo Runbook — Red → Green Migration (Concept‑Only)
+# Demo Runbook - Red → Green Migration (Concept‑Only)
 
 ## Goal
 Show compile‑time failure under Strict policy, then relax to a migration policy and get green.

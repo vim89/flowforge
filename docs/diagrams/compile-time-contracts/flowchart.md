@@ -1,4 +1,4 @@
-# Compile‑Time Contracts — Common Flowchart
+# Compile‑Time Contracts - Common Flowchart
 
 ```mermaid
 flowchart TD
@@ -81,7 +81,7 @@ Legend and glossary (read me first)
 
 Design and patterns in this diagram
 
-- Strategy/Bridge: Derivation facade delegates to a backend (Magnolia vs Mirrors) — easy to swap.
+- Strategy/Bridge: Derivation facade delegates to a backend (Magnolia vs Mirrors) - easy to swap.
 - Typestate/Phantom Builder (outside this diagram, in PipelineBuilder): compile-time states ensure you can only build complete pipelines.
 - Typeclass pattern: SchemaConforms is a typeclass; the compiler tries to synthesize an instance.
 - ADTs: SchemaPolicy and SchemaAST are algebraic data types for closed, explicit modeling.

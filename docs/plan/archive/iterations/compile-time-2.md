@@ -1,10 +1,10 @@
 # FlowForge: Plan to Achieve **100% Compile-Time Contract** Enforcement
 
-> Goal: **Pipelines cannot be built** (won’t compile) whenever the declared data contract and the program’s types **diverge**—for sources *and* sinks—across all public APIs, examples, and templates.
+> Goal: **Pipelines cannot be built** (won’t compile) whenever the declared data contract and the program’s types **diverge**-for sources *and* sinks-across all public APIs, examples, and templates.
 
 ---
 
-## Phase 0 — Guardrails & Scope (Day 0)
+## Phase 0 - Guardrails & Scope (Day 0)
 
 1) **Freeze the public surface**
     - Mark `modules/core/types/PipelineBuilder2.scala` as the **only** public builder API; rename to `PipelineBuilder`.
@@ -16,7 +16,7 @@
 
 ---
 
-## Phase 1 — Type-Level Contract Model (Week 1)
+## Phase 1 - Type-Level Contract Model (Week 1)
 
 3) **Contract policy ADT**
     - `SchemaPolicy = Exact | ExactUnordered | Backward | Forward | Full`.
@@ -48,7 +48,7 @@
 
 ---
 
-## Phase 2 — End-to-End Coverage (Week 2)
+## Phase 2 - End-to-End Coverage (Week 2)
 
 8) **Every public “add source/sink” requires evidence**
     - Audit all builder overloads. Delete or **deprecate** any variant that doesn’t request `SchemaConforms`/`SchemaEq`.
@@ -66,7 +66,7 @@
 
 ---
 
-## Phase 3 — Developer Experience & Templates (Week 3)
+## Phase 3 - Developer Experience & Templates (Week 3)
 
 12) **Quickstart that fails on purpose (then passes)**
 - New g8 template `flowforge-quickstart.g8`:
@@ -84,7 +84,7 @@
 
 ---
 
-## Phase 4 — Tests: Make Drift **Unbuildable** in CI (Week 3–4)
+## Phase 4 - Tests: Make Drift **Unbuildable** in CI (Week 3–4)
 
 15) **Negative compilation tests (unit level)**
 - **MUnit**: `compileErrors("bad code")` with golden messages for:
@@ -102,7 +102,7 @@
 
 ---
 
-## Phase 5 — Total Path Audit (Week 4)
+## Phase 5 - Total Path Audit (Week 4)
 
 18) **grep for escape hatches**
 - Disallow any public constructor that yields an untyped source/sink.
@@ -114,7 +114,7 @@
 
 ---
 
-## Phase 6 — Ergonomics & Error Clarity (Week 5)
+## Phase 6 - Ergonomics & Error Clarity (Week 5)
 
 20) **High-signal compiler messages**
 - Format `@implicitNotFound` to show:
@@ -129,7 +129,7 @@
 
 ---
 
-## Phase 7 — Hardening (Week 5–6)
+## Phase 7 - Hardening (Week 5–6)
 
 22) **Contract evolution rules**
 - Encode permitted changes per policy (e.g., `Backward`: add optional fields with defaults; `Forward`: allow dropping optional fields).
@@ -143,7 +143,7 @@
 
 ---
 
-## Phase 8 — Ship Criteria for “100%” (Week 6)
+## Phase 8 - Ship Criteria for “100%” (Week 6)
 
 25) **Definition of Done**
 - **All** public ways to attach sources/sinks require `SchemaConforms`/`SchemaEq`.

@@ -1,4 +1,4 @@
-# Audit logging — Implementation plan (Sprint A & B)
+# Audit logging - Implementation plan (Sprint A & B)
 
 Audience: Developers (including juniors) implementing the audit system.
 
@@ -36,9 +36,9 @@ Files and responsibilities
   - Holds canonical bytes/string, `hash`, `prevHash`, and parsed `AuditEvent`.
 - `hash/Hashing.scala`
   - `sha256Hex(bytes: Array[Byte]): String`.
-  - `canonicalize(e: AuditEvent): Array[Byte]` — sorted keys, fixed number formats, UTC ISO‑8601.
+  - `canonicalize(e: AuditEvent): Array[Byte]` - sorted keys, fixed number formats, UTC ISO‑8601.
 - `redaction/Redactor.scala`
-  - Load policy keys (comma‑separated). Modes: `mask`, `drop`, `hash` (salted) — start with `mask`.
+  - Load policy keys (comma‑separated). Modes: `mask`, `drop`, `hash` (salted) - start with `mask`.
   - Apply to `subject` and `details` recursively by key name.
 - `algebra/AuditSink.scala`
   - Trait per ADR; `writeEncoded`, `rollInterval`, `readRange`.

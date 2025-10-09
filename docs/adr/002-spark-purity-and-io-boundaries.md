@@ -1,5 +1,5 @@
 ```markdown
-# ADR 002 — Spark Purity and Effectful IO Boundaries
+# ADR 002 - Spark Purity and Effectful IO Boundaries
 
 - Status: Accepted
 - Date: 2025-09-04

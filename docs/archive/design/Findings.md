@@ -285,7 +285,7 @@ The framework represents a **revolutionary leap forward** in data engineering ty
 
 ---
 
-## Big Picture Alignment Snapshot — 2025-09-02
+## Big Picture Alignment Snapshot - 2025-09-02
 
 This section summarizes the current codebase reality against the design documents and the project end‑goal (compile‑time contracts, effect‑safe pipelines, multi‑engine portability, and production‑grade foundation).
 
@@ -327,7 +327,7 @@ This section summarizes the current codebase reality against the design document
 
 ---
 
-## Module‑by‑Module Audit — 2025-09-02
+## Module‑by‑Module Audit - 2025-09-02
 
 This section inventories current modules and highlights any scaffolding, ???, or risky placeholders.
 
@@ -353,7 +353,7 @@ This section inventories current modules and highlights any scaffolding, ???, or
   - InfrastructureLayer.scala contains ??? for resourceSafety, cloudResourceSafety, loadConfigWithLogging.
 
 - Logging
-  - StructuredLogger.scala: implement withContext (MDC push/pop) — currently ???.
+  - StructuredLogger.scala: implement withContext (MDC push/pop) - currently ???.
 
 - Safety
   - ResourceSafety/CloudResourceSafety present; internal TODO comments for provider internals acceptable until service layer adapters exist.
@@ -365,9 +365,9 @@ This section inventories current modules and highlights any scaffolding, ???, or
   - g8 dirs exist but empty; implement data‑pipeline.g8 first.
 
 ### Known TODO/??? Hotspots
-- modules/infrastructure/InfrastructureLayer.scala: resourceSafety, cloudResourceSafety, loadConfigWithLogging — implement.
-- modules/infrastructure/src/main/scala/com/flowforge/logging/StructuredLogger.scala: withContext — implement.
-- modules/core/src/main/scala/com/flowforge/framework/PipelineCombinators.scala: placeholder — replace/remove.
+- modules/infrastructure/InfrastructureLayer.scala: resourceSafety, cloudResourceSafety, loadConfigWithLogging - implement.
+- modules/infrastructure/src/main/scala/com/flowforge/logging/StructuredLogger.scala: withContext - implement.
+- modules/core/src/main/scala/com/flowforge/framework/PipelineCombinators.scala: placeholder - replace/remove.
 
 ### Cross‑Cutting Risks
 - Overuse of UnsupportedOperationException guard rails in Spark paths; convert to domain errors where appropriate.

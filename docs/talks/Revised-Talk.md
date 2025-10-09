@@ -1,4 +1,4 @@
-# Archived — 2) Talk: Review + Improvements + Revised Deck (brand-agnostic)
+# Archived - 2) Talk: Review + Improvements + Revised Deck (brand-agnostic)
 
 > This file is archived. See the new concept‑only decks:
 > - docs/talks/talk-a-api-migration.md
@@ -37,20 +37,20 @@
 
 ## Revised talk (brand-agnostic Markdown deck)
 
-### Slide 1 — The Premise (2 min)
-- What if broken pipelines never launched—because the **compiler** stopped them?
+### Slide 1 - The Premise (2 min)
+- What if broken pipelines never launched-because the **compiler** stopped them?
 - What if orchestration **respected fibers**, and Spark transforms stayed **pure**?
 - Today: a design blueprint for **type-first, effect-aware** data engineering in Scala.
 
-### Slide 1.0b — Why you should care (1 min)
+### Slide 1.0b - Why you should care (1 min)
 - You lose the most hours to: schema drift discovered at runtime; non‑idempotent edge effects; inability to roll back safely.
 - This design turns those into build‑time failures and edge‑only effects with idempotency.
 
-> *Speaker note:* Start with a 30-second “we shipped junk on Friday because a field was added silently.” Then: “let’s move that pain left—into the compiler.”
+> *Speaker note:* Start with a 30-second “we shipped junk on Friday because a field was added silently.” Then: “let’s move that pain left-into the compiler.”
 
 ---
 
-### Slide 1.1 — Code Smell: a fragile Spark job (live pain) (3 min)
+### Slide 1.1 - Code Smell: a fragile Spark job (live pain) (3 min)
 ```scala
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
@@ -72,20 +72,20 @@ object BadJobEventsOnly {
       .option("header", "true").option("inferSchema", "true") // ❌ prod‑unfriendly
       .csv(s"s3://raw/users/*_$from_$to.csv")
 
-    // DQ on source (action) — triggers a job
+    // DQ on source (action) - triggers a job
     val badEmails = users.filter(!$"email".contains("@")).count() // ACTION
     audit.insert("DQ_SOURCE", batchId, Map("badEmails" -> badEmails.toString)) // ❌ not idempotent
 
-    // Pure transforms (fine) — but we log DAG/plan to Slack (side‑effect)
+    // Pure transforms (fine) - but we log DAG/plan to Slack (side‑effect)
     val cleaned = users.withColumn("email", lower(col("email"))).withColumn("flag", lit(1))
     val plan = cleaned.queryExecution.executedPlan.toString() // can be large
     notify.post("#ops", s"Plan for $batchId:\n$plan") // ❌ may breach rate limits / size caps
 
-    // Pre‑sink DQ (another action) — may re‑compute lineage if not cached
+    // Pre‑sink DQ (another action) - may re‑compute lineage if not cached
     val rows = cleaned.count() // ACTION (re‑exec if not cached/persisted)
     audit.insert("DQ_PRESINK", batchId, Map("rows" -> rows.toString)) // ❌ duplicates on retry
 
-    // Actual sink — write to cloud (OK)
+    // Actual sink - write to cloud (OK)
     cleaned.write.mode("append").parquet(s"s3://curated/users/$from-$to/")
 
     // End status (yet another side‑effect)
@@ -104,7 +104,7 @@ object BadJobEventsOnly {
 **Transition line (to the solution slides)**
 - We’ll fix this with **idempotent audit/notify**, **pure transforms**, caching where appropriate, and **fiber‑safe orchestration** (bracketed resources, backoff, throttling).
 
-### Slide 1.1b — Why side‑effects blow up (6‑month batches over 4 years) (2 min)
+### Slide 1.1b - Why side‑effects blow up (6‑month batches over 4 years) (2 min)
 **Scenario**: For each 6‑month batch you **log to an Audit DB** and **POST a Slack notification**.
 
 **What can go wrong (and why)**
@@ -119,13 +119,13 @@ object BadJobEventsOnly {
 - Keep transforms **pure**; do effects in **edge blocks** (e.g., `foreachBatch` / `foreachPartition`), with **bracketed** resources and **bounded concurrency**.
 - Centralize notifications (driver/queue) or apply **per‑channel throttling** + **exponential backoff**.
 
-### Slide 1.2 — Same job, sane patterns (brand‑agnostic) (3 min)
+### Slide 1.2 - Same job, sane patterns (brand‑agnostic) (3 min)
 ```scala
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
-// Event‑level side effects — idempotent by (batchId, phase)
+// Event‑level side effects - idempotent by (batchId, phase)
 trait AuditDb { def upsert(phase: String, batchId: String, meta: Map[String,String] = Map.empty): Unit }
 trait Notifier { def notifyOnce(key: String, text: String): Unit }
 
@@ -143,7 +143,7 @@ object GoodJobEventsOnly {
     ))
     val users = spark.read.schema(userSchema).csv(s"s3://raw/users/*_$from_$to.csv")
 
-    // Source DQ — single action, result cached for reuse
+    // Source DQ - single action, result cached for reuse
     phase("DQ_SOURCE") {
       val usersCached = users.persist()
       val bad = usersCached.filter(!$"email".contains("@")).count() // ACTION
@@ -158,7 +158,7 @@ object GoodJobEventsOnly {
       val nodes = cleaned.queryExecution.optimizedPlan.stats.sizeInBytes.toString
       notify.notifyOnce(s"plan.$batchId", s"Batch $batchId plan size≈$nodes bytes")
 
-      // Pre‑sink DQ — reuse cached lineage to avoid re‑exec
+      // Pre‑sink DQ - reuse cached lineage to avoid re‑exec
       val rows = cleaned.count() // ACTION
       audit.upsert("DQ_PRESINK:RESULT", batchId, Map("rows" -> rows.toString))
 
@@ -178,7 +178,7 @@ object GoodJobEventsOnly {
 - **Minimized actions & caching**: compute DQ once and **reuse** lineage; fewer opportunities for re‑execution and duplicate logs.
 - **Rate‑limited notifications**: `notifyOnce(key, …)` enforces **one post per batch** and can honor Slack’s `Retry‑After`.
 
-### Slide 2 — Agenda (1 min)
+### Slide 2 - Agenda (1 min)
 - Pain → Promise
 - Contracts & policies (compile gates)
 - Typestate builder (unbuildable invalid pipelines)
@@ -189,7 +189,7 @@ object GoodJobEventsOnly {
 
 ---
 
-### Slide 3 — The Pain We Normalized (3 min)
+### Slide 3 - The Pain We Normalized (3 min)
 - **Schema drift** discovered late → dashboards red, weekend hotfixes
 - **Side-effects** leaking into transforms (JDBC, HTTP) → flaky tests
 - Orchestrators **schedule**, they don’t **enforce purity**
@@ -197,7 +197,7 @@ object GoodJobEventsOnly {
 
 ---
 
-### Interlude — Data Contracts 101 (why contracts before code)
+### Interlude - Data Contracts 101 (why contracts before code)
 **Slide (what the audience sees)**
 - A **data contract** is a **promise** from producer to consumer.
 - It captures **schema + meaning + freshness + ownership**.
@@ -207,7 +207,7 @@ object GoodJobEventsOnly {
 
 ---
 
-### Slide 4 — Contracts & Policies (5 min)
+### Slide 4 - Contracts & Policies (5 min)
 ```scala
 // Compile-time policy gate
 final case class Consumer(id: Long, email: String)
@@ -232,7 +232,7 @@ implicitly[SchemaConforms[Producer, Consumer, SchemaPolicy.Backward]] // ✅ com
 
 ---
 
-### Interlude — `inline` & Macros: the 1‑minute mental model
+### Interlude - `inline` & Macros: the 1‑minute mental model
 **Slide (what the audience sees)**
 - `inline` → **expand code at compile time**.
 - Macros → **generate/inspect code at compile time**.
@@ -241,7 +241,7 @@ implicitly[SchemaConforms[Producer, Consumer, SchemaPolicy.Backward]] // ✅ com
 *Speaker notes (you say this, not on slide):*
 - **`inline`**: the compiler **replaces the call with the method body** at the call site. `transparent inline` can improve inferred types.
 - **Macros**: **compile‑time code** that can **inspect/generate** well‑typed Scala (quotes/splices under the hood).
-- **Why we care**: we derive **type shapes** and materialize `SchemaConforms[Out, Contract, Policy]`. If not compatible, we **abort compilation** with a readable diff — the “red” moment.
+- **Why we care**: we derive **type shapes** and materialize `SchemaConforms[Out, Contract, Policy]`. If not compatible, we **abort compilation** with a readable diff - the “red” moment.
 
 _Pseudo‑code (illustrative only):_
 ```scala
@@ -253,7 +253,7 @@ inline def conforms[Out, Contract, Policy]: Unit =
 ```
 
 
-### Slide 5 — “How It Works” (3 min)
+### Slide 5 - “How It Works” (3 min)
 - `Shape[T]` (Magnolia) → `SchemaAST`
 - Macro compares `AST(Out)` vs `AST(Contract)` under a chosen policy
 - `SchemaConforms[Out, Contract, Policy]` **exists or compilation aborts**
@@ -326,13 +326,13 @@ flowchart TD
 ```
 
 
-*Speaker notes — detailed walkthrough of the flowchart:*
+*Speaker notes - detailed walkthrough of the flowchart:*
 
 1) **Authoring (A → A1/A2/A3).**  
    The developer writes three things:
-   - **Out record (A1)** — the Scala type produced by your transforms (e.g., `UserOut`).  
-   - **Contract type (A2)** — the schema the consumer expects (e.g., `UserContract`).  
-   - **Policy (A3)** — *how* to compare shapes (Exact/Backward/Forward + flags like order/case sensitivity).  
+   - **Out record (A1)** - the Scala type produced by your transforms (e.g., `UserOut`).  
+   - **Contract type (A2)** - the schema the consumer expects (e.g., `UserContract`).  
+   - **Policy (A3)** - *how* to compare shapes (Exact/Backward/Forward + flags like order/case sensitivity).  
    These are just plain types/constants; nothing runs yet.
 
 2) **Typed edges demand evidence (B → E).**  
@@ -347,7 +347,7 @@ flowchart TD
    The goal in both cases is the same: **compute shapes → compare → either materialize evidence or abort**.
 
 4) **Build normalized shapes (S2/S3: M1+M2 or G1+G2 → M/G3).**  
-   Each backend inspects the structure of `Out` and `Contract` and builds a **SchemaAST**: a normalized tree of fields (names, types, optionality/nullability, nesting, and—subject to flags—order/case normalization).  
+   Each backend inspects the structure of `Out` and `Contract` and builds a **SchemaAST**: a normalized tree of fields (names, types, optionality/nullability, nesting, and-subject to flags-order/case normalization).  
    - Products (case classes) and nested products are supported; sealed trait hierarchies can be handled if allowed by your policy.  
    - Custom field-level knobs (e.g., ignore/rename) can be encoded as annotations, if enabled.
 
@@ -359,7 +359,7 @@ flowchart TD
    Case sensitivity and order checks are toggled by the policy’s flags.
 
 6) **Emit proof or abort (M/G5 vs M/G6 & G/G6).**  
-   - If compatible, the macro **materializes** a tiny instance of `SchemaConforms[...]` — this is the **E** token. It’s a **compile‑time value only**.  
+   - If compatible, the macro **materializes** a tiny instance of `SchemaConforms[...]` - this is the **E** token. It’s a **compile‑time value only**.  
    - If not, the macro **aborts compilation** with a **human‑readable diff**: lists of missing/extra fields and type mismatches, annotated with the active policy and flags.  
    This is your *“red”* moment in the live demo.
 
@@ -390,7 +390,7 @@ flowchart TD
 
 ---
 
-### Interlude — Phantom Types (compile-safe builder)
+### Interlude - Phantom Types (compile-safe builder)
 **Slide (what the audience sees)**
 - **Compile-safe builder**: `.build` is available only when required fields exist.
 - **Phantom types** = stickers for the compiler; **zero runtime cost**.
@@ -443,7 +443,7 @@ val ok =
 // val nope = PersonBuilder().withEmail("bad@domain").build
 ```
 
-### Slide 6 — The Typestate Builder (3 min)
+### Slide 6 - The Typestate Builder (3 min)
 ```scala
 // Invalid pipelines are unrepresentable
 PipelineBuilder[Start, F, Unit, Unit]("users")
@@ -460,7 +460,7 @@ PipelineBuilder[Start, F, Unit, Unit]("users")
 
 ---
 
-### Interlude — Kleisli (pipelines as `A => F[B]`)
+### Interlude - Kleisli (pipelines as `A => F[B]`)
 **Slide (what the audience sees)**
 - A Kleisli is a **named step**: “give me an `A`, I’ll do work in a box `F` and return `B`”.
 - Steps **click together** (compose) like an **assembly line**.
@@ -480,7 +480,7 @@ val pipeline: Kleisli[F, Unit, Unit] = read andThen transform andThen write
 pipeline.run(()) // do the thing
 ```
 
-### Slide 7 — Orchestration as Kleisli (3 min)
+### Slide 7 - Orchestration as Kleisli (3 min)
 - Pipelines compose as `Kleisli[F, In, Out]`
 - We get lawful composition, easy substitution, and **no hidden IO** in transforms
 - Concurrency is explicit (fibers/parallel) via the effect abstraction
@@ -521,7 +521,7 @@ val k: Kleisli[IO, Unit, Unit] = pipeline.run // Kleisli: the built pipeline exe
 
 ---
 
-### Slide 8 — Minimal Effect System (3 min)
+### Slide 8 - Minimal Effect System (3 min)
 ```scala
 trait EffectSystem[F[_]] extends MonadError[F, Throwable] {
   trait Fiber[F[_], A] { def cancel: F[Unit]; def join: F[A] }
@@ -533,9 +533,9 @@ trait EffectSystem[F[_]] extends MonadError[F, Throwable] {
 }
 ```
 - Implementations for **IO** and **ZIO Task**; enough to **bracket** resources, run **fibers**, and **parallelize** safely
-- Not a new effect framework—just the thin bridge we need
+- Not a new effect framework-just the thin bridge we need
 
-### Slide 8.1 — Fiber‑safe Data Pipelines (2 min)
+### Slide 8.1 - Fiber‑safe Data Pipelines (2 min)
 **Slide (what the audience sees)**
 - Keep **Spark transforms pure**; push **side‑effects** (audit/log/IO) to the edges.
 - Use **fibers** for parallel IO; **bracket** to guarantee cleanup.
@@ -607,7 +607,7 @@ _Talking points to call out as you scroll the code:_
 
 ---
 
-### Interlude — Tagless Final (algebras over `F[_]`)
+### Interlude - Tagless Final (algebras over `F[_]`)
 **Slide (what the audience sees)**
 - **Program to interfaces**: define an algebra (capabilities), not an implementation.
 - **Abstract over `F[_]`**: pick **IO / ZIO / Test** later (interpreters).
@@ -629,7 +629,7 @@ def program[F[_]: Monad](C: Console[F]): F[Unit] =
   } yield ()
 ```
 
-### Slide 9 — Pure vs Effectful: the Contract (2 min)
+### Slide 9 - Pure vs Effectful: the Contract (2 min)
 ```scala
 trait DataAlgebra[F[_]] {
   // IO boundaries
@@ -646,7 +646,7 @@ trait DataAlgebra[F[_]] {
 
 ---
 
-### Slide 10 — Engine Boundary & Swap (3 min)
+### Slide 10 - Engine Boundary & Swap (3 min)
 - Your logic targets `DataAlgebra[F]`
 - **Spark** implements it today; **Flink** (or any runner) can implement the same surface
 - Swap the runner by wiring, not rewriting logic
@@ -687,14 +687,14 @@ object FlinkMain extends zio.ZIOAppDefault {
 
 ---
 
-### Slide 11 — Data Quality (2 min)
+### Slide 11 - Data Quality (2 min)
 - Native Spark checks built-in (NotNull/Unique/Range/Pattern/etc.)
 - **Deequ optional** via reflection (no hard dep); enable via a flag when present
 - Fail fast at read or before write; aggregate with `ValidatedNel`
 
 ---
 
-### Slide 12 — DX: Red → Green (3 min)
+### Slide 12 - DX: Red → Green (3 min)
 - giter8 template scaffolds a project that **fails to compile** until:
   1) a contract is present,
   2) source/transform/sink complete the typestate,
@@ -703,14 +703,14 @@ object FlinkMain extends zio.ZIOAppDefault {
 
 ---
 
-### Slide 13 — Live Moment (2 min)
+### Slide 13 - Live Moment (2 min)
 - Start with `SchemaPolicy.Exact` (red)
 - Switch to `Backward` (green) as a safe rollout plan
 - Show the **diff** the macro prints
 
 ---
 
-### Slide 14 — Recommendations (2 min)
+### Slide 14 - Recommendations (2 min)
 - Contracts first-class and versioned
 - Pure vs effectful boundary in your APIs
 - Minimal effect abstraction; fibers for orchestration
@@ -719,17 +719,17 @@ object FlinkMain extends zio.ZIOAppDefault {
 
 ---
 
-### Slide 15 — FAQ (3 min)
+### Slide 15 - FAQ (3 min)
 - **Order/case sensitivity?** Variants exist; choose per domain.
 - **Schema evolution safety?** Prefer Backward for additive change; bake defaults.
 - **Fibers IO vs ZIO?** Uniform through the thin `EffectSystem`.
 - **Unit tests without Spark?** Pure transforms test as plain functions.
-- **Runner swap?** Yes—your logic talks to the algebra, not Spark.
+- **Runner swap?** Yes-your logic talks to the algebra, not Spark.
 
 ---
 
-### Slide 16 — Closing (1 min)
-The compiler is your strictest reviewer. Give it contracts and minimal, honest effects—and most Friday rollbacks simply won’t compile.
+### Slide 16 - Closing (1 min)
+The compiler is your strictest reviewer. Give it contracts and minimal, honest effects-and most Friday rollbacks simply won’t compile.
 
 ---
 
@@ -747,4 +747,4 @@ The compiler is your strictest reviewer. Give it contracts and minimal, honest e
 1. Start from template: contract missing → compile fails.
 2. Add contract + `Exact` → fail (schema mismatch).
 3. Relax to `Backward` with defaults → pass.
-4. Run small job with IO/ZIO toggled—show identical behavior via the abstraction.
+4. Run small job with IO/ZIO toggled-show identical behavior via the abstraction.

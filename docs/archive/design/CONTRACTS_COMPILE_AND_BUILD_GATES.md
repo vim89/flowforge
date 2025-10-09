@@ -4,7 +4,7 @@
 > Note: No sbt AutoPlugin is maintained; the authoritative gate is CI (GitHub Actions Forms + validation-cli). Case classes and `.avsc` are generated in CI from Forms.
 
 Updated: 2025-09-03
-Status: Critical design — required for MVR→MVP
+Status: Critical design - required for MVR→MVP
 Owners: Framework + Core + Templates
 
 ## Purpose

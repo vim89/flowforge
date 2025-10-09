@@ -1,4 +1,4 @@
-# Unvarnished Review — 2025-10-03
+# Unvarnished Review - 2025-10-03
 
 Scope: full-tree scan of docs, modules, build, CI; deep reads of core compile-time contracts and engine abstractions. Files referenced below are repository-relative.
 
@@ -38,7 +38,7 @@ Scope: full-tree scan of docs, modules, build, CI; deep reads of core compile-ti
 - Evidence: Good baselines in `docs/quality/release-criteria.md` and `docs/plan/v1.0-readiness.md` but acceptance criteria lack explicit “builder typestate compile-fail” and “Spark IT JDK lock”.
 - Fix plan: extend both docs with explicit criteria and pointers to tests/jobs.
 
-## v1.0 Readiness — Current Verdict
+## v1.0 Readiness - Current Verdict
 - Not yet. Contracts and engine core are strong, but we need: (a) typestate compile-fail coverage, (b) config/observability hardening, (c) talk/docs WHY-first pass, and (d) CI gates just added to bake for a cycle.
 
 ## Remediation Plan (critical → high)

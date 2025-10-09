@@ -1,12 +1,12 @@
-# PLAN — Compile-Time & Build-Time Gates (CI-first)
+# PLAN - Compile-Time & Build-Time Gates (CI-first)
 
 ## 1) Scope (Minimal Viable Change)
 - Goal: Contracts authored by non-engineers via GitHub Actions Forms; CI materializes typed artifacts and runs schema validation against physical sources (Parquet/Delta/Hive/JDBC). PR fails on mismatches.
 - Out of scope: Full registry integration and advanced compatibility policies (reserved for later ADR).
 
 ## 2) Files to Touch (exact)
-1. `.github/workflows/contracts-submit.yml` — GHA workflow with `workflow_dispatch` + Forms (inputs: domain, entity, version, paths, policy).
-2. `.github/actions/contract-materialize/` — composite action: validate contract YAML/JSON, fetch expected schema JSON, place under `contracts/` for the run.
+1. `.github/workflows/contracts-submit.yml` - GHA workflow with `workflow_dispatch` + Forms (inputs: domain, entity, version, paths, policy).
+2. `.github/actions/contract-materialize/` - composite action: validate contract YAML/JSON, fetch expected schema JSON, place under `contracts/` for the run.
 3. Use `modules/validation-cli` inside workflow to canonicalize Spark schemas and diff vs expected; local parity via `sbt ffValidate`.
 4. docs: Update ADR-011, Evidence, Handbook to reflect CI-first (no sbt plugin maintained).
 

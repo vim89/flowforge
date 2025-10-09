@@ -1,5 +1,5 @@
 ```markdown
-# ADR 007 — Observability and Infrastructure Layer
+# ADR 007 - Observability and Infrastructure Layer
 
 - Status: Accepted
 - Date: 2025-09-04

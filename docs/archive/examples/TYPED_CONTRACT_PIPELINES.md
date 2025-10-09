@@ -1,4 +1,4 @@
-# Typed Contract Pipelines — Compile-Time Gates in Action
+# Typed Contract Pipelines - Compile-Time Gates in Action
 
 > Archived: Superseded by ADR-019 Typed Contract Pipelines Example. See `docs/adr/019-typed-contract-pipelines-example.md`.
 

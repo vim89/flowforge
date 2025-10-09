@@ -1,4 +1,4 @@
-# EVIDENCE — Effect System & Purity
+# EVIDENCE - Effect System & Purity
 
 ## 1) Problem & Constraints
 - **Goal**: Verify pure Spark transforms; ensure single-effect-per-module discipline.

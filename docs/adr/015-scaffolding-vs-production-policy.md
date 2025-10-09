@@ -1,5 +1,5 @@
 ```markdown
-# ADR 015 — Scaffolding vs Production Policy
+# ADR 015 - Scaffolding vs Production Policy
 
 - Status: Accepted
 - Date: 2025-09-04

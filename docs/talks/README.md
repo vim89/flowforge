@@ -1,15 +1,15 @@
-# Conference Talks — Index and Runbook
+# Conference Talks - Index and Runbook
 
 This folder contains two concept‑only talks designed around the concentric approach (WHY → HOW → WHAT), while keeping slide titles neutral. FlowForge is mentioned only on the last slide of each talk.
 
 ## Talks
 
-- Talk A — Safe API/Schema Migration (concept‑only)
+- Talk A - Safe API/Schema Migration (concept‑only)
   - File: talk-a-api-migration.md
   - Abstract: Migrations often fail late. This talk shows how to encode migration intent with a small policy lattice (Exact/Backward/Forward), make incomplete jobs unbuildable with typestate, and prove compatibility at compile time. We demo a red→green migration (Exact → Backward), show PR‑friendly compile‑fail tests, and explain where runtime guardrails (DQ, lineage, idempotent edges) still apply.
   - Target audience: platform/data engineers, EMs, staff architects.
 
-- Talk B — Types for Interface Representation & Validation (concept‑only)
+- Talk B - Types for Interface Representation & Validation (concept‑only)
   - File: talk-b-types-validation.md
   - Abstract: Tests are sampled; types can be exhaustive for shapes. This talk shows how to derive structural shapes, enforce policy compatibility at compile time, keep transforms pure and effects at the edges, and encode construction rules in types. We demo element‑optionality drift (List[Option[A]] ≠ List[A]) and typestate build(), then prove portability with a simple engine seam.
   - Target audience: engineers and architects who want stronger guarantees with types.

@@ -1,4 +1,4 @@
-# PLAN — CI Contracts Submit (Forms + Validation CLI)
+# PLAN - CI Contracts Submit (Forms + Validation CLI)
 
 ## 1) Scope (Minimal Viable Change)
 - Add GitHub Actions workflow (Forms) to author/update contracts; CI materializes typed artifacts and validates physical schemas using validation-cli.

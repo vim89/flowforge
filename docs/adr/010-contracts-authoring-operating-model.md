@@ -1,5 +1,5 @@
 ```markdown
-# ADR 010 — Contracts Authoring & Operating Model
+# ADR 010 - Contracts Authoring & Operating Model
 
 - Status: Accepted
 - Date: 2025-09-04

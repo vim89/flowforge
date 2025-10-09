@@ -1,4 +1,4 @@
-# Archived — Compile‑Time Contracts & Fiber‑Safe Data Pipelines (Scala)
+# Archived - Compile‑Time Contracts & Fiber‑Safe Data Pipelines (Scala)
 
 > This deck is archived. Use the concept‑only talks instead:
 > - docs/talks/talk-a-api-migration.md
@@ -8,34 +8,34 @@
 
 ---
 
-## Slide 1 — The Premise [~2 min]
+## Slide 1 - The Premise [~2 min]
 
-- What if broken data pipelines didn’t start — they failed at compile time?
+- What if broken data pipelines didn’t start - they failed at compile time?
 - What if orchestration respected fiber safety, and Spark transforms stayed pure?
 - Today: A design blueprint for type‑first, effect‑aware data engineering in Scala.
 
 > Speaker notes:
 > - Open with a true story: a Friday night rollback due to silent schema drift (missing email column), and how the team only discovered it after dashboards turned red. Tie pain to audience memory.
-> - Reframe: “What if these failures moved left of runtime — to the compiler?”
+> - Reframe: “What if these failures moved left of runtime - to the compiler?”
 > - Promise: By the end, they’ll know the blueprint to make this their default.
 
 ---
 
-## Slide 2 — Agenda & Timing (45 min) [~1 min]
+## Slide 2 - Agenda & Timing (45 min) [~1 min]
 
-- 5 min — Problem framing (pain → promise)
-- 8 min — Contracts and policies (compile gates)
-- 10 min — Effects, fibers, orchestration API (Kleisli)
-- 8 min — Engine boundary (Spark) + runner abstraction (Flink)
-- 8 min — DX: template + red→green, tests, DQ
-- 6 min — Recommendations + Q&A buffer
+- 5 min - Problem framing (pain → promise)
+- 8 min - Contracts and policies (compile gates)
+- 10 min - Effects, fibers, orchestration API (Kleisli)
+- 8 min - Engine boundary (Spark) + runner abstraction (Flink)
+- 8 min - DX: template + red→green, tests, DQ
+- 6 min - Recommendations + Q&A buffer
 
 > Speaker notes:
 > - Keep a brisk pace: most time is on effects/orchestration and contracts. Reserve a couple of live red→green moments.
 
 ---
 
-## Slide 3 — The Problem Landscape [~3 min]
+## Slide 3 - The Problem Landscape [~3 min]
 
 - Schema drift discovered late; postmortems and “hotfix ETLs” abound
 - Ad‑hoc side‑effects leak into transforms (network, JDBC, file IO)
@@ -48,7 +48,7 @@
 
 ---
 
-## Slide 4 — Design Tenets (North Star) [~3 min]
+## Slide 4 - Design Tenets (North Star) [~3 min]
 
 - Contracts at the edges: producers/consumers encode schema, evolution policy
 - Purity inside: transforms are referentially transparent
@@ -62,7 +62,7 @@
 
 ---
 
-## Slide 5 — Compile‑Time Contracts (Concept) [~5 min]
+## Slide 5 - Compile‑Time Contracts (Concept) [~5 min]
 
 ```mermaid
 classDiagram
@@ -104,7 +104,7 @@ implicitly[SchemaConforms[Producer, Consumer, SchemaPolicy.Backward]]
 
 ---
 
-## Slide 5.1 — How Compile‑Time Contracts Actually Work [~4 min]
+## Slide 5.1 - How Compile‑Time Contracts Actually Work [~4 min]
 
 ```mermaid
 flowchart LR
@@ -140,7 +140,7 @@ def join[T](cc: CaseClass[Shape, T]): Shape[T] = new Shape[T] {
 
 ---
 
-## Slide 6 — Contracts: The Building Blocks [~2 min]
+## Slide 6 - Contracts: The Building Blocks [~2 min]
 
 - `SchemaPolicy` encodes evolution rules (Exact, ExactUnordered, Backward, Forward, Full)
 - `SchemaConforms[Out, Contract, Policy]` is the evidence you must provide
@@ -165,7 +165,7 @@ object SchemaPolicy {
 
 ---
 
-## Slide 7 — A Contract‑Aware Pipeline Builder (Typestate) [~4 min]
+## Slide 7 - A Contract‑Aware Pipeline Builder (Typestate) [~4 min]
 
 ```mermaid
 flowchart LR
@@ -209,7 +209,7 @@ case class PipelineBuilder[S, F[_]: EffectSystem, In, Out](
 
 ---
 
-## Slide 7.1 — Builder Internals (Deeper Dive) [~3 min]
+## Slide 7.1 - Builder Internals (Deeper Dive) [~3 min]
 
 ```mermaid
 classDiagram
@@ -261,7 +261,7 @@ val pipeline: Pipeline[F, In, Out] = Pipeline(kleisliAny.asInstanceOf[Kleisli[F,
 
 ---
 
-## Slide 8 — Effect System Abstraction (One API, Many Runtimes) [~3 min]
+## Slide 8 - Effect System Abstraction (One API, Many Runtimes) [~3 min]
 
 - Thin type class captures essentials: map/flatMap, async, fibers, parallelism, timing, bracket
 - Implemented for Cats‑Effect IO and ZIO Task
@@ -283,7 +283,7 @@ trait EffectSystem[F[_]] extends MonadError[F, Throwable] {
 
 ---
 
-## Slide 9 — Fibers, Cancellation, Parallelism (Instances) [~2 min]
+## Slide 9 - Fibers, Cancellation, Parallelism (Instances) [~2 min]
 
 ```scala
 // file: modules/core/.../EffectInstances.scala (IO & ZIO snippets)
@@ -302,7 +302,7 @@ def start[A](fa: Task[A]): Task[Fiber[Task, A]] = fa.fork.map(ZIOFiber(_))
 
 ---
 
-## Slide 10 — Orchestrate with Kleisli Pipelines [~4 min]
+## Slide 10 - Orchestrate with Kleisli Pipelines [~4 min]
 
 
 ```mermaid
@@ -366,7 +366,7 @@ object PipelineCombinators {
 
 ---
 
-## Slide 11 — Pure vs Effectful: The Boundary [~2 min]
+## Slide 11 - Pure vs Effectful: The Boundary [~2 min]
 
 - Rule: pure transforms return `Dataset[A]` (no `F[_]`)
 - IO (read/write, lineage, config, DQ) use `F[_]`
@@ -385,11 +385,11 @@ trait DataAlgebra[F[_]] {
 
 > Speaker notes:
 > - Rule of thumb: if it touches the outside world, it’s `F[_]`. If it transforms records, it’s pure.
-> - This cuts test time dramatically — unit tests run without Spark sessions.
+> - This cuts test time dramatically - unit tests run without Spark sessions.
 
 ---
 
-## Slide 12 — Engine Implementation (Spark) [~2 min]
+## Slide 12 - Engine Implementation (Spark) [~2 min]
 
 ```mermaid
 flowchart LR
@@ -437,10 +437,10 @@ override def map[A,B: DataEncoder](ds: Dataset[A], f: A => B): Dataset[B] =
 
 ---
 
-## Slide 12.1 — Trait‑Based Runners (Spark, Flink, Kafka) [~2 min]
+## Slide 12.1 - Trait‑Based Runners (Spark, Flink, Kafka) [~2 min]
 
 - Keep engines behind the `DataAlgebra[F]` trait; business logic doesn’t depend on Spark/Flink.
-- Flink implementation delegates to an in‑memory algebra while exposing engine config knobs — proving runner swap.
+- Flink implementation delegates to an in‑memory algebra while exposing engine config knobs - proving runner swap.
 
 Code (Flink algebra, trimmed):
 
@@ -459,7 +459,7 @@ final class FlinkDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataAlge
 
 ---
 
-## Slide 13 — Resource Safety Everywhere [~2 min]
+## Slide 13 - Resource Safety Everywhere [~2 min]
 
 - Acquire/use/release via bracket; effect‑agnostic `FlowforgeResource` (name elided)
 
@@ -483,7 +483,7 @@ trait ResourceSafety[F[_]] {
 
 ---
 
-## Slide 14 — Diagram: Golden Path [~1 min]
+## Slide 14 - Diagram: Golden Path [~1 min]
 
 ```mermaid
 flowchart LR
@@ -507,7 +507,7 @@ flowchart LR
 
 ---
 
-## Slide 15 — Diagram: Effect Boundaries [~1 min]
+## Slide 15 - Diagram: Effect Boundaries [~1 min]
 
 ```mermaid
 flowchart TB
@@ -526,7 +526,7 @@ flowchart TB
 
 ---
 
-## Slide 16 — Data Quality: Native + Deequ (Optional) [~2 min]
+## Slide 16 - Data Quality: Native + Deequ (Optional) [~2 min]
 
 - Constraints DSL: NotNull, Unique, Range, Pattern, Distinctness, NullRateBelow, Min/Max.
 - Default path runs native Spark checks; optional Deequ 2.0+ via reflection (no hard dep) when enabled.
@@ -559,7 +559,7 @@ flowchart LR
 
 ---
 
-## Slide 17 — Observability Hooks (Minimal, Practical) [~1 min]
+## Slide 17 - Observability Hooks (Minimal, Practical) [~1 min]
 
 - Timing wrappers and results capture around pipeline execution
 
@@ -574,7 +574,7 @@ object PipelineExecution {
 
 ---
 
-## Slide 18 — Parallel & Retry Combinators [~2 min]
+## Slide 18 - Parallel & Retry Combinators [~2 min]
 
 ```scala
 // file: modules/core/.../framework/PipelineCombinators.scala (trimmed)
@@ -586,7 +586,7 @@ val batched: Pipeline[F, List[A], List[B]] = batch(listPipeline, batchSize = 100
 
 ---
 
-## Slide 19 — Template Strategy (DX) [~2 min]
+## Slide 19 - Template Strategy (DX) [~2 min]
 
 - Scaffold a project with typed contracts and CI gates
 - “Red → Green” demo: start with a deliberate mismatch; fix policy/types to compile
@@ -596,11 +596,11 @@ val batched: Pipeline[F, List[A], List[B]] = batch(listPipeline, batchSize = 100
 assertTypeError("implicitly[SchemaConforms[Producer, Consumer, SchemaPolicy.Exact]]")
 ```
 
-> Speaker note: A template isn’t magic — it encodes defaults that make the right thing easy.
+> Speaker note: A template isn’t magic - it encodes defaults that make the right thing easy.
 
 ---
 
-## Slide 20 — Example Walkthrough (5 min) [~3 min]
+## Slide 20 - Example Walkthrough (5 min) [~3 min]
 
 - Minimal pipeline: typed source → pure transform → typed sink
 
@@ -621,7 +621,7 @@ val p = PipelineBuilder[IO]("users")
 
 ---
 
-## Slide 21 — Migration & Evolution [~2 min]
+## Slide 21 - Migration & Evolution [~2 min]
 
 - Start “Exact” → relax to “Backward/Forward” during staged rollouts
 - Compile gates make drift explicit; CI enforces policy intent
@@ -630,7 +630,7 @@ val p = PipelineBuilder[IO]("users")
 
 ---
 
-## Slide 22 — Testing Strategy [~2 min]
+## Slide 22 - Testing Strategy [~2 min]
 
 - Unit test pure transforms quickly
 - Property and contract tests at the edges
@@ -640,7 +640,7 @@ val p = PipelineBuilder[IO]("users")
 
 ---
 
-## Slide 23 — From Blueprint to Platform [~1 min]
+## Slide 23 - From Blueprint to Platform [~1 min]
 
 > Speaker notes:
 > - Summarize extensibility vectors: add engines by implementing the `DataAlgebra[F]` trait; add effect systems by providing `EffectSystem` instances; add DQ providers behind an adapter.
@@ -653,7 +653,7 @@ val p = PipelineBuilder[IO]("users")
 
 ---
 
-## Slide 24 — Live Diagram: Putting It Together [~1 min]
+## Slide 24 - Live Diagram: Putting It Together [~1 min]
 
 ```mermaid
 sequenceDiagram
@@ -674,7 +674,7 @@ sequenceDiagram
 
 ---
 
-## Slide 25 — Recommendations (Do This) [~1 min]
+## Slide 25 - Recommendations (Do This) [~1 min]
 
 - Make contracts first‑class and versioned
 - Separate pure logic from IO; enforce effect boundaries in APIs
@@ -683,7 +683,7 @@ sequenceDiagram
 
 ---
 
-## Slide 26 — Anti‑Patterns (Avoid This) [~1 min]
+## Slide 26 - Anti‑Patterns (Avoid This) [~1 min]
 
 - “Just parse JSON at the edges” without compile gates
 - Embedding network calls inside Spark `map`
@@ -692,7 +692,7 @@ sequenceDiagram
 
 ---
 
-## Slide 27 — What’s Next [~1 min]
+## Slide 27 - What’s Next [~1 min]
 
 - Templates that encode these defaults (contract gates in CI)
 - Pluggable quality adapters (native checks or external libs)
@@ -702,14 +702,14 @@ sequenceDiagram
 
 ---
 
-## Slide 28 — Q&A [~5 min]
+## Slide 28 - Q&A [~5 min]
 
 - Ask about migrations, CI wiring, or engine swaps
 - Happy to share examples and templates
 
 ---
 
-## Appendix A — Additional Snippets
+## Appendix A - Additional Snippets
 
 Effect backoff retry (conceptual):
 ```scala
@@ -726,11 +726,11 @@ val P: Pipeline[F, A, (B,C)] = parallel(L, R){ (b,c) => Pipeline.pure(a => (b,c)
 
 ---
 
-## Appendix C — File References (for later sharing)
+## Appendix C - File References (for later sharing)
 
 ---
 
-## Scala Cheatsheet — Features & Patterns (with speaker notes)
+## Scala Cheatsheet - Features & Patterns (with speaker notes)
 
 - Phantom Types: `BuilderState` enforces construction order with zero runtime cost.
 - Tagless Final: `EffectSystem[F[_]]`, `DataAlgebra[F[_]]`, log/metrics traits keep effects abstract.
@@ -745,7 +745,7 @@ val P: Pipeline[F, A, (B,C)] = parallel(L, R){ (b,c) => Pipeline.pure(a => (b,c)
 
 ---
 
-## Appendix D — FAQ / Q&A Prep (with references)
+## Appendix D - FAQ / Q&A Prep (with references)
 
 1) How expensive are compile‑time contracts?
 - Answer: All checks occur at compile time via macros; runtime cost is zero at boundaries. Error messages are generated once. See modules/core/src/main/scala/com/flowforge/core/contracts/internal/SchemaConformsMacros.scala:1 and derive/Shape.scala:1.
@@ -781,7 +781,7 @@ val P: Pipeline[F, A, (B,C)] = parallel(L, R){ (b,c) => Pipeline.pure(a => (b,c)
 - Answer: Config decoders validate early; refined types (e.g., `FieldName`) constrain at compile time. See modules/core/.../types/RefinedTypes and config layer modules/infrastructure.
 
 12) Can we express heterogeneous stage pipelines safely?
-- Answer: Yes, via the GADT pipeline (advanced) — no casts, type‑witnessed composition. See modules/core/.../types/GADTPipeline.scala:1.
+- Answer: Yes, via the GADT pipeline (advanced) - no casts, type‑witnessed composition. See modules/core/.../types/GADTPipeline.scala:1.
 
 13) Does this work with Kafka streaming?
 - Answer: Connectors/Kafka module provides the edge; same `DataAlgebra[F]` approach applies (IO at edges, pure in middle). Wire at the engine/connector boundary.
@@ -794,7 +794,7 @@ val P: Pipeline[F, A, (B,C)] = parallel(L, R){ (b,c) => Pipeline.pure(a => (b,c)
 
 ---
 
-## Appendix E — Live Demo Script (copy‑paste ready)
+## Appendix E - Live Demo Script (copy‑paste ready)
 
 Prereqs
 - Java 17+, sbt 1.9+, local Spark runtime OK for template demo.

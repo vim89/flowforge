@@ -1,4 +1,4 @@
-# Typestate Builder — Slide Source (Export to PNG)
+# Typestate Builder - Slide Source (Export to PNG)
 
 ```mermaid
 flowchart LR

@@ -52,7 +52,7 @@ Fix: Emit START/COMPLETE/FAIL from inside PipelineBuilder.build for each stage a
 - open Marquez → see lineage light up.
 
 ## De-scope building custom S3/Azure connectors
-Short answer: **yes, you can de-scope building *custom* S3/Azure connectors for v1.0** without kneecapping adoption—*if* you lean on the storage drivers Spark already supports and you document them crisply.
+Short answer: **yes, you can de-scope building *custom* S3/Azure connectors for v1.0** without kneecapping adoption-*if* you lean on the storage drivers Spark already supports and you document them crisply.
 
 ### Why this is safe for v1.0
 
@@ -75,7 +75,7 @@ Short answer: **yes, you can de-scope building *custom* S3/Azure connectors for 
 3. **Provide one Spark example per storage in docs** using the *same* FlowForge pipeline, just different URI & conf blocks. Keep it “local\[\*]” fast. ([Google Cloud][3])
 4. **Gate “cloud ITs” behind env flags** (`WITH_S3_IT`, `WITH_AZURE_IT`), so CI stays green without secrets. This proves portability without shipping SDK wrappers.
 5. **Document Delta constraints on each backend** (the enforcement part of your story): show `ALTER TABLE … SET NOT NULL` / `ADD CONSTRAINT CHECK` on S3/ADLS/GCS. ([Delta Lake][5])
-6. **Call out concurrency/consistency notes** where relevant—e.g., Delta’s S3 guidance for multi-writer workloads. ([delta.io][6])
+6. **Call out concurrency/consistency notes** where relevant-e.g., Delta’s S3 guidance for multi-writer workloads. ([delta.io][6])
 
 ### Recommended stance for v1.0
 
@@ -83,7 +83,7 @@ Short answer: **yes, you can de-scope building *custom* S3/Azure connectors for 
 * **YES commit to docs + examples** that show S3A/ABFSS usage with your current builder.
 * **Plan S3/Azure as 1.1 plugins** only if users ask for value beyond Spark’s drivers (e.g., per-provider retries, metrics, typed creds, auto-assume-role, managed secrets).
 
-This way you keep v1.0 focused on your signature move—**compile-time contracts + pure transforms + runtime enforcement + lineage**—while still being credibly “multi-cloud” on day one through Spark’s standard connectors. ([Apache Hadoop][1], [Google Cloud][3], [Delta Lake][5])
+This way you keep v1.0 focused on your signature move-**compile-time contracts + pure transforms + runtime enforcement + lineage**-while still being credibly “multi-cloud” on day one through Spark’s standard connectors. ([Apache Hadoop][1], [Google Cloud][3], [Delta Lake][5])
 
 [1]: https://hadoop.apache.org/docs/r3.4.1/hadoop-aws/tools/hadoop-aws/index.html "Hadoop-AWS module: Integration with Amazon Web Services"
 [2]: https://hadoop.apache.org/docs/stable/hadoop-azure/index.html "Hadoop Azure Support: ABFS - Azure Data Lake Storage Gen2"

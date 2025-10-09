@@ -1,5 +1,5 @@
 ```markdown
-# ADR 019 — Typed Contract Pipelines Example
+# ADR 019 - Typed Contract Pipelines Example
 
 - Status: Accepted
 - Date: 2025-09-04

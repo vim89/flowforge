@@ -18,8 +18,8 @@ import com.flowforge.core.types._
  * → addTypedSource → addTransform → addTypedSink → build()
  *
  * References on typestate/phantom types & compile-safe builders:
- *   - Xebia: Compile‑safe Builder Pattern Using Phantom Types (Scala) — prevents `.build()` until complete
- *   - Typelevel Cats‑Effect IOApp — entry point to run IO programs cleanly
+ *   - Xebia: Compile‑safe Builder Pattern Using Phantom Types (Scala) - prevents `.build()` until complete
+ *   - Typelevel Cats‑Effect IOApp - entry point to run IO programs cleanly
  *   - ZIO/Cats fibers docs (background on structured concurrency)
  */
 object TypestateRefusal extends IOApp.Simple {

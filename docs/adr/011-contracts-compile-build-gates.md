@@ -1,5 +1,5 @@
 ```markdown
-# ADR 011 — Contracts Compile-Time & Build-Time Gates
+# ADR 011 - Contracts Compile-Time & Build-Time Gates
 
 - Status: Accepted
 - Date: 2025-09-04

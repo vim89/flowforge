@@ -1,4 +1,4 @@
-# PLAN — Partitions & Table Ops (Affected Partitions First)
+# PLAN - Partitions & Table Ops (Affected Partitions First)
 
 ## 1) Scope (Minimal Viable Change)
 - Implement `getAffectedPartitions(table, startTime, endTime)` and consume results in table ops to reduce work and shuffles.

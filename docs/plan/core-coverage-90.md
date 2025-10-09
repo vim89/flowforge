@@ -1,4 +1,4 @@
-# Core Module Coverage Plan — Path to 90% Statement Coverage
+# Core Module Coverage Plan - Path to 90% Statement Coverage
 
 Owner: Core module (com.flowforge.core)
 Date: 2025-10-04
@@ -38,7 +38,7 @@ Implementation mechanics to make WHY/ HOW/ WHAT visible:
 Acceptance heuristics for distribution (core):
 - ≥30% of executed statements covered by WHY‑class specs (typestate, compile‑fail, laws, invariants).
 - ≥50% by HOW‑class specs (algebras, builders, combinators, effect semantics, observability).
-- Remainder by WHAT‑class specs (codecs, types, helpers) — never the majority in a given PR.
+- Remainder by WHAT‑class specs (codecs, types, helpers) - never the majority in a given PR.
 
 ## Guardrails
 - Statement coverage (scoverage) is our primary gate; branch coverage is tracked but not gated. Excludes remain minimal (only macro/legacy witness already configured in build.sbt).
@@ -54,22 +54,22 @@ Acceptance heuristics for distribution (core):
   - Internal macros/AST are compile‑time; runtime coverage is not applicable (remain excluded)
 
 ## Strategy (4 Milestones)
-1) 53% → 65% — Builder & Combinators
+1) 53% → 65% - Builder & Combinators
    - `PipelineBuilder`: withDescription/withLineageEmitter/withTracer, typed source→(noTransform|transform)→typed sink, build path, stage names, metadata tags.
    - `PipelineCombinators`: sequence (NonEmptyList), parallel (compose + metadata), conditional (both branches), retry (cap, backoff), batch.
    - Negative flow checks aligned with actual behavior (no brittle assumptions).
 
-2) 65% → 75% — Typeclasses & Codecs Matrix
+2) 65% → 75% - Typeclasses & Codecs Matrix
    - `DataEncoder/DataDecoder.instance` defaults (estimateSize/supportsFormat/optimizationHints) executed.
    - DefaultCodecs: success/failure paths for JSON/JSONL/CSV and explicit unsupported branches where applicable.
    - Metrics: `MetricsCollector.instance/noop`, `collectTimed` custom metric, `aggregate`, `ProcessingMetrics.combine/custom`.
 
-3) 75% → 85% — Effects & Syntax
+3) 75% → 85% - Effects & Syntax
    - Effect syntax: bracket/resource, race/parMapN/parWith, timed/timeout/logging; assert both happy‑path and error‑path behavior.
    - `PipelineSyntax` DSL sugar: filter/validate/quality/retry/timeout/config wired to builder/interpreters at least once.
    - Schema builders and `Show` rendering (eventSchema/userSchema) validated by behavior, not string‑only tests.
 
-4) 85% → 90% — Edges & Observability
+4) 85% → 90% - Edges & Observability
    - Observability: Tracer.noop semantics; prometheus/noop selection where feasible without external deps.
    - Lineage helpers: noop emitter flows and run‑id generation (env/property vs generated) executed.
    - Error ADTs utility surfaces (`withContext/withCause` stubs) exercised where meaningful.

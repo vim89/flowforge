@@ -439,7 +439,7 @@ Local S3/GCS emulation picks are **LocalStack (S3)** and **fake-gcs-server (GCS)
 
 ```scala
 /* =======================================================================================================================
- * FLOWFORGE EXPERIMENTAL POC — CANCELLATION-SAFE CLOUD UPLOAD SINK (KYO) WITH LOCAL EMULATORS
+ * FLOWFORGE EXPERIMENTAL POC - CANCELLATION-SAFE CLOUD UPLOAD SINK (KYO) WITH LOCAL EMULATORS
  * =======================================================================================================================
  * Layout (all in one block for copy-paste; split into files as indicated):
  *

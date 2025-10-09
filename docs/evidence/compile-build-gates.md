@@ -1,4 +1,4 @@
-# EVIDENCE — Compile-Time & Build-Time Gates
+# EVIDENCE - Compile-Time & Build-Time Gates
 
 ## 1) Problem & Constraints
 - **Goal**: Confirm typed compile-time gates and build-time physical validators exist.

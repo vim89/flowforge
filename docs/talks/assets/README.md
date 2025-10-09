@@ -1,4 +1,4 @@
-# Slide Assets — Rendering Guide
+# Slide Assets - Rendering Guide
 
 This folder contains ready-to-embed SVGs and sources you can export to PNG for slide embeds.
 

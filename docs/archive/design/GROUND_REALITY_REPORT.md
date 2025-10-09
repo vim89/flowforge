@@ -1,4 +1,4 @@
-# FlowForge — Ground Reality Report (Codebase vs Documentation)
+# FlowForge - Ground Reality Report (Codebase vs Documentation)
 
 > Archived: Superseded by ADR-016 Ground Reality & Alignment Governance. See `docs/adr/016-ground-reality-governance.md`.
 
@@ -73,7 +73,7 @@ Repo-wide stats (snapshot)
 ## Highest‑Risk Gaps
 
 1. Spark engine productionization (real DataFrame/Dataset path, partitioning, CDC/Delta write semantics).
-2. Cloud connectors (GCS/S3/BQ/Kafka/Azure) — no code yet.
+2. Cloud connectors (GCS/S3/BQ/Kafka/Azure) - no code yet.
 3. Deequ adapter and quality rule orchestration.
 4. Schema evolution compatibility + migrations.
 5. End‑to‑end template that compiles and runs a contract‑first pipeline.
@@ -92,7 +92,7 @@ Repo-wide stats (snapshot)
 
 ---
 
-## Update — Compile-time Schema Enforcement (2025-09-03)
+## Update - Compile-time Schema Enforcement (2025-09-03)
 
 - Added `TypedSchema` and `TypedSink` to enable compile-time schema checks via shapeless LabelledGeneric.
 - Extended `PipelineBuilder2` with `addTypedSource` and `addTypedSink` that require labelled-generic evidence. Compilation fails if the pipeline type and sink expectation differ.
@@ -141,14 +141,14 @@ Limitations (next steps):
 | Deequ integration | ❌ | modules/quality-deequ (no sources) | No adapter despite dependency coords.
 | Monitoring/metrics/tracing | 🟡/❌ | modules/core/observability/*; modules/infrastructure/.../StructuredLogger.scala | Prometheus counters used; tracing/OTel not wired; no cohesive monitoring layer.
 | Audit + lineage | 🟡 | DataAlgebra lineage signatures; core/observability/* | Stubs only; no persistence.
-| Schema evolution & compatibility | ❌ | — | Only conceptual types; no compatibility/migration engine.
+| Schema evolution & compatibility | ❌ | - | Only conceptual types; no compatibility/migration engine.
 | Cloud portability (GCS/S3/BQ/Kafka/Azure) | ❌/✅ | modules/connectors/filesystem (Local/HDFS ✅); modules/connectors-* (empty) | Only Local/HDFS implemented.
 | 30‑second template → production | 🟡 | templates/data-pipeline.g8 | Minimal seed; not contract‑first runnable pipeline yet.
 | Batch‑stream unification | 🟡 | modules/engines-spark/StreamingCDC.scala | Helper folds micro‑batches; not a full streaming runtime.
 | Restartability/partition‑level processing | 🟡 | core types: partitioning utilities; Spark impl | No robust engine‑level partition restart.
 | Typed error channels / DLQ | 🟡/❌ | modules/core/types/ErrorTypes.scala | Typed errors exist; DLQ not implemented.
-| Exactly‑once vs at‑least‑once semantics | ❌ | — | Not modeled in sinks/engines.
-| Transactional sink writes / outbox | ❌ | — | Not implemented.
+| Exactly‑once vs at‑least‑once semantics | ❌ | - | Not modeled in sinks/engines.
+| Transactional sink writes / outbox | ❌ | - | Not implemented.
 | Configuration management (CCM replacement) | 🟡 | modules/infrastructure/src/main/scala/com/flowforge/config/ConfigurationManagement.scala | Typed decoders; watch/refresh TODO; connector decoders stub.
 | Effect polymorphism (choose CE or ZIO) | ✅ | modules/core/instances/EffectInstances.scala; project/Dependencies.scala | Unified EffectSystem with IO/Task instances.
 | Testing framework & ITs | 🟡/❌ | modules/core/src/test/**; modules/engines-spark/src/test/** | Core tests exist; engine/connectors ITs largely missing.

@@ -1,4 +1,4 @@
-# FlowForge 1.0 Ship Plan — precise, end-to-end, FP-first (Scala 2.13, Spark 3.5/4.0 ready)
+# FlowForge 1.0 Ship Plan - precise, end-to-end, FP-first (Scala 2.13, Spark 3.5/4.0 ready)
 
 > This is a hands-on checklist that maps tasks to **concrete files/paths** in your repo (`/flowforge/flowforge`). It favors **compile-time contracts**, **pure transforms**, **effect safety**, **small clear APIs**, and **fast inner loops**. No new libraries; only version bumps if truly necessary.
 

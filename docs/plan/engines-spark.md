@@ -1,12 +1,12 @@
-# PLAN — Engines: Spark Hardening
+# PLAN - Engines: Spark Hardening
 
 ## 1) Scope (Minimal Viable Change)
 - **Goal**: Remove in-memory fallbacks where possible, consolidate Delta path, optimize write path, and wire observability at IO boundaries.
 - **Out of scope**: Flink/local engines.
 
 ## 2) Files to Touch (exact)
-1. `modules/engines-spark/SparkDataAlgebra.scala` — prefer distributed ops; optimize writes; add logs/metrics.
-2. `modules/engines-spark/DeltaSupport.scala` — removed; canonical path is direct Delta API in SparkDataAlgebra.
+1. `modules/engines-spark/SparkDataAlgebra.scala` - prefer distributed ops; optimize writes; add logs/metrics.
+2. `modules/engines-spark/DeltaSupport.scala` - removed; canonical path is direct Delta API in SparkDataAlgebra.
 
 ## 3) Patch Sketch (pseudo-diffs)
 ```scala

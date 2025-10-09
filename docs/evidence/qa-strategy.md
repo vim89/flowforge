@@ -1,4 +1,4 @@
-# EVIDENCE — QA Strategy and Testing
+# EVIDENCE - QA Strategy and Testing
 
 ## 1) Problem & Constraints
 - **Goal**: Confirm QA layers exist (property/law/integration) and planned perf/security are tracked.

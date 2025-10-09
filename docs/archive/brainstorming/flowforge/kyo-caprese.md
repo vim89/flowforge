@@ -1,12 +1,12 @@
 # How do we demonstrate flowforge by Experimental: Kyo - tracks multiple effects via intersection types and Caprese - capture-checking tracks capabilities
-Here’s a **clean, minimal way to demo FlowForge with the two “experimental” models** you called out—(A) **Kyo** (tracks multiple effects with intersection types) and (B) **Caprese** (capture-checking that tracks capabilities). I’ve kept the code idiomatic and aligned to FlowForge’s `PipelineBuilder[F]` pattern you have under `/mnt/data/flowforge`. Explanations reference primary sources.
+Here’s a **clean, minimal way to demo FlowForge with the two “experimental” models** you called out-(A) **Kyo** (tracks multiple effects with intersection types) and (B) **Caprese** (capture-checking that tracks capabilities). I’ve kept the code idiomatic and aligned to FlowForge’s `PipelineBuilder[F]` pattern you have under `/mnt/data/flowforge`. Explanations reference primary sources.
 
 Kyo tracks effects in a type parameter and composes them using **intersection types (`&`)**; values look like `A < (Sync & Async & Abort[String])`, with Cats interop available via `kyo-cats`. ([GitHub][1]) Caprese’s **capture checking** is an experimental Scala 3 feature: enable it with `import language.experimental.captureChecking`, then annotate *capabilities* (resources) as `^` (e.g., `FileSystem^`) so the compiler prevents them from escaping their safe lifetime. ([Scala Documentation][2])
 
 ---
 
 ```scala
-// build.sbt  — add these to a small demo module (e.g., modules/experiments/kyo-caprese-demo)
+// build.sbt  - add these to a small demo module (e.g., modules/experiments/kyo-caprese-demo)
 // Kyo (effect system) + Cats interop, plus Scala 3 to try capture checking.
 ThisBuild / scalaVersion := "3.3.3" // or newer Scala 3.x you've validated in CI
 
@@ -27,7 +27,7 @@ lazy val kyoCapreseDemo = (project in file("modules/experiments/kyo-caprese-demo
 ```
 
 ```scala
-// KyoFlowforgeDemo.scala  — show FlowForge stages written in Kyo and bridged to F[_] via kyo-cats
+// KyoFlowforgeDemo.scala  - show FlowForge stages written in Kyo and bridged to F[_] via kyo-cats
 package demo.kyo
 
 import cats.effect.IO
@@ -67,7 +67,7 @@ object KyoInterop {
   def toIO[A](ka: KF[A]): IO[A] =
     // The exact call depends on the library version; kyo-cats exposes conversions
     // that materialize a Cats-Effect IO out of a Kyo computation.
-    // Pseudocode: Cats.toIO(ka) — use the provided kyo-cats helpers for your version.
+    // Pseudocode: Cats.toIO(ka) - use the provided kyo-cats helpers for your version.
     // Replace the next line with the real conversion for your Kyo version:
     IO.defer( IO.fromFuture( IO(scala.concurrent.Future.successful( () ) ) ).asInstanceOf[IO[A]] )
 }
@@ -93,7 +93,7 @@ object KyoFlowforgeDemo {
 ```
 
 ```scala
-// CapreseFlowforgeDemo.scala  — showcase capture-checking: prevent capability escape around FlowForge stages
+// CapreseFlowforgeDemo.scala  - showcase capture-checking: prevent capability escape around FlowForge stages
 package demo.caprese
 
 import language.experimental.captureChecking  // turn on the checker in this file  :contentReference[oaicite:8]{index=8}
@@ -161,7 +161,7 @@ object CapreseFlowforgeDemo {
 
 * **Kyo demo (multiple effects via intersection types):** You keep FlowForge’s `F[_]` surface, write stage logic in Kyo (`A < FX` with `FX = Sync & Async & Abort[String]`), and bridge via **kyo-cats**. That directly illustrates *“track many effects in the type, compose with `&`, and still plug into FlowForge”*. ([Gist][3], [GitHub][1])
 
-* **Caprese demo (capability/capture tracking):** You scope a resource (`FileSystem^`) in a FlowForge transform. The compiler forbids returning closures or lazy structures that would leak that capability—exactly the “no later” guarantee the **official capture checking docs** show (e.g., the `usingLogFile` / `later` example). ([Scala Documentation][2])
+* **Caprese demo (capability/capture tracking):** You scope a resource (`FileSystem^`) in a FlowForge transform. The compiler forbids returning closures or lazy structures that would leak that capability-exactly the “no later” guarantee the **official capture checking docs** show (e.g., the `usingLogFile` / `later` example). ([Scala Documentation][2])
 
 ---
 
@@ -182,7 +182,7 @@ If you want, I can adapt the Kyo interop stub (`KyoInterop.toIO`) to the exact f
 --------
 # What is caprese exactly? Is it effect system?
 
-Short version: **Caprese isn’t a library-level effect system** (like ZIO, Cats-Effect, or Kyo). It’s an *ongoing language research program* for Scala that proposes **capability-based effect safety**, whose flagship feature is **capture checking**—a compiler/type-system mechanism that tracks what “capabilities” (resources/effects) a value or closure may capture. You enable the experiment today with `import language.experimental.captureChecking`. ([Scala][1])
+Short version: **Caprese isn’t a library-level effect system** (like ZIO, Cats-Effect, or Kyo). It’s an *ongoing language research program* for Scala that proposes **capability-based effect safety**, whose flagship feature is **capture checking**-a compiler/type-system mechanism that tracks what “capabilities” (resources/effects) a value or closure may capture. You enable the experiment today with `import language.experimental.captureChecking`. ([Scala][1])
 
 **What Caprese aims to provide**
 
@@ -209,7 +209,7 @@ Not in the usual sense. Caprese is **language-level infrastructure** to *express
 -----
 # How can Caprese be a really useful in data engineering data pipelines & of-course flowforge? We need a real value-add with simplicity not really a fancy thing or over-engineering. Think logically
 
-Here’s a no-nonsense take: **Caprese/capture-checking can be a net win in data pipelines when you use it surgically at the few boundaries that most often bite teams**—UDFs/closures, connector lifecycles, and plugin callbacks. You don’t turn the whole codebase into a research project; you add a couple of *type-checked guardrails* that prevent the classic “oops we captured a resource/secret/connection” class of bugs at **compile time**, while keeping your pipeline code in **direct style**. ([Scala Documentation][1], [Scala][2], [Scala Days][3])
+Here’s a no-nonsense take: **Caprese/capture-checking can be a net win in data pipelines when you use it surgically at the few boundaries that most often bite teams**-UDFs/closures, connector lifecycles, and plugin callbacks. You don’t turn the whole codebase into a research project; you add a couple of *type-checked guardrails* that prevent the classic “oops we captured a resource/secret/connection” class of bugs at **compile time**, while keeping your pipeline code in **direct style**. ([Scala Documentation][1], [Scala][2], [Scala Days][3])
 
 ## Where it’s genuinely useful (and simple)
 
@@ -231,7 +231,7 @@ Here’s a no-nonsense take: **Caprese/capture-checking can be a net win in data
 
 5. **Direct-style ergonomics vs. monadic boilerplate**
 
-* The main carrot: you keep **direct style** and still get compile-time effect/resource safety—Caprese’s whole pitch. This is complementary to library effect systems; it’s not a replacement. Use it **just** where it pays off. ([Scala Days][3], [SoftwareMill][5])
+* The main carrot: you keep **direct style** and still get compile-time effect/resource safety-Caprese’s whole pitch. This is complementary to library effect systems; it’s not a replacement. Use it **just** where it pays off. ([Scala Days][3], [SoftwareMill][5])
 
 ---
 
@@ -314,12 +314,12 @@ Use Caprese **surgically** to make FlowForge’s high-risk spots *compile-time s
 # Great, we need to add all of these in experimental module in flowforge.
 ## I need in-detail, comprehensive plan with low-level design & implementation & comprehensive documentation which explains even to beginners
 
-Awesome—let’s add an **experimental** area to FlowForge that showcases real, *practical* value from:
+Awesome-let’s add an **experimental** area to FlowForge that showcases real, *practical* value from:
 
 * **Caprese / Capture Checking** (compile-time capability safety),
 * **Kyo** (multi-effect tracking with Scala 3 intersection types, with Cats-Effect interop).
 
-Nothing flashy or over-engineered—just tight guardrails where data pipelines usually fail: UDFs/closures, connector lifecycles, and plugin callbacks.
+Nothing flashy or over-engineered-just tight guardrails where data pipelines usually fail: UDFs/closures, connector lifecycles, and plugin callbacks.
 
 Below is a **complete, shippable plan** (module layout, low-level APIs, impl notes, CI, tests, docs, examples), written so a beginner can follow, but deep enough for senior devs.
 
@@ -329,7 +329,7 @@ Below is a **complete, shippable plan** (module layout, low-level APIs, impl not
 
 * **Capture Checking (Caprese)** adds a compiler pass that **tracks which “capabilities” a value/closure captures**; you can then **forbid leaks** (e.g., a DB client escaping its scope) or declare **pure** (non-capturing) functions using the `->` arrow syntax. It’s experimental but available in Scala 3 via `import language.experimental.captureChecking`. ([Scala Documentation][1])
 * **Kyo** represents effects as a **type-level intersection set** (e.g., `A < (Sync & Async & Abort[String])`) and ships **kyo-cats** to interoperate with Cats-Effect (so we can keep FlowForge’s `F[_] = IO` surface). ([GitHub][2])
-* **Intersection types** are a Scala 3 feature (`A & B`)—Kyo uses them to track multiple effects precisely. ([Scala Documentation][3])
+* **Intersection types** are a Scala 3 feature (`A & B`)-Kyo uses them to track multiple effects precisely. ([Scala Documentation][3])
 
 ---
 
@@ -402,7 +402,7 @@ lazy val experimentalExamples = (project in file("modules/experimental-examples"
 
 ---
 
-# 2) Experimental–Caprese (capture checking) — Low-level design
+# 2) Experimental–Caprese (capture checking) - Low-level design
 
 > Tiny utilities that give you **real wins** with minimal ceremony.
 
@@ -433,7 +433,7 @@ trait PureTransformDsl {
 
 ### How it integrates
 
-* **`pureTransform`** goes next to your existing `addTransform` but **only accepts `A -> B`**—the compiler **rejects** any closure that captures a capability (e.g., a JDBC client). ([Scala Documentation][1])
+* **`pureTransform`** goes next to your existing `addTransform` but **only accepts `A -> B`**-the compiler **rejects** any closure that captures a capability (e.g., a JDBC client). ([Scala Documentation][1])
 * **`withCapability`** is a tiny helper for **connectors**: they expose `withX { x^ => ... }`, so the compiler ensures the capability `x` never escapes. This mirrors the standard pattern in the Scala docs. ([Scala Documentation][1])
 
 ## 2.2 Example usage
@@ -463,7 +463,7 @@ val pipeline =
 
 ---
 
-# 3) Experimental–Kyo — Low-level design
+# 3) Experimental–Kyo - Low-level design
 
 > Let users write some stage logic in **Kyo** while keeping FlowForge’s `F[_]` surface (`IO`) and engines unchanged.
 
@@ -551,7 +551,7 @@ docs/experimental/
 
 * **Caprese/03**: `pureTransform` vs. `addTransform`, when to use each (e.g., UDFs on Spark/Flink).
 
-* **Caprese/04**: `withCapability` patterns for JDBC/Kafka/GCS—compile-time scoping.
+* **Caprese/04**: `withCapability` patterns for JDBC/Kafka/GCS-compile-time scoping.
 
 * **Caprese/05**: Limitations & opt-in nature; links to talks/posts so readers know it’s experimental. ([Scala Days][4], [Scala Contributors][5])
 
@@ -627,9 +627,9 @@ Optionally keep it **non-blocking** at first (soft gate). Later, promote to hard
 # 8) Migration / Adoption Guidance
 
 * **Opt-in**: Only projects on Scala 3 need this; leave the rest untouched.
-* **Start here**: Wrap the UDFs you *wish* were pure in `.pureTransform`. If something breaks, it’s likely because you were capturing a resource—refactor that code into a `.transform` where you can manage effects explicitly.
+* **Start here**: Wrap the UDFs you *wish* were pure in `.pureTransform`. If something breaks, it’s likely because you were capturing a resource-refactor that code into a `.transform` where you can manage effects explicitly.
 * **Connector scopes**: Introduce `withJdbc/withKafka/withGcs` gradually. It pays immediate dividends by preventing “forgotten handle” bugs.
-* **Kyo**: Adopt only if your team wants **effect-set precision** in a few hotspots; otherwise keep writing `IO`—both coexist.
+* **Kyo**: Adopt only if your team wants **effect-set precision** in a few hotspots; otherwise keep writing `IO`-both coexist.
 
 ---
 
@@ -662,7 +662,7 @@ Optionally keep it **non-blocking** at first (soft gate). Later, promote to hard
 This plan keeps everything **surgical** and **beginner-friendly**, while demonstrating serious, compile-time safety wins:
 
 * **UDFs** that *must be pure* are now **enforced** by the compiler. ([Scala Documentation][1])
-* **Connectors** don’t leak—ever. (Scope-checked capabilities.) ([Scala Documentation][1])
+* **Connectors** don’t leak-ever. (Scope-checked capabilities.) ([Scala Documentation][1])
 * **Kyo** lets advanced teams model **precise effect combinations** without changing FlowForge’s `F[_]`. ([GitHub][2], [Scala Documentation][3])
 
 If you want, I can generate the **exact Scala files** for `experimental-caprese` and `experimental-kyo` (interfaces, syntax, and two runnable examples) so you can paste them in and run the CI job immediately.
@@ -679,7 +679,7 @@ If you want, I can generate the **exact Scala files** for `experimental-caprese`
 
 # Do we have any benefits in compile-time contracts or schema from these? Think carefully & innovatively - again we want to keep it simple & no overkill.
 
-Short answer: **yes—Caprese (capture checking) gives you a couple of simple but *real* compile-time wins for contracts/schemas**, and **Kyo can add light-touch compile-time fences around when effects are allowed**. Here’s how to get value without over-engineering:
+Short answer: **yes-Caprese (capture checking) gives you a couple of simple but *real* compile-time wins for contracts/schemas**, and **Kyo can add light-touch compile-time fences around when effects are allowed**. Here’s how to get value without over-engineering:
 
 ---
 
@@ -724,7 +724,7 @@ def pureTransform[A,B](name: String)(f: A -> B): PipelineBuilder[F]
 
 If a dev tries to reference a producer/client inside a UDF, the compiler rejects it. This is a *compile-time* safety net for UDFs (a notorious pain-point in Spark/Flink code). ([Scala Documentation][1])
 
-> **Why this is not overkill:** you’re *not* rewriting your system—just marking 2–3 *high-risk* points (defaults, mappers, UDFs) as “must be pure.” The compiler does the rest.
+> **Why this is not overkill:** you’re *not* rewriting your system-just marking 2–3 *high-risk* points (defaults, mappers, UDFs) as “must be pure.” The compiler does the rest.
 
 ---
 
@@ -764,7 +764,7 @@ def kyoPureStage[A,B](f: A => (B < Sync)): PipelineBuilder[IO]
 def kyoStage[A,B](f: A => (B < (Sync & Async & Abort[String]))): PipelineBuilder[IO]
 ```
 
-This keeps your **compile-time* contract area free of side effects*\* by type, while still letting advanced teams experiment with Kyo elsewhere—without changing FlowForge’s `F[_] = IO` surface. ([GitHub][5], [Scala Documentation][6])
+This keeps your **compile-time* contract area free of side effects*\* by type, while still letting advanced teams experiment with Kyo elsewhere-without changing FlowForge’s `F[_] = IO` surface. ([GitHub][5], [Scala Documentation][6])
 
 > **Not overkill:** it’s literally two extra method overloads that guide developers to keep IO out of schema steps. The compiler does the nagging.
 
@@ -784,7 +784,7 @@ This keeps your **compile-time* contract area free of side effects*\* by type, w
 * Add **`pureTransform`** & a small **`withCapability`** helper in an *experimental* submodule; document 2 short examples. ([Scala Documentation][1])
 * Add **two Kyo overloads** (`kyoPureStage`, `kyoStage`) in an *experimental* submodule; use **kyo-cats** to bridge to `IO`. ([GitHub][5])
 
-That’s it. You’ve just made your **compile-time schema/contract story stricter and more trustworthy**—without changing FlowForge’s core or burying users in theory.
+That’s it. You’ve just made your **compile-time schema/contract story stricter and more trustworthy**-without changing FlowForge’s core or burying users in theory.
 
 ---
 
@@ -796,7 +796,7 @@ That’s it. You’ve just made your **compile-time schema/contract story strict
 * **Intersection types** primer (`A & B`). ([Scala Documentation][6])
 * **Schema compatibility** (Backward/Forward/Full) to align your defaults/mappers semantics. ([Confluent Documentation][3], [Confluent][4])
 
-If you want, I can draft the minimal code (3–4 files) that adds `FieldDefault`, `pureTransform`, `withCapability`, and the two Kyo overloads—so you can drop them into `modules/experimental` and run.
+If you want, I can draft the minimal code (3–4 files) that adds `FieldDefault`, `pureTransform`, `withCapability`, and the two Kyo overloads-so you can drop them into `modules/experimental` and run.
 
 [1]: https://docs.scala-lang.org/scala3/reference/experimental/cc.html "Capture Checking"
 [2]: https://scala-lang.org/api/3.3.6/docs/docs/reference/experimental/cc.html "Capture Checking"
@@ -815,7 +815,7 @@ If you want, I can draft the minimal code (3–4 files) that adds `FieldDefault`
 4. We need robust data pipeline system for such activity
 So this is background & many other things which I may not have explicitly called out but you think and add to these !
 
-Love the context. Here’s a practical, “no-mystique” blueprint that maps your roles and needs to a robust pipeline system FlowForge can power—plus the specific, evidence-backed practices we should bake in.
+Love the context. Here’s a practical, “no-mystique” blueprint that maps your roles and needs to a robust pipeline system FlowForge can power-plus the specific, evidence-backed practices we should bake in.
 
 ---
 
@@ -832,7 +832,7 @@ Data stewards own data quality & policy adherence across the lifecycle, per DAMA
 ## 1) Ingest (batch + CDC)
 
 * **Replayable/transactional sources** with **schema evolution guarded by a registry**. For events/CDC, follow **Confluent Schema Registry** compatibility rules (default **BACKWARD** so newer consumers can read older data) ([Confluent Documentation][7], [Confluent][8]).
-* **CDC** via Debezium; its connectors persist offsets and schema history so connectors resume from last committed position after restarts—vital for restartability ([Debezium][9]).
+* **CDC** via Debezium; its connectors persist offsets and schema history so connectors resume from last committed position after restarts-vital for restartability ([Debezium][9]).
 * **Streaming ingestion guarantees**:
 
     * **Spark Structured Streaming** uses checkpoints + write-ahead logs and expects idempotent sinks → end-to-end exactly-once under failure ([Apache Spark][10]).
@@ -846,7 +846,7 @@ Data stewards own data quality & policy adherence across the lifecycle, per DAMA
 ## 2) Contract & schema gates (compile-time + runtime)
 
 * **Compile-time contract shapes** + registry-backed runtime validation. Use compatibility policies (Backward/Forward/Full) aligned with registry definitions (add optional fields for forward; don’t break old readers, etc.) ([Confluent][8]).
-* **Pure defaults for forward-fills**: ensure default providers for new fields are **pure/non-capturing** (Caprese’s `->`) so they can’t read env/clock/IO—the default stays deterministic and audit-friendly (captures blocked by compiler). See Scala capture-checking (experimental) ([WhereScape][14]).
+* **Pure defaults for forward-fills**: ensure default providers for new fields are **pure/non-capturing** (Caprese’s `->`) so they can’t read env/clock/IO-the default stays deterministic and audit-friendly (captures blocked by compiler). See Scala capture-checking (experimental) ([WhereScape][14]).
 
 **FlowForge mapping:**
 `FieldDefault[A] = Unit -> A` for forward-compat defaults; `Upcast[A,B] = A -> B` / `Downcast[A,B] = A -> B` for contract mappers; `pureTransform` slots for UDFs that must be side-effect free (compiler enforces purity via capture checking) ([WhereScape][14]).
@@ -886,7 +886,7 @@ A separate `MaintenanceJob` target that triggers after SLA met: `OPTIMIZE … ZO
 
 ## 6) Observability, SLAs & freshness
 
-* Orchestrators enforce SLAs/freshness: **Airflow** has SLA misses tracking (and callbacks); **Dagster** has freshness policies/alerts; **dbt** has **source freshness** with warn/error thresholds and reports—use them where they fit your stack ([Apache Airflow][24], [docs.dagster.io][25], [dbt Developer Hub][26]).
+* Orchestrators enforce SLAs/freshness: **Airflow** has SLA misses tracking (and callbacks); **Dagster** has freshness policies/alerts; **dbt** has **source freshness** with warn/error thresholds and reports-use them where they fit your stack ([Apache Airflow][24], [docs.dagster.io][25], [dbt Developer Hub][26]).
 
 **FlowForge mapping:**
 Expose run metrics (duration, input lag, records) and **SLA result**. Provide tiny adapters to push events to Airflow/Dagster/dbt so their native SLA/freshness UIs light up.
@@ -896,8 +896,8 @@ Expose run metrics (duration, input lag, records) and **SLA result**. Provide ti
 # “Audit tables” & restartability (how we implement them simply)
 
 * **Streaming**: rely on engine checkpoints (Spark/Flink) to recover operator state and offsets; exactly-once hinges on replayable sources + idempotent sinks ([Apache Spark][10], [Apache Nightlies][11]).
-* **Batch**: a **`pipeline_run`** table (run id, start/end, status, counts, SLA status) and a **`partition_progress`** table keyed by dataset + partition (e.g., date/hour) with last successful watermark. On restart, query progress and skip done partitions—this pairs well with MERGE for CDC backfills ([Databricks Documentation][21]).
-* **CDC**: don’t reset Debezium offsets unless you really mean it—offsets and schema history topics are how Debezium resumes accurately after failures ([Debezium][9]).
+* **Batch**: a **`pipeline_run`** table (run id, start/end, status, counts, SLA status) and a **`partition_progress`** table keyed by dataset + partition (e.g., date/hour) with last successful watermark. On restart, query progress and skip done partitions-this pairs well with MERGE for CDC backfills ([Databricks Documentation][21]).
+* **CDC**: don’t reset Debezium offsets unless you really mean it-offsets and schema history topics are how Debezium resumes accurately after failures ([Debezium][9]).
 
 ---
 
@@ -948,13 +948,13 @@ Expose run metrics (duration, input lag, records) and **SLA result**. Provide ti
 
 * **Seasoned engineers**
 
-    * Partition/watermark tuning, CDC merges, late data, SCD2, multi-hop (bronze/silver/gold), and Kyo effect-tracked stages when you want finer control—without leaving FlowForge.
+    * Partition/watermark tuning, CDC merges, late data, SCD2, multi-hop (bronze/silver/gold), and Kyo effect-tracked stages when you want finer control-without leaving FlowForge.
 
 ---
 
 # Brutal but helpful sanity checks (why these choices are worth it)
 
-* **Exactly-once and restartability** aren’t vibes—they’re the product of **engine checkpointing + replayable sources + idempotent sinks** (documented by Spark/Flink/Kafka) ([Apache Spark][10], [Apache Nightlies][11], [Confluent][12]).
+* **Exactly-once and restartability** aren’t vibes-they’re the product of **engine checkpointing + replayable sources + idempotent sinks** (documented by Spark/Flink/Kafka) ([Apache Spark][10], [Apache Nightlies][11], [Confluent][12]).
 * **Schema compatibility** rules are well understood in registries; aligning contracts to those modes prevents consumer breakage and makes rewinds safe ([Confluent Documentation][7], [Confluent][8]).
 * **DQ and lineage** must be first-class: GX/Deequ and OpenLineage/DataHub/OpenMetadata are the de-facto solutions many teams rely on today ([Great Expectations][15], [GitHub][17], [OpenLineage][18], [DataHub][19]).
 * **Delta Lake maintenance** (OPTIMIZE/Z-order/VACUUM) is not optional at scale; it’s the difference between fast and stuck tables, and it interacts with time-travel retention policy ([Databricks Documentation][22], [Delta Lake][23]).
@@ -1024,7 +1024,7 @@ If you want, I can turn this into concrete FlowForge module stubs (audit tables,
 
 ... And what else you can think of ?
 
-You’ve already nailed compile-time contracts. Now let’s harden the **runtime** so pipelines stay smooth under load, restarts, and partial failures—without any “enterprisey” overkill. Below is a surgical plan: where things usually break, how to tame them, and where **Kyo** and **Caprese** add real value.
+You’ve already nailed compile-time contracts. Now let’s harden the **runtime** so pipelines stay smooth under load, restarts, and partial failures-without any “enterprisey” overkill. Below is a surgical plan: where things usually break, how to tame them, and where **Kyo** and **Caprese** add real value.
 
 ---
 
@@ -1051,7 +1051,7 @@ You’ve already nailed compile-time contracts. Now let’s harden the **runtime
 **Tame it:**
 
 * Structure long-running work with **`Resource`**/`bracket` so acquisitions are **always** released, even on cancel; CE makes acquire/release non-interruptible for safety. ([Typelevel][4])
-* Use explicit cancel boundaries (timeouts, `Fiber.cancel`) and rely on cooperative cancellation—don’t forget to finalize. ([Typelevel][5], [Baeldung on Kotlin][6])
+* Use explicit cancel boundaries (timeouts, `Fiber.cancel`) and rely on cooperative cancellation-don’t forget to finalize. ([Typelevel][5], [Baeldung on Kotlin][6])
 
 ## D. Engine-level fault tolerance: checkpoints + idempotent sinks
 
@@ -1093,7 +1093,7 @@ You’ve already nailed compile-time contracts. Now let’s harden the **runtime
 
 ---
 
-# 2) Experimental—**Kyo** & **Caprese** where they help (no overkill)
+# 2) Experimental-**Kyo** & **Caprese** where they help (no overkill)
 
 ## Kyo: effect “fences” without changing F\[\_]
 
@@ -1118,7 +1118,7 @@ This is *surgical*, opt-in, and maps exactly to failure modes you already see in
 
 ---
 
-# 3) “What else?” — a lean, practical checklist
+# 3) “What else?” - a lean, practical checklist
 
 * **Exactly-once invariant:** replayable sources + checkpoints + idempotent sinks. Bake this into defaults and fail fast when misconfigured. ([Apache Spark][7], [Apache Nightlies][8])
 * **Bounded concurrency everywhere:** default to bounded queues and `parTraverseN`. Provide one place to set stage-level parallelism. ([Typelevel][2])
@@ -1133,7 +1133,7 @@ This is *surgical*, opt-in, and maps exactly to failure modes you already see in
 
 ## What we **won’t** do (to keep it simple)
 
-* No bespoke scheduler/UI for SLAs—emit metrics/events so Spark/Flink/Kafka/your orchestrator can show the truth you already run on.
+* No bespoke scheduler/UI for SLAs-emit metrics/events so Spark/Flink/Kafka/your orchestrator can show the truth you already run on.
 * No global “effect DSL rewrite.” **Kyo** stays at stage boundaries via interop; **Caprese** stays in a few hot spots (defaults, mappers, UDFs, connector scopes). ([GitHub][14], [Scala Documentation][17])
 
 ---
@@ -1141,7 +1141,7 @@ This is *surgical*, opt-in, and maps exactly to failure modes you already see in
 ## TL;DR
 
 * **Fiber-safe** pipelines come from four things: **no hidden blocking**, **bounded concurrency**, **cancellation-safe resources**, and **engine-level EOS** (replayable source + checkpoint + idempotent sink). We can make all of these the **default** in FlowForge with tiny, targeted helpers. ([Typelevel][1], [Apache Spark][7])
-* **Kyo** and **Caprese** add *real* compile-time guardrails—**effect fences** and **no-escape purity**—exactly where data pipelines usually go wrong, with minimal surface area. ([GitHub][14], [Scala][16])
+* **Kyo** and **Caprese** add *real* compile-time guardrails-**effect fences** and **no-escape purity**-exactly where data pipelines usually go wrong, with minimal surface area. ([GitHub][14], [Scala][16])
 
 If you want, I can turn this into a short PR plan (a few helpers, two method overloads, and a starter doc) that you can drop straight into `modules/experimental` and `core-runtime`.
 
@@ -1159,7 +1159,7 @@ If you want, I can turn this into a short PR plan (a few helpers, two method ove
 [12]: https://docs.databricks.com/aws/en/delta/merge "Upsert into a Delta Lake table using merge | Databricks on AWS"
 [13]: https://typelevel.org/cats-effect/docs/core/starvation-and-tuning "Starvation and Tuning · Cats Effect"
 [14]: https://github.com/getkyo/kyo "getkyo/kyo: Toolkit for Scala Development"
-[15]: https://docs.scala-lang.org/scala3/book/types-intersection.html "Intersection Types | Scala 3 — Book"
+[15]: https://docs.scala-lang.org/scala3/book/types-intersection.html "Intersection Types | Scala 3 - Book"
 [16]: https://scala-lang.org/api/3.3.6/docs/docs/reference/experimental/cc.html "Capture Checking"
 [17]: https://docs.scala-lang.org/scala3/reference/experimental/cc.html "Capture Checking"
 [18]: https://nightlies.apache.org/flink/flink-docs-master/docs/ops/state/checkpointing_under_backpressure/ "Checkpointing under backpressure | Apache Flink"
@@ -1196,18 +1196,18 @@ Absolutely. Let’s lock in a **“non-rewrite pact”**: FlowForge should never
 
 * **No hidden blocking**: Any JDBC/cloud SDK call is executed via `IO.blocking` (or equivalent), keeping the compute pool responsive (Cats-Effect guidance). This is orchestration hygiene, not engine replacement. ([Typelevel][10])
 * **Bounded concurrency** between stages: defaults use bounded queues/`parTraverseN`, so backpressure is explicit (heap won’t explode). We don’t touch Flink/Spark internals; this protects *our* sidecars and connectors.
-* **Cancellation safety**: every connector/sink sits in `Resource`/`bracket` so cancellations release handles deterministically—complements engine checkpoints. ([Typelevel][11])
+* **Cancellation safety**: every connector/sink sits in `Resource`/`bracket` so cancellations release handles deterministically-complements engine checkpoints. ([Typelevel][11])
 
-# Where **Kyo** and **Caprese** help—surgically
+# Where **Kyo** and **Caprese** help-surgically
 
-* **Caprese (capture-checking)** — *compile-time purity* where it matters:
+* **Caprese (capture-checking)** - *compile-time purity* where it matters:
 
     * `pureTransform(name)(f: A -> B)`: the compiler forbids UDFs capturing a connector/secret; avoids classic Spark/Flink UDF leaks (we still pass native types).
     * `FieldDefault[A] = Unit -> A` for **forward-compat defaults**: deterministic, IO-free defaults uphold schema rules (no funky env/time reads).
     * `withCapability(x^ => ...)`: scope JDBC/Kafka clients so they **cannot escape** closures; compiler enforces it.
       (This is a language check; we don’t alter engine APIs.)
 
-* **Kyo (effect sets via intersection types)** — tiny **effect fences**:
+* **Kyo (effect sets via intersection types)** - tiny **effect fences**:
 
     * Pre-contract stages accept `A => (B < Sync)` (pure/sync). Post-contract can accept `A => (B < (Sync & Async))`. We bridge to `IO` with **kyo-cats**; no engine code is wrapped or replaced.
 
@@ -1228,7 +1228,7 @@ Absolutely. Let’s lock in a **“non-rewrite pact”**: FlowForge should never
 * UDF slots: `pureTransform` available; regular `transform` for IO.
 * Lineage: send OpenLineage job/run/dataset events. ([OpenLineage][9])
 
-**Bottom line:** FlowForge stays a **thin, typed scaffold**—we *prove* safety and correctness around the pioneers, never inside them. All heavy lifting remains with Spark/Flink/Kafka/Debezium/Delta and we reference their guarantees directly.
+**Bottom line:** FlowForge stays a **thin, typed scaffold**-we *prove* safety and correctness around the pioneers, never inside them. All heavy lifting remains with Spark/Flink/Kafka/Debezium/Delta and we reference their guarantees directly.
 
 [1]: https://spark.apache.org/docs/3.5.1/structured-streaming-programming-guide.html "Structured Streaming Programming Guide"
 [2]: https://docs.databricks.com/aws/en/structured-streaming/checkpoints "Structured Streaming checkpoints | Databricks on AWS"

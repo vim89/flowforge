@@ -1,4 +1,4 @@
-# ADR-021: FlowForge Audit logging — Effect-agnostic, portable, tamper‑evident
+# ADR-021: FlowForge Audit logging - Effect-agnostic, portable, tamper‑evident
 
 Status: Accepted
 
@@ -32,25 +32,25 @@ Adopt a core audit event model and a minimal SPI with pluggable sinks. Provide r
 ## Core model (stable)
 
 ### AuditEvent (immutable, append‑only)
-- `id: UUID` — event ID (unique). Used for idempotency/dedup.
-- `chainId: UUID` — logical sequence/session (e.g., pipeline run or job session). Used for hash chain continuity.
-- `occurredAt: Instant` — UTC timestamp when the event occurred (not when persisted).
-- `actor: String` — service/user/role identity (e.g., `ff-pipeline-runner`, `ops-user@corp`).
-- `engine: String` — `spark`, `flink`, `none`, etc.
-- `source: String` — module/component emitting (`PipelineExecution`, `DataAlgebra`, `DQ`, `CDC`).
-- `correlationId: String` — pipeline/job/run correlation (e.g., runId, jobId).
-- `subject: Json` — structured description of the thing acted on (dataset, sink, contract, topic/partition, table/partition, window, etc.).
-- `action: String` — event type. Canonical set (non‑exhaustive, extensible):
+- `id: UUID` - event ID (unique). Used for idempotency/dedup.
+- `chainId: UUID` - logical sequence/session (e.g., pipeline run or job session). Used for hash chain continuity.
+- `occurredAt: Instant` - UTC timestamp when the event occurred (not when persisted).
+- `actor: String` - service/user/role identity (e.g., `ff-pipeline-runner`, `ops-user@corp`).
+- `engine: String` - `spark`, `flink`, `none`, etc.
+- `source: String` - module/component emitting (`PipelineExecution`, `DataAlgebra`, `DQ`, `CDC`).
+- `correlationId: String` - pipeline/job/run correlation (e.g., runId, jobId).
+- `subject: Json` - structured description of the thing acted on (dataset, sink, contract, topic/partition, table/partition, window, etc.).
+- `action: String` - event type. Canonical set (non‑exhaustive, extensible):
   - Pipeline: `pipeline_started`, `pipeline_completed`, `pipeline_failed`, `batch_open`, `batch_close`.
   - IO: `read_started`, `read_completed`, `write_started`, `write_completed`.
   - DQ/Contracts: `quality_checked`, `contract_validated`.
   - CDC: `offset_committed`, `checkpoint_saved`.
-- `outcome: String` — `success` | `failure` | `skipped`.
-- `severity: String` — `Info` | `Warning` | `Error`.
-- `details: Json` — event‑specific payload:
+- `outcome: String` - `success` | `failure` | `skipped`.
+- `severity: String` - `Info` | `Warning` | `Error`.
+- `details: Json` - event‑specific payload:
   - Common keys (conventions): `records_read`, `records_written`, `duration_ms`, `dq_score`, `violations` (array with `{constraint, count, severity}`), `topic`, `partition`, `offset`, `window_start`, `window_end`, `idempotency_key`, `watermark_at`, `metrics` (freeform map), `error` (on failures).
-- `prevHash: HexString(64)` — hash of previous event in the same `chainId` (or genesis constant for the first event).
-- `hash:  HexString(64)` — hash of this event’s canonical encoding (including `prevHash`).
+- `prevHash: HexString(64)` - hash of previous event in the same `chainId` (or genesis constant for the first event).
+- `hash:  HexString(64)` - hash of this event’s canonical encoding (including `prevHash`).
 
 Notes:
 - Hash algorithm: SHA‑256 over canonical JSON encoding (UTF‑8). Canonicalization: sorted object keys; no insignificant whitespace; fixed number/string representations.
@@ -288,7 +288,7 @@ Sprint B
 ## Unresolved / future work
 
 - Pluggable signature providers for digests (HSM/KMS).
-- Multi‑tenant isolation guidelines (per‑tenant schema vs RLS) — documented in runbook when tenancy lands.
+- Multi‑tenant isolation guidelines (per‑tenant schema vs RLS) - documented in runbook when tenancy lands.
 - Schema evolution for `details` conventions: publish JSON Schemas per `action` for stricter validation (optional).
 
 
@@ -319,7 +319,7 @@ Core model (stable, effect‑agnostic)
     - correlationId (pipeline/job/run), subject (dataset/sink/contract)
     - action (pipeline_started/completed/failed, read_started/completed, write_started/completed, quality_checked, offset_committed, checkpoint_saved, batch_open/close)
     - outcome (success/failure), severity (Info/Warning/Error)
-    - details (Map[String, AnyJson]) — event‑specific payload (records, partitions, offsets, constraints, metrics)
+    - details (Map[String, AnyJson]) - event‑specific payload (records, partitions, offsets, constraints, metrics)
     - prevHash, hash (tamper‑evidence)
 - Auxiliary, normalized facts (all optional; used by JDBC/reporting):
     - Run: run_id, pipeline, engine, started_at, completed_at, status, metrics JSON
@@ -331,11 +331,11 @@ Core model (stable, effect‑agnostic)
 
 SPI & algebra (BYO sink)
 
-- AuditSink[F] — low‑level sink interface (bring your own DB/table)
+- AuditSink[F] - low‑level sink interface (bring your own DB/table)
     - writeEncoded(batch: List[EncodedAuditEvent]): F[Unit]
     - rollInterval(key: IntervalKey): F[Unit]  // optional
     - readRange(q: VerifyQuery): Stream[F, EncodedAuditEvent] // optional (for verifiers)
-- AuditAlgebra[F] — main entry points (our API)
+- AuditAlgebra[F] - main entry points (our API)
     - append(e: AuditEvent): F[Unit], appendBatch(es): F[Unit]
     - checkpoint(): F[Unit]
     - verify(q: VerifyQuery): F[AuditVerification]
@@ -527,5 +527,5 @@ Next steps -
 - Scaffold modules: audit-core and audit-file (types, hash chain, JSONL writer, digest writer, simple verifier).
 - Wire hooks under ff.audit.enabled in PipelineExecution and DataAlgebra edges.
 - Provide an example + demo verifier CLI.
-- Add docs: “Audit Reporting 101” showing SQL views/materialized views for L1/L2 dashboards—pipeline success rates, DQ failures, throughput, top offsets/checkpoints,
+- Add docs: “Audit Reporting 101” showing SQL views/materialized views for L1/L2 dashboards-pipeline success rates, DQ failures, throughput, top offsets/checkpoints,
   restart summaries.

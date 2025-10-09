@@ -1,4 +1,4 @@
-# Compile-Time Contracts Diagrams — Guide
+# Compile-Time Contracts Diagrams - Guide
 
 How to read these diagrams (junior-friendly)
 
@@ -20,8 +20,8 @@ Glossary
 Design patterns and principles
 
 - Strategy/Bridge: Derivation facade chooses backend (Magnolia vs Mirrors) transparently.
-- Typeclass pattern: SchemaConforms is a typeclass — no runtime registry; the compiler builds it for you.
-- ADTs: SchemaPolicy and SchemaAST are sealed trait hierarchies — explicit and safe.
+- Typeclass pattern: SchemaConforms is a typeclass - no runtime registry; the compiler builds it for you.
+- ADTs: SchemaPolicy and SchemaAST are sealed trait hierarchies - explicit and safe.
 - Typestate/Phantom Builder: PipelineBuilder enforces stage ordering at compile time (build only when complete).
 - Functional error model: compile-time failures; optional runtime data quality uses ValidatedNel.
 - SOLID highlights:

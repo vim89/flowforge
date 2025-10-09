@@ -1,4 +1,4 @@
-# PLAN — Typed Contract Pipelines Example
+# PLAN - Typed Contract Pipelines Example
 
 ## 1) Scope (Minimal Viable Change)
 - **Goal**: Add a minimal typed example + test using core-only typed path.
@@ -6,7 +6,7 @@
 
 ## 2) Files to Touch (exact)
 1. `modules/examples/src/main/scala/.../TypedContractsDemo.scala`
-2. `modules/core/src/test/scala/.../TypedContractsCompileSpec.scala` — negative compile test (schema drift) if feasible, else runtime assertion on witness resolution.
+2. `modules/core/src/test/scala/.../TypedContractsCompileSpec.scala` - negative compile test (schema drift) if feasible, else runtime assertion on witness resolution.
 
 ## 3) Patch Sketch (pseudo-diffs)
 ```scala

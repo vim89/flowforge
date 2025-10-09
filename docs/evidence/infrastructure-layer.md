@@ -1,4 +1,4 @@
-# EVIDENCE — Infrastructure Layer
+# EVIDENCE - Infrastructure Layer
 
 ## 1) Problem & Constraints
 - **Goal**: Validate infra layer services exist and are wired (config, logging, metrics, tracing, resource safety, testing harness).

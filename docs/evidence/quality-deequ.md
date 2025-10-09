@@ -1,4 +1,4 @@
-# EVIDENCE — Quality and Deequ Adapter MVP (Status: Implemented)
+# EVIDENCE - Quality and Deequ Adapter MVP (Status: Implemented)
 
 ## 1) Problem & Constraints
 - **Goal**: Validate a minimal Deequ adapter to back our DQ claims end-to-end.
@@ -21,8 +21,8 @@
 - Unit test added: `DeequAdapterSpec.scala` spins local Spark and verifies pass/fail scenarios.
 
 ## 3) Prior Art & Sources
-- ADR-005 — Quality and Deequ Adapter MVP.
-- QA_PLAN.md (archived) — testing strategy.
+- ADR-005 - Quality and Deequ Adapter MVP.
+- QA_PLAN.md (archived) - testing strategy.
 
 ## 4) Options & Trade-offs
 | Option | Pros | Cons | Why |

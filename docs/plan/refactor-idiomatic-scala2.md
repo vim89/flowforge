@@ -155,11 +155,11 @@ Acceptance: CI remains green; developer docs discoverable.
 - Each wave is a shippable PR; revertible by PR if needed.
 
 ## 10) Timeline & PR Breakdown
-- Wave A: Mechanical (1 day) — single PR
-- Wave B/C: Core + Spark (2–3 days) — 2 PRs
-- Wave D/E: Connectors + CLIs/Examples (1–2 days) — 2 PRs
-- Wave F: Flink polish (0.5 day) — 1 PR
-- Wave G: Docs/CI (0.5 day) — 1 PR
+- Wave A: Mechanical (1 day) - single PR
+- Wave B/C: Core + Spark (2–3 days) - 2 PRs
+- Wave D/E: Connectors + CLIs/Examples (1–2 days) - 2 PRs
+- Wave F: Flink polish (0.5 day) - 1 PR
+- Wave G: Docs/CI (0.5 day) - 1 PR
 
 Total: ~5 working days, ~7 small PRs. Repo stays green throughout.
 

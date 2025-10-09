@@ -1,4 +1,4 @@
-# ADR 021 — Contracts Source of Truth and Codegen (g8 + CI, no avro4s/avrohugger at build)
+# ADR 021 - Contracts Source of Truth and Codegen (g8 + CI, no avro4s/avrohugger at build)
 
 - Status: Accepted
 - Date: 2025-09-05
@@ -15,7 +15,7 @@ Earlier designs proposed avro4s or sbt‑avrohugger. We now prefer a CI‑first 
 - Source of Truth: GitHub Actions Form inputs (domain, entity, fields, nullability, metadata, version, policy).
 - Code artifacts generated in CI (single step):
   - Scala case classes per entity under a contracts SDK module/repo.
-  - Avro schemas (Avro JSON `.avsc`) for cross‑language interoperability — optional, controlled via a CI flag (see Toggle below).
+  - Avro schemas (Avro JSON `.avsc`) for cross‑language interoperability - optional, controlled via a CI flag (see Toggle below).
 - Tools:
   - giter8: to template case classes and companion boilerplate non‑interactively in CI using Form inputs.
   - A tiny CI script/action to render `.avsc` from Form inputs (field list → Avro JSON) without relying on avro4s/avrohugger at build time (can be disabled via a flag).
@@ -59,8 +59,8 @@ Earlier designs proposed avro4s or sbt‑avrohugger. We now prefer a CI‑first 
 - Consumers: update docs to depend on published SDK JAR; adopt CI validation‑cli with `.avsc`.
 
 ## References
-- ADR‑010 (Contracts Authoring & Operating Model) — updated to Forms + CI publisher.
-- ADR‑011 (CI-first compile/build gates) — authoritative physical gates; no sbt plugin.
+- ADR‑010 (Contracts Authoring & Operating Model) - updated to Forms + CI publisher.
+- ADR‑011 (CI-first compile/build gates) - authoritative physical gates; no sbt plugin.
 - Toggle (.avsc generation):
   - Expose a `generateAvsc` boolean in GitHub Actions Forms (or use a repo variable `FF_GENERATE_AVSC`).
   - When false, CI skips `.avsc` generation; typed compile gates still work for Scala consumers, and validation-cli can validate against Spark JSON canonicalization instead.

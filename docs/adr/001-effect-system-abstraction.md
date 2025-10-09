@@ -1,5 +1,5 @@
 ```markdown
-# ADR 001 — Unified Effect System Abstraction (EffectSystem[F[_]])
+# ADR 001 - Unified Effect System Abstraction (EffectSystem[F[_]])
 
 - Status: Accepted
 - Date: 2025-09-04
@@ -32,7 +32,7 @@ We require a unified abstraction over effect systems to support IO boundaries, r
 
 ## Milestones
 - M1: IO/ZIO instances audited with law/property tests (present).
-- M2: Leaf modules depend on `EffectSystem[F]` only (no direct IO/ZIO)—see Evidence and Plan.
+- M2: Leaf modules depend on `EffectSystem[F]` only (no direct IO/ZIO)-see Evidence and Plan.
 - M3: Observability and resource-safety wired at IO boundaries (see ADR-007, ADR-013).
 
 ## Open Questions

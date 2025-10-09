@@ -1,4 +1,4 @@
-# EVIDENCE — <topic>
+# EVIDENCE - <topic>
 
 ## 1) Problem & Constraints
 - **Goal**: <one-liner outcome>

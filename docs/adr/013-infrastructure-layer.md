@@ -1,5 +1,5 @@
 ```markdown
-# ADR 013 — Infrastructure Layer Implementation
+# ADR 013 - Infrastructure Layer Implementation
 
 - Status: Accepted
 - Date: 2025-09-04

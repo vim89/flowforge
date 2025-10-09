@@ -1,4 +1,4 @@
-# FlowForge — Ground Reality Report (Full, Codebase vs Docs)
+# FlowForge - Ground Reality Report (Full, Codebase vs Docs)
 
 > Archived: Superseded by ADR-016 Ground Reality & Alignment Governance. See `docs/adr/016-ground-reality-governance.md`.
 
@@ -153,7 +153,7 @@ Notes: File list per module is provided in Appendix A.
 
 Key claim patterns found: compile-time guarantees/gates, multi-engine, cloud portability, Deequ integration, observability/tracing/lineage, 30-second quickstart, CDC/SCD.
 
-## Appendix A — Per-Module Scala Files
+## Appendix A - Per-Module Scala Files
 
 infrastructure:
 - modules/infrastructure/src/main/scala/com/flowforge/config/ConfigurationManagement.scala
@@ -251,7 +251,7 @@ framework:
 
 (Other modules have no Scala sources at this time.)
 
-## Appendix B — Docs Files Scanned
+## Appendix B - Docs Files Scanned
 
 See “Docs Scanned” section above for top-level groups; specific filenames include:
 - `docs/design/EffectSystemResearch.md`, `ALIGNMENT_STATUS.md`, `GROUND_REALITY_REPORT.md`, `IMPLEMENTATION_TODO.md`, `QA_PLAN.md`, `PRODUCTION_REALITY_UPDATE.md`, `SCAFFOLDING_VS_PRODUCTION_AUDIT.md`, `design.md`, `Findings.md`, `INFRASTRUCTURE_LAYER.md`, `RoadmapProposal.md`.

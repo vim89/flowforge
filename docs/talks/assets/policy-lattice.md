@@ -1,4 +1,4 @@
-# Policy Lattice — Slide Source (Export to PNG)
+# Policy Lattice - Slide Source (Export to PNG)
 
 | Policy  | Missing Fields                        | Extra Fields | Type Mismatch | Field Order       | Name Case |
 |---------|---------------------------------------|--------------|---------------|-------------------|-----------|

@@ -1,4 +1,4 @@
-# Talk A — Safe API/Schema Migration (Concept‑Only)
+# Talk A - Safe API/Schema Migration (Concept‑Only)
 
 > WHY → HOW → WHAT. Inside‑out. No product names until the last page.
 
@@ -118,7 +118,7 @@ Speaker notes [Category: WHY]: Repeat belief bumper once; move to Q&A.
 ## Speaker Notes (brief prompts)
 - WHY: open with beliefs; then the Friday night story (20–30s).
 - Boundaries: 1 line each; avoid deep dives.
-- Lattice: point to table; audience doesn’t need to memorize—playbook + demo will cement it.
+- Lattice: point to table; audience doesn’t need to memorize-playbook + demo will cement it.
 - Demo: keep compiler error visible; read key line (“Missing attributes: …”).
 - Runtime slide: stress idempotency at edges; compile‑time != runtime perfection.
 - Takeaways: repeat ONE bumper line; then move to Q&A.

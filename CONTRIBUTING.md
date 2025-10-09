@@ -38,7 +38,7 @@ This avoids rework and helps maintain consistent architecture.
 
 ## Build, test, and development commands
 
-- `sbt compile` — compile all modules; `sbt test` — run all tests (non‑parallel).
+- `sbt compile` - compile all modules; `sbt test` - run all tests (non‑parallel).
 - Formatting: `sbt fmt` / `sbt fmtCheck`; Linting: `sbt fix` / `sbt fixCheck`.
 - Focused runs: `sbt core/test`, `sbt engines-spark/compile`.
 - CLIs: `sbt validation-cli/run` and `sbt contracts-extractor-cli/run`.
@@ -246,7 +246,7 @@ trait LegacyCompatibility[F[_] : Sync] extends ConfigurationAlgebra[F] {
 - A class and its companion should live together in the same file. 
 - sealed traits and their subtypes must also be in the same file for compiler safety.
 - File names usually match the main type they hold.
-- Multi-type grouping: When types are closely related, grouping is permitted—but only when justified. The file should then use meaningful lowerCamelCase names. 
+- Multi-type grouping: When types are closely related, grouping is permitted-but only when justified. The file should then use meaningful lowerCamelCase names. 
 - Developer ergonomics: Having one type per file helps with navigation, findability, and code review. It avoids confusion and reduces search friction.
 
 ## Commit & Pull Request guidelines

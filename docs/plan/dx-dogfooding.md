@@ -1,4 +1,4 @@
-# PLAN — Comprehensive DX Roadmap (Dogfooding + Foundations + Feedback)
+# PLAN - Comprehensive DX Roadmap (Dogfooding + Foundations + Feedback)
 
 This is the master plan for delivering a batteries‑included, functional‑first data engineering toolkit with a great developer experience (DX). It merges the earlier dogfooding plan with foundations (observability, partitions, quality, CI contracts) into a single, executable roadmap.
 

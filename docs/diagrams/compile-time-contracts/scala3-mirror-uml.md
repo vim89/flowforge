@@ -1,4 +1,4 @@
-# UML — Scala 3 (Quotes Macros; Mirrors optional)
+# UML - Scala 3 (Quotes Macros; Mirrors optional)
 
 ```mermaid
 classDiagram
@@ -72,10 +72,10 @@ Glossary
 
 - Quotes/TypeRepr: Scala 3’s macro reflection API to inspect types at compile time.
 - Mirrors (optional): product/sum descriptors; can be used instead of quotes traversal.
-- SchemaConforms/Evidence: see Scala 2 UML notes — identical concept, different backend.
+- SchemaConforms/Evidence: see Scala 2 UML notes - identical concept, different backend.
 
 Design patterns used
 
 - Strategy/Bridge: same Derivation facade, different backend (Quotes macro; Mirrors optional).
 - Typeclass + ADTs: unchanged; we still produce SchemaConforms based on SchemaAST.
-- SOLID: same reasoning as Scala 2 — verification is isolated and declarative.
+- SOLID: same reasoning as Scala 2 - verification is isolated and declarative.

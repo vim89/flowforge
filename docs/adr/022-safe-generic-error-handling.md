@@ -1,4 +1,4 @@
-# ADR 022 — Safe, Generic Error Handling Utilities (Result/Validated + Effect Abstraction)
+# ADR 022 - Safe, Generic Error Handling Utilities (Result/Validated + Effect Abstraction)
 
 - Status: Accepted
 - Date: 2025-09-14
@@ -23,8 +23,8 @@ This ADR standardizes the approach and provides small utilities that are easy to
 Introduce a tiny, universal “safety” surface in `core`:
 
 - New package: `com.flowforge.core.safety`
-  - `Safety` — pure and effectful helpers for safe execution.
-  - `ErrorMapper` — pluggable mapping from `Throwable` → `FlowForgeError` tuned per layer.
+  - `Safety` - pure and effectful helpers for safe execution.
+  - `ErrorMapper` - pluggable mapping from `Throwable` → `FlowForgeError` tuned per layer.
 
 Decisions aligned with existing architecture:
 
@@ -75,9 +75,9 @@ Effectful helpers (with `EffectSystem[F]`):
 - `trait In[F[_]]`:
   - `def attempt[A](fa: F[A])(implicit em: ErrorMapper): F[Result[A]]`
   - `def attemptV[A](fa: F[A])(implicit em: ErrorMapper): F[ValidatedResult[A]]`
-  - `def orFail[A](fa: F[Result[A]])(implicit F: EffectSystem[F]): F[A]` — bridge where an `A` is required.
-  - `def guarantee[A](fa: F[A])(finalizer: F[Unit]): F[A]` — delegates to `EffectSystem.guarantee`.
-  - `def bracket[A,B](acq: F[A])(use: A => F[B])(rel: A => F[Unit]): F[B]` — delegates to `EffectSystem.bracket`.
+  - `def orFail[A](fa: F[Result[A]])(implicit F: EffectSystem[F]): F[A]` - bridge where an `A` is required.
+  - `def guarantee[A](fa: F[A])(finalizer: F[Unit]): F[A]` - delegates to `EffectSystem.guarantee`.
+  - `def bracket[A,B](acq: F[A])(use: A => F[B])(rel: A => F[Unit]): F[B]` - delegates to `EffectSystem.bracket`.
 - Optional syntax: `fa.safely`, `result.mapError`, `result.toValidatedNel`, `fa.withErrorMapper(em)`, and
   `fa.logLeft(implicit L: CoreLogger[F])`.
 
@@ -162,12 +162,12 @@ Aggregating validations
 
 ## Alternatives Considered
 
-- Rely solely on `EffectSystem[F].attempt` + ad‑hoc mapping at call sites — rejected; increases duplication and
+- Rely solely on `EffectSystem[F].attempt` + ad‑hoc mapping at call sites - rejected; increases duplication and
   encourages inconsistency.
-- Introduce a global `Throwable => FlowForgeError` implicit — rejected; different layers need different semantics.
-- Add more exception types and throw/catch internally — rejected; breaks purity and testability.
+- Introduce a global `Throwable => FlowForgeError` implicit - rejected; different layers need different semantics.
+- Add more exception types and throw/catch internally - rejected; breaks purity and testability.
 
-## Appendix — Concise API Sketch
+## Appendix - Concise API Sketch
 
 - Safety.scala
   - `object Safety {`

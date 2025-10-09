@@ -1,4 +1,4 @@
-# UML — Scala 2 (Magnolia)
+# UML - Scala 2 (Magnolia)
 
 ```mermaid
 classDiagram

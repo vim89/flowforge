@@ -1,12 +1,12 @@
-# PLAN — QA Strategy and Testing
+# PLAN - QA Strategy and Testing
 
 ## 1) Scope (Minimal Viable Change)
 - **Goal**: Add 1–2 E2E integration tests; track perf/security as follow-ups.
 - **Out of scope**: Full perf/security suites.
 
 ## 2) Files to Touch (exact)
-1. `modules/engines-spark/src/test/scala/.../SparkCDCIntegrationSpec.scala` — small CDC E2E.
-2. `docs/design/qa-followups.md` — list perf/security test plan.
+1. `modules/engines-spark/src/test/scala/.../SparkCDCIntegrationSpec.scala` - small CDC E2E.
+2. `docs/design/qa-followups.md` - list perf/security test plan.
 
 ## 3) Patch Sketch (pseudo-diffs)
 ```scala

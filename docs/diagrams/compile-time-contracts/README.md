@@ -1,4 +1,4 @@
-# Compile‑Time Data Contracts — Diagrams
+# Compile‑Time Data Contracts - Diagrams
 
 This folder contains flowcharts and UML diagrams explaining how FlowForge’s compile‑time data contracts work. It covers the common flow used across both implementations and details for:
 

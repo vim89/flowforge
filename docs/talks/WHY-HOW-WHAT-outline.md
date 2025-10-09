@@ -1,4 +1,4 @@
-# Talk Outline — WHY → HOW → WHAT (Brand-agnostic)
+# Talk Outline - WHY → HOW → WHAT (Brand-agnostic)
 
 ## WHY (start here)
 - Runtime schema drift burns nights. Make it a compile error so broken pipelines never launch.

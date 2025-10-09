@@ -161,7 +161,7 @@ Use all SOLID principles where applicable
 - A class and its companion should live together in the same file.
 - sealed traits and their subtypes must also be in the same file for compiler safety.
 - File names usually match the main type they hold.
-- Multi-type grouping: When types are closely related, grouping is permitted—but only when justified. The file should then use meaningful lowerCamelCase names.
+- Multi-type grouping: When types are closely related, grouping is permitted-but only when justified. The file should then use meaningful lowerCamelCase names.
 - Developer ergonomics: Having one type per file helps with navigation, findability, and code review. It avoids confusion and reduces search friction.
 
 

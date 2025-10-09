@@ -2,7 +2,7 @@
 
 Both talks follow this pacing. Times are approximate; demos have screenshot fallbacks.
 
-## Talk A — Safe API/Schema Migration
+## Talk A - Safe API/Schema Migration
 - 00:00-03:00 - Beliefs & stakes (S01)
 - 03:00-05:00 - Boundaries: compile-time vs runtime; DX vs process (S02)
 - 05:00-11:00 - Migration policies on one slide (S03)
@@ -13,7 +13,7 @@ Both talks follow this pacing. Times are approximate; demos have screenshot fall
 - 32:00-36:00 - Minimal toolkit (S08)
 - 36:00-45:00 - Takeaways + Q&A (S09)
 
-## Talk B — Types for Interfaces & Validation
+## Talk B - Types for Interfaces & Validation
 - 00:00-03:00 - Beliefs & stakes (S01)
 - 03:00-05:00 - Boundaries (S02)
 - 05:00-09:00 - From types to shape (S03)

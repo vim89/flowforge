@@ -1,5 +1,5 @@
 ```markdown
-# ADR 017 — HDFS Connector Strategy
+# ADR 017 - HDFS Connector Strategy
 
 - Status: Accepted
 - Date: 2025-09-04

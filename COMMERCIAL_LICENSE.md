@@ -70,6 +70,6 @@ IN WITNESS WHEREOF, the parties have executed this Agreement as of the Effective
 ---
 
 ### Schedules
-- **Schedule A (Scope)** — define use cases, modules, user count, and region.  
-- **Schedule B (Fees)** — fees, payment schedule, and currency.  
-- **Schedule C (Support / Updates)** — support obligations, SLA, maintenance plan.
+- **Schedule A (Scope)** - define use cases, modules, user count, and region.  
+- **Schedule B (Fees)** - fees, payment schedule, and currency.  
+- **Schedule C (Support / Updates)** - support obligations, SLA, maintenance plan.

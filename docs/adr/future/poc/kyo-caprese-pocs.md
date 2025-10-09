@@ -1,4 +1,4 @@
-Here are **4 lean, high-impact POC topics—2 for Kyo, 2 for Caprese**—that plug directly into FlowForge (Scala + Spark + Cloud) without reinventing engine features. Each POC includes the value prop, what to build, how to demo/measure, and the “why” with sources.
+Here are **4 lean, high-impact POC topics-2 for Kyo, 2 for Caprese**-that plug directly into FlowForge (Scala + Spark + Cloud) without reinventing engine features. Each POC includes the value prop, what to build, how to demo/measure, and the “why” with sources.
 
 ---
 
@@ -33,7 +33,7 @@ Here are **4 lean, high-impact POC topics—2 for Kyo, 2 for Caprese**—that pl
 
 ## KYO – POC #2: Built-in OTel Metrics per Stage via `kyo-stats-otel`
 
-**Real value-add:** First-class, zero-boilerplate **OpenTelemetry** counters/histograms for *every* stage (records in/out, latency, retries). Kyo already ships a **Stats** effect with an OTel exporter—use it rather than adding a new metrics stack. ([GitHub][1])
+**Real value-add:** First-class, zero-boilerplate **OpenTelemetry** counters/histograms for *every* stage (records in/out, latency, retries). Kyo already ships a **Stats** effect with an OTel exporter-use it rather than adding a new metrics stack. ([GitHub][1])
 
 **What to build**
 
@@ -81,7 +81,7 @@ Here are **4 lean, high-impact POC topics—2 for Kyo, 2 for Caprese**—that pl
 
 ## CAPRESE – POC #2: Scoped Cloud Credentials (No-escape Capabilities)
 
-**Real value-add:** Enforce “**credentials never leak**” by construction. Wrap short-lived AWS/GCP credentials in a **capability** and prove they *cannot escape* a scope or be stored in closures—aligns with security best practices (don’t hardcode keys; prefer roles/Workload Identity; no long-lived secrets). ([Scala Documentation][6], [AWS Documentation][9], [Google Cloud][10])
+**Real value-add:** Enforce “**credentials never leak**” by construction. Wrap short-lived AWS/GCP credentials in a **capability** and prove they *cannot escape* a scope or be stored in closures-aligns with security best practices (don’t hardcode keys; prefer roles/Workload Identity; no long-lived secrets). ([Scala Documentation][6], [AWS Documentation][9], [Google Cloud][10])
 
 **What to build**
 

@@ -1,4 +1,4 @@
-# Data Contracts — Overview (Current Model)
+# Data Contracts - Overview (Current Model)
 
 This page clarifies FlowForge’s contract model so there’s no confusion between typed compile‑time gates, CI checks, and runtime code.
 
@@ -15,12 +15,12 @@ This page clarifies FlowForge’s contract model so there’s no confusion betwe
 
 ## What Lives Where
 - Type‑level enforcement (compile time in code):
-  - `modules/core/types/SchemaEvidence.scala` — `SchemaEq`, `SchemaConforms`, policies.
-  - `modules/core/types/PipelineBuilder2.scala` — typed builder enforcing endpoints/gates.
+  - `modules/core/types/SchemaEvidence.scala` - `SchemaEq`, `SchemaConforms`, policies.
+  - `modules/core/types/PipelineBuilder2.scala` - typed builder enforcing endpoints/gates.
   - Generated/SDK contracts provide the typed endpoints (`TypedSource/TypedSink`) and witnesses.
 
 - CI validation (physical schema checks):
-  - `modules/validation-cli` — canonicalizes Spark/Delta/Hive/Parquet schemas and diffs vs contract JSON/Avro.
+  - `modules/validation-cli` - canonicalizes Spark/Delta/Hive/Parquet schemas and diffs vs contract JSON/Avro.
   - GitHub Actions Forms + workflow: contract submission → materialize typed artifacts → run validation.
 - No sbt AutoPlugin is maintained. Local checks invoke the same CLI directly (e.g., via `sbt ffValidate`).
 
@@ -29,7 +29,7 @@ This page clarifies FlowForge’s contract model so there’s no confusion betwe
 - When disabled, Scala typed gates still work; CI can validate physical schemas using Spark JSON canonicalization instead of Avro.
 
 - Business/DQ contracts (logical rules):
-  - `modules/contracts` — DataContract, validation rules (ValidatedNel), builder patterns for dataset‑level checks.
+  - `modules/contracts` - DataContract, validation rules (ValidatedNel), builder patterns for dataset‑level checks.
   - These complement type/physical gates with domain rules.
 
 ## Developer Reality

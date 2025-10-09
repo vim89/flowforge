@@ -1,4 +1,4 @@
-# FlowForge Umbrella Tracker — Plans, Evidence, ADRs (2025-09-04)
+# FlowForge Umbrella Tracker - Plans, Evidence, ADRs (2025-09-04)
 
 This tracker ties ADRs → Evidence (current reality) → Plans (actions) with owners, status, and acceptance criteria.
 
@@ -28,7 +28,7 @@ Legend
 - Dependencies: none
 - Acceptance: Files present; no build.sbt changes; `sbt compile` green.
 
-2) Quality — Deequ Adapter MVP
+2) Quality - Deequ Adapter MVP
 - ADR: docs/adr/005-quality-and-deequ-adapter.md
 - Evidence: docs/evidence/quality-deequ.md
 - Plan: docs/plan/quality-deequ.md
@@ -105,7 +105,7 @@ Legend
 - Next Step: Add PR template check for ADR/Evidence/Plan links; schedule weekly Evidence refresh.
 - Acceptance: Process live; Evidence updated weekly; PRs include links.
 
-10) Engines — Spark Hardening
+10) Engines - Spark Hardening
 - ADR: docs/adr/002-spark-purity-and-io-boundaries.md
 - Evidence: docs/evidence/engines-spark.md
 - Plan: docs/plan/engines-spark.md

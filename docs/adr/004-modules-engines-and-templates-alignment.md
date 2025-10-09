@@ -1,5 +1,5 @@
 ```markdown
-# ADR 004 — Modules, Engines, and Templates Alignment
+# ADR 004 - Modules, Engines, and Templates Alignment
 
 - Status: Accepted
 - Date: 2025-09-04

@@ -136,7 +136,7 @@
 
 - **MVR (Minimum Viable Run)**
   - Scope: Spark local SCD1/SCD2, streaming helper, metrics, runnable template demo.
-  - Status: In progress — SCD2 generalized; streaming helper done; template scaffold present; opt‑in IT added.
+  - Status: In progress - SCD2 generalized; streaming helper done; template scaffold present; opt‑in IT added.
   - ETA: 2–3 weeks.
 
 - **MVP (Minimum Viable Product)**
@@ -157,7 +157,7 @@
 
 ---
 
-## Big Picture Snapshot — 2025-09-02
+## Big Picture Snapshot - 2025-09-02
 
 ### End‑Goal Pillars vs Current Status
 
@@ -180,7 +180,7 @@
 - Compilation: `sbt compile` succeeds across modules (modules without sources trivially compile).
  - Docs: README reality-first update; ASSISTANTS wording corrected; Ground Reality report expanded with repo stats.
 
-### Next 10 Working Days — Execution Plan
+### Next 10 Working Days - Execution Plan
 1. Core hardening (EffectSystem laws, error ADTs, codecs/schemas, PipelineBuilder2 behaviors, remove placeholder combinators).
 2. Foundation MVPs (ResourceSafety, Config decoders/validators, logging SPI, in‑memory interpreters).
 3. Template v0 (data-pipeline.g8 with Cats‑Effect choice, strict contract, end‑to‑end example).

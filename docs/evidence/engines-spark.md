@@ -1,4 +1,4 @@
-# EVIDENCE — Engines: Spark Hardening
+# EVIDENCE - Engines: Spark Hardening
 
 ## 1) Problem & Constraints
 - **Goal**: Ensure Spark engine uses distributed ops for transforms, consistent Delta MERGE path, efficient writes, and uniform observability.

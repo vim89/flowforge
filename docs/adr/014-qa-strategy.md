@@ -1,5 +1,5 @@
 ```markdown
-# ADR 014 — QA Strategy and Testing
+# ADR 014 - QA Strategy and Testing
 
 - Status: Accepted
 - Date: 2025-09-04

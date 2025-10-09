@@ -22,7 +22,7 @@ The hot spots are the HList/LabelledGeneric-based representations and the Align/
 ⸻
 
 Why Magnolia (Scala 2) is a good fit
-•	Magnolia 1 (scala2 branch) exposes field labels and structure via CaseClass/Param — we can read param names & types during derivation and materialize a tiny shape typeclass. Then, use a small macro to abort compilation with your rich error when shapes violate a policy.  ￼
+•	Magnolia 1 (scala2 branch) exposes field labels and structure via CaseClass/Param - we can read param names & types during derivation and materialize a tiny shape typeclass. Then, use a small macro to abort compilation with your rich error when shapes violate a policy.  ￼
 •	For Scala 2 projects, use:
 libraryDependencies += "com.softwaremill.magnolia1_2" %% "magnolia" % "1.1.10" (artifact family for Scala 2; the README shows the exact coordinates).  ￼
 •	Later, on Scala 3, you can drop this backend and plug in Mirrors + inline with the same facade. (The repo’s main README shows the Scala 3 coordinates and modern API; we’re future-proofing the facade now.)  ￼

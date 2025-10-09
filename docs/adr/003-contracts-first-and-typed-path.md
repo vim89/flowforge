@@ -1,5 +1,5 @@
 ```markdown
-# ADR 003 — Contracts-First and Typed Compile-Time Path
+# ADR 003 - Contracts-First and Typed Compile-Time Path
 
 - Status: Accepted
 - Date: 2025-09-04

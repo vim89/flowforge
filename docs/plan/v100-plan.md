@@ -21,7 +21,7 @@ These contradict the “all fixed” claims and also diverge from our own plans.
 
     * `modules/engines-spark/.../SparkAdapters.scala` has literal placeholder lines (e.g., `SparkTypes { ... }`) and ellipses in writer logic.
     * `modules/core/.../contracts/SchemaConforms.scala` includes a placeholder message with `Missing: ... | Extra: ...` (string is fine if it’s just formatting, but audit it).
-    * `modules/quality-deequ/.../ContractToDeltaExample.scala` includes `...` in SQL examples (and claims a **UNIQUE** constraint in comments—see below).
+    * `modules/quality-deequ/.../ContractToDeltaExample.scala` includes `...` in SQL examples (and claims a **UNIQUE** constraint in comments-see below).
 
 3. **Contract SDK generator truncated**
 
@@ -40,13 +40,13 @@ These contradict the “all fixed” claims and also diverge from our own plans.
 
     * Comments/examples imply **UNIQUE**; Delta supports **NOT NULL** and **CHECK** (no enforced UNIQUE). If you want uniqueness, do it in **Deequ** (logical) or **merge-dedupe** (physical), and document that clearly. ([Delta Lake][4], [Databricks Documentation][5], [Delta Lake][6])
 
-> These P0s are small in number but high in blast radius. They’re also already acknowledged in our **v10 plan docs**—so the fix is mostly to **finish what our own plan prescribes**.
+> These P0s are small in number but high in blast radius. They’re also already acknowledged in our **v10 plan docs**-so the fix is mostly to **finish what our own plan prescribes**.
 
 ---
 
 # Is it v1.0.0-ready?
 
-**Not yet.** But you have a precise path to green that matches `docs/plan/*`. Below is the **reconciled, step-by-step cut plan**—each step points to the files and the plan it satisfies.
+**Not yet.** But you have a precise path to green that matches `docs/plan/*`. Below is the **reconciled, step-by-step cut plan**-each step points to the files and the plan it satisfies.
 
 ## Step-by-step to a credible v1.0.0 (mapped to our plans)
 
@@ -73,7 +73,7 @@ These contradict the “all fixed” claims and also diverge from our own plans.
 ### 3) Align DQ mapping & physical constraints (**quality-deequ plan**, **engines-spark plan**)
 
 * **Deequ adapter**: map our contract rule ADTs → Deequ checks (at least `not null`, `pattern`, `range`, `uniqueness`). Pin Deequ to `2.0.12-spark-3.5`. ([Maven Repository][3])
-* **Delta**: implement **NOT NULL** and **CHECK** creation/update on the target Delta table. **Do not** imply **UNIQUE**—document uniqueness as Deequ logical checks + optional dedupe on write path. ([Delta Lake][4], [Databricks Documentation][5])
+* **Delta**: implement **NOT NULL** and **CHECK** creation/update on the target Delta table. **Do not** imply **UNIQUE**-document uniqueness as Deequ logical checks + optional dedupe on write path. ([Delta Lake][4], [Databricks Documentation][5])
 
 ### 4) Effect purity per module (**effect-per-module-and-purity plan**)
 
@@ -152,7 +152,7 @@ That’s it. If you execute those nine steps, the tag is legit.
 
 # Is FlowForge unique?
 
-**Your wedge is real—if you ship it end-to-end.**
+**Your wedge is real-if you ship it end-to-end.**
 
 * **What’s unique (in Scala):** a **contracts-first** approach that fans out into **Deequ DQ**, **Delta constraints**, and **OpenLineage** events from a **single source of truth**. Scala has type-safety projects (e.g., Frameless), but not this *integrated*, contracts-as-product story. ([GitHub][9], [typelevel.org][10])
 * **Where others play:**
@@ -190,7 +190,7 @@ That’s it. If you execute those nine steps, the tag is legit.
 
 # Competitive calibration (external facts)
 
-* **Delta constraints: NOT NULL & CHECK**; no enforced UNIQUE in Delta—document and handle accordingly. ([Delta Lake][4], [Databricks Documentation][5])
+* **Delta constraints: NOT NULL & CHECK**; no enforced UNIQUE in Delta-document and handle accordingly. ([Delta Lake][4], [Databricks Documentation][5])
 * **Spark baselines:** 3.5.6 is the latest 3.5 maintenance release; 4.0.1 exists but should be “tech preview” until deps catch up. ([Apache Spark][1])
 * **Deequ:** current Spark-3.5 builds are available and in active use. ([Maven Repository][3])
 * **OpenLineage/Marquez:** reference impl for lineage ingestion & UI. ([OpenLineage][19])
@@ -199,7 +199,7 @@ That’s it. If you execute those nine steps, the tag is legit.
 
 # Final, un-polished checklist (copy straight into issues)
 
-**P0 — must pass before tag**
+**P0 - must pass before tag**
 
 * [ ] **OpenLineageEmitter.scala**: dedupe methods; add `F[_]: Async`; implement `Noop` + `Http` transports; wire `PipelineBuilder` to emit START/COMPLETE/FAIL + per-stage. ([OpenLineage][19])
 * [ ] **SparkAdapters.scala**: remove ellipses; complete `SparkTypes`, writers, and factories per plan.
@@ -211,18 +211,18 @@ That’s it. If you execute those nine steps, the tag is legit.
 * [ ] **Golden path E2E**: one `examples/` pipeline that asserts Deequ report, Delta constraints, and lineage (noop default).
 * [ ] **flowforge.g8 smoke**: `g8Test` generates → compiles → runs success text.
 
-**P1 — DX & docs**
+**P1 - DX & docs**
 
 * [ ] Quickstart with 4 commands + expected outputs/screenshots. See [quick guide](../getting-started-quick.md) and [architecture overview](../diagrams/overview.svg).
 * [ ] `mdoc` wired to `examples/` so doc snippets compile in CI.
 * [ ] Compatibility matrix (Spark/Delta/Deequ) and limitations (no UNIQUE). ([Delta Lake][4])
-* [ ] Comparison page vs Frameless/Dagster/Kedro/Scio—what FlowForge uniquely provides (contracts → enforcement ×3). ([GitHub][9], [Dagster Docs][11], [Kedro][13], [Spotify Open Source][15])
+* [ ] Comparison page vs Frameless/Dagster/Kedro/Scio-what FlowForge uniquely provides (contracts → enforcement ×3). ([GitHub][9], [Dagster Docs][11], [Kedro][13], [Spotify Open Source][15])
 
 ---
 
 ## Brutal truth (with love)
 
-The **vision is excellent** and your **plans are solid**—but v1.0.0 can’t ship with duplicate lineage methods, ellipses in Spark adapters, and a truncated codegen CLI. Finish those, narrow to the **one immaculate Spark 3.5 path**, and make the **contract → (DQ + Delta + lineage)** story boringly repeatable. Then the “Scala needs a batteries-included functional data engineering kit” isn’t a slogan—it’s Tuesday at 10am, on a laptop, working.
+The **vision is excellent** and your **plans are solid**-but v1.0.0 can’t ship with duplicate lineage methods, ellipses in Spark adapters, and a truncated codegen CLI. Finish those, narrow to the **one immaculate Spark 3.5 path**, and make the **contract → (DQ + Delta + lineage)** story boringly repeatable. Then the “Scala needs a batteries-included functional data engineering kit” isn’t a slogan-it’s Tuesday at 10am, on a laptop, working.
 
 [1]: https://spark.apache.org/downloads.html "Downloads | Apache Spark"
 [2]: https://endoflife.date/apache-spark "Apache Spark"

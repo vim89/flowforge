@@ -1,4 +1,4 @@
-# EVIDENCE — Modules/Templates Alignment
+# EVIDENCE - Modules/Templates Alignment
 
 ## 1) Problem & Constraints
 - **Goal**: Align declared `templates` module with actual template sources so repo hygiene and discoverability improve without changing build.sbt structure.
@@ -20,13 +20,13 @@
 - `build.sbt` declares a `templates` module, but there are no sources under `modules/templates/**`.
 - The actual, usable g8 template lives under `templates/data-pipeline.g8/**` at the repository root.
 - Developers browsing modules expect template sources there; the empty module path causes confusion and missed discoverability.
-- CI and release flows don’t depend on the module path — mirroring files imposes no build graph change.
+- CI and release flows don’t depend on the module path - mirroring files imposes no build graph change.
 
 ## 3) Prior Art & Sources
 
 ## 3) Prior Art & Sources
-- ADR-004 — Modules, Engines, and Templates Alignment.
-- CONTRIBUTING.md — Template generation philosophy.
+- ADR-004 - Modules, Engines, and Templates Alignment.
+- CONTRIBUTING.md - Template generation philosophy.
 
 ## 4) Options & Trade-offs
 | Option | Pros | Cons | Why |
