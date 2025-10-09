@@ -16,6 +16,25 @@ ThisBuild / crossScalaVersions := Seq(
   Dependencies.Versions.scala213
 )
 
+// ===== CODE COVERAGE THRESHOLDS =====
+// Industry benchmarks: 70-80%, Data Engineering 75-85%
+// FlowForge targets: Core/Contracts 90%+, Connectors/Engines 80%+, Infrastructure 75%+
+//
+// FLAG-BASED ENFORCEMENT:
+// During development: Report only (no CI failures)
+// Production ready: Set SCOVERAGE_ENFORCE_THRESHOLD=true to fail build on low coverage
+//
+// Usage:
+//   Development: sbt coverage test coverageReport (reports but doesn't fail)
+//   CI strict:   SCOVERAGE_ENFORCE_THRESHOLD=true sbt coverage test coverageReport (fails if below threshold)
+//
+val enforceCoverageThreshold = sys.env.get("SCOVERAGE_ENFORCE_THRESHOLD").contains("true")
+
+ThisBuild / coverageMinimumStmtTotal := 75
+ThisBuild / coverageMinimumBranchTotal := 70
+ThisBuild / coverageFailOnMinimum := enforceCoverageThreshold
+ThisBuild / coverageHighlighting := true
+
 // ===== REPOSITORY RESOLVERS =====
 resolvers ++= Resolver.sonatypeOssRepos("public") ++ Seq(
   Resolver.mavenCentral,
@@ -167,6 +186,10 @@ lazy val core = moduleProject("core")
     coverageExcludedFiles := Seq(
       ".*SchemaWitness.scala",
     ).mkString(";"),
+    // Core module requires 90% coverage (foundational code)
+    coverageMinimumStmtTotal := 90,
+    coverageMinimumBranchTotal := 85,
+    coverageFailOnMinimum := enforceCoverageThreshold,
     // Section 13.3 - Version-specific dependencies for Scala 2/3 cross-build
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -208,6 +231,10 @@ lazy val contracts = moduleProject("contracts")
   .settings(
     description := "Compile-time and runtime data contracts",
     libraryDependencies ++= Dependencies.forModule("contracts"),
+    // Contracts module requires 90% coverage (KILLER FEATURE - must be bulletproof)
+    coverageMinimumStmtTotal := 90,
+    coverageMinimumBranchTotal := 85,
+    coverageFailOnMinimum := enforceCoverageThreshold,
   )
 
 // Sample "contract SDK" to demonstrate typed endpoints without local codegen
@@ -293,6 +320,8 @@ lazy val examples = moduleProject("examples")
     description := "Example implementations",
     libraryDependencies ++= Dependencies.forModule("examples"),
     publish / skip := true,
+    // Examples are for demonstration - exclude from coverage requirements
+    coverageEnabled := false,
   )
 
 // examples-spark merged into examples; module removed to avoid duplication
