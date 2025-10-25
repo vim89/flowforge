@@ -1,11 +1,14 @@
-# Presenter Cheatsheet (Both Talks)
+# Presenter Cheatsheet – ScalaIO 2025 Main Deck
 
 ## Timing (30 min target)
 - WHY (3) + Boundaries (2) = 5
-- HOW (7–9)
+- HOW core (policy + pipeline) (8)
 - Demo (7–8)
-- WHAT (3–4)
-- Takeaways + Q&A (4–6)
+- Batteries (tests/CLI/connectors/lineage) (3–4)
+- Engine seam (2)
+- Runtime guardrails (1)
+- Outcome/Remember Why (2)
+- Q&A (4–6)
 
 ## One‑liners (repeat at section changes)
 - If it compiles, contracts align.
@@ -13,13 +16,14 @@
 - Typed pipelines, portable engines, safer ops.
 
 ## Boundary clarifiers
-- Compile‑time vs Runtime: structures/policies vs DQ, lineage, retries.
-- DX vs Process: fast local loop vs CI policy gate + compile‑fail PR.
+- Compile-time vs Runtime: structures/policies/typestate vs DQ, lineage, retries.
+- DX vs Process: fast local loop vs CI policy gate + compile-fail PR.
+- Batteries slide reminder: “Compiler + tooling handles drift; runtime guardrails still monitor corrupt files and SLAs.”
 
 ## Demo prep
 - Copy/paste snippets into a scratch file/repl; verify error text in advance.
 - Keep screenshots as a fallback (error and success states).
-- Time both demos < 4 minutes total.
+- Time both demos < 4 minutes total; leave 60s buffer for boundary checkpoint + batteries slide callouts.
 
 ## Likely Q&A (seed)
 - Do types replace tests? No; types are exhaustive for shape/policy, tests for behavior.
@@ -33,4 +37,4 @@
 ## Last‑slide product note (20–30s only)
 - “We built a framework that embodies these ideas; if you’re curious, start here.”
 - Link + quickstart command + invitation to contribute.
-
+- Transition with “Remember why we do this: sleep, safety, trust.”

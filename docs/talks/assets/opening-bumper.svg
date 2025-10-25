@@ -14,15 +14,12 @@
 
   <g filter="url(#shadow)">
     <text x="70" y="150" fill="#e8f6ff" style="font-family: Inter, Segoe UI, Arial, sans-serif; font-weight: 800; font-size: 48px; letter-spacing: 0.5px;">
-      If it compiles, contracts align.
+      If spark code compiles, data contracts align.
     </text>
     <text x="70" y="220" fill="#cfe8ff" style="font-family: Inter, Segoe UI, Arial, sans-serif; font-weight: 500; font-size: 28px;">
       Pure inside, effects at the edges.
     </text>
   </g>
 
-  <text x="70" y="310" fill="#a9c7dd" style="font-family: Inter, Segoe UI, Arial, sans-serif; font-weight: 400; font-size: 18px;">
-    (Opening bumper - large type, minimal words, sets the belief before any code.)
-  </text>
 </svg>
 

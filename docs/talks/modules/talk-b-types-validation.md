@@ -1,6 +1,9 @@
 # Talk B - Types for Interface Representation & Validation (Concept‑Only)
 
+> MODULE NOTE (not part of ScalaIO deck): This is a standalone, concept‑only talk. Do not merge into ScalaIO-2025-Main-Talk.md. See docs/talks/INDEX.md for scope.
+
 > WHY → HOW → WHAT. Inside‑out. No product names until the last page.
+> _Use this as a deep-dive module supporting the ScalaIO 2025 main deck (`ScalaIO-2025-Main-Talk.md`)._
 
 ## Title
 - Types that make pipelines unbuildable in the wrong shape
@@ -11,10 +14,12 @@
 
 ## S01 - Beliefs & Stakes (2 min)
 Design tip: use opening-bumper.svg full-bleed as Slide 1.
-Speaker notes [Category: WHY]: Connect types→exhaustive guarantees (for structure/policy) vs tests→behavior. Use an example (“changing an element from optional to required should not slip through CI”).
+Speaker notes [Category: WHY]: Connect types→exhaustive guarantees (for structure/policy) vs tests→behavior. Use the expanded optionality story so the audience feels the stakes.
 - Tests are sampled; types can be exhaustive for shapes and policy compatibility.
-- Compile‑time errors are cheaper than nighttime pages.
- 
+- Compile‑time errors are cheaper than multi‑week backfills.
+- Story (tell it verbatim):
+  - “Upstream silently renamed `amount` to `amt`. Our transformation kept compiling and running—but wrote nulls for weeks. We discovered it at month‑end reconciliation and had to backfill millions of rows.”
+  - “If the compiler had enforced the contract at build time, the drift would never have shipped.”
 
 ## S02 - Boundaries We Must Name (1 min)
 - Compile‑time: structural compatibility/policies; builder typestate
@@ -50,16 +55,39 @@ Speaker notes [Category: HOW]: Emphasize fast tests, explicit resource lifecycle
 Design tip: code left, error/right outputs right; keep font large.
 Speaker notes [Category: WHAT]: For optionality, read the mismatch (“optional Int vs Int”). For typestate, read the required state (“Complete”). Keep to 3 minutes each; show a screenshot if the projector blurs text.
 
+## S06a - Boundary Checkpoint (1 min)
+- Compile‑time blocks structural drift and illegal builder states.
+- Runtime still covers corrupt payloads, SLAs, retries, and lineage obligations.
+- DX = fast local loop. Process = CI gate + compile‑fail PR check.
+Design tip: reuse icons from Talk A for consistency; bold the first line.
+Speaker notes [Category: HOW → WHY bridge]: Say explicitly: “The compiler keeps us from re-living that optionality outage; runtime guardrails still catch production realities.”
+
+## S08a - Boundary Checkpoint (Recap, 1 min)
+- Compile‑time stops drift and illegal construction.
+- Runtime handles corrupt payloads, SLA breaches, retries, lineage.
+- DX = fast local red→green. Process = CI policy gates + compile‑fail PR checks.
+Design tip: reuse icons from S06a to signal reinforcement.
+Speaker notes: Read the three bullets aloud before advancing to S08b.
+
 ## S07 - Minimal Toolkit (4 min)
-- Batteries: contracts, builders, engine abstraction, optional quality
-- Templates & compile‑fail tests for teams
+- Batteries: contracts, builders, policy toggles, typed DQ seams.
+- Templates & compile‑fail tests teams can clone.
 Design tip: minimal checklist; no dense bullets.
 Speaker notes [Category: WHAT]: Keep it short and move to takeaways; this is reinforcement.
 
-## S08 - Takeaways (1 min)
-- Let the compiler prove shape compatibility
-- Keep transforms pure; push effects to the edges
-- Encode construction rules in types
+## S08 - Outcome Takeaways (1 min)
+- Kill schema drift before runtime by proving shapes exhaustively.
+- Protect SLAs: retries are fiber‑safe and idempotent at the edges.
+- Shorten MTTR: compiler errors pinpoint the exact field/path that changed.
+Design tip: outcomes only; no noun piles.
+Speaker notes [Category: WHY]: Repeat “This is how we keep incident response daylight hours” before advancing.
+
+## S08b - Remember Why (45 sec)
+- We believe pipelines should fail in IDEs, not at 02:00.
+- Compile gates protect sleep; explicit effect boundaries keep reruns safe.
+- Join us if you refuse to debug optionality bugs in prod again.
+Design tip: display concentric circles with WHY highlighted; fade HOW/WHAT.
+Speaker notes [Category: WHY]: Invite the room to recall their worst schema surprise.
 
 ## S09 - Q&A (3 min)
 
@@ -97,14 +125,17 @@ Speaker notes [Category: WHAT]: Keep it short and move to takeaways; this is rei
 ### Demo (Option drift + typestate)
 - List[Option[Int]] vs List[Int] → compile‑time error; then show build() before/after sink.
 
-### Engine abstraction (proof)
-- One interface, two engines; two call‑sites without changing job code.
+### Boundary checkpoint
+- Compile‑time blocks drift + illegal builders. Runtime covers corruption, SLAs, retries. DX = local loop; Process = CI gate + compile‑fail PR.
 
 ### WHAT (minimal)
-- Batteries: contracts, builder, engine seam, optional quality. Templates + compile‑fail tests for teams.
+- Batteries: contracts, builder, policy toggles, typed DQ seam. Templates + compile‑fail tests for teams.
 
-### Takeaways
-- Let the compiler prove shape compatibility; keep transforms pure; encode construction rules.
+### Outcome takeaways
+- Kill schema drift pre-runtime. Keep retries safe. Shorten incident response with precise compiler errors.
+
+### Remember why
+- We protect sleep and customer trust by making pipelines fail in the IDE, not prod.
 
 ### Last slide (product)
 - One page only: try link + quickstart + contribute.
@@ -116,7 +147,7 @@ Speaker notes [Category: WHAT]: Keep it short and move to takeaways; this is rei
 - Optionality: call out List[Option[A]] ≠ List[A]; people remember this example.
 - Typestate: name the state you need (“Complete”) when reading the error.
 - Effect boundary: say “pure inside; effects at edges” verbatim; it sticks.
-- Engine abstraction: no deep dive-just the seam exists; portability proven.
+- Boundary checkpoint slide: restate compile-time vs runtime vs process to defuse Q&A confusion.
 ---
 
 ## Presenter Cheatsheet (condensed)

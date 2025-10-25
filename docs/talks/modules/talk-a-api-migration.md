@@ -1,6 +1,9 @@
 # Talk A - Safe API/Schema Migration (Concept‑Only)
 
+> MODULE NOTE (not part of ScalaIO deck): This is a standalone, concept‑only talk. Do not merge into ScalaIO-2025-Main-Talk.md. See docs/talks/INDEX.md for scope.
+
 > WHY → HOW → WHAT. Inside‑out. No product names until the last page.
+> _Use this as a deep-dive module supporting the ScalaIO 2025 main deck (`ScalaIO-2025-Main-Talk.md`)._
 
 ## Title
 - Safe API & Schema Migration with Compile‑Time Guarantees
@@ -11,11 +14,12 @@
 
 ## S01 - Beliefs & Stakes (2 min)
 Design tip: use opening-bumper.svg full-bleed as Slide 1.
-Speaker notes [Category: WHY]: Open with beliefs, then the 20–30s Friday story. Frame the migration goal as “compile‑time proof or we don’t ship.”
-- Runtime schema drift burns nights and weekends.
+Speaker notes [Category: WHY]: Open with beliefs, then the 45-second Friday story. Frame the migration goal as “compile‑time proof or we don’t ship.”
+- Schema drift often hides silently; fix it before it ships.
 - The compiler should stop broken rollouts before they start.
-- Story: “A partner team removed a nullable column late Friday. Without a safe rollback, both teams were up all night before markets opened.”
- 
+- Story (tell it verbatim):
+  - “Upstream silently renamed `amount` to `amt`. The job didn’t crash—it wrote nulls for weeks. We found it at month‑end close and backfilled millions of rows.”
+  - “If the build had failed on that schema diff, the change wouldn’t have shipped and none of that rework would exist.”
 
 ## S02 - Boundaries We Must Name (1 min)
 - Compile‑time vs Runtime: shapes/policies vs corrupt files/SLA breaches.
@@ -50,6 +54,20 @@ Speaker notes [Category: HOW]: Name the required state (“Complete”) when rea
 Design tip: split screen code (left) and compiler output (right).
 Speaker notes [Category: WHAT]: Read one line from the error (“Missing attributes: …”). Keep to ~4 min total; show CI policy table screenshot.
 
+## S06a - Boundary Checkpoint (1 min)
+- Compile‑time stops schema drift and incomplete builds.
+- Runtime still handles corrupt files, SLA breaches, retries, and lineage.
+- DX = fast local red→green. Process = CI policy gate + compile‑fail PR check.
+Design tip: bold the first sentence; use contrasting icons (shield vs heartbeat).
+Speaker notes [Category: HOW → WHY bridge]: Say explicitly: “The compiler keeps us out of Friday night incidents; runtime guardrails catch the world’s messiness.”
+
+## S08a - Boundary Checkpoint (Recap, 1 min)
+- Compile‑time stops drift and illegal construction.
+- Runtime handles corrupt files, SLA breaches, retries, lineage.
+- DX = fast local red→green. Process = CI policy gates + compile‑fail PR checks.
+Design tip: reuse icons from S06a to signal reinforcement.
+Speaker notes: Read the three bullets aloud before advancing to S08b.
+
 ## S07 - Minimal Toolkit (4 min)
 - Templates that encode the playbook.
 - Compile‑fail tests as gates.
@@ -57,12 +75,19 @@ Speaker notes [Category: WHAT]: Read one line from the error (“Missing attribu
 Design tip: checklist with 4–5 ticks; no more.
 Speaker notes [Category: WHAT]: Keep this short; ideas already landed. Invite conversation during Q&A.
 
-## S08 - Takeaways (1 min)
-- If it compiles, contracts align.
-- Types for migration intent; policies encode allowed change.
-- Build guardrails into templates and CI.
-Design tip: big one-liners; leave time for Q&A.
-Speaker notes [Category: WHY]: Repeat belief bumper once; move to Q&A.
+## S08 - Outcome Takeaways (1 min)
+- Sleep through Friday deploys because drift dies at compile time.
+- Shorten MTTR: compiler errors pinpoint the exact field/path that changed.
+- Protect SLAs: retries are fiber‑safe and idempotent at the edges.
+Design tip: big outcome statements; no jargon nouns.
+Speaker notes [Category: WHY]: Repeat “We protect on-call sleep and customer trust” before advancing.
+
+## S08b - Remember Why (45 sec)
+- We do this to keep traders, analysts, and on-call engineers out of midnight war rooms.
+- Compile gates buy confidence; CI policies formalise hand-offs.
+- The framework exists because migrations should be boring and safe.
+Design tip: reuse concentric-circle graphic; highlight inner circle.
+Speaker notes [Category: WHY]: Invite the audience to map this to their worst rollout before Q&A.
 
 ## S09 - Q&A (3 min)
 
@@ -101,14 +126,17 @@ Speaker notes [Category: WHY]: Repeat belief bumper once; move to Q&A.
 ### Demo (Red→Green)
 - Strict evidence → compile error; relax to migration policy → compiles; show CI gate + compile‑fail test.
 
-### Runtime guardrails (one slide)
-- Quality checks, lineage, metrics; idempotent edges.
+### Boundary checkpoint
+- Compile‑time blocks drift/incomplete builds. Runtime covers corruption, SLAs, retries. DX = local red→green; Process = CI policy gate.
 
 ### WHAT (minimal)
 - Templates encode the playbook; compile‑fail tests as PR gates; optional quality modes.
 
-### Takeaways
-- If it compiles, contracts align. Policies encode migration intent. Guardrails in CI.
+### Outcome takeaways
+- Sleep through Friday deploys. Compiler diffs slash MTTR. Policy-driven rollouts stay reversible.
+
+### Remember why
+- Protect sleep, trading hours, and stakeholder trust. Compile gates + CI policies keep migrations boring.
 
 ### Last slide (product)
 - One page only: try link + quickstart + contribute.
@@ -116,12 +144,12 @@ Speaker notes [Category: WHY]: Repeat belief bumper once; move to Q&A.
 ---
 
 ## Speaker Notes (brief prompts)
-- WHY: open with beliefs; then the Friday night story (20–30s).
+- WHY: open with beliefs; then the Friday night story (≈45s).
 - Boundaries: 1 line each; avoid deep dives.
 - Lattice: point to table; audience doesn’t need to memorize-playbook + demo will cement it.
 - Demo: keep compiler error visible; read key line (“Missing attributes: …”).
 - Runtime slide: stress idempotency at edges; compile‑time != runtime perfection.
-- Takeaways: repeat ONE bumper line; then move to Q&A.
+- Outcome slides: tie bullets to sleep saved, MTTR cut, risk avoided; finish with “Remember Why” before Q&A.
 ---
 
 ## Presenter Cheatsheet (condensed)

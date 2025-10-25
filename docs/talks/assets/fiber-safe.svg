@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="300" viewBox="0 0 720 300">
+  <style>
+    .title { font: 700 18px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; fill: #223; }
+    .label { font: 600 14px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; fill: #223; }
+    .small { font: 12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; fill: #223; }
+    .box { fill:#f7faff; stroke:#5a79a5; stroke-width:1.5; rx:8; ry:8; }
+    .cap { fill:#eef9f0; stroke:#46a26b; stroke-width:1.5; rx:8; ry:8; }
+    .interp { fill:#fff7ee; stroke:#c47a2c; stroke-width:1.5; rx:8; ry:8; }
+    .arrow { stroke:#444; stroke-width:2; marker-end:url(#arrowhead); fill:none; }
+  </style>
+
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#444" />
+    </marker>
+  </defs>
+
+  <text x="20" y="30" class="title">Fiber‑Safe Execution: Capability → Interpreter</text>
+
+  <!-- Capability box -->
+  <rect class="cap" x="20" y="60" width="320" height="80" />
+  <text x="40" y="90" class="label">EffectSystem[F]</text>
+  <text x="40" y="115" class="small">Capabilities: cancel, bracket, parTraverse, timing</text>
+
+  <!-- Interpreters -->
+  <rect class="interp" x="420" y="50" width="260" height="70" />
+  <text x="440" y="80" class="label">Cats Effect Interpreter</text>
+  <text x="440" y="100" class="small">maps to IO fibers, Resource, cancellation</text>
+
+  <rect class="interp" x="420" y="140" width="260" height="70" />
+  <text x="440" y="170" class="label">ZIO Interpreter</text>
+  <text x="440" y="190" class="small">maps to ZIO fibers, Scope, interruption</text>
+
+  <!-- Arrows -->
+  <line class="arrow" x1="340" y1="100" x2="420" y2="85" />
+  <line class="arrow" x1="340" y1="100" x2="420" y2="175" />
+
+  <!-- Pipeline context box -->
+  <rect class="box" x="20" y="170" width="320" height="90" />
+  <text x="40" y="200" class="label">Pipeline: Kleisli[F, A, B]</text>
+  <text x="40" y="225" class="small">pure inside; effects at edges; engine‑agnostic</text>
+
+</svg>

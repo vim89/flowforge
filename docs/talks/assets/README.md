@@ -18,4 +18,26 @@ This folder contains ready-to-embed SVGs and sources you can export to PNG for s
 - Mermaid source (optional): `typestate-builder.md`
 - Export PNG as needed via Preview/Inkscape.
 
+## WHY / HOW / WHAT Circles (SVG)
+- Single-message circles ready to drop into slides. Pick the ones you need:
+  ### WHY
+  - `why-circle.svg` (blank template)
+  - `why-01-protect-sleep.svg`
+  - `why-02-prevent-drift.svg`
+  - `why-03-preserve-trust.svg`
+  - `why-04-make-joyful.svg`
+  ### HOW
+  - `how-01-contracts.svg`
+  - `how-02-typestate.svg`
+  - `how-03-effects.svg`
+  - `how-04-ci-gates.svg`
+  ### WHAT
+  - `what-01-templates.svg`
+  - `what-02-cli.svg`
+  - `what-03-connectors.svg`
+  - `what-04-engines.svg`
+  - `what-05-lineage.svg`
+  - `what-06-quality.svg`
+- Mix and match or stack as needed. Export to PNG at ≥1600px if vector embeds aren’t supported.
+
 Tip: keep PNG width ≈ 1200–1600px so it stays crisp on projectors.

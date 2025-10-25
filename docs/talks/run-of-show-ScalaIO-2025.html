@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Run-of-Show – ScalaIO 2025</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --fg:#222; --muted:#777; --accent:#0a6; }
+    html, body { margin:0; padding:0; }
+    body { font: 14px/1.35 -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: var(--fg); }
+    .page { max-width: 980px; margin: 24px auto; padding: 16px 24px; }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    h2 { font-size: 16px; margin: 18px 0 8px; }
+    p.meta { color: var(--muted); margin-top: 0; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; }
+    th, td { border: 1px solid #ddd; padding: 6px 8px; }
+    th { background: #f6f8fa; text-align: left; }
+    ul { margin: 6px 0 14px 18px; }
+    .fine { color: var(--muted); }
+    @media print {
+      body { font-size: 12px; }
+      .page { margin: 8mm; padding: 0; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Run-of-Show – ScalaIO 2025</h1>
+    <p class="meta">Talk: Compile-Time Contracts & Fiber-Safe Data Pipelines · 45 min talk + 10 min Q&amp;A</p>
+
+    <h2>Schedule (target end times)</h2>
+    <table>
+      <thead><tr><th>Slide</th><th>Segment</th><th>Start → End</th></tr></thead>
+      <tbody>
+        <tr><td>S01</td><td>Beliefs &amp; stakes (amount→amt story)</td><td>00:00 → 03:00</td></tr>
+        <tr><td>S02</td><td>Boundaries (CT vs RT; DX vs Process)</td><td>03:00 → 04:30</td></tr>
+        <tr><td>S02a</td><td>Boundary checkpoint (read verbatim)</td><td>04:30 → 05:15</td></tr>
+        <tr><td>S03</td><td>Policies: Why contracts first</td><td>05:15 → 08:15</td></tr>
+        <tr><td>S04</td><td>Compile-time evidence</td><td>08:15 → 11:45</td></tr>
+        <tr><td>S05</td><td>Demo: Red→Green (cap 90s)</td><td>11:45 → 15:15</td></tr>
+        <tr><td>S06</td><td>Templates &amp; golden path</td><td>15:15 → 17:15</td></tr>
+        <tr><td>S07</td><td>Config safety (Refined + ValidatedNel)</td><td>17:15 → 19:00</td></tr>
+        <tr><td>S08</td><td>Functional DQ (ValidatedNel)</td><td>19:00 → 21:00</td></tr>
+        <tr><td>S09</td><td>Effect boundary with Kleisli</td><td>21:00 → 24:00</td></tr>
+        <tr><td>S10</td><td>Fiber-safe execution (CE/ZIO)</td><td>24:00 → 27:00</td></tr>
+        <tr><td>S11</td><td>Batteries included (checklist)</td><td>27:00 → 28:30</td></tr>
+        <tr><td>S12</td><td>Engine portability seam</td><td>28:30 → 29:30</td></tr>
+        <tr><td>S13</td><td>Runtime guardrails</td><td>29:30 → 30:30</td></tr>
+        <tr><td>S13a</td><td>Boundary checkpoint (read verbatim)</td><td>30:30 → 31:15</td></tr>
+        <tr><td>S14</td><td>Outcome takeaways</td><td>31:15 → 32:15</td></tr>
+        <tr><td>S15</td><td>Remember why</td><td>32:15 → 33:00</td></tr>
+        <tr><td>S16</td><td>Invitation + Q&amp;A transition</td><td>33:00 → 35:00</td></tr>
+        <tr><td>—</td><td>Buffer</td><td>35:00 → 45:00</td></tr>
+        <tr><td>—</td><td>Q&amp;A</td><td>45:00 → 55:00</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Anchor Phrases</h2>
+    <ul>
+      <li>After S02a: “Keep these two boundaries in mind; everything maps back to them.”</li>
+      <li>Before S05: “We’ll break it on purpose and show the compiler stop it.”</li>
+      <li>After S05: “That failure just moved left—from runtime to compile/build time.”</li>
+      <li>Before S10: “Pure inside; effects at the edges—now let’s make retries fiber‑safe.”</li>
+      <li>Before S14: “Let’s land the outcomes—what you actually get back.”</li>
+    </ul>
+
+    <h2>Cut List</h2>
+    <ul>
+      <li>Cut A (−60s): Drop Deequ mention in S08; keep ValidatedNel.</li>
+      <li>Cut B (−60–90s): S11 → one sentence: “tests, CLI, connectors, lineage—batteries included.”</li>
+      <li>Cut C (−60s): Remove Kyo/Caprese callout in S10.</li>
+      <li>Cut D (−45–60s): S12 → title + one sentence + appendix pointer.</li>
+      <li>Cut E (−60s): S07 → no code; say “typed decoders + refined + aggregated validation”.</li>
+      <li><strong>Never cut</strong>: S02a, S13a, S14, S15. If tight, shorten S16 invite to one sentence.</li>
+    </ul>
+
+    <h2>Demo Checklist (S05)</h2>
+    <ul>
+      <li>Cap at 90 seconds; if hiccup, switch to screenshot fallback immediately.</li>
+      <li>Show failure with Exact → relax to Backward → show success; narrate “moved left”.</li>
+    </ul>
+
+    <h2>Boundary Checkpoint Lines (read aloud)</h2>
+    <ul>
+      <li>“Compile‑time stops drift and illegal construction.”</li>
+      <li>“Runtime handles corrupt files, SLA breaches, retries, lineage.”</li>
+      <li>“DX = fast local red→green. Process = CI policy gates + compile‑fail PR checks.”</li>
+    </ul>
+
+    <p class="fine">Print this page to PDF (File → Print / Save as PDF). Keep a copy on the lectern.</p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="480" height="480" viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .bg { fill: rgba(255,153,0,0.75); stroke: none; }
+    .title { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 44px; font-weight: 700; fill: #ffffff; text-anchor: middle; }
+    .caption { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 26px; fill: #ffffff; text-anchor: middle; }
+  </style>
+  <rect width="480" height="480" fill="none"/>
+  <circle class="bg" cx="240" cy="240" r="190"/>
+  <text class="title" x="240" y="220">HOW</text>
+  <text class="caption" x="240" y="270">Effect boundaries & fibers</text>
+</svg>

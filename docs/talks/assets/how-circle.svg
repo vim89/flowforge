@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="720" height="720" viewBox="0 0 720 720" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .ring { fill: rgba(255, 149, 0, 0.6); stroke: none; }
+    .inner { fill: rgba(255, 255, 255, 0.2); }
+    .title { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 56px; font-weight: 700; fill: #202020; text-anchor: middle; }
+    .item { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 30px; fill: #202020; text-anchor: middle; font-weight: 600; }
+  </style>
+  <rect width="720" height="720" fill="none"/>
+  <circle class="ring" cx="360" cy="360" r="260"/>
+  <circle class="inner" cx="360" cy="360" r="170"/>
+  <text class="title" x="360" y="280">HOW</text>
+  <text class="item" x="360" y="350">Compile-time contracts</text>
+  <text class="item" x="360" y="395">stop schema drift before deploy</text>
+</svg>

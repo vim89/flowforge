@@ -1,4 +1,6 @@
-# Q&A Seed and Hard Questions
+# Q&A Seed and Hard Questions (ARCHIVED 2025-10-15)
+
+> ARCHIVED: Superseded by speaker-notes-ScalaIO-2025.md (see Anticipated Q&A). Retained for historical context.
 
 ## Likely questions (short answers)
 - Does this replace tests?
