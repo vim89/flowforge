@@ -38,7 +38,7 @@ jobs:
 
       - name: Download coverage artifacts from CI
         if: github.event_name == 'workflow_run'
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           pattern: coverage-*
           path: coverage-downloads
