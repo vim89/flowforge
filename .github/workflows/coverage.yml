@@ -34,7 +34,7 @@ jobs:
           java-version: '17'
 
       - name: Coursier cache
-        uses: coursier/cache-action@v6
+        uses: coursier/cache-action@v7
 
       - name: Download coverage artifacts from CI
         if: github.event_name == 'workflow_run'

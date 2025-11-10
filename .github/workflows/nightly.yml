@@ -36,7 +36,7 @@ jobs:
           java-version: ${{ matrix.java }}
           cache: 'sbt'
       - name: Coursier cache
-        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+        uses: coursier/cache-action@02f666a4dac9add5772f3597ab33b6384393a55c
 
       - name: Check formatting
         run: |
@@ -75,7 +75,7 @@ jobs:
           java-version: '17'
           cache: 'sbt'
       - name: Coursier cache
-        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+        uses: coursier/cache-action@02f666a4dac9add5772f3597ab33b6384393a55c
 
       - name: Run Spark integration tests
         run: |
@@ -104,7 +104,7 @@ jobs:
           java-version: '17'
           cache: 'sbt'
       - name: Coursier cache
-        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+        uses: coursier/cache-action@02f666a4dac9add5772f3597ab33b6384393a55c
 
       - name: Build with Scala ${{ matrix.scala }}
         run: |
@@ -127,7 +127,7 @@ jobs:
           java-version: '17'
           cache: 'sbt'
       - name: Coursier cache
-        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+        uses: coursier/cache-action@02f666a4dac9add5772f3597ab33b6384393a55c
 
       - name: Run benchmarks
         continue-on-error: true
@@ -162,7 +162,7 @@ jobs:
           java-version: '17'
           cache: 'sbt'
       - name: Coursier cache
-        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+        uses: coursier/cache-action@02f666a4dac9add5772f3597ab33b6384393a55c
 
       - name: Test g8 template generation
         run: |

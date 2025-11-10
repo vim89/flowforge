@@ -47,7 +47,7 @@ jobs:
           cache: 'sbt'
 
       - name: Cache Coursier
-        uses: coursier/cache-action@v6
+        uses: coursier/cache-action@v7
 
       - name: Scalafmt check
         run: sbt -batch scalafmtCheckAll
