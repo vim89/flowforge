@@ -94,7 +94,7 @@ jobs:
           java-version: '17'
 
       - name: Coursier cache (sbt/ivy)
-        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+        uses: coursier/cache-action@02f666a4dac9add5772f3597ab33b6384393a55c
 
       - name: Check formatting
         run: sbt scalafmtCheckAll
@@ -151,7 +151,7 @@ jobs:
           java-version: '17'
 
       - name: Coursier cache (sbt/ivy)
-        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+        uses: coursier/cache-action@02f666a4dac9add5772f3597ab33b6384393a55c
 
       - name: Set release version
         run: |
@@ -403,7 +403,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
       - name: Coursier cache (sbt/ivy)
-        uses: coursier/cache-action@4e2615869d13561d626ed48655e1a39e5b192b3c
+        uses: coursier/cache-action@02f666a4dac9add5772f3597ab33b6384393a55c
       - name: Generate Scaladoc for all modules
         run: |
           sbt -batch doc
