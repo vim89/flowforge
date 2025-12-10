@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update plans, quality, and how-it-fails ([7ef826f](7ef826f0fd76982320d7e4d50e86b24622d51cde))
 - Cleanup & de-clutter ([4e48127](4e48127147325fd0eafec8d76ec16fb7ab682622))
 - Consolidate coverage governance and release readiness ([762bdb0](762bdb073cebcf84a208b16a0fa50b2faa590364))
+- Update CHANGELOG.md [skip ci] ([5fc6557](5fc65573a135455655eabcf58c98e6653464de36))
+- Cleanup ([b908fbe](b908fbe4d1100efe6d307bd22ecf829cf74597bd))
 
 ### Miscellaneous Tasks
 
@@ -25,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update ([5ae713b](5ae713b921e157b617156ee735120699ac1035ae))
 - Update ([d8cbd6a](d8cbd6a024a8978c829f974bd074aa4b753b3b72))
 - Tests bug fixes ([ff4f3b7](ff4f3b77c7a0ec07d849d9d08c66e142b4d59ce4))
+- Cleanup ([42728ad](42728ad3e9f8b781c3858855eb4cc53364d7f5b1))
 
 ### Testing
 
