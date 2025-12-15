@@ -20,7 +20,7 @@ jobs:
         language: [ 'actions' ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.1
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -41,7 +41,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.1
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -65,7 +65,7 @@ jobs:
 
       - name: Upload dependency check report
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: dependency-check-report
           path: target/dependency-check-report.html
@@ -77,7 +77,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.1
         with:
           fetch-depth: 0
 
