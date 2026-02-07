@@ -477,7 +477,7 @@ object FlinkStreamingExample {
         userId = random.nextLong(1000) + 1,
         eventType = eventTypes(random.nextInt(eventTypes.length)),
         timestamp = baseTime + (i * 1000) + random.nextInt(5000),
-        sessionId = s"session_"+random.nextInt(100)},
+        sessionId = s"session_"+random.nextInt(100),
         properties = Map(
           "page" -> s"page_"+random.nextInt(10),
           "source" -> List("web", "mobile", "api")(random.nextInt(3))
