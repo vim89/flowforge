@@ -216,6 +216,8 @@ jobs:
     name: Spark integration tests
     needs: [test]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-integration-tests')) ||
@@ -235,6 +237,8 @@ jobs:
     name: Scaladoc
     runs-on: ubuntu-latest
     needs: quick-checks
+    permissions:
+      contents: read
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
     steps:
       - uses: actions/checkout@v5
@@ -258,6 +262,8 @@ jobs:
     name: Smoke Tests
     runs-on: ubuntu-latest
     needs: test
+    permissions:
+      contents: read
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
     steps:
       - uses: actions/checkout@v5
@@ -277,6 +283,8 @@ jobs:
     name: Budget Gate
     runs-on: ubuntu-latest
     needs: [test]
+    permissions:
+      contents: read
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
     steps:
       - uses: actions/checkout@v4
