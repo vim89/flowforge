@@ -1,26 +1,38 @@
-#+ Timed Outline (45 minutes)
+# Timed Outline – ScalaIO 2025 Main Talk (45 min talk + 10 min Q&A = 55 min total)
 
-Both talks follow this pacing. Times are approximate; demos have screenshot fallbacks.
+Times are approximate; demos have screenshot fallbacks. Slides reference `docs/talks/ScalaIO-2025-Main-Talk.md`.
 
-## Talk A - Safe API/Schema Migration
-- 00:00-03:00 - Beliefs & stakes (S01)
-- 03:00-05:00 - Boundaries: compile-time vs runtime; DX vs process (S02)
-- 05:00-11:00 - Migration policies on one slide (S03)
-- 11:00-15:00 - Migration playbook (S04)
-- 15:00-18:00 - Construction with types (S05)
-- 18:00-28:00 - Live demo: red->green (Exact -> Backward), PR gate (S06)
-- 28:00-32:00 - Runtime guardrails (S07)
-- 32:00-36:00 - Minimal toolkit (S08)
-- 36:00-45:00 - Takeaways + Q&A (S09)
+**Total time allocation:** 45 minutes talk + 10 minutes Q&A
 
-## Talk B - Types for Interfaces & Validation
-- 00:00-03:00 - Beliefs & stakes (S01)
-- 03:00-05:00 - Boundaries (S02)
-- 05:00-09:00 - From types to shape (S03)
-- 09:00-12:00 - Construction with types (S04)
-- 12:00-15:00 - Pure inside, effects at the edges (S05)
-- 15:00-25:00 - Live demos: optionality drift + typestate (S06-S07)
-- 25:00-30:00 - Engine abstraction (proof) (S08)
-- 30:00-34:00 - Minimal toolkit (S09)
-- 34:00-45:00 - Takeaways + Q&A (S10)
+| Time           | Segment                                      | Slide ID | Notes |
+|----------------|----------------------------------------------|----------|-------|
+| 00:00 – 00:45  | About me                                     | S01a     | Clean, concise |
+| 00:45 – 01:30  | About Walmart (context)                      | S01b     | Setup constraints |
+| 01:30 – 04:00  | **Scar story (60s verbatim)**                | S01      | **MUST LAND** |
+| 04:00 – 06:00  | Boundaries + decision matrix                 | S02      | Interactive table |
+| 06:00 – 06:30  | Boundary checkpoint (mini)                   | S02a     | Repeat later |
+| 06:30 – 09:00  | Why contracts come first (policy + code)     | S03      | Code snippet |
+| 09:00 – 12:00  | Compile-time evidence (user API first)       | S04      | Error example |
+| 12:00 – 15:30  | **Red → Green demo**                         | S05      | **PROTECT** |
+| 15:30 – 17:30  | Templates & golden path (show generated)     | S06      | Code example |
+| 17:30 – 19:00  | Configuration safety                         | S07      | *Skip if behind* |
+| 19:00 – 20:30  | Functional validation & DQ                   | S08      | *Skip if behind* |
+| 20:30 – 22:00  | Effect boundary (pure inside)                | S09a     | Connection stated |
+| 22:00 – 24:00  | Kleisli composition                          | S09b     | Code example |
+| 24:00 – 27:00  | Fiber-safe execution (translated)            | S10      | User outcomes |
+| 27:00 – 29:00  | Batteries (one example + mentions)           | S11      | CI gate shown |
+| 29:00 – 30:00  | Engine portability (inline answer)           | S12      | *Can skip* |
+| 30:00 – 31:00  | Runtime guardrails                           | S13      | Quick |
+| 31:00 – 32:00  | **Boundary checkpoint (pop quiz)**           | S13a     | **Interactive** |
+| 32:00 – 34:00  | **Outcome takeaways (feelings first)**       | S14      | **PROTECT** |
+| 34:00 – 35:00  | **Remember why (callback to S01)**           | S15      | **Emotional** |
+| 35:00 – 37:00  | **Invitation (proof not pitch)**             | S16      | **Close loop** |
+| 37:00 – 45:00  | Buffer / overflow                            | —        | Breathing room |
+| 45:00 – 55:00  | Q&A                                          | —        | 10 minutes |
 
+**Priority protection (if running behind):**
+1. **MUST KEEP:** S01 (scar story), S05 (demo), S14-S15 (outcomes), S16 (close)
+2. **Can condense:** S07-S08 → 60 seconds combined mention
+3. **Can skip entirely:** S12 (engine portability) if pressed for time
+
+**Rehearsal target:** Complete S01-S16 in 35 minutes, leaving 10-minute buffer before Q&A.

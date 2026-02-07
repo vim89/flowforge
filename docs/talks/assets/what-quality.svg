@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="720" height="720" viewBox="0 0 720 720" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .ring { fill: rgba(34,197,94,0.6); stroke: none; }
+    .title { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 60px; font-weight: 700; text-anchor: middle; fill: #0f172a; }
+    .caption { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 32px; text-anchor: middle; fill: #0f172a; }
+  </style>
+  <rect width="720" height="720" fill="none"/>
+  <circle class="ring" cx="360" cy="360" r="300"/>
+  <text class="title" x="360" y="340">WHAT</text>
+  <text class="caption" x="360" y="410">Compile-fail tests & docs</text>
+</svg>

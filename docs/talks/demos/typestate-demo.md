@@ -1,4 +1,4 @@
-# Demo Runbook - Typestate Builder (Concept‑Only)
+# Demo runbook - Type indexing / Typestate Builder pattern
 
 ## Goal
 Show that build() is unavailable until all required parts are present.

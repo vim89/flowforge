@@ -1,11 +1,16 @@
 import sbt.util
 import scoverage.ScoverageKeys._
+import sbtdynver.DynVerPlugin.autoImport._
 
 import scala.collection.Seq
 // ===== GLOBAL BUILD SETTINGS =====
 ThisBuild / organization := "com.flowforge"
 
-ThisBuild / version := "0.1.0-SNAPSHOT"
+// Versioning: derive from git tags via sbt-dynver (v0.8.1 -> 0.8.1)
+ThisBuild / versionScheme := Some("early-semver")
+ThisBuild / dynverVTagPrefix := true
+ThisBuild / dynverSeparator := "-"
+ThisBuild / dynverSonatypeSnapshots := true
 // Default Scala stays 2.13 for most modules; Spark/Deequ modules are handled pragmatically via deps.
 ThisBuild / scalaVersion := Dependencies.Versions.scala213
 // Cross-compile defaults: build-level + commands iterate over Scala 2.13 and 3 for speed and stability.
@@ -131,6 +136,15 @@ def moduleProject(name: String): Project =
       libraryDependencies ++= Dependencies.common,
     )
 
+// Binary compatibility: previous version can be supplied via env MIMA_PREVIOUS_VERSION
+def mimaSettings(module: String): Seq[Setting[_]] =
+  Seq(
+    mimaPreviousArtifacts := sys.env
+      .get("MIMA_PREVIOUS_VERSION")
+      .map(v => Set(organization.value %% s"flowforge-$module" % v))
+      .getOrElse(Set.empty),
+  )
+
 // ===== ROOT PROJECT =====
 lazy val root = (project in file("."))
   .aggregate(
@@ -170,6 +184,7 @@ lazy val infrastructure = moduleProject("infrastructure")
       "com.flowforge.infrastructure.DistributedTracing",
     ).mkString(";"),
   )
+  .settings(mimaSettings("infrastructure"): _*)
 
 // ===== CORE MODULES =====
 lazy val core = moduleProject("core")
@@ -225,6 +240,7 @@ lazy val core = moduleProject("core")
       }
     },
   )
+  .settings(mimaSettings("core"): _*)
 
 lazy val contracts = moduleProject("contracts")
   .dependsOn(core)
@@ -236,6 +252,7 @@ lazy val contracts = moduleProject("contracts")
     coverageMinimumBranchTotal := 85,
     coverageFailOnMinimum := enforceCoverageThreshold,
   )
+  .settings(mimaSettings("contracts"): _*)
 
 // Sample "contract SDK" to demonstrate typed endpoints without local codegen
 
@@ -253,6 +270,7 @@ lazy val connectors = moduleProject("connectors")
       ".*CloudStorageConnector.scala",
     ).mkString(";"),
   )
+  .settings(mimaSettings("connectors"): _*)
 
 lazy val connectorsGcs = moduleProject("connectors-gcs")
   .dependsOn(connectors)
@@ -260,6 +278,7 @@ lazy val connectorsGcs = moduleProject("connectors-gcs")
     description := "Google Cloud Storage connector",
     libraryDependencies ++= Dependencies.forModule("connectors-gcs"),
   )
+  .settings(mimaSettings("connectors-gcs"): _*)
 
 lazy val connectorsJdbc = moduleProject("connectors-jdbc")
   .dependsOn(core, connectors, enginesSpark % "test->compile")
@@ -268,6 +287,7 @@ lazy val connectorsJdbc = moduleProject("connectors-jdbc")
     libraryDependencies ++= Dependencies.forModule("connectors-jdbc"),
     Test / fork := true,
   )
+  .settings(mimaSettings("connectors-jdbc"): _*)
 
 // ===== ENGINE MODULES =====
 
@@ -277,6 +297,7 @@ lazy val enginesSpark = moduleProject("engines-spark")
     description := "Apache Spark execution engine",
     libraryDependencies ++= Dependencies.forModule("engines-spark"),
   )
+  .settings(mimaSettings("engines-spark"): _*)
 
 // typed-spark merged into engines-spark under com.flowforge.engines.spark.typed
 
@@ -288,6 +309,7 @@ lazy val enginesFlink = moduleProject("engines-flink")
     crossScalaVersions := Seq(Dependencies.Versions.scala212),
     libraryDependencies ++= Dependencies.forModule("engines-flink"),
   )
+  .settings(mimaSettings("engines-flink"): _*)
 
 // ===== QUALITY MODULES =====
 // Removed empty quality module shell per v1.0-2 plan requirements
@@ -310,6 +332,7 @@ lazy val qualityDeequ = moduleProject("quality-deequ")
     // Make it runnable for ffCheck command
     Compile / mainClass := Some("com.flowforge.quality.deequ.ContractToDeltaExample"),
   )
+  .settings(mimaSettings("quality-deequ"): _*)
 
 // ===== SUPPORT MODULES =====
 
@@ -477,6 +500,7 @@ lazy val contractsSdk = moduleProject("contracts-sdk")
       generated
     }.taskValue,
   )
+  .settings(mimaSettings("contracts-sdk"): _*)
 // Experimental Scala 3 module for capture checking demos (opt-in)
 lazy val experimental = moduleProject("experimental")
   .settings(

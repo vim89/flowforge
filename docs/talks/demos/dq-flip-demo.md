@@ -1,4 +1,4 @@
-# Demo Runbook - Optional Quality Mode Flip (Concept‑Only)
+# Demo runbook - Optional Quality mode flip
 
 ## Goal
 Show a default native quality check, then flip a flag to enable an external checker when present.

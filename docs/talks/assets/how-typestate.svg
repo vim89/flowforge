@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="720" height="720" viewBox="0 0 720 720" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .ring { fill: rgba(255,153,0,0.7); stroke: none; }
+    .title { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 60px; font-weight: 700; text-anchor: middle; fill: #15202b; }
+    .caption { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 32px; text-anchor: middle; fill: #15202b; }
+  </style>
+  <rect width="720" height="720" fill="none"/>
+  <circle class="ring" cx="360" cy="360" r="210"/>
+  <text class="title" x="360" y="340">HOW</text>
+  <text class="caption" x="360" y="410">Typestate builders</text>
+</svg>

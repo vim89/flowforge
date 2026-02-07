@@ -1,35 +1,37 @@
-# Conference Organizer Packet
+# Conference Organizer Packet – ScalaIO Paris 2025
 
-This packet helps CFP/organizers review and run the session smoothly. The talks are concept‑only (no product until the last slide).
+This packet reflects the single conference talk we are delivering. All content stays brand-agnostic until the closing invitation slide.
 
-## Talk A - Safe API/Schema Migration with Compile‑Time Guarantees
-- Duration: 45 minutes (incl. Q&A)
-- Abstract: Migrations often fail late. This talk shows how to encode migration intent with a small policy lattice (Exact/Backward/Forward), make incomplete jobs unbuildable with typestate, and prove compatibility at compile time. Live demo: red→green migration (Exact → Backward), compile‑fail tests in PR, and where runtime guardrails (DQ/lineage/idempotent edges) still apply.
-- Learning objectives:
-  - Understand compile‑time structure checks and policy migration
-  - Recognize the separation of compile‑time vs runtime safety
-  - Apply a 3‑step migration playbook in code and CI
+## Session Overview
+- **Title:** Compile-Time Contracts & Fiber-Safe Data Pipelines
+- **Duration:** 45 minutes including Q&A
+- **Abstract:** How to move schema drift and effect leaks left of runtime. We show contract-first pipelines, policy-driven migrations, compile-fail tests, refined configuration, fiber-safe execution across Cats Effect/ZIO, and the trait seam that swaps Spark/Flink without touching user code.
+- **Key Outcomes for Attendees:**
+  1. Recognize how compile-time contracts block schema drift and shorten MTTR.
+  2. Apply the migration playbook (Exact → Backward/Forward → Exact) with CI guardrails.
+  3. Keep pipelines pure inside and effectful at the edges for safe retries and faster feedback.
 
-## Talk B - Types for Interface Representation & Validation
-- Duration: 45 minutes (incl. Q&A)
-- Abstract: Tests are sampled; types can be exhaustive for shape/policy compatibility. We derive shapes, enforce policy at compile time, keep transforms pure and effects at the edges, and encode construction rules in types. Live demo: element‑optionality drift (List[Option[A]] vs List[A]) and typestate build().
-- Learning objectives:
-  - Build an intuition for inline/quotes (Scala 3) and structural derivation
-  - Separate pure/effectful work for faster feedback & safer retries
-  - Encode construction rules with types and prove shape compatibility
+## Agenda Snapshot
+1. WHY: Friday-night schema failure story; belief statements (3 min)
+2. Boundaries: compile-time vs runtime; DX vs process (2 min)
+3. HOW: Policy lattice, compile-time evidence pipeline, red→green demo (15 min)
+4. HOW: Templates, refined config, ValidatedNel DQ, effect boundary with Kleisli, Cats Effect/ZIO interop, engine seam (18 min)
+5. WHAT: Runtime guardrails, outcome takeaways, invitation (7 min)
+6. Q&A buffer (5–7 min)
 
-## Demo prerequisites
-- Speaker laptop with JDK 17+, sbt 1.9+
-- Local editor/REPL
-- Prepared code snippets & screenshots in case of projector issues
-- Optional: Wi‑Fi if showing a CI PR page (not required)
+See `docs/talks/ScalaIO-2025-Main-Talk.md` for slide-by-slide script.
 
-## AV requests
+## Demo Requirements
+- Laptop with JDK 17+, sbt 1.9+
+- Local clone of FlowForge (or prebuilt demo repo)
+- Prepared code snippets & compiler-error screenshots
+- Optional: Wi‑Fi only if we show a CI PR snapshot (offline screenshots available)
+
+## AV Requests
 - 1080p+ projector, dark theme
-- Code font at least 24–28 pt; error text large enough to read from the back
-- Presenter display (timer preferred)
+- IDE / terminal font ≥ 24–28 pt
+- Confidence monitor with speaker timer preferred
 
-## Speaker bio (placeholder)
-- One‑liner: [Your Name] builds reliable data systems and teaches type‑driven design.
-- 100‑word: [Your Name] is a staff‑level engineer focused on type‑driven data platforms. They’ve led teams across schema migrations, contract governance, and runtime reliability. They speak about moving failures left, pragmatic FP, and developer ergonomics.
-
+## Speaker Bio (placeholder text)
+- **One-liner:** [Your Name] builds type-driven data platforms that make migrations boring and predictable.
+- **~100 words:** [Your Name] is a staff-level engineer focused on compile-time safety and effect-aware data systems. They have led schema governance, reliability initiatives, and cross-engine pipeline projects in finance and SaaS, and they speak regularly about moving failures left and keeping developer feedback loops fast.
