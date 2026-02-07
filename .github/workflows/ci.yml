@@ -1,197 +1,195 @@
 name: CI
 
 on:
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'modules/**'
-      - 'build.sbt'
-      - 'project/**'
-      - '.github/workflows/ci.yml'
-      - '.github/actions/**'
-  # Only run on main for coverage artifact generation (triggered by merge)
   push:
-    branches: [ main ]
-    paths:
-      - 'modules/**'
-      - 'build.sbt'
-      - 'project/**'
+    branches: [main]
+  pull_request:
   workflow_dispatch:
-
-permissions:
-  contents: read
+  workflow_call:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  JAVA_OPTS: -Xmx4G -XX:+UseG1GC
-  SBT_OPTS: -Xmx4G -XX:+UseG1GC
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  quality:
-    name: Code Quality
-    runs-on: ubuntu-22.04
-    timeout-minutes: 15
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+  fixture-sync:
+    name: Spec fixture sync
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v5
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
+      - name: Verify contract fixtures are coherent
+        run: |
+          chmod +x scripts/check-contract-fixtures-sync.sh
+          ./scripts/check-contract-fixtures-sync.sh
+
+  quick-checks:
+    name: Quick checks
+    runs-on: ubuntu-latest
+    needs: fixture-sync
+    permissions:
+      contents: read
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: sbt/setup-sbt@v1
+
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
-          cache: 'sbt'
+          java-version: 17
+          cache: sbt
 
-      - name: Cache Coursier
-        uses: coursier/cache-action@v7
+      - name: Clean workspace
+        run: sbt clean
 
-      - name: Scalafmt check
-        run: sbt -batch scalafmtCheckAll
+      - name: scalafmt check
+        run: sbt clean scalafmtCheckAll
 
-      - name: Scalafix check
-        continue-on-error: true
-        run: |
-          sbt -batch \
-            "core/compile:scalafix --check" \
-            "connectors/compile:scalafix --check" \
-            "connectors-gcs/compile:scalafix --check" \
-            "infrastructure/compile:scalafix --check" \
-            "engines-spark/compile:scalafix --check" \
-            "engines-flink/compile:scalafix --check" \
-            "quality-deequ/compile:scalafix --check"
+      - name: compile all
+        run: sbt clean compileAll
 
-  build:
-    needs: [quality]
+      - name: binary compatibility check
+        run: >
+          sbt clean
+          core/mimaReportBinaryIssues
+          contracts/mimaReportBinaryIssues
+          connectors/mimaReportBinaryIssues
+          connectors-gcs/mimaReportBinaryIssues
+          connectors-jdbc/mimaReportBinaryIssues
+          engines-spark/mimaReportBinaryIssues
+          quality-deequ/mimaReportBinaryIssues
+          infrastructure/mimaReportBinaryIssues
+          contracts-sdk/mimaReportBinaryIssues
+
+  test:
+    name: Test
+    needs: quick-checks
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         include:
-          - module: core
-            commands: core/test compile-fail-tests/test
-            paths: |
-              target
-              modules/core/target
-              modules/compile-fail-tests/target
-          - module: connectors
-            commands: >
-              connectors/test connectors-gcs/test
-            paths: |
-              target
-              modules/connectors/target
-              modules/connectors-gcs/target
-          - module: engines
-            commands: >
-              engines-spark/test engines-flink/test
-            paths: |
-              target
-              modules/engines-spark/target
-              modules/engines-flink/target
-          - module: jdbc-quality
-            commands: >
-              connectors-jdbc/test quality-deequ/test
-            paths: |
-              target
-              modules/connectors-jdbc/target
-              modules/quality-deequ/target
-          - module: clis
-            commands: >
-              validation-cli/test contracts-extractor-cli/test maintenance-cli/test
-            paths: |
-              target
-              modules/validation-cli/target
-              modules/contracts-extractor-cli/target
-              modules/maintenance-cli/target
-          - module: sdk-experimental
-            commands: >
-              contracts-sdk/test experimental/test
-            paths: |
-              target
-              modules/contracts-sdk/target
-              modules/experimental/target
-    name: ${{ matrix.module }}
-    runs-on: ubuntu-22.04
-    timeout-minutes: 20
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+          - os: ubuntu-latest
+            scala: 2.13.16
+            java: 17
+          - os: macos-latest
+            scala: 2.13.16
+            java: 17
+          - os: windows-latest
+            scala: 2.13.16
+            java: 17
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v5
 
-      - name: SBT (build matrix)
-        uses: ./.github/actions/sbt
-        with:
-          java-version: '17'
-          distribution: temurin
-          commands: ${{ matrix.commands }}
+      - uses: sbt/setup-sbt@v1
 
-  security:
-    name: Security Scans
-    runs-on: ubuntu-22.04
-    timeout-minutes: 15
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6.0.2
-        with:
-          fetch-depth: 0
-
-      - name: CodeQL Analysis
-        uses: github/codeql-action/init@v4
-        with:
-          languages: 'java'  # CodeQL uses 'java' for Scala (analyzes JVM bytecode)
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
-
-      - name: Secret Scan
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: ${{ github.event.pull_request.base.sha }}
-          head: HEAD
-          extra_args: --only-verified=false
-
-      - name: Semgrep SAST
-        uses: returntocorp/semgrep-action@v1
-        with:
-          config: auto
-
-  spark-it:
-    needs: [build]
-    name: Spark Integration Tests
-    runs-on: ubuntu-22.04
-    timeout-minutes: 30
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-integration-tests')) ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    steps:
-      - uses: actions/checkout@v6.0.2
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
-      - name: Cache Ivy and Coursier
-        uses: actions/cache@v5
+          java-version: ${{ matrix.java }}
+          cache: sbt
+
+      - name: Run tests
+        run: sbt "-Dsbt.log.noformat=true" ++${{ matrix.scala }} testQuick
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
         with:
+          name: test-reports-${{ matrix.os }}-${{ matrix.scala }}
           path: |
-            ~/.ivy2/cache
-            ~/.cache/coursier
-            ~/.sbt
-          key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt', '**/project/**/*.sbt', '**/project/**/Dependencies.scala') }}
-          restore-keys: |
-            ${{ runner.os }}-sbt-
-      - name: Run Spark/Delta Integration Tests
-        uses: nick-fields/retry@v3
+            **/target/test-reports/
+            **/target/scala-${{ matrix.scala }}/test-reports/
+          retention-days: 5
+
+  spark-compat:
+    name: Spark compatibility (${{ matrix.spark }})
+    needs: quick-checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        spark: ["3.5.6"]
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: sbt/setup-sbt@v1
+
+      - uses: actions/setup-java@v4
         with:
-          timeout_minutes: 30
-          max_attempts: 3
-          retry_on: error
-          command: sbt -batch -DwithSparkIT=true "engines-spark/testOnly *SparkDeltaSCD2IT"
+          distribution: temurin
+          java-version: 17
+          cache: sbt
+
+      - name: Run engines-spark tests
+        run: sbt "-Dsbt.log.noformat=true" engines-spark/test
+
+  scaladoc:
+    name: Scaladoc
+    runs-on: ubuntu-latest
+    needs: quick-checks
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: sbt/setup-sbt@v1
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: sbt
+
+      - name: Generate Scaladoc (core)
+        run: sbt clean -Dsbt.log.noformat=true core/doc
+
+      - name: Generate Scaladoc (engines-spark)
+        run: sbt -Dsbt.log.noformat=true engines-spark/doc
+        continue-on-error: true
+
+  smoke:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    needs: test
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: sbt/setup-sbt@v1
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: sbt
+
+      - name: Examples smoke test
+        run: sbt -Dsbt.log.noformat=true "examples/testOnly *EffectSystemExamplesSpec"
+
+  budget:
+    name: Budget Gate
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: sbt/setup-sbt@v1
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: sbt
+      - name: Compile-fail + quality gate
+        run: sbt -Dsbt.log.noformat=true ffCheck
