@@ -1,464 +1,230 @@
 name: Release
 
 on:
+  push:
+    tags:
+      - 'v*'
+  repository_dispatch:
+    types: [release-tag-created]
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Release version (e.g., 0.1.0)'
+      tag:
+        description: 'Tag to release (e.g., v0.1.0)'
         required: true
-        type: string
-      prerelease:
-        description: 'Mark as pre-release'
-        required: false
-        default: false
-        type: boolean
-      target:
-        description: 'target_commitish (branch name or commit SHA). Defaults to the triggering commit.'
-        required: false
         type: string
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
-
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
-
-env:
-  JAVA_OPTS: -Xmx4G -XX:+UseG1GC
-  SBT_OPTS: -Xmx4G -XX:+UseG1GC
+  packages: write
+  actions: write
 
 jobs:
-  validate-release:
-    name: Validate Release
+  prepare:
+    name: Determine tag and verify CI
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      is-prerelease: ${{ steps.version.outputs.is-prerelease }}
-      target-commitish: ${{ steps.version.outputs.target_commitish }}
+      tag: ${{ steps.tag.outputs.tag }}
+      require_ci: ${{ steps.verify_ci.outputs.require_ci }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
-        with:
-          fetch-depth: 0
-
-      - name: Determine version
-        id: version
-        run: |
-          VERSION="${{ github.event.inputs.version }}"
-          IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
-          TARGET_INPUT="${{ github.event.inputs.target }}"
-          if [ -z "$TARGET_INPUT" ]; then
-            TARGET_INPUT="${GITHUB_SHA}"
-          fi
-          {
-            echo "version=$VERSION"
-            echo "is-prerelease=$IS_PRERELEASE"
-            echo "target_commitish=$TARGET_INPUT"
-          } >> "$GITHUB_OUTPUT"
-          echo "Release version: $VERSION (prerelease: $IS_PRERELEASE, target=$TARGET_INPUT)"
-
-      - name: Validate version format
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
-            echo "Invalid version format: $VERSION"
-            echo "Expected format: X.Y.Z or X.Y.Z-qualifier"
-            exit 1
-          fi
-
-      - name: Check for existing release
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          if gh release view "v$VERSION" &>/dev/null; then
-            echo "Release v$VERSION already exists!"
-            exit 1
-          fi
+      - name: Determine tag to release
+        id: tag
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  pre-release-tests:
-    name: Pre-release tests
-    needs: [validate-release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
-
-      - name: Setup Java 17
-        uses: actions/setup-java@ead9eaa3cfe0b0fc2fa749519ae09c3d4f4080b0
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Coursier cache (sbt/ivy)
-        uses: coursier/cache-action@02f666a4dac9add5772f3597ab33b6384393a55c
-
-      - name: Check formatting
-        run: sbt scalafmtCheckAll
-
-      - name: Compile all modules
-        run: sbt compile Test/compile
-
-      - name: Run full test suite
+          INPUT_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || '' }}
+          DISPATCH_TAG: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.tag || '' }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          echo "🧪 Running full test suite for release"
-          sbt coverage test
-          echo "🔥 Running compile-fail tests - proving contract enforcement"
-          sbt "compile-fail-tests/test"
-          echo "🚀 Running engine smoke tests"
-          sbt "engines-spark/testOnly *StreamingCDCSpec"
-          sbt "engines-flink/testOnly *EngineAbstractionSpec" 
-          sbt coverageReport
-          echo "✅ All release tests passed!"
-
-      - name: Generate coverage report
-        run: sbt coverageAggregate
-
-      - name: Validate g8 template for release
-        run: |
-          echo "📋 Validating g8 template for release"
-          cd ${{ runner.temp }}
-          sbt new file://${{ github.workspace }}/flowforge.g8 --name="release-test-pipeline" --organization="com.flowforge.release"
-          cd release-test-pipeline
-          echo "🔨 Testing template compilation"
-          sbt compile
-          echo "🧪 Testing template tests"
-          sbt test
-          echo "🎯 Testing contract drift demo"
-          sed -i 's/id: Long/id: String/' src/main/scala/Contract.scala
-          if sbt compile; then
-            echo "❌ Contract drift should have failed compilation!"
-            exit 1
+          if [ -n "${INPUT_TAG}" ]; then
+            TAG="${INPUT_TAG}"
+          elif [ -n "${DISPATCH_TAG}" ]; then
+            TAG="${DISPATCH_TAG}"
           else
-            echo "✅ Contract drift prevention working correctly!"
+            TAG="${REF_NAME}"
           fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Releasing tag: $TAG"
 
-  build-artifacts:
-    name: Build release artifacts
-    needs: [validate-release, pre-release-tests]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
-
-      - name: Setup Java 17
-        uses: actions/setup-java@ead9eaa3cfe0b0fc2fa749519ae09c3d4f4080b0
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Coursier cache (sbt/ivy)
-        uses: coursier/cache-action@02f666a4dac9add5772f3597ab33b6384393a55c
-
-      - name: Set release version
-        run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
-          echo "Building with version: $VERSION (from git tag)"
-          # sbt-dynver uses git tags for versioning automatically
-          git tag -f "v$VERSION" 2>/dev/null || true
-
-      - name: Build JAR artifacts
-        run: |
-          sbt clean compile
-          sbt "validation-cli/assembly"
-          sbt "contracts-extractor-cli/assembly"
-          sbt "maintenance-cli/assembly"
-
-      - name: Create release directory
-        run: mkdir -p release-artifacts
-
-      - name: Copy artifacts
-        run: |
-          find . -name "*assembly*.jar" -exec cp {} release-artifacts/ \;
-          ls -la release-artifacts/
-
-      - name: Generate checksums
-        run: |
-          cd release-artifacts
-          sha256sum -- *.jar > SHA256SUMS
-          sha512sum -- *.jar > SHA512SUMS
-
-      - name: Sign artifacts
-        if: ${{ env.GPG_PRIVATE_KEY != '' }}
-        run: |
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
-          cd release-artifacts
-          for jar in *.jar; do
-            gpg --batch --detach-sign --armor "$jar"
-          done
+      - name: Ensure CI succeeded for tag commit
+        id: verify_ci
+        uses: actions/github-script@v7
         env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-
-      - name: Generate SBOM
-        uses: anchore/sbom-action@v0
+          RELEASE_TAG: ${{ steps.tag.outputs.tag }}
         with:
-          path: ./
-          artifact-name: flowforge-sbom-${{ needs.validate-release.outputs.version }}.spdx.json
-          output-file: release-artifacts/sbom.spdx.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = process.env.RELEASE_TAG;
+            if (!tag) {
+              core.setFailed('No release tag determined.');
+              return;
+            }
 
-      - name: Publish to Maven Central
-        if: ${{ !env.ACT && env.SONATYPE_USERNAME != '' }}
-        run: sbt publishSigned sonatypeBundleRelease
-        env:
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+            const { data: ref } = await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `tags/${tag}`,
+            });
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: release-artifacts-${{ needs.validate-release.outputs.version }}
-          path: release-artifacts/
-          retention-days: 30
+            const sha = ref.object.sha;
+            core.info(`Tag ${tag} points to commit ${sha}`);
 
-  create-release:
-    name: Create GitHub Release
-    needs: [validate-release, build-artifacts]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yml',
+              head_sha: sha,
+              per_page: 1,
+            });
 
-      - name: Download artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
-        with:
-          name: release-artifacts-${{ needs.validate-release.outputs.version }}
-          path: release-artifacts/
+            const run = data.workflow_runs[0];
+            let requireCi = false;
+            if (!run) {
+              core.warning(`No CI workflow run found for commit ${sha}. Release workflow will rerun CI.`);
+              requireCi = true;
+            } else if (run.conclusion !== 'success') {
+              core.warning(`CI workflow run ${run.html_url} has conclusion ${run.conclusion}. Release workflow will rerun CI.`);
+              requireCi = true;
+            } else {
+              core.info(`CI workflow run ${run.html_url} succeeded at ${run.updated_at}.`);
+            }
 
-      - name: Generate dynamic release notes
-        id: release-notes
-        run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+            core.setOutput('require_ci', requireCi ? 'true' : 'false');
 
-          {
-            echo "# FlowForge v$VERSION"
-            echo ""
-
-            if [ -n "$PREV_TAG" ]; then
-              echo "## 📝 Changes since $PREV_TAG"
-              echo ""
-              git log "${PREV_TAG}..HEAD" --pretty=format:"- %s (%h)" --no-merges | head -n 50
-              echo ""
-              echo ""
-            fi
-
-            echo "## 🚀 Core Features"
-            echo "- 100% Compile-time contracts - Data pipelines fail to compile on schema drift"
-            echo "- Phantom-state builder pattern - Type-safe pipeline construction"
-            echo "- Macro-based schema validation - Zero-runtime overhead"
-            echo ""
-            echo "## 🛠 CLI Tools"
-            echo "- **validation-cli**: Schema validation and contract checking"
-            echo "- **contracts-extractor-cli**: Extract contracts from data sources"
-            echo ""
-            echo "## 📊 Statistics"
-            COMMIT_COUNT=$(git rev-list --count "${PREV_TAG}..HEAD" 2>/dev/null || echo "N/A")
-            CONTRIBUTOR_COUNT=$(git shortlog -sn "${PREV_TAG}..HEAD" 2>/dev/null | wc -l || echo "N/A")
-            echo "- Commits: $COMMIT_COUNT"
-            echo "- Contributors: $CONTRIBUTOR_COUNT"
-            echo "- Commit: \`${{ github.sha }}\`"
-            echo ""
-            echo "## 📚 Documentation"
-            echo "- API Docs: https://vim89.github.io/flowforge/api/"
-            echo "- Getting Started: https://github.com/vim89/flowforge#getting-started"
-          } > release-notes.md
-
-      - name: Create gitHub release
-        uses: softprops/action-gh-release@26f96dfa697d77e81fd5907df203aa23a56210a8
-        with:
-          tag_name: v${{ needs.validate-release.outputs.version }}
-          name: FlowForge v${{ needs.validate-release.outputs.version }}
-          body_path: release-notes.md
-          target_commitish: ${{ needs.validate-release.outputs.target-commitish }}
-          prerelease: ${{ needs.validate-release.outputs.is-prerelease == 'true' }}
-          files: release-artifacts/*
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload to Codecov
-        if: success()
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: false
-
-      - name: Rollback instructions
-        if: failure()
-        run: |
-          echo "❌ Release failed!"
-          echo ""
-          echo "To rollback:"
-          echo "  1. Delete failed release: gh release delete v${{ needs.validate-release.outputs.version }} -y"
-          echo "  2. Delete tag: git push --delete origin v${{ needs.validate-release.outputs.version }}"
-          echo "  3. Fix issues and re-tag when ready"
-
-  publish-docker:
-    name: Publish Docker Images
-    needs: [validate-release, create-release]
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+  ci:
+    name: Rerun CI if required
+    needs: prepare
+    if: needs.prepare.outputs.require_ci == 'true'
+    uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
-      packages: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6.0.2
+      pull-requests: write
 
-      - name: Download artifacts
-        uses: actions/download-artifact@v7
-        with:
-          name: release-artifacts-${{ needs.validate-release.outputs.version }}
-          path: release-artifacts/
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta-validation
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/validation-cli
-          tags: |
-            type=semver,pattern={{version}},value=${{ needs.validate-release.outputs.version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ needs.validate-release.outputs.version }}
-
-      - name: Build and push validation-cli
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile.validation-cli
-          push: true
-          tags: ${{ steps.meta-validation.outputs.tags }}
-          labels: ${{ steps.meta-validation.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Extract metadata (contracts-extractor-cli)
-        id: meta-extractor
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/contracts-extractor-cli
-          tags: |
-            type=semver,pattern={{version}},value=${{ needs.validate-release.outputs.version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ needs.validate-release.outputs.version }}
-
-      - name: Build and push contracts-extractor-cli
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile.contracts-extractor-cli
-          push: true
-          tags: ${{ steps.meta-extractor.outputs.tags }}
-          labels: ${{ steps.meta-extractor.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Extract metadata (maintenance-cli)
-        id: meta-maintenance
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/maintenance-cli
-          tags: |
-            type=semver,pattern={{version}},value=${{ needs.validate-release.outputs.version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ needs.validate-release.outputs.version }}
-
-      - name: Build and push maintenance-cli
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile.maintenance-cli
-          push: true
-          tags: ${{ steps.meta-maintenance.outputs.tags }}
-          labels: ${{ steps.meta-maintenance.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  publish-docs:
-    name: Publish Scaladoc to GitHub Pages
-    needs: [validate-release, create-release]
+  publish:
+    name: Publish to Maven Central
+    needs: [prepare, ci]
+    if: |
+      needs.prepare.outputs.require_ci != 'true' ||
+      (needs.prepare.outputs.require_ci == 'true' && needs.ci.result == 'success')
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    timeout-minutes: 60
+    env:
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+      - name: Checkout tag
+        uses: actions/checkout@v4
         with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
           fetch-depth: 0
-      - name: Setup Java 17
-        uses: actions/setup-java@ead9eaa3cfe0b0fc2fa749519ae09c3d4f4080b0
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-      - name: Coursier cache (sbt/ivy)
-        uses: coursier/cache-action@02f666a4dac9add5772f3597ab33b6384393a55c
-      - name: Generate Scaladoc for all modules
-        run: |
-          sbt -batch doc
-          # Try unified docs for Scala 2.13 modules; don't fail release if unidoc fails
-          sbt -batch unidoc || echo "unidoc failed (non-fatal)"
-      - name: Assemble site folder
-        run: |
-          mkdir -p public/api
-          for m in modules/*; do
-            mod=$(basename "$m")
-            api_dir="$m/target/scala-2.13/api"
-            if [ -d "$api_dir" ]; then
-              mkdir -p "public/api/$mod"
-              cp -R "$api_dir"/* "public/api/$mod"/
-            fi
-          done
-          # Root module (if any aggregated docs exist)
-          if [ -d target/scala-2.13/api ]; then
-            mkdir -p public/api/root && cp -R target/scala-2.13/api/* public/api/root/
-          fi
-          # Unified docs (if present)
-          if [ -d target/scala-2.13/unidoc ] || [ -d target/scala-2.13/api-unidoc ]; then
-            UNIDOC_DIR="$(find target/scala-2.13 -maxdepth 1 -name '*unidoc' -type d 2>/dev/null | head -n1)"
-            if [ -n "$UNIDOC_DIR" ]; then
-              mkdir -p public/api/unified && cp -R "$UNIDOC_DIR"/* public/api/unified/
-            fi
-          fi
-          # Add index
-          cat > public/index.html << 'EOF'
-          <!doctype html>
-          <html><head><meta charset="utf-8"><title>FlowForge API</title></head>
-          <body>
-            <h1>FlowForge API (Scaladoc)</h1>
-            <ul>
-              $(for d in api/*; do echo "<li><a href=\"$d/index.html\">$(basename "$d")</a></li>"; done)
-            </ul>
-          </body></html>
-          EOF
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
-        with:
-          path: public
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
 
-      - name: Verify deployment
-        run: |
-          echo "Verifying release artifacts..."
-          VERSION="${{ needs.validate-release.outputs.version }}"
-          curl -f "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/validation-cli-assembly-${VERSION}.jar" || echo "⚠️  validation-cli JAR not found"
-          curl -f "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/contracts-extractor-cli-assembly-${VERSION}.jar" || echo "⚠️  contracts-extractor-cli JAR not found"
-          curl -f "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/maintenance-cli-assembly-${VERSION}.jar" || echo "⚠️  maintenance-cli JAR not found"
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: sbt
 
-      - name: Notify on failure
-        if: failure()
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
+
+      - name: Import and publish GPG key
+        id: gpg
+        env:
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
         run: |
-          echo "::error::Documentation deployment failed for release v${{ needs.validate-release.outputs.version }}"
+          set -euo pipefail
+          if [ -z "${PGP_SECRET:-}" ]; then
+            echo "PGP_SECRET is not configured"
+            exit 1
+          fi
+
+          echo "$PGP_SECRET" | base64 --decode | gpg --batch --import
+          KEY_FPR=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/ { print $10; exit }')
+          if [ -z "$KEY_FPR" ]; then
+            echo "Could not determine GPG key fingerprint"
+            exit 1
+          fi
+          echo "fingerprint=$KEY_FPR" >> "$GITHUB_OUTPUT"
+          echo "Using GPG fingerprint: $KEY_FPR"
+
+          KEYSERVER="hkps://keyserver.ubuntu.com"
+          if gpg --batch --keyserver "$KEYSERVER" --send-keys "$KEY_FPR"; then
+            echo "Uploaded public key to $KEYSERVER"
+          else
+            echo "::warning::Failed to upload key to $KEYSERVER. Ensure the fingerprint $KEY_FPR is published manually."
+          fi
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(sbt --batch --no-colors 'print version' | tail -1 | xargs)
+          echo "Version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          TAG="${RELEASE_TAG}"
+          EXPECTED_VERSION="${TAG#v}"
+
+          if [ "$VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "ERROR: Version mismatch!"
+            echo "  Tag: $TAG"
+            echo "  Expected version: $EXPECTED_VERSION"
+            echo "  Actual version: $VERSION"
+            exit 1
+          fi
+
+          if [[ "$VERSION" =~ SNAPSHOT ]]; then
+            echo "ERROR: Tag release cannot have SNAPSHOT version!"
+            echo "  Tag: $TAG"
+            echo "  Version: $VERSION"
+            exit 1
+          fi
+
+      - name: Publish to Maven Central
+        run: sbt --batch --no-colors ci-release
+        env:
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          CI_RELEASE: +publishSigned
+          CI_COMMIT_TAG: ${{ env.RELEASE_TAG }}
+          BUILD_SOURCEBRANCH: refs/tags/${{ env.RELEASE_TAG }}
+          GITHUB_REF: refs/tags/${{ env.RELEASE_TAG }}
+
+      - name: Package artifacts
+        run: sbt --batch --no-colors package
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ env.RELEASE_TAG }}
+          name: flowforge ${{ steps.version.outputs.version }}
+          body: |
+            ## flowforge ${{ steps.version.outputs.version }}
+
+            Type-safe-first data engineering framework for compile-time contract enforcement.
+
+            ### What's changed
+            - [Changelog](https://github.com/${{github.repository}}/blob/main/CHANGELOG.md)
+
+            ### Installation
+            ```scala
+            libraryDependencies += "com.flowforge" %% "flowforge-core" % "${{steps.version.outputs.version}}"
+            ```
+          artifacts: "modules/**/target/scala-*/flowforge-*.jar"
+          draft: false
+          prerelease: false
+          makeLatest: true
+          allowUpdates: true
+          updateOnlyUnreleased: false
+
+      - name: Trigger Changelog update
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              event_type: 'release-completed',
+              client_payload: {
+                tag: process.env.RELEASE_TAG
+              }
+            });

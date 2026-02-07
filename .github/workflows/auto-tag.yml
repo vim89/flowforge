@@ -1,5 +1,4 @@
 # Auto tag - Automated semantic versioning based on conventional commits
-# Mirrors toon4s setup for FlowForge
 name: Auto tag
 
 on:
@@ -28,7 +27,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check and clean incomplete releases
-        id: check_release
         uses: actions/github-script@v7
         with:
           script: |
@@ -45,16 +43,13 @@ jobs:
                   repo: context.repo.repo,
                   tag: tag.name
                 });
-                console.log(`Release exists for tag ${tag.name}`);
               } catch (error) {
                 if (error.status === 404) {
-                  console.log(`No release found for tag ${tag.name}, deleting tag`);
                   await github.rest.git.deleteRef({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     ref: `tags/${tag.name}`
                   });
-                  console.log(`Deleted tag ${tag.name}`);
                 }
               }
             }
@@ -92,26 +87,3 @@ jobs:
                 tag: '${{ steps.tag_version.outputs.new_tag }}'
               }
             });
-
-      - name: Summary
-        if: steps.tag_version.outputs.new_tag != ''
-        run: |
-          echo "## Tag Created Successfully" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**New Tag**: \`${{ steps.tag_version.outputs.new_tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Previous Tag**: \`${{ steps.tag_version.outputs.previous_tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Version Bump**: \`${{ steps.tag_version.outputs.part }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Changelog**:" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.tag_version.outputs.changelog }}" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🚀 Release workflow triggered via repository_dispatch" >> $GITHUB_STEP_SUMMARY
-
-      - name: No tag created
-        if: steps.tag_version.outputs.new_tag == ''
-        run: |
-          echo "## No Tag Created" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "No version bump needed based on commit messages" >> $GITHUB_STEP_SUMMARY

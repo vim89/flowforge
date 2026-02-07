@@ -45,6 +45,7 @@ import scala.annotation.implicitNotFound
 )
 sealed trait SchemaWitness[PipelineOut, Contract, Policy <: SchemaEvolutionPolicy]
 
+/** Companion with implicit evidence constructors for schema compatibility policies. */
 object SchemaWitness {
 
   // Type alias for migration - use SchemaConforms instead
@@ -121,8 +122,10 @@ object SchemaEvolutionPolicy {
 ║  🔧 Fix: Ensure all fields in subset exist in superset with same types.      ║
 ╚════════════════════════════════════════════════════════════════════════════════╝
 """)
+/** Evidence that `Subset` is contained within `Superset` at the HList field/type level. */
 trait SubsetSchema[Subset <: HList, Superset <: HList]
 
+/** Constructors for subset evidence used by backward/forward compatibility witnesses. */
 object SubsetSchema {
 
   /**

@@ -8,30 +8,50 @@ set -euo pipefail
 ROOTS=(modules/core modules/contracts)
 MISS=0
 echo "🔎 Doc lint: scanning for missing Scaladoc on public declarations"
-for r in "${ROOTS[@]}"; do
-  while IFS= read -r -d '' f; do
-    mapfile -t lines < <(nl -ba "$f")
-    for ((i=0; i<${#lines[@]}; i++)); do
-      L="${lines[$i]}"
-      # Match top-level public declarations (very simple heuristic)
-      if [[ "$L" =~ [[:space:]]+[0-9]+[[:space:]]+(trait|class|object)[[:space:]]+[A-Z][A-Za-z0-9_]*[[:space:]]*\{? ]]; then
-        # Look back a few lines for a /** ... */ opener
-        hasdoc=0
-        for b in 1 2 3 4 5; do
-          j=$((i-b))
-          if (( j >= 0 )); then
-            if [[ "${lines[$j]}" =~ \/\*\* ]]; then hasdoc=1; break; fi
-            if [[ "${lines[$j]}" =~ ^[[:space:]]*$ ]]; then continue; fi
-          fi
-        done
-        if (( hasdoc == 0 )); then
-          echo "⚠️  Missing Scaladoc: $f:${L%%$'\t'*}"
-          ((MISS++))
+scan_file() {
+  local f="$1"
+  lines=()
+  while IFS= read -r line; do
+    lines+=("$line")
+  done < <(nl -ba "$f")
+  for ((i=0; i<${#lines[@]}; i++)); do
+    L="${lines[$i]}"
+    # Match top-level public declarations (very simple heuristic)
+    if [[ "$L" =~ [[:space:]]+[0-9]+[[:space:]]+(trait|class|object)[[:space:]]+[A-Z][A-Za-z0-9_]*[[:space:]]*\{? ]]; then
+      # Look back a few lines for a /** ... */ opener
+      hasdoc=0
+      for b in 1 2 3 4 5; do
+        j=$((i-b))
+        if (( j >= 0 )); then
+          if [[ "${lines[$j]}" =~ \/\*\* ]]; then hasdoc=1; break; fi
+          if [[ "${lines[$j]}" =~ ^[[:space:]]*$ ]]; then continue; fi
         fi
+      done
+      if (( hasdoc == 0 )); then
+        echo "⚠️  Missing Scaladoc: $f:${L%%$'\t'*}"
+        ((MISS++))
       fi
-    done
-  done < <(find "$r" -type f -path "*/src/main/*" -name "*.scala" -print0)
-done
+    fi
+  done
+}
+
+if [[ -n "${DOC_LINT_FILES:-}" ]]; then
+  while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    [[ ! -f "$f" ]] && continue
+    case "$f" in
+      modules/core/src/main/*|modules/contracts/src/main/*)
+        scan_file "$f"
+        ;;
+    esac
+  done <<< "${DOC_LINT_FILES}"
+else
+  for r in "${ROOTS[@]}"; do
+    while IFS= read -r -d '' f; do
+      scan_file "$f"
+    done < <(find "$r" -type f -path "*/src/main/*" -name "*.scala" -print0)
+  done
+fi
 
 echo "Doclint: $MISS items missing Scaladoc"
 if (( MISS > 0 )); then

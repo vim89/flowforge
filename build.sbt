@@ -329,8 +329,6 @@ lazy val qualityDeequ = moduleProject("quality-deequ")
     ),
     Test / fork              := true,
     Test / parallelExecution := false,
-    // Make it runnable for ffCheck command
-    Compile / mainClass := Some("com.flowforge.quality.deequ.ContractToDeltaExample"),
   )
   .settings(mimaSettings("quality-deequ"): _*)
 
@@ -438,8 +436,8 @@ addCommandAlias("mvr", "compileAll; testQuick")
 // FlowForge aliases required by end-to-end plan section 8
 addCommandAlias(
   "ffCheck",
-  "compile-fail-tests/test; quality-deequ/run",
-)                                                  // compile-fail + contract diff check
+  "compile-fail-tests/test; quality-deequ/test",
+)                                                  // compile-fail + quality integration checks
 addCommandAlias("ffDev", "compileAll; testQuick")  // local run with fixtures in <3s
 addCommandAlias("ffRunSpark", "engines-spark/run") // Spark local[*], DQ + Delta sink
 

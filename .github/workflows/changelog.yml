@@ -1,13 +1,13 @@
 name: Changelog
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'modules/**'
-      - 'build.sbt'
-      - 'project/**'
+  repository_dispatch:
+    types: [release-completed]
   workflow_dispatch:
+
+concurrency:
+  group: changelog-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -15,13 +15,16 @@ permissions:
 
 jobs:
   changelog:
+    name: Generate changelog
     runs-on: ubuntu-latest
     timeout-minutes: 5
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
 
       - name: Install git-cliff
         run: |
@@ -30,11 +33,13 @@ jobs:
           sudo mv git-cliff-*/git-cliff /usr/local/bin/
           git-cliff --version
 
-      - name: Generate changelog
+      - name: Generate full changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git-cliff --config cliff.toml --verbose --unreleased --tag unreleased -o CHANGELOG.md
+          git-cliff --config cliff.toml --verbose -o CHANGELOG.md
 
-      - name: Commit changelog
+      - name: Commit and push changelog
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -46,4 +51,4 @@ jobs:
 
           git add CHANGELOG.md
           git commit -m "docs: update CHANGELOG.md [skip ci]"
-          git push
+          git push origin main
