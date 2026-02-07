@@ -86,12 +86,15 @@ jobs:
         id: docs_changes
         uses: dorny/paths-filter@v3
         with:
+          list-files: shell
           filters: |
             docs:
               - 'docs/**'
               - '**/*.md'
               - 'scripts/lint-docs.sh'
-              - 'scripts/doclint.sh'
+            api_scala:
+              - 'modules/core/src/main/**/*.scala'
+              - 'modules/contracts/src/main/**/*.scala'
       - name: Skip docs lint (no docs changes)
         if: steps.docs_changes.outputs.docs != 'true'
         run: echo "No docs changes detected; skipping docs lint."
@@ -102,7 +105,9 @@ jobs:
         if: steps.docs_changes.outputs.docs == 'true'
         run: bash scripts/lint-docs.sh
       - name: Scaladoc coverage lint
-        if: steps.docs_changes.outputs.docs == 'true'
+        if: steps.docs_changes.outputs.api_scala == 'true'
+        env:
+          DOC_LINT_FILES: ${{ steps.docs_changes.outputs.api_scala_files }}
         run: |
           chmod +x scripts/doclint.sh
           ./scripts/doclint.sh
