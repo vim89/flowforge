@@ -9,8 +9,8 @@ ok()  { echo -e "${green}OK:${reset} $1"; }
 # 1) CONTRIBUTING.md must contain core anchors and references
 if ! rg -n "^## Session Workflow" CONTRIBUTING.md >/dev/null 2>&1; then err "CONTRIBUTING.md missing 'Session Workflow' section"; else ok "CONTRIBUTING.md has Session Workflow"; fi
 if ! rg -n "^## Condensed Pipeline Checklist" CONTRIBUTING.md >/dev/null 2>&1; then err "CONTRIBUTING.md missing 'Condensed Pipeline Checklist'"; else ok "CONTRIBUTING.md has condensed checklist"; fi
-if ! rg -n "ADR Index `docs/adr/INDEX.md`" CONTRIBUTING.md >/dev/null 2>&1; then err "CONTRIBUTING.md missing ADR Index reference"; else ok "CONTRIBUTING.md references ADR Index"; fi
-if ! rg -n "Developer Handbook `docs/contributing/HANDBOOK.md`" CONTRIBUTING.md >/dev/null 2>&1; then err "CONTRIBUTING.md missing Handbook reference"; else ok "CONTRIBUTING.md references Handbook"; fi
+if ! rg -n 'ADR Index `docs/adr/INDEX.md`' CONTRIBUTING.md >/dev/null 2>&1; then err "CONTRIBUTING.md missing ADR Index reference"; else ok "CONTRIBUTING.md references ADR Index"; fi
+if ! rg -n 'Developer Handbook `docs/contributing/HANDBOOK.md`' CONTRIBUTING.md >/dev/null 2>&1; then err "CONTRIBUTING.md missing Handbook reference"; else ok "CONTRIBUTING.md references Handbook"; fi
 
 # 2) Handbook must contain key sections
 declare -a handbook_sections=(

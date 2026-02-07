@@ -10,7 +10,10 @@ MISS=0
 echo "🔎 Doc lint: scanning for missing Scaladoc on public declarations"
 for r in "${ROOTS[@]}"; do
   while IFS= read -r -d '' f; do
-    mapfile -t lines < <(nl -ba "$f")
+    lines=()
+    while IFS= read -r line; do
+      lines+=("$line")
+    done < <(nl -ba "$f")
     for ((i=0; i<${#lines[@]}; i++)); do
       L="${lines[$i]}"
       # Match top-level public declarations (very simple heuristic)

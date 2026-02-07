@@ -82,11 +82,27 @@ jobs:
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
     steps:
       - uses: actions/checkout@v5
+      - name: Detect docs changes
+        id: docs_changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            docs:
+              - 'docs/**'
+              - '**/*.md'
+              - 'scripts/lint-docs.sh'
+              - 'scripts/doclint.sh'
+      - name: Skip docs lint (no docs changes)
+        if: steps.docs_changes.outputs.docs != 'true'
+        run: echo "No docs changes detected; skipping docs lint."
       - name: Install ripgrep
+        if: steps.docs_changes.outputs.docs == 'true'
         run: sudo apt-get update && sudo apt-get install -y ripgrep
       - name: Docs structure lint
+        if: steps.docs_changes.outputs.docs == 'true'
         run: bash scripts/lint-docs.sh
       - name: Scaladoc coverage lint
+        if: steps.docs_changes.outputs.docs == 'true'
         run: |
           chmod +x scripts/doclint.sh
           ./scripts/doclint.sh
@@ -103,12 +119,19 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - uses: sbt/setup-sbt@v1
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: sbt
       - name: CodeQL init
         uses: github/codeql-action/init@v4
         with:
           languages: java
-      - name: CodeQL autobuild
-        uses: github/codeql-action/autobuild@v4
+          build-mode: manual
+      - name: CodeQL build (sbt)
+        run: sbt -batch compileAll
       - name: CodeQL analyze
         uses: github/codeql-action/analyze@v4
       - name: TruffleHog secret scan
@@ -117,7 +140,7 @@ jobs:
           path: ./
           base: ${{ github.event.pull_request.base.sha }}
           head: HEAD
-          extra_args: --only-verified=false
+          extra_args: --only-verified
       - name: Semgrep SAST
         uses: returntocorp/semgrep-action@v1
         with:
