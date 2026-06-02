@@ -27,7 +27,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check and clean incomplete releases
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const tags = await github.rest.repos.listTags({
@@ -76,7 +76,7 @@ jobs:
 
       - name: Trigger release workflow
         if: steps.tag_version.outputs.new_tag != ''
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             await github.rest.repos.createDispatchEvent({
