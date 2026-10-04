@@ -3,6 +3,7 @@ package com.flowforge.core.impl
 
 import cats.data.Kleisli
 import com.flowforge.core.algebra.{ DataAlgebra, DataEncoder, EffectSystem }
+import com.flowforge.core.exec.{ ExecutableStage, StageComposer }
 import com.flowforge.core.types._
 import com.flowforge.framework.{ Pipeline, PipelineMetadata }
 
@@ -59,6 +60,15 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
     new InMemoryTypedBuilder(name, dataAlgebra, stages, description, Some(cfg))(ef)
 
   /**
+   * Append a stage and retype the builder.
+   *
+   * Every stage method used to call the constructor with three of the five fields, so `withDescription` and
+   * `withConfig` were discarded by the next stage added. Carrying the fields in one place removes that.
+   */
+  private def advance[In2, Out2](stage: InMemoryStage[F, _, _]): InMemoryTypedBuilder[F, In2, Out2] =
+    new InMemoryTypedBuilder[F, In2, Out2](name, dataAlgebra, stages :+ stage, description, config)(ef)
+
+  /**
    * Add a streaming data source with fs2.Stream processing
    */
   def addStreamingSource[C](
@@ -71,7 +81,7 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
       source = source,
       execute = Kleisli(_ => dataAlgebra.read(source)(decoder)),
     )
-    new InMemoryTypedBuilder[F, Unit, C](name, dataAlgebra, stages :+ stage)(ef)
+    advance[Unit, C](stage)
   }
 
   /**
@@ -83,7 +93,7 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
       description = "Memory-safe transformation with fs2",
       execute = Kleisli(transform),
     )
-    new InMemoryTypedBuilder[F, In, C](name, dataAlgebra, stages :+ stage)(ef)
+    advance[In, C](stage)
   }
 
   /**
@@ -97,7 +107,7 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
       description = "Batch transformation",
       execute = Kleisli(data => ef.pure(transform(data))),
     )
-    new InMemoryTypedBuilder[F, In, C](name, dataAlgebra, stages :+ stage)(ef)
+    advance[In, C](stage)
   }
 
   /**
@@ -113,7 +123,7 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
       execute =
         Kleisli(data => ef.flatMap(dataAlgebra.validate(data, contract))(result => ef.pure(result.data))),
     )
-    new InMemoryTypedBuilder[F, In, Out](name, dataAlgebra, stages :+ stage)(ef)
+    advance[In, Out](stage)
   }
 
   /**
@@ -130,16 +140,34 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
       sink = sink,
       execute = Kleisli(data => ef.flatMap(dataAlgebra.write(data, sink, options)(encoder))(_ => ef.pure(()))),
     )
-    new InMemoryTypedBuilder[F, In, Unit](name, dataAlgebra, stages :+ stage)(ef)
+    advance[In, Unit](stage)
   }
 
   /**
    * Build the final pipeline with memory-safe processing
    */
   def build(): Pipeline[F, In, Out] = {
-    // Create a simple identity pipeline for now
-    val kleisliPipeline = Kleisli[F, In, Out] { input =>
-      ef.pure(input.asInstanceOf[Out])
+    // This builder cannot run its stages yet, and it must not pretend to.
+    //
+    // It used to return an identity arrow that discarded every stage and handed the input back cast to
+    // Out. Because the cast is erased it did not even fail: a pipeline that should have produced 42
+    // returned (), and the metadata below still listed the stages it had dropped.
+    //
+    // Composing the stages is not a small fix, because the stage types do not line up with the type
+    // parameters. addStreamingSource[C] reports Out = C while its stage produces Dataset[C], and
+    // addStreamTransform (Out => F[C]) and addBatchTransform (Dataset[Out] => Dataset[C]) disagree about
+    // whether Out is the element type or the value type. One Out cannot satisfy both, so the signatures
+    // have to change before the stages can be run. That is an API change, kept out of this fix.
+    //
+    // Until then, failing on run is the honest behaviour. Returning wrong data silently is the worse of
+    // the two, and this builder has no callers to break.
+    val kleisliPipeline = Kleisli[F, In, Out] { _ =>
+      ef.raiseError[Out](
+        new UnsupportedOperationException(
+          s"InMemoryTypedBuilder '$name' cannot execute its ${stages.size} stage(s): stage composition is " +
+            "not implemented. Use PipelineBuilder for a runnable typed pipeline.",
+        ),
+      )
     }
 
     val metadata = PipelineMetadata(
@@ -152,6 +180,7 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
         "streaming"   -> "fs2",
         "memory_safe" -> "true",
         "type_safe"   -> "true",
+        "description" -> description,
       ),
     )
 
@@ -184,9 +213,12 @@ class InMemoryStreamBuilder[F[_]] private[impl] (
   }
 
   def buildStreaming(): Pipeline[F, fs2.Stream[F, Any], fs2.Stream[F, Any]] = {
-    val kleisliPipeline = Kleisli[F, fs2.Stream[F, Any], fs2.Stream[F, Any]] { stream =>
-      ef.pure(stream)
-    }
+    // Each stage maps Stream[F, A] to Stream[F, B] and feeds the next, so these compose directly.
+    // This used to return the input stream unchanged, ignoring every registered operation.
+    val kleisliPipeline = StageComposer.compose[F, fs2.Stream[F, Any], fs2.Stream[F, Any]](
+      pipelineName = name,
+      stages = stages.map(st => ExecutableStage[F](st.name, st.asKleisli)),
+    )(ef)
 
     val metadata = PipelineMetadata(
       name = name,
