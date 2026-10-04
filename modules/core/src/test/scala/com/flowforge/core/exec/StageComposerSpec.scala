@@ -48,17 +48,29 @@ class StageComposerSpec extends AnyFunSuite with Matchers {
     val events: ListBuffer[String] = ListBuffer.empty
     val runIds: ListBuffer[String] = ListBuffer.empty
 
-    private def record(kind: String, jobName: String, runId: String): IO[Either[LineageError, Unit]] =
+    private def record(
+      kind: String,
+      jobName: String,
+      runId: String,
+    ): IO[Either[LineageError, Unit]] =
       IO {
         events += s"$kind:$jobName"
         runIds += runId
         if (failEveryEmit) Left(LineageError("emitter is down")) else Right(())
       }
 
-    def emitJobStart(ns: String, jobName: String, runId: String): IO[Either[LineageError, Unit]] =
+    def emitJobStart(
+      ns: String,
+      jobName: String,
+      runId: String,
+    ): IO[Either[LineageError, Unit]] =
       record("START", jobName, runId)
 
-    def emitJobComplete(ns: String, jobName: String, runId: String): IO[Either[LineageError, Unit]] =
+    def emitJobComplete(
+      ns: String,
+      jobName: String,
+      runId: String,
+    ): IO[Either[LineageError, Unit]] =
       record("COMPLETE", jobName, runId)
 
     def emitJobFail(
@@ -76,8 +88,8 @@ class StageComposerSpec extends AnyFunSuite with Matchers {
     lineage: Option[OpenLineageEmitter[IO]] = None,
     tracerFirst: Boolean = true,
   ) = {
-    val empty = PipelineBuilder[BuilderState.Empty, IO, Unit, Unit](name)
-    val head  = if (tracerFirst) tracer.fold(empty)(empty.withTracer) else empty
+    val empty       = PipelineBuilder[BuilderState.Empty, IO, Unit, Unit](name)
+    val head        = if (tracerFirst) tracer.fold(empty)(empty.withTracer) else empty
     val withLineage = lineage.fold(head)(head.withLineageEmitter)
     val sourced = withLineage
       .addTypedSource[UserContract, UserContract, SchemaPolicy.Exact](source, reader)
@@ -176,11 +188,24 @@ class StageComposerSpec extends AnyFunSuite with Matchers {
 
   test("an emitter that throws does not fail the pipeline it describes", How) {
     val throwing = new OpenLineageEmitter[IO] {
-      def emitJobStart(ns: String, j: String, r: String): IO[Either[LineageError, Unit]] =
+      def emitJobStart(
+        ns: String,
+        j: String,
+        r: String,
+      ): IO[Either[LineageError, Unit]] =
         IO.raiseError(new RuntimeException("emitter threw"))
-      def emitJobComplete(ns: String, j: String, r: String): IO[Either[LineageError, Unit]] =
+      def emitJobComplete(
+        ns: String,
+        j: String,
+        r: String,
+      ): IO[Either[LineageError, Unit]] =
         IO.raiseError(new RuntimeException("emitter threw"))
-      def emitJobFail(ns: String, j: String, r: String, e: String): IO[Either[LineageError, Unit]] =
+      def emitJobFail(
+        ns: String,
+        j: String,
+        r: String,
+        e: String,
+      ): IO[Either[LineageError, Unit]] =
         IO.raiseError(new RuntimeException("emitter threw"))
     }
 

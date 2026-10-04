@@ -20,8 +20,8 @@ object ExecutableStage {
    * Erase a stage arrow to `Any => Any`.
    *
    * The cast is safe because a builder only ever appends a stage whose input type is the previous stage's
-   * output type, and it is unchecked because that chaining is tracked in the builder's type parameters
-   * rather than in the stage list. Keeping the cast here means it exists once rather than once per builder.
+   * output type, and it is unchecked because that chaining is tracked in the builder's type parameters rather
+   * than in the stage list. Keeping the cast here means it exists once rather than once per builder.
    */
   def apply[F[_]](name: String, stage: Kleisli[F, _, _]): ExecutableStage[F] =
     new ExecutableStage[F](name, stage.asInstanceOf[Kleisli[F, Any, Any]])
@@ -30,9 +30,9 @@ object ExecutableStage {
 /**
  * Composes pipeline stages into a single arrow and decorates each stage with tracing and lineage.
  *
- * This is the only place in core that answers "how is a list of stages run". It previously had three
- * answers: `PipelineBuilder.build`, `LineageRunner.runWithEmitter`, and the in-memory builders. They
- * disagreed, and each one was missing something the others had.
+ * This is the only place in core that answers "how is a list of stages run". It previously had three answers:
+ * `PipelineBuilder.build`, `LineageRunner.runWithEmitter`, and the in-memory builders. They disagreed, and
+ * each one was missing something the others had.
  */
 object StageComposer {
 
@@ -41,9 +41,9 @@ object StageComposer {
   /**
    * Build the arrow that runs `stages` in order.
    *
-   * Tracing and lineage are per stage. A stage's span and its START/COMPLETE events cover that stage only,
-   * so stage durations are comparable to each other. When an emitter is given, the whole run is also
-   * wrapped in a pipeline level START/COMPLETE pair sharing one run id.
+   * Tracing and lineage are per stage. A stage's span and its START/COMPLETE events cover that stage only, so
+   * stage durations are comparable to each other. When an emitter is given, the whole run is also wrapped in
+   * a pipeline level START/COMPLETE pair sharing one run id.
    *
    * The run id is generated per execution, not per build, because one built pipeline may be run many times
    * and OpenLineage expects a run id to identify a single run.
