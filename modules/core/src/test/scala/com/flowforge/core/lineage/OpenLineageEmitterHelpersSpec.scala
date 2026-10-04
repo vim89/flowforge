@@ -10,9 +10,13 @@ import org.scalatest.matchers.should.Matchers
 class OpenLineageEmitterHelpersSpec extends AnyFunSuite with Matchers {
   implicit val es: EffectSystem[IO] = EffectInstances.catsEffectSystemInstance
 
-  test("generateRunId produces a stable, non-empty id when no env set") {
+  test("generateRunId produces a fresh, non-empty id for each call when no env set") {
     val id = OpenLineageEmitter.generateRunId("testpipe")
     id.trim.length should be > 0
+
+    // It used to hash the name and the current millisecond, so two runs of one pipeline started in the
+    // same millisecond got the same id and a backend merged them into one run.
+    List.fill(100)(OpenLineageEmitter.generateRunId("testpipe")).distinct.size shouldBe 100
   }
 
   test("pipeline-level emit helpers succeed with noop emitter") {
