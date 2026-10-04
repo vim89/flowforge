@@ -151,11 +151,21 @@ class StageComposerSpec extends AnyFunSuite with Matchers {
     )
   }
 
-  test("every event of one execution shares a single run id", How) {
+  test("a run id identifies one job and is shared by that job's events", How) {
     val emitter = new RecordingEmitter
-    pipelineWith("one-run-id", lineage = Some(emitter)).execute(()).unsafeRunSync()
+    pipelineWith("one-run-per-job", lineage = Some(emitter)).execute(()).unsafeRunSync()
 
-    emitter.runIds.distinct.size shouldBe 1
+    // A run is one execution of one job. Every event of a job carries that job's run id, and no two jobs
+    // share one, so a backend can always tell which job a run belongs to.
+    val byJob = emitter.events.toList
+      .map(_.split(':')(1))
+      .zip(emitter.runIds.toList)
+      .groupBy(_._1)
+      .map { case (job, pairs) => job -> pairs.map(_._2).distinct }
+
+    byJob.values.foreach(_.size shouldBe 1)
+    byJob.size shouldBe 4
+    byJob.values.flatten.toList.distinct.size shouldBe 4
   }
 
   test("a stage failure emits FAIL and re-raises the original error", How) {
@@ -210,6 +220,36 @@ class StageComposerSpec extends AnyFunSuite with Matchers {
     }
 
     pipelineWith("emitter-throws", lineage = Some(throwing)).execute(()).unsafeRunSync() shouldBe (())
+  }
+
+  test("an emitter that throws before returning its effect does not fail the pipeline", How) {
+    // IO.raiseError above is a well behaved failure: the error is inside the effect. This one throws while
+    // the effect is being built, so it escapes any attempt that takes the effect by value.
+    // scalafix:off DisableSyntax.throw
+    val throwing = new OpenLineageEmitter[IO] {
+      def emitJobStart(
+        ns: String,
+        j: String,
+        r: String,
+      ): IO[Either[LineageError, Unit]] =
+        throw new RuntimeException("emitter threw on the way out")
+      def emitJobComplete(
+        ns: String,
+        j: String,
+        r: String,
+      ): IO[Either[LineageError, Unit]] =
+        throw new RuntimeException("emitter threw on the way out")
+      def emitJobFail(
+        ns: String,
+        j: String,
+        r: String,
+        e: String,
+      ): IO[Either[LineageError, Unit]] =
+        throw new RuntimeException("emitter threw on the way out")
+    }
+    // scalafix:on DisableSyntax.throw
+
+    pipelineWith("emitter-throws-early", lineage = Some(throwing)).execute(()).unsafeRunSync() shouldBe (())
   }
 
   test("stages run in order and produce the sink result", How) {
