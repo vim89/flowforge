@@ -373,8 +373,10 @@ object EffectInstances {
     // PARALLEL OPERATIONS
     // ===============================
 
+    // zipPar, not zip: ZIO's zip runs the two effects one after the other, so this used to be a sequential
+    // product behind a parallel name, and every fan-out built on it ran at half speed under ZIO.
     def parProduct[A, B](fa: Task[A], fb: Task[B]): Task[(A, B)] =
-      fa.zip(fb)
+      fa.zipPar(fb)
 
     def parTraverse[A, B](list: List[A])(f: A => Task[B]): Task[List[B]] =
       ZIO.foreachPar(list)(f)

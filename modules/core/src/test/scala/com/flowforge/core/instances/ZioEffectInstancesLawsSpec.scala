@@ -7,8 +7,6 @@ import zio.test.Assertion._
 import zio.test.{ Live, _ }
 import zio.{ durationInt => _, _ }
 
-import scala.concurrent.duration._
-
 object ZioEffectInstancesLawsSpec extends ZIOSpecDefault {
   private val effectSystem: EffectSystem[Task] = zioEffectSystemInstance
 
@@ -53,15 +51,25 @@ object ZioEffectInstancesLawsSpec extends ZIOSpecDefault {
         assertZIO(prog.map(_.left.map(_ => released)))(isLeft(equalTo(true)))
       },
       test("runs parallel operations concurrently") {
+        // This used to sleep 50 ms on each side and require the pair to finish inside 150 ms. A CI runner
+        // under load took 196 ms, so the test reported a sequential parProduct when all it had measured was
+        // a busy machine.
+        //
+        // Each side now announces that it started and then waits for the other to announce the same. That
+        // can only finish if both are running at once, which is the property being tested, and it says
+        // nothing about how fast the machine is. A sequential parProduct would block instead of returning a
+        // wrong answer, so the timeout is what turns that into a failure.
         Live.live {
-          val start = java.lang.System.currentTimeMillis()
-          val op1   = effectSystem.sleep(DurationInt(50).millis) *> effectSystem.pure(1)
-          val op2   = effectSystem.sleep(DurationInt(50).millis) *> effectSystem.pure(2)
-          effectSystem.parProduct(op1, op2).map {
-            case (r1, r2) =>
-              val elapsed = java.lang.System.currentTimeMillis() - start
-              assertTrue(r1 == 1 && r2 == 2 && elapsed < 150)
-          }
+          Promise
+            .make[Nothing, Unit]
+            .zip(Promise.make[Nothing, Unit])
+            .flatMap {
+              case (started1, started2) =>
+                val op1: Task[Int] = started1.succeed(()) *> started2.await.as(1)
+                val op2: Task[Int] = started2.succeed(()) *> started1.await.as(2)
+                effectSystem.parProduct(op1, op2).timeout(Duration.fromSeconds(10))
+            }
+            .map(result => assertTrue(result.contains((1, 2))))
         }
       },
     )
