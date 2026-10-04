@@ -30,9 +30,9 @@ object ExecutableStage {
 /**
  * Composes pipeline stages into a single arrow and decorates each stage with tracing and lineage.
  *
- * This is the only place in core that answers "how is a list of stages run". It previously had three answers:
- * `PipelineBuilder.build`, `LineageRunner.runWithEmitter`, and the in-memory builders. They disagreed, and
- * each one was missing something the others had.
+ * This is the only place in core that answers "how is a list of stages run". `PipelineBuilder.build` and the
+ * in-memory builders each used to answer it separately. They disagreed, and each one was missing something
+ * the others had.
  */
 object StageComposer {
 
