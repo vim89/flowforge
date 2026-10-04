@@ -198,9 +198,6 @@ lazy val core = moduleProject("core")
       "com.flowforge.core.contracts.internal.*",
       "com.flowforge.core.examples.*",
     ).mkString(";"),
-    coverageExcludedFiles := Seq(
-      ".*SchemaWitness.scala",
-    ).mkString(";"),
     // Core module requires 90% coverage (foundational code)
     coverageMinimumStmtTotal := 90,
     coverageMinimumBranchTotal := 85,
@@ -212,8 +209,6 @@ lazy val core = moduleProject("core")
           Seq(
             "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.10",
             "org.scala-lang"                % "scala-reflect" % scalaVersion.value,
-            // Temporary for legacy SchemaWitness (shapeless) kept under scala-2 sources only
-            "com.chuusai"                   %% "shapeless"     % "2.3.10",
           )
         case Some((3, _)) =>
           Seq(
