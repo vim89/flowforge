@@ -31,10 +31,13 @@ class InMemoryPipelineBuilder[F[_]: EffectSystem] private (
     )(EffectSystem[F])
 
   /**
-   * Create a streaming pipeline builder for large datasets
+   * Create a streaming pipeline builder for large datasets.
+   *
+   * `A` is the element type the pipeline is fed. The builder carries it so that each operation added has to
+   * accept what the one before it produced.
    */
-  def streaming(name: String): InMemoryStreamBuilder[F] =
-    new InMemoryStreamBuilder[F](
+  def streaming[A](name: String): InMemoryStreamBuilder[F, A, A] =
+    new InMemoryStreamBuilder[F, A, A](
       name = name,
       dataAlgebra = dataAlgebra,
       stages = List.empty,
@@ -189,33 +192,39 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
 }
 
 /**
- * Streaming pipeline builder for large dataset processing
+ * Streaming pipeline builder for large dataset processing.
+ *
+ * `In` is the element type the pipeline is fed, `Out` the element type it currently produces. Both are needed
+ * because the stages are run back to back: without `Out` the next operation could declare any input element
+ * type it liked, the mismatch would survive compilation, and the stream would fail at the first element with
+ * a cast error inside the fs2 machinery rather than at the call that caused it.
  */
-class InMemoryStreamBuilder[F[_]] private[impl] (
+class InMemoryStreamBuilder[F[_], In, Out] private[impl] (
   private val name: String,
   private val dataAlgebra: InMemoryDataAlgebra[F],
   private val stages: List[InMemoryStage[F, _, _]],
 )(implicit
   ef: EffectSystem[F]) {
 
-  def addStreamingOperation[A, B](
+  /** Append an operation. It has to read the element type the pipeline currently produces. */
+  def addStreamingOperation[B](
     stageName: String,
-    operation: fs2.Stream[F, A] => fs2.Stream[F, B],
-  ): InMemoryStreamBuilder[F] = {
-    val stage = InMemoryStage.Streaming[F, A, B](
+    operation: fs2.Stream[F, Out] => fs2.Stream[F, B],
+  ): InMemoryStreamBuilder[F, In, B] = {
+    val stage = InMemoryStage.Streaming[F, Out, B](
       name = stageName,
       description = "fs2.Stream operation",
-      execute = Kleisli { stream: fs2.Stream[F, A] =>
+      execute = Kleisli { stream: fs2.Stream[F, Out] =>
         ef.pure(operation(stream))
       },
     )
-    new InMemoryStreamBuilder[F](name, dataAlgebra, stages :+ stage)(ef)
+    new InMemoryStreamBuilder[F, In, B](name, dataAlgebra, stages :+ stage)(ef)
   }
 
-  def buildStreaming(): Pipeline[F, fs2.Stream[F, Any], fs2.Stream[F, Any]] = {
+  def buildStreaming(): Pipeline[F, fs2.Stream[F, In], fs2.Stream[F, Out]] = {
     // Each stage maps Stream[F, A] to Stream[F, B] and feeds the next, so these compose directly.
     // This used to return the input stream unchanged, ignoring every registered operation.
-    val kleisliPipeline = StageComposer.compose[F, fs2.Stream[F, Any], fs2.Stream[F, Any]](
+    val kleisliPipeline = StageComposer.compose[F, fs2.Stream[F, In], fs2.Stream[F, Out]](
       pipelineName = name,
       stages = stages.map(st => ExecutableStage[F](st.name, st.asKleisli)),
     )(ef)

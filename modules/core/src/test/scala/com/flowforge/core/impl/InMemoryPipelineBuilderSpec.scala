@@ -39,17 +39,29 @@ class InMemoryPipelineBuilderSpec extends AnyFunSuite with Matchers {
   test("a streaming build applies the operations it was given", How) {
     val built = InMemoryPipelineBuilder
       .create[IO]
-      .streaming("doubler")
-      .addStreamingOperation[Int, Int]("double", _.map(_ * 2))
-      .addStreamingOperation[Int, Int]("increment", _.map(_ + 1))
+      .streaming[Int]("doubler")
+      .addStreamingOperation[Int]("double", _.map(_ * 2))
+      .addStreamingOperation[Int]("increment", _.map(_ + 1))
       .buildStreaming()
 
     // It used to return the input stream unchanged, ignoring every registered operation.
     val out = built
-      .execute(fs2.Stream[IO, Any](1, 2, 3))
+      .execute(fs2.Stream[IO, Int](1, 2, 3))
       .flatMap(_.compile.toList)
       .unsafeRunSync()
 
     out shouldBe List(3, 5, 7)
+  }
+
+  test("a streaming operation that does not read the previous element type is rejected", How) {
+    // The builder used to carry no element type, so this compiled and then failed at the first element
+    // with a cast error from inside fs2 rather than at the call that caused it.
+    assertDoesNotCompile(
+      """InMemoryPipelineBuilder
+           .create[IO]
+           .streaming[Int]("mismatched")
+           .addStreamingOperation[String]("render", _.map(_.toString))
+           .addStreamingOperation[Int]("length", (s: fs2.Stream[IO, Int]) => s)""",
+    )
   }
 }
