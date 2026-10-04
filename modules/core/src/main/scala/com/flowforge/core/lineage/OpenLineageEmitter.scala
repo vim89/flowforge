@@ -44,6 +44,19 @@ class HttpOpenLineageEmitter[F[_]: EffectSystem](implicit L: com.flowforge.core.
   private val openLineageUrl = sys.env.getOrElse("OPENLINEAGE_URL", "http://localhost:5000/api/v1/lineage")
   sys.env.getOrElse("OPENLINEAGE_NAMESPACE", "flowforge")
 
+  /**
+   * Caller waits for the POST, so an endpoint that accepts a connection and then never answers would hold the
+   * pipeline for as long as the socket stays open. These timeouts bound that wait.
+   */
+  private val connectTimeoutMs = timeoutFromEnv("OPENLINEAGE_CONNECT_TIMEOUT_MS", 5000)
+  private val readTimeoutMs    = timeoutFromEnv("OPENLINEAGE_READ_TIMEOUT_MS", 5000)
+
+  private def timeoutFromEnv(key: String, fallbackMs: Int): Int =
+    sys.env.get(key).flatMap(v => scala.util.control.Exception.allCatch.opt(v.toInt)).filter(_ > 0) match {
+      case Some(ms) => ms
+      case None     => fallbackMs
+    }
+
   def emitJobStart(
     namespace: String,
     jobName: String,
@@ -157,6 +170,8 @@ class HttpOpenLineageEmitter[F[_]: EffectSystem](implicit L: com.flowforge.core.
         val url        = new java.net.URL(endpoint)
         val connection = url.openConnection().asInstanceOf[java.net.HttpURLConnection]
 
+        connection.setConnectTimeout(connectTimeoutMs)
+        connection.setReadTimeout(readTimeoutMs)
         connection.setRequestMethod("POST")
         connection.setRequestProperty("Content-Type", "application/json")
         connection.setRequestProperty("User-Agent", "FlowForge/1.0.0")
@@ -215,16 +230,21 @@ object OpenLineageEmitter {
   def asyncHttp[F[_]: EffectSystem](capacity: Int = 1024): OpenLineageEmitter[F] =
     new AsyncOpenLineageEmitter[F](http[F], capacity)
 
-  // Generate a run ID for each pipeline execution. Deterministic when OPENLINEAGE_RUN_ID is set; otherwise UUID.
-  def generateRunId(pipelineName: String = "pipeline"): String =
+  /**
+   * Generate a run ID for one execution. Fixed when OPENLINEAGE_RUN_ID or the matching system property is
+   * set, so an orchestrator can supply the id; otherwise random.
+   *
+   * The fallback used to hash the pipeline name and the current millisecond. Two executions of the same
+   * pipeline starting in the same millisecond then got the same id, and a backend merged them into one run. A
+   * run id has to identify a single run, so a random UUID is the only safe default.
+   */
+  def generateRunId(pipelineName: String = "pipeline"): String = {
+    val _ = pipelineName
     sys.env
       .get("OPENLINEAGE_RUN_ID")
       .orElse(sys.props.get("openlineage.run.id"))
-      .getOrElse {
-        val ts  = Instant.now().toEpochMilli
-        val raw = s"$pipelineName-$ts"
-        java.util.UUID.nameUUIDFromBytes(raw.getBytes("UTF-8")).toString
-      }
+      .getOrElse(java.util.UUID.randomUUID().toString)
+  }
 
   // Helper for pipeline-level events
   def emitPipelineStart[F[_]: EffectSystem](

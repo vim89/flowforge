@@ -3,6 +3,7 @@ package com.flowforge.core
 import cats.data.Kleisli
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
+import com.flowforge.core.exec.{ ExecutableStage, StageComposer }
 import com.flowforge.core.lineage.OpenLineageEmitter
 import com.flowforge.core.observability.Tracer
 import com.flowforge.core.types.BuilderState.{ WithContract, WithTransform }
@@ -50,6 +51,26 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
     copy(tracer = Some(t))
 
   /**
+   * Append a stage and move to the next phantom state.
+   *
+   * `copy` cannot do this because the phantom state and the In/Out types change, and `copy` returns the same
+   * type. That forced a hand-written constructor call in each stage method, and three of them listed five of
+   * the six fields, so a tracer attached before the first stage was dropped. Carrying the fields here means
+   * there is one place to update when a field is added.
+   */
+  private def advance[S2 <: BuilderState, In2, Out2](
+    stage: PipelineStage[F, _, _],
+  ): PipelineBuilder[S2, F, In2, Out2] =
+    PipelineBuilder[S2, F, In2, Out2](
+      name,
+      description,
+      stages :+ stage,
+      config,
+      lineageEmitter,
+      tracer,
+    )
+
+  /**
    * Add typed source with explicit contract and policy. This is the ONLY way to add sources - no untyped
    * escape hatches.
    *
@@ -67,13 +88,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
       dataSource = source.underlying,
       execute = Kleisli(_ => reader(source.underlying)),
     )
-    PipelineBuilder[WithContract, F, Unit, C](
-      name,
-      description,
-      stages :+ stage,
-      config,
-      lineageEmitter,
-    )
+    advance[WithContract, Unit, C](stage)
   }
 
   /**
@@ -90,13 +105,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
       description = "Contract-aware transformation",
       execute = Kleisli(transform),
     )
-    PipelineBuilder[WithTransform, F, In, C](
-      name,
-      description,
-      stages :+ stage,
-      config,
-      lineageEmitter,
-    )
+    advance[WithTransform, In, C](stage)
   }
 
   /**
@@ -135,13 +144,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
         writer(data, sink.underlying),
       ),
     )
-    PipelineBuilder[BuilderState.Complete, F, In, Out](
-      name,
-      description,
-      stages :+ stage,
-      config,
-      lineageEmitter,
-    )
+    advance[BuilderState.Complete, In, Out](stage)
   }
 
   /**
@@ -153,23 +156,12 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
     complete: S <:< BuilderState.Complete,
   ): FFPipeline[F, In, Out] = {
 
-    // Per v1.0 plan: "wire OpenLineageEmitter.emitJobStart/Complete/Fail per stage and for the pipeline"
-    // Lineage emitter can be integrated here per-stage; kept optional for now
-
-    // Compose stages into a single Kleisli[F, In, Out]
-    object KC {
-      def kAny(k: Kleisli[F, _, _]): Kleisli[F, Any, Any] =
-        k.asInstanceOf[Kleisli[F, Any, Any]]
-      def kTyped[A, B](k: Kleisli[F, Any, Any]): Kleisli[F, A, B] =
-        k.asInstanceOf[Kleisli[F, A, B]]
-    }
-
-    val kleisliAny: Kleisli[F, Any, Any] =
-      stages.foldLeft(Kleisli.ask[F, Any]) { (acc, st) =>
-        val next = acc.andThen(KC.kAny(st.execute))
-        tracer.fold(next)(tr => Kleisli(in => tr.inSpan(st.name)(next.run(in))))
-      }
-    val kleisli: Kleisli[F, In, Out] = KC.kTyped[In, Out](kleisliAny)
+    val kleisli: Kleisli[F, In, Out] = StageComposer.compose[F, In, Out](
+      pipelineName = name,
+      stages = stages.map(st => ExecutableStage[F](st.name, st.execute)),
+      tracer = tracer,
+      lineage = lineageEmitter,
+    )
 
     val md = PipelineMetadata(
       name = name,
