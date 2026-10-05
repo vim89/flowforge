@@ -152,6 +152,17 @@ This guards against silently dropping optionality in deeply nested structures. S
 - `SchemaPolicy.ExactOrderedCI`: Case-insensitive names with enforced order.
 - `SchemaPolicy.ExactByPosition`: Ignores names; requires types match at each position. Useful when integrating sources with unstable naming but stable positions.
 
+#### Case sensitivity of `Exact`
+
+`Exact` compares field names case-sensitively. The Scala 3 proof of concept these policies came from
+compares them case-insensitively instead, so a producer renaming `userId` to `userid` passes there and
+fails here. The difference is intentional: column name case is load-bearing in some of the stores
+FlowForge writes to, so accepting case drift by default would hide a real break. The case-insensitive
+behaviour is still available under `ExactUnorderedCI` and `ExactOrderedCI`, it just has to be asked for.
+
+Every policy's accepted and rejected cases are listed in
+`modules/core/src/test/scala/com/flowforge/core/contracts/internal/ShapeDiffPolicySpec.scala`.
+
 ---
 
 ### `SchemaPolicy.Backward`
