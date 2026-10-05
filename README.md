@@ -214,7 +214,7 @@ We welcome folks from Python/ETL backgrounds and JVM veterans alike. Start with 
 ## License
 
 
-[Apache 2.0](LICENSE)
+[AGPLv3 with additional Flowforge terms](LICENSE)
 
 ---
 ### Flowforge Hybrid Licensing Model
