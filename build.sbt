@@ -136,6 +136,16 @@ def moduleProject(name: String): Project =
       libraryDependencies ++= Dependencies.common,
     )
 
+// Demos and CLI entry points print to stdout and run effects at their `main`. See the header of
+// .scalafix-demo.conf for which rules that exempts them from.
+// The Test config inherits from Compile, so the Test setting has to be repeated here or the demo
+// config would also apply to these modules' test sources.
+lazy val demoScalafixSettings: Seq[Setting[_]] =
+  Seq(
+    Compile / scalafixConfig := Some(file(".scalafix-demo.conf")),
+    Test / scalafixConfig := Some(file(".scalafix-test.conf")),
+  )
+
 // Binary compatibility: previous version can be supplied via env MIMA_PREVIOUS_VERSION
 def mimaSettings(module: String): Seq[Setting[_]] =
   Seq(
@@ -339,6 +349,7 @@ lazy val examples = moduleProject("examples")
     // Examples are for demonstration - exclude from coverage requirements
     coverageEnabled := false,
   )
+  .settings(demoScalafixSettings)
 
 // examples-spark merged into examples; module removed to avoid duplication
 
@@ -357,6 +368,7 @@ lazy val validationCli = moduleProject("validation-cli")
     Compile / mainClass := Some("com.flowforge.validation.SchemaValidateCli"),
     publish / skip      := true,
   )
+  .settings(demoScalafixSettings)
 
 // CLI to infer contracts from physical sources and emit .avsc + dq/metadata YAML
 lazy val contractsExtractorCli = moduleProject("contracts-extractor-cli")
@@ -373,6 +385,7 @@ lazy val contractsExtractorCli = moduleProject("contracts-extractor-cli")
     Compile / mainClass := Some("com.flowforge.contracts.extractor.ContractsExtractorCli"),
     publish / skip      := true,
   )
+  .settings(demoScalafixSettings)
 
 // Maintenance CLI for non-SLA operations (VACUUM, compact)
 lazy val maintenanceCli = moduleProject("maintenance-cli")
@@ -383,6 +396,7 @@ lazy val maintenanceCli = moduleProject("maintenance-cli")
     Compile / mainClass := Some("com.flowforge.maintenance.MaintenanceCli"),
     publish / skip      := true,
   )
+  .settings(demoScalafixSettings)
 
 // ===== ADDITIONAL MODULES =====
 
@@ -531,3 +545,7 @@ ThisBuild / ScalaUnidoc / unidocProjectFilter := inProjects(unidocProjects.map(_
 
 // Scalafix: Disable auto-run on compile (run explicitly in CI)
 ThisBuild / scalafixOnCompile := false
+
+// Test sources use a looser rule set. See the header of .scalafix-test.conf for which rules are
+// dropped and why. Scalafix has no per-file excludes, so the split has to be made here.
+ThisBuild / Test / scalafixConfig := Some(file(".scalafix-test.conf"))
