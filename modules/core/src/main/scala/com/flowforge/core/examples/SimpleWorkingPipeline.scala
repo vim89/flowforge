@@ -124,13 +124,13 @@ object SimpleWorkingPipeline extends IOApp.Simple {
   def demonstrateErrorHandling: IO[Unit] = {
     println("\n🚨 Error Handling Demo")
 
-    val flakyOperation: IO[String] = IO.delay {
-      if (scala.util.Random.nextDouble() > 0.5) {
-        "Success!"
-      } else {
-        throw new RuntimeException("Random failure occurred")
+    // The failure is raised in IO rather than thrown, so the handleErrorWith below is what catches it in
+    // either case and the demo does not depend on delay happening to capture an exception.
+    val flakyOperation: IO[String] =
+      IO.delay(scala.util.Random.nextDouble() > 0.5).flatMap {
+        case true  => IO.pure("Success!")
+        case false => IO.raiseError(new RuntimeException("Random failure occurred"))
       }
-    }
 
     val withRetryAndFallback = flakyOperation
       .handleErrorWith(_ => IO.pure("Fallback value"))
