@@ -144,17 +144,15 @@ object Dependencies {
   // Engines
   object Engines {
     val spark = Seq(
-      "org.apache.spark" %% "spark-core"     % Versions.spark % "provided",
-      "org.apache.spark" %% "spark-sql"      % Versions.spark % "provided",
-      "org.apache.spark" %% "spark-catalyst" % Versions.spark % "provided",
-      "io.delta"         %% "delta-spark"    % Versions.delta,
+      "org.apache.spark" %% "spark-core"  % Versions.spark % "provided",
+      "org.apache.spark" %% "spark-sql"   % Versions.spark % "provided",
+      "io.delta"         %% "delta-spark" % Versions.delta,
     )
 
     val sparkCompile = Seq(
-      "org.apache.spark" %% "spark-core"     % Versions.spark,
-      "org.apache.spark" %% "spark-sql"      % Versions.spark,
-      "org.apache.spark" %% "spark-catalyst" % Versions.spark,
-      "io.delta"         %% "delta-spark"    % Versions.delta,
+      "org.apache.spark" %% "spark-core"  % Versions.spark,
+      "org.apache.spark" %% "spark-sql"   % Versions.spark,
+      "io.delta"         %% "delta-spark" % Versions.delta,
     )
 
     val flink = Seq(
