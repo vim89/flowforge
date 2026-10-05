@@ -1,7 +1,7 @@
 package com.flowforge.contracts.syntax
 
-import com.flowforge.contracts.{ FieldConstraint, FieldType }
 import com.flowforge.contracts.syntax.ContractDSL._
+import com.flowforge.contracts.{ FieldConstraint, FieldType }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 

@@ -3,11 +3,10 @@ package com.flowforge.core.pipeline
 import cats.data.Validated
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import cats.syntax.all._
-import com.flowforge.core.syntax.PipelineSyntax
-import com.flowforge.core.syntax.PipelineSyntax._
 import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
 import com.flowforge.core.impl.InMemoryDataAlgebra
+import com.flowforge.core.syntax.PipelineSyntax
+import com.flowforge.core.syntax.PipelineSyntax._
 import com.flowforge.core.types._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers

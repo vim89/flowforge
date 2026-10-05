@@ -18,7 +18,7 @@ class FlowForgePipelineCoverageSpec extends AnyFunSuite with Matchers {
     val sink                                     = DataSink.local("/out", DataFormat.JSON)
     val t: PipelineComponent[IO, String, String] = cats.data.Kleisli((s: String) => IO.pure(s.trim))
     val bad: QualityCheck[String] =
-      s => Validated.invalidNel[FlowForgeError, Unit](FlowForgeError.ValidationError("bad", Some("x")))
+      _ => Validated.invalidNel[FlowForgeError, Unit](FlowForgeError.ValidationError("bad", Some("x")))
     val good: QualityCheck[String] = _ => Validated.valid(())
 
     val p = FlowForgePipeline[IO, String, String]("p", src, sink, t, List(good, bad), None)

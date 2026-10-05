@@ -5,8 +5,6 @@ import cats.Monoid
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-import java.time.Instant
-import java.util.concurrent.TimeUnit
 import scala.concurrent.duration._
 
 class MetricTypesSpec extends AnyFunSuite with Matchers {

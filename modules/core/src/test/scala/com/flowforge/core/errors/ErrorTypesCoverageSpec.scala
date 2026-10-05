@@ -1,9 +1,7 @@
 package com.flowforge.core.errors
-
-import com.flowforge.core.types._
-import com.flowforge.core.types.ValidationError._
-import com.flowforge.core.types.SystemError._
 import com.flowforge.core.types.BusinessError._
+import com.flowforge.core.types.SystemError._
+import com.flowforge.core.types.ValidationError._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
