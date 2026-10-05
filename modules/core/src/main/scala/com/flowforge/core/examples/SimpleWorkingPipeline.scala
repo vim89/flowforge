@@ -1,3 +1,5 @@
+// Runnable example, not library code: it prints its results so it can be read when run.
+// scalafix:off DisableSyntax.noPrintln
 /**
  * Simple working pipeline example demonstrating FlowForge core functionality.
  *
