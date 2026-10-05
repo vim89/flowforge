@@ -146,7 +146,7 @@ PipelineBuilder[IO]("demo")
 |------|------|----------|
 | A - Examples | Try locally (no cluster) | `sbt ffDev` (compile + focused tests), `sbt ffRunSpark` (Spark local[*]) |
 | B - Red→Green | See compile‑time error then fix | Use the snippet above; run `sbt compile` |
-| C - New project | Scaffold with g8 | `sbt new flowforge.g8 --name="ff-demo" --organization="com.acme"` then `sbt test` / `sbt run` |
+| C - New project | Scaffold with g8 | `sbt new vim89/flowforge.g8 --name="ff-demo" --organization="com.acme"` then `sbt test` / `sbt run` |
 
 ## Compatibility
 
