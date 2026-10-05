@@ -39,13 +39,19 @@ final case class ProductionSparkDataset[A](
   override def data: List[A] = sampleData
 
   /**
-   * Convert to Spark Dataset with encoder for type-safe operations
+   * View the underlying DataFrame as a typed `Dataset[A]`.
+   *
+   * The element type is the wrapper's own `A` rather than a free type parameter. Supplying the type the
+   * wrapper already knows is the only thing this method adds: a caller who wants some other shape can still
+   * write `sparkDataFrame.as[T]`, since the frame is public. A free parameter also could not be inferred, so
+   * every call site had to name it.
+   *
+   * Binding is schema-on-read. `as` resolves `A`'s fields against the frame's columns when it is called, so a
+   * frame that does not carry those columns fails here instead of in the first operation that needs them. No
+   * job is started: this is a lazy view of the same frame, not a copy.
    */
-  def asSparkDataset[T](implicit encoder: org.apache.spark.sql.Encoder[T]): Dataset[T] =
-    // This would require proper encoding implementation in production
-    throw new UnsupportedOperationException(
-      "Type-safe Spark Dataset conversion requires encoder implementation",
-    )
+  def asSparkDataset(implicit encoder: org.apache.spark.sql.Encoder[A]): Dataset[A] =
+    sparkDataFrame.as[A]
 
   /**
    * Cache the underlying DataFrame for performance
