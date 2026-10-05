@@ -13,7 +13,8 @@ import scala.quoted.*
  */
 object ContractMacros {
 
-  def conformsImpl[Out: Type, Contract: Type, P <: SchemaPolicy: Type](using
+  def conformsImpl[Out: Type, Contract: Type, P <: SchemaPolicy: Type](
+    using
     q: Quotes,
   ): Expr[SchemaConforms[Out, Contract, P]] = {
     import q.reflect.*

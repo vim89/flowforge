@@ -6,10 +6,10 @@ import com.flowforge.core.contracts.internal.TypeShape._
 /**
  * Policy-aware comparison of two normalized shapes.
  *
- * This is all of contract checking that does not need a compiler: given two [[TypeShape]]s and a policy
- * name it says what drifted and renders the message. Each Scala version's macro only has to turn a type
- * into a `TypeShape` and hand the pair to [[ShapeDiff.report]], so the rules live in one place and can be
- * tested without compiling anything.
+ * This is all of contract checking that does not need a compiler: given two [[TypeShape]]s and a policy name
+ * it says what drifted and renders the message. Each Scala version's macro only has to turn a type into a
+ * `TypeShape` and hand the pair to [[ShapeDiff.report]], so the rules live in one place and can be tested
+ * without compiling anything.
  */
 object ShapeDiff {
 
@@ -69,8 +69,8 @@ object ShapeDiff {
      * Either a simple name ("Backward") or the fully qualified type name a macro reads off the type it was
      * given ("com.flowforge.core.contracts.SchemaPolicy.Backward") works.
      *
-     * An unrecognised name, including an abstract `P <: SchemaPolicy`, compares exactly and relaxes
-     * nothing, which is the strictest answer available.
+     * An unrecognised name, including an abstract `P <: SchemaPolicy`, compares exactly and relaxes nothing,
+     * which is the strictest answer available.
      */
     def forName(policyName: String): Flags =
       byName.getOrElse(policyName.substring(policyName.lastIndexOf('.') + 1), Flags())
@@ -259,9 +259,9 @@ object ShapeDiff {
     outFields: List[FieldShape],
     contractFields: List[FieldShape],
   ): (List[Missing], List[Extra], List[Mismatch]) = {
-    val norm: String => String  = s => if (flags.caseInsensitive) s.toLowerCase else s
-    val outMap                  = outFields.map(f => norm(f.name) -> f).toMap
-    val contractMap             = contractFields.map(f => norm(f.name) -> f).toMap
+    val norm: String => String = s => if (flags.caseInsensitive) s.toLowerCase else s
+    val outMap                 = outFields.map(f => norm(f.name) -> f).toMap
+    val contractMap            = contractFields.map(f => norm(f.name) -> f).toMap
 
     val missing = contractFields.collect {
       case f if !outMap.contains(norm(f.name)) => Missing(pathOf(path, f.name), f)

@@ -7,8 +7,8 @@ import scala.quoted.*
 /**
  * Turning a Scala 3 type into a [[TypeShape]].
  *
- * The two macros that need this, contract checking and `Shape` derivation, ask different questions of the same
- * type, so the reflection lives here and each of them keeps only its own job.
+ * The two macros that need this, contract checking and `Shape` derivation, ask different questions of the
+ * same type, so the reflection lives here and each of them keeps only its own job.
  */
 object TypeShapes {
 
@@ -75,13 +75,14 @@ object TypeShapes {
 
   private def fieldsOf(using q: Quotes)(tpe: q.reflect.TypeRepr): List[FieldShape] = {
     import q.reflect.*
-    params(tpe).map { case (name, fieldType, hasDefault) =>
-      val (underlying, isOptional) = fieldType.dealias.asType match {
-        case '[Option[a]] => (TypeRepr.of[a], true)
-        case _            => (fieldType, false)
-      }
-      // For field-level shape, pass inField = true so Option is carried via isOptional flag
-      FieldShape(name, shapeOf(underlying, inField = true), hasDefault, isOptional)
+    params(tpe).map {
+      case (name, fieldType, hasDefault) =>
+        val (underlying, isOptional) = fieldType.dealias.asType match {
+          case '[Option[a]] => (TypeRepr.of[a], true)
+          case _            => (fieldType, false)
+        }
+        // For field-level shape, pass inField = true so Option is carried via isOptional flag
+        FieldShape(name, shapeOf(underlying, inField = true), hasDefault, isOptional)
     }
   }
 
