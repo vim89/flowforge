@@ -194,8 +194,16 @@ lazy val core = moduleProject("core")
     libraryDependencies ++= Dependencies.forModule("core"),
     // Minimal, justified excludes only
     coverageExcludedPackages := Seq(
-      "com.flowforge.core.contracts.internal.*",
       "com.flowforge.core.examples.*",
+    ).mkString(";"),
+    // The macros run in the compiler rather than in a test, so the instrumentation never sees them. The
+    // comparison they share lives in the same package and is ordinary code with its own tests, which is
+    // why these are excluded by file instead of by package.
+    coverageExcludedFiles := Seq(
+      ".*/ContractMacros.scala",
+      ".*/SchemaConformsMaterializer.scala",
+      ".*/ShapeDerivation.scala",
+      ".*/TypeShapes.scala",
     ).mkString(";"),
     // Core module requires 90% coverage (foundational code)
     coverageMinimumStmtTotal := 90,
