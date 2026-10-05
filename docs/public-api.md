@@ -1,19 +1,19 @@
 # flowforge Public API (v1.0)
 
-Status: RC-ready public surface. APIs listed here are intended for public use and will maintain binary compatibility within 1.x (see guarantees below).
+Status: pre-1.0. APIs listed here are intended for public use. The binary compatibility promise described below starts at the 1.0.0 release; releases before that may break it.
 
 ## Core public APIs
 
 ### Primary pipeline construction
 - **Core**: `com.flowforge.core.*` - Main pipeline builder and execution system
 - **Contracts**: `com.flowforge.core.contracts.*` - Schema validation and policy enforcement  
-- **Types**: `com.flowforge.core.types.*` - Type-safe data structures and builders
+- **Types**: the types named in this document under `com.flowforge.core.types` - `DataSchema`, `DataType`, `StructField`, `QualityConstraint`, `DataSource`, `DataSink`, `RefinedTypes`. The rest of the package is not covered by this surface.
 - **Main Builder**: `com.flowforge.core.PipelineBuilder` - 100% compile-time contract enforcement
 
 ### Data algebra & operations
-- **DataAlgebra**: `com.flowforge.core.algebra.DataAlgebra[F[_], DS[_]]` - Core data operations abstraction
+- **DataAlgebra**: `com.flowforge.core.algebra.DataAlgebra[F[_]]` - Core data operations abstraction
 - **Quality Framework**: `com.flowforge.core.algebra.DataAlgebra.QualityResult[A]` - Quality validation results
-- **Pipeline Types**: `com.flowforge.core.types.Pipeline[Input, Output]` - Type-safe pipeline execution
+- **Pipeline Types**: `com.flowforge.core.FlowForgePipeline[F[_]: EffectSystem, A, B]` - Type-safe pipeline execution
 
 ### Quality constraints DSL
 ```scala
@@ -30,9 +30,9 @@ com.flowforge.core.types.QualityConstraint:
 
 ### Spark integration
 - **ProductionSparkDataset**: `com.flowforge.engines.spark.ProductionSparkDataset[A]`
-  - File operations: `writeParquet()`, `writeDelta()`, `writeCSV()`
-  - Schema operations: `printSchema()`, `show()`
-  - Factory methods: `fromDataFrame()`, `fromParquet()`, `fromDelta()`
+  - File operations: `writeParquet()`, `writeDelta()`
+  - Spark interop: `asSparkDataset()`, `show()`, `cache()`, `persist()`, `repartition()`
+  - Factory methods: `fromDataFrame()`, `fromData()`
 - **SparkDataAlgebra**: Spark-specific DataAlgebra implementation
 
 ### Flink integration
@@ -66,14 +66,14 @@ com.flowforge.core.types.QualityConstraint:
 ### Type safety
 - **100% Compile-Time Contracts**: Pipelines won't build if schemas don't match (improved implementation)
 - **Phantom-State Builder**: Type system prevents incomplete pipelines
-- **Superior Schema Policy System**: Exact, ExactUnorderedCI, ExactOrdered, ExactByPosition, Backward, Forward, Full policies
+- **Schema Policy System**: Exact, ExactUnordered, ExactUnorderedCI, ExactOrdered, ExactOrderedCI, ExactByPosition, Backward, Forward, Full policies
 - **TypeShape ADT**: Clean, functional schema representation replacing old SchemaAST
 - **Policy-Based Comparison**: Maintainable, extensible schema validation engine
 - **Refined Types**: `FieldName`, `SchemaVersion` with compile-time validation
 
 ### Effect system support
 - **Effect-Safe**: Works with any `F[_]: EffectSystem` (IO, Task, etc.)
-- **Resource Management**: All operations use `Resource[F, _]` for automatic cleanup
+- **Resource Management**: `com.flowforge.core.algebra.FlowforgeResource[F, _]` for acquire-and-release cleanup. `DataAlgebra` operations themselves return plain `F[_]`; the table operations in `EnterpriseTableAlgebra` return `cats.effect.Resource`.
 - **Error Handling**: Either monads throughout (CONTRIBUTING.md compliance)
 
 ### Production features
@@ -85,7 +85,7 @@ com.flowforge.core.types.QualityConstraint:
 ## Examples & utilities (v1.0 reference)
 
 ### Complete pipeline example
-- **UsersPipeline**: `com.flowforge.examples.spark.UsersPipeline`
+- **UsersPipeline**: `com.flowforge.examples.spark.UsersPipeline` (test sources of the `examples` module, so it is read as a reference rather than depended on)
   - End-to-end ETL demonstration
   - Quality validation with 6 constraint types
   - Delta Lake constraints (NOT NULL, CHECK)
@@ -99,8 +99,7 @@ com.flowforge.core.types.QualityConstraint:
 ## Internal APIs (not public)
 
 ### Implementation details
-- **Internal**: `com.flowforge.core.internal.*` - Implementation details, not for public use
-- **Instances**: `com.flowforge.core.instances.internal.*` - Internal type class instances  
+- **Internal**: any `*.internal.*` package, such as `com.flowforge.core.contracts.internal` (the contract macros) - implementation details, not for public use
 - **Test Utilities**: Test fixtures and helpers
 - **Build Configuration**: SBT modules and dependency management
 
@@ -162,5 +161,5 @@ Available in documentation with copy-pasteable examples for each cloud provider.
 
 ---
 
-Document Status: RC-ready
-Last Updated: 2025‑10‑02
+Document Status: pre-1.0
+Last Updated: 2026‑10‑05
