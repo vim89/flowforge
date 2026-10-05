@@ -1,7 +1,7 @@
 // Formatting
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.5.2")
 
-// Code quality  
+// Code quality
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.11.1")
 
 // Test coverage
