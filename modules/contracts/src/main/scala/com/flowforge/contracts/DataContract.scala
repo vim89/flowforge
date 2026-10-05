@@ -33,8 +33,13 @@ trait DataContract[A] {
 object DataContract {
   def apply[A](implicit ev: DataContract[A]): DataContract[A] = ev
 
-  /** Builder for creating data contracts. */
-  def builder[A]: DataContractBuilder[A] = new DataContractBuilder[A]
+  /**
+   * Starts a builder for a contract over `A`.
+   *
+   * The schema is taken here rather than through a `withSchema` step so that `build` has nothing left to fail
+   * on: a builder cannot exist without the one part that is mandatory.
+   */
+  def builder[A](schema: ContractSchema): DataContractBuilder[A] = DataContractBuilder[A](schema)
 
   /** Prebuilt strict view that validates schema and all rules. */
   def strict[A: DataContract]: DataContract[A] = DataContract[A]
@@ -98,14 +103,13 @@ object ValidationRules {
   def nonNull[A](fieldName: String)(extract: A => Any): ValidationRule[A] =
     new ValidationRule[A] {
       val name = s"nonNull($fieldName)"
-      def validate(data: A): ValidatedNel[ContractViolation, Unit] = {
-        val value = extract(data)
-        if (value == null) {
-          ContractViolation.NullValue(fieldName).invalidNel
-        } else {
-          ().validNel
+      def validate(data: A): ValidatedNel[ContractViolation, Unit] =
+        // `extract` returns Any because it reaches into caller data this module does not control, so a null
+        // genuinely can arrive here. Option is the narrowest way to ask without naming the literal.
+        Option(extract(data)) match {
+          case Some(_) => ().validNel
+          case None    => ContractViolation.NullValue(fieldName).invalidNel
         }
-      }
     }
 
   def unique[A](fieldName: String)(extract: A => Any): ValidationRule[A] =
@@ -236,51 +240,50 @@ case class ContractVersion(
 }
 
 object ContractVersion {
-  def apply(version: String): ContractVersion =
+
+  /** Parses `major.minor.patch`. Returns None for anything else, including non-numeric parts. */
+  def fromString(version: String): Option[ContractVersion] =
     version.split("\\.") match {
       case Array(major, minor, patch) =>
-        ContractVersion(major.toInt, minor.toInt, patch.toInt)
-      case _ =>
-        throw new IllegalArgumentException(s"Invalid version format: $version")
+        for {
+          ma <- major.toIntOption
+          mi <- minor.toIntOption
+          pa <- patch.toIntOption
+        } yield ContractVersion(ma, mi, pa)
+      case _ => None
     }
 }
 
 /**
- * Fluent builder for data contracts
+ * Fluent builder for data contracts.
+ *
+ * Immutable: every step returns a new builder. `declaredRules` is in declaration order.
  */
-class DataContractBuilder[A] {
-  private var schemaOpt: Option[ContractSchema]   = None
-  private var versionOpt: Option[ContractVersion] = None
-  private var rules: List[ValidationRule[A]]      = List.empty
+case class DataContractBuilder[A](
+  contractSchema: ContractSchema,
+  declaredVersion: ContractVersion = ContractVersion(1, 0, 0),
+  declaredRules: List[ValidationRule[A]] = List.empty) {
 
-  def withSchema(schema: ContractSchema): DataContractBuilder[A] = {
-    schemaOpt = Some(schema)
-    this
-  }
+  def withVersion(version: ContractVersion): DataContractBuilder[A] =
+    copy(declaredVersion = version)
 
-  def withVersion(version: ContractVersion): DataContractBuilder[A] = {
-    versionOpt = Some(version)
-    this
-  }
+  def withRule(rule: ValidationRule[A]): DataContractBuilder[A] =
+    copy(declaredRules = declaredRules :+ rule)
 
-  def withRule(rule: ValidationRule[A]): DataContractBuilder[A] = {
-    rules = rule :: rules
-    this
-  }
-
-  def withRules(newRules: ValidationRule[A]*): DataContractBuilder[A] = {
-    rules = newRules.toList ++ rules
-    this
-  }
+  def withRules(newRules: ValidationRule[A]*): DataContractBuilder[A] =
+    copy(declaredRules = declaredRules ++ newRules)
 
   def build: DataContract[A] = {
-    schemaOpt.getOrElse(throw new IllegalStateException("Schema is required"))
-    versionOpt.getOrElse(ContractVersion(1, 0, 0))
+    // A contract has to carry at least one rule. With none declared, the contract accepts everything, which
+    // is what a schema-only contract means.
     val ruleList = NonEmptyList
-      .fromList(rules.reverse)
+      .fromList(declaredRules)
       .getOrElse(
         NonEmptyList.one(ValidationRules.custom[A]("always_valid")(_ => ().validNel)),
       )
+
+    val builtSchema  = contractSchema
+    val builtVersion = declaredVersion
 
     new DataContract[A] {
       def validate(data: A): ValidatedNel[ContractViolation, A] = {
@@ -288,8 +291,8 @@ class DataContractBuilder[A] {
         validations.sequence_.map(_ => data)
       }
 
-      val schema: ContractSchema                 = schema
-      val version: ContractVersion               = version
+      val schema: ContractSchema                 = builtSchema
+      val version: ContractVersion               = builtVersion
       val rules: NonEmptyList[ValidationRule[A]] = ruleList
     }
   }
@@ -308,8 +311,7 @@ object StandardContracts {
 
   implicit val salesDataContract: DataContract[SalesData] =
     DataContract
-      .builder[SalesData]
-      .withSchema(
+      .builder[SalesData](
         ContractSchema(
           name = NonEmptyString.unsafeFrom("SalesData"),
           fields = List(
