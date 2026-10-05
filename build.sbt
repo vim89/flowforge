@@ -520,6 +520,8 @@ lazy val experimental = moduleProject("experimental")
     ),
     Compile / mainClass := Some("com.flowforge.experimental.caprese.Main"),
     publish / skip      := true,
+    // The Scala 2 only rules are dropped here so this module still goes through the same DisableSyntax gate.
+    scalafixConfig := Some(file(".scalafix-scala3.conf")),
   )
 // ===== UNIDOC (optional unified API) =====
 import sbtunidoc.ScalaUnidocPlugin
