@@ -7,6 +7,7 @@ import cats.{ Applicative, Monad }
 import com.flowforge.core.algebra.{ DataAlgebra, DataDecoder, EffectSystem, FlowforgeResource }
 import com.flowforge.core.instances.DataInstances
 import com.flowforge.core.types._
+import com.flowforge.framework.{ Pipeline, PipelineMetadata }
 import eu.timepit.refined.api.Refined
 
 import java.time.Instant
@@ -441,6 +442,30 @@ object ReaderPattern {
           validator(context, input)
         }
       }
+    }
+
+  /**
+   * Resolve a component against a context and return a runnable pipeline.
+   *
+   * This is the join to the rest of the framework: dependencies are supplied once, at the edge, and what
+   * comes back is an ordinary [[com.flowforge.framework.Pipeline]] whose type no longer mentions the context.
+   * Without it a caller holds a `DIComponent` and has to unwrap the `ReaderT` and build the metadata by hand.
+   */
+  def pipeline[F[_]: Monad, A, B](
+    name: String,
+    component: DIComponent[F, A, B],
+    stages: List[String] = Nil,
+  ): ReaderT[F, AppContext[F], Pipeline[F, A, B]] =
+    component.map { arrow =>
+      Pipeline(
+        arrow,
+        PipelineMetadata(
+          name = name,
+          stages = if (stages.isEmpty) List(name) else stages,
+          transformations = stages.size,
+          tags = Map("di" -> "reader"),
+        ),
+      )
     }
 
   /**
