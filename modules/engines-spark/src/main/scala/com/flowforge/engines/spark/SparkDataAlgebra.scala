@@ -104,9 +104,10 @@ object SparkDataAlgebra {
 
       import com.flowforge.core.impl.SimpleDataset
 
-      private val F     = EffectSystem[F]
-      private val log   = com.flowforge.core.logging.CoreLogger.noOp[F]
-      private val spark = sparkSession
+      private val F       = EffectSystem[F]
+      private val log     = com.flowforge.core.logging.CoreLogger.noOp[F]
+      private val spark   = sparkSession
+      private val metrics = com.flowforge.core.observability.MetricsCollector.prometheusOrNoop
 
       override val capabilities: Set[Capability] =
         Set(Capability.Read, Capability.Write, Capability.QualityChecks)
@@ -180,13 +181,10 @@ object SparkDataAlgebra {
                 case j: DataSource.JdbcSource      => j.table.value
                 case _                             => source.getClass.getSimpleName
               }
-              // Best-effort metrics/logging (errors swallowed)
-              F.delay {
-                try
-                  com.flowforge.core.observability.PrometheusMetrics.Data.opLatencyMs
-                    .labels("read", "spark").observe(dur.toMillis.toDouble)
-                catch { case _: Throwable => () }
-              }.*>(log.info(s"spark.read ok format=${source.format} loc=$loc ms=${dur.toMillis}"))
+              // Metrics are best effort: MetricsCollector drops a failure that means the metric could not
+              // be recorded, and lets anything else through.
+              F.delay(metrics.observeLatency("read", "spark", dur.toMillis.toDouble))
+                .*>(log.info(s"spark.read ok format=${source.format} loc=$loc ms=${dur.toMillis}"))
                 .as(ds)
           }
       }
@@ -261,11 +259,7 @@ object SparkDataAlgebra {
                 bytesWritten = bytesWritten,
                 success = true,
               )
-              try
-                com.flowforge.core.observability.PrometheusMetrics.Data.writeTotal
-                  .labels("spark", sink.format.toString)
-                  .inc()
-              catch { case _: Throwable => () }
+              metrics.incWrite("spark", sink.format.toString)
               wr
 
             case j: JdbcSink =>
@@ -315,12 +309,7 @@ object SparkDataAlgebra {
               case _                   => sink.getClass.getSimpleName
             }
             for {
-              _ <- F.delay {
-                try
-                  com.flowforge.core.observability.PrometheusMetrics.Data.opLatencyMs
-                    .labels("write", "spark").observe(dur.toMillis.toDouble)
-                catch { case _: Throwable => () }
-              }
+              _ <- F.delay(metrics.observeLatency("write", "spark", dur.toMillis.toDouble))
               _ <- log.info(
                 s"spark.write ok format=${sink.format} loc=$loc ms=${dur.toMillis} records=${wr.recordsWritten}",
               )
@@ -597,13 +586,7 @@ object SparkDataAlgebra {
           start  <- startNanosF
           counts <- op
           end    <- F.delay(System.nanoTime())
-          _ <- F.delay {
-            try
-              com.flowforge.core.observability.PrometheusMetrics.Data.opLatencyMs
-                .labels("cdc-merge", "spark")
-                .observe((end - start).toDouble / 1e6)
-            catch { case _: Throwable => () }
-          }
+          _ <- F.delay(metrics.observeLatency("cdc-merge", "spark", (end - start).toDouble / 1e6))
           _ <- log.info(
             s"spark.cdc counts inserted=${counts._1} updated=${counts._2} deleted=${counts._3} unchanged=${counts._4}",
           )
