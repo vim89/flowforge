@@ -79,12 +79,17 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
     new InMemoryTypedBuilder[F, In2, Out2](name, dataAlgebra, stages :+ stage, description, config)(ef)
 
   /**
-   * Add a streaming data source with fs2.Stream processing
+   * Add a streaming data source with fs2.Stream processing.
+   *
+   * A source reads from outside the pipeline, so it takes no input. The `Out =:= Unit` evidence restricts it
+   * to a builder that has not produced a value yet. Without it, adding a source after a transform compiled
+   * and then failed at run time, because the source's arrow would be handed the transform's output.
    */
   def addStreamingSource[C](
     source: DataSource,
     decoder: com.flowforge.core.algebra.DataDecoder[C],
-  ): InMemoryTypedBuilder[F, Unit, DataAlgebra.Dataset[C]] = {
+  )(implicit atStart: Out =:= Unit): InMemoryTypedBuilder[F, Unit, DataAlgebra.Dataset[C]] = {
+    val _ = atStart
     val stage = InMemoryStage.StreamingSource[F, C](
       name = s"stream-source-${stages.size}",
       description = s"Stream from ${source.format} with fs2",

@@ -79,6 +79,21 @@ class InMemoryPipelineBuilderSpec extends AnyFunSuite with Matchers {
     )
   }
 
+  test("a source is rejected when the pipeline is already carrying a value", How) {
+    // A source takes no input, so appending one after a transform used to compile and then hand the
+    // transform's Int to an arrow expecting Unit.
+    assertDoesNotCompile(
+      """InMemoryPipelineBuilder
+           .create[IO]
+           .typed("source-after-transform")
+           .addStreamTransform[Int](_ => IO.pure(1))
+           .addStreamingSource(
+             LocalDataSource("in.jsonl", DataFormat.JSONL),
+             DefaultCodecs.stringDecoder,
+           )""",
+    )
+  }
+
   test("a streaming build applies the operations it was given", How) {
     val built = InMemoryPipelineBuilder
       .create[IO]
