@@ -57,7 +57,7 @@ You get compile‑time guarantees (not CI or runtime heuristics), a small opinio
 
 - Core: contracts, builder, EffectSystem, DataAlgebra.
 - Engines: Spark (primary 1.0), Flink (2.12 only).
-- Connectors: filesystem, JDBC, GCS (more coming).
+- Connectors: filesystem, GCS, and JDBC through Spark's own JDBC source. See [docs/connectors/CAPABILITIES.md](docs/connectors/CAPABILITIES.md) for what each one supports.
 - Data Quality: native checks by default; optional Deequ when present.
 - Template: flowforge.g8 for new projects.
 
