@@ -403,8 +403,10 @@ lazy val maintenanceCli = moduleProject("maintenance-cli")
 // ===== SBT ALIASES =====
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("fmtCheck", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
-addCommandAlias("fix", "all compile:scalafix test:scalafix")
-addCommandAlias("fixCheck", "compile:scalafix --check ; test:scalafix --check")
+// scalafixAll covers every project and both configurations in one task; the per-configuration form it
+// replaced only reached the project sbt happened to have loaded.
+addCommandAlias("fix", "scalafixAll")
+addCommandAlias("fixCheck", "scalafixAll --check")
 addCommandAlias("testAll", "all test")
 addCommandAlias("testQuick", "testOnly * -- -l \"org.scalatest.tags.Slow\"")
 // Better compileAll: use aggregation-aware sequence, not `all`
