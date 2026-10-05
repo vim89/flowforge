@@ -32,11 +32,9 @@ jobs:
       - name: sbt format check
         run: sbt -v scalafmtSbtCheck scalafmtCheckAll
 
+  # Needs the flowforge artifacts this project depends on to be resolvable from Maven Central.
   build:
     runs-on: ubuntu-latest
-    if: \${{ env.RUN_FULL == 'true' }}
-    env:
-      RUN_FULL: \${{ vars.RUN_FULL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
