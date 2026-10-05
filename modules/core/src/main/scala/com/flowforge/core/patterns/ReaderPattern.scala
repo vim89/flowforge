@@ -457,12 +457,15 @@ object ReaderPattern {
     stages: List[String] = Nil,
   ): ReaderT[F, AppContext[F], Pipeline[F, A, B]] =
     component.map { arrow =>
+      // One stage list, used for both fields. Deriving the count from the caller's argument instead left the
+      // default path reporting one stage and zero transformations.
+      val effectiveStages = if (stages.isEmpty) List(name) else stages
       Pipeline(
         arrow,
         PipelineMetadata(
           name = name,
-          stages = if (stages.isEmpty) List(name) else stages,
-          transformations = stages.size,
+          stages = effectiveStages,
+          transformations = effectiveStages.size,
           tags = Map("di" -> "reader"),
         ),
       )
