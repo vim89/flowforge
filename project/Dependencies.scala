@@ -19,26 +19,16 @@ object Dependencies {
     val refined        = "0.11.3"
     val kittens        = "3.1.0"
 
-    // JSON & Config
-    val circe      = "0.14.14" // Security update: was 0.14.6
-    val pureconfig = "0.17.9"
+    // JSON
+    val circe = "0.14.14" // Security update: was 0.14.6
 
     // Big Data engines
-    val spark    = "3.5.6" // Updated to latest 3.5 LTS per v100-plan
-    val delta    = "3.3.2"
-    val flink    = "1.18.0"
-    val kafka    = "3.6.1"
-    val fs2Kafka = "3.9.0"
+    val spark = "3.5.6" // Updated to latest 3.5 LTS per v100-plan
+    val delta = "3.3.2"
+    val flink = "1.18.0"
 
     // Cloud providers
     val gcpStorage = "2.37.0"
-    val bigquery   = "2.54.1"
-    val aws        = "2.21.29"
-    val azure      = "12.9.0"
-
-    // Data quality
-    val deequ             = "2.0.12-spark-3.5" // Per v1.0-2 plan: use latest Deequ
-    val greatExpectations = "0.16.0"
 
     // Monitoring & Observability
     val prometheus = "0.16.0"
@@ -50,10 +40,6 @@ object Dependencies {
     val logback      = "1.5.18" // Already latest available
     val log4cats     = "2.7.1"
 
-    // Experimental libraries
-    val kyo = "0.8.5"
-    val monix   = "3.4.1"
-
     // Testing
     val scalaTest      = "3.2.19" // Updated: was 3.2.17
     val scalaCheck     = "1.18.1" // Updated: was 1.17.0
@@ -61,12 +47,6 @@ object Dependencies {
     val wiremock       = "3.0.1"
     val mockito        = "5.13.0"
 
-    // Build tools & plugins
-    val scalafix = "0.11.1"
-    val scalafmt = "3.7.17"
-    val mdoc     = "2.5.1"
-    val unidoc   = "0.5.0"
-    val assembly = "2.1.4"
     // Choose a widely available artifact for generic frameless-dataset
     val frameless = "0.15.0"
   }
