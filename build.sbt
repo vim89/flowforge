@@ -64,9 +64,6 @@ val scala3CompilerOptions = Seq(
   "-Wunused:all",
   "-language:higherKinds",
   "-language:implicitConversions",
-  "-Xlint:_,-missing-interpolator",
-  "-Ywarn-dead-code",
-  "-Ywarn-value-discard",
 )
 val scala2CompilerOptions = Seq(
   // "-Xfatal-warnings", Commented to allow deprecation warnings
@@ -91,7 +88,8 @@ def scalacOptionsForVersion(scalaVersion: String): Seq[String] =
     case _ => Seq.empty
   }
 
-ThisBuild / scalacOptions ++= scalacOptionsForVersion(scalaVersion.value)
+// Scoped per project, not per build: `ThisBuild / scalacOptions` would be computed once against
+// `ThisBuild / scalaVersion`, so a module that pins a different Scala version got the wrong flags.
 
 // Enable SemanticDB for Scalafix semantic rules with version compatibility
 inThisBuild(
@@ -133,6 +131,7 @@ def moduleProject(name: String): Project =
   Project(name, file(s"modules/$name"))
     .settings(
       moduleName := s"flowforge-$name",
+      scalacOptions ++= scalacOptionsForVersion(scalaVersion.value),
       libraryDependencies ++= Dependencies.common,
     )
 
@@ -190,8 +189,8 @@ lazy val infrastructure = moduleProject("infrastructure")
 lazy val core = moduleProject("core")
   .settings(
     description := "Core abstractions and custom type system",
-    // Inherit ThisBuild cross (2.13, 3). Flink-specific modules handle 2.12 separately.
-    crossScalaVersions := (ThisBuild / crossScalaVersions).value,
+    // Core is the only module published for both. Flink-specific modules handle 2.12 separately.
+    crossScalaVersions := Seq(Dependencies.Versions.scala213, Dependencies.Versions.scala3),
     libraryDependencies ++= Dependencies.forModule("core"),
     // Minimal, justified excludes only
     coverageExcludedPackages := Seq(
@@ -212,7 +211,8 @@ lazy val core = moduleProject("core")
           )
         case Some((3, _)) =>
           Seq(
-            // Scala 3 uses built-in Mirrors, no external dependencies needed
+            // Scala 3 derives and inspects types with the compiler's own quotes reflection, so there is
+            // no Magnolia or scala-reflect to add here.
           )
         case _ => Seq.empty
       }
