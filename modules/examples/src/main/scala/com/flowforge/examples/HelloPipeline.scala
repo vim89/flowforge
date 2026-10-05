@@ -75,7 +75,7 @@ object HelloPipeline extends IOApp.Simple {
       val src = DataSource.local("modules/examples/src/main/resources/fixtures/raw-users.csv", DataFormat.CSV)
       val sink = DataSink.local("target/hello/curated", DataFormat.Parquet)
 
-      val pipeline = PipelineBuilder[BuilderState.Empty, IO, Unit, Unit](name = "hello-pipeline")
+      val pipeline = PipelineBuilder[IO](name = "hello-pipeline")
         .addTypedSource[User, User, SchemaPolicy.Exact](
           TypedSource(src),
           (_: DataSource) => IO.pure(User(1L, "demo@flowforge.dev", 42)),

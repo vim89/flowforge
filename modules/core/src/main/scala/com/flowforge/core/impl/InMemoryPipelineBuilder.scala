@@ -214,7 +214,7 @@ class InMemoryStreamBuilder[F[_], In, Out] private[impl] (
     val stage = InMemoryStage.Streaming[F, Out, B](
       name = stageName,
       description = "fs2.Stream operation",
-      execute = Kleisli { stream: fs2.Stream[F, Out] =>
+      execute = Kleisli { (stream: fs2.Stream[F, Out]) =>
         ef.pure(operation(stream))
       },
     )

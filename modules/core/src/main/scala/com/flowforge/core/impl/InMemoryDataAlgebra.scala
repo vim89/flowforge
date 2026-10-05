@@ -225,7 +225,7 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
     transformations: NonEmptyList[A => F[B]],
   ): F[Dataset[B]] = {
     val Fsys = EffectSystem[F]
-    val composed: A => F[B] = { a: A =>
+    val composed: A => F[B] = { (a: A) =>
       val first: F[B] = transformations.head(a)
       Fsys.flatMap(first) { b0 =>
         transformations.tail.foldLeft(Fsys.pure(b0)) { (acc, f) =>

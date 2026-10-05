@@ -11,6 +11,7 @@ package com.flowforge.core.integration
 import cats.effect.IO
 import cats.effect.testing.scalatest.AsyncIOSpec
 import cats.implicits._
+import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.instances.EffectInstances.catsEffectSystemInstance
 import org.scalatest.funspec.AsyncFunSpec
 import org.scalatest.matchers.should.Matchers
@@ -19,7 +20,7 @@ import scala.concurrent.duration._
 
 class DataPipelineIntegrationSpec extends AsyncFunSpec with AsyncIOSpec with Matchers {
 
-  implicit val es = catsEffectSystemInstance
+  implicit val es: EffectSystem[IO] = catsEffectSystemInstance
 
   // Mock data types for testing
   case class RawData(
