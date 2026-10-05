@@ -7,8 +7,11 @@ Status: pre-1.0. APIs listed here are intended for public use. The binary compat
 ### Primary pipeline construction
 - **Core**: `com.flowforge.core.*` - Main pipeline builder and execution system
 - **Contracts**: `com.flowforge.core.contracts.*` - Schema validation and policy enforcement  
-- **Types**: the types named in this document under `com.flowforge.core.types` - `DataSchema`, `DataType`, `StructField`, `QualityConstraint`, `DataSource`, `DataSink`, `RefinedTypes`. The rest of the package is not covered by this surface.
+- **Types**: the types named in this document under `com.flowforge.core.types` - `DataSchema`, `DataType`, `StructField`, `QualityConstraint`, `DataSource`, `DataSink`, `RefinedTypes`, `TypedSource`, `TypedSink`, `BuilderState` and the phantom traits it aliases (`HasSource`, `HasContract`, `HasTransform`, `HasSink`). The rest of the package is not covered by this surface.
 - **Main Builder**: `com.flowforge.core.PipelineBuilder` - 100% compile-time contract enforcement
+- **Effect abstraction**: `com.flowforge.core.algebra.EffectSystem[F]` - required to construct a `PipelineBuilder`
+
+Every type a public signature mentions is itself public. `PipelineBuilder.addTypedSource` and `addTypedSink` take `TypedSource[R]` and `TypedSink[R]`, its phantom parameter is a `BuilderState`, and constructing either endpoint needs a `Shape` instance from `com.flowforge.core.contracts.derive`. Those are therefore in the surface and under the same compatibility promise, not implementation detail.
 
 ### Data algebra & operations
 - **DataAlgebra**: `com.flowforge.core.algebra.DataAlgebra[F[_]]` - Core data operations abstraction
