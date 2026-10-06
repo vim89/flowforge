@@ -193,6 +193,29 @@ class CrossEngineParitySpec extends AnyFunSuite with Matchers {
     fromMemory.violations shouldBe fromFlink.violations
   }
 
+  test("a violation many records share is reported once, with the number of records behind it") {
+    // Two Bobs. A keyed sum that reported running totals would answer `(name is Bob, 1)` and
+    // `(name is Bob, 2)`, so this is what pins the counting job to one final total per key.
+    val source = csvFixture(List(Person(1, "Bob"), Person(2, "Bob"), Person(3, "Carol")))
+
+    val fromFlink = flink.validate(flink.read[Person](source).unsafeRunSync(), nameIsNotBob).unsafeRunSync()
+
+    fromFlink.violations.map(v => (v.message, v.recordsAffected)) shouldBe List(("name is Bob", 2L))
+    fromFlink.score shouldBe (1.0 / 3.0)
+  }
+
+  test("a header the file pads with spaces is still a header") {
+    val file = Files.createTempFile("ff-flink-padded", ".csv")
+    Files.write(file, "id, name\n1,Alice\n2,Bob".getBytes(StandardCharsets.UTF_8))
+    val source = LocalDataSource(file.toString, DataFormat.CSV)
+
+    val dataset = flink.read[Person](source).unsafeRunSync()
+
+    // Reading the header as a record would make this 3, and would hand the decoder `{"id":"id"}`.
+    flink.count(dataset) shouldBe 2L
+    dataset.data.sortBy(_.id) shouldBe List(Person(1, "Alice"), Person(2, "Bob"))
+  }
+
   test("the flink sink writes every record, and the records read back") {
     val source = csvFixture()
     val out    = Files.createTempFile("ff-flink-out", ".jsonl")
