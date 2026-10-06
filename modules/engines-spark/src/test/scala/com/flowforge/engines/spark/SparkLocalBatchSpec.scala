@@ -127,6 +127,14 @@ class SparkLocalBatchSpec extends AnyFunSuite with Matchers with BeforeAndAfterA
   }
 
   test("a local csv read and parquet write keeps every record") {
+    // A Spark write to a local path goes through Hadoop's RawLocalFileSystem, which sets permissions by
+    // calling winutils.exe. Windows runners have no HADOOP_HOME, so the write fails there for reasons that
+    // have nothing to do with this code. Reads need none of that, so only this test is skipped.
+    assume(
+      !sys.props.getOrElse("os.name", "").toLowerCase.contains("win"),
+      "Spark local write needs winutils",
+    )
+
     val rows   = List(Person(1, "Alice"), Person(2, "Bob"), Person(3, "Carol"))
     val source = LocalDataSource(csvFixture(rows).toString, DataFormat.CSV)
     val out    = tempDir("ff-people-out")
