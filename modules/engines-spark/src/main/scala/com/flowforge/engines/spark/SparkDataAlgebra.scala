@@ -586,7 +586,7 @@ object SparkDataAlgebra {
           start  <- startNanosF
           counts <- op
           end    <- F.delay(System.nanoTime())
-          _ <- F.delay(metrics.observeLatency("cdc-merge", "spark", (end - start).toDouble / 1e6))
+          _      <- F.delay(metrics.observeLatency("cdc-merge", "spark", (end - start).toDouble / 1e6))
           _ <- log.info(
             s"spark.cdc counts inserted=${counts._1} updated=${counts._2} deleted=${counts._3} unchanged=${counts._4}",
           )
