@@ -292,9 +292,17 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
     dataset: Dataset[A],
     checks: NonEmptyList[QualityCheck[A]],
   ): F[List[QualityCheckResult]] = F.pure(
+    // The checks used to be counted and then discarded, so every check passed whatever the records were and
+    // a caller could not tell a clean dataset from a dirty one. The Spark algebra runs them, which is how
+    // this was found: the two engines disagreed on the same input.
     checks.toList.zipWithIndex.map {
-      case (_, idx) =>
-        QualityCheckResult(s"check_$idx", passed = true, message = "ok", score = 1.0)
+      case (check, idx) =>
+        val failures = dataset.data.flatMap(a => check(a).fold(_.toList, _ => Nil))
+        if (failures.isEmpty) QualityCheckResult(s"check_$idx", passed = true, message = "ok", score = 1.0)
+        else {
+          val message = failures.map(_.message).distinct.take(3).mkString("; ")
+          QualityCheckResult(s"check_$idx", passed = false, message = message, score = 0.0)
+        }
     },
   )
 
