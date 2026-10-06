@@ -218,13 +218,15 @@ case class RetryPolicy(
   jitter: Boolean = true) {
 
   def validate: ValidatedNel[ConfigError, Unit] = {
-    val backoffValidation = if (backoffFactor >= 1.0) {
+    // Annotated, not inferred: each branch yields a different ConfigError subtype, and Scala 3 infers a
+    // union of them that no Semigroup covers.
+    val backoffValidation: ValidatedNel[ConfigError, Unit] = if (backoffFactor >= 1.0) {
       ().validNel
     } else {
       ConfigError.InvalidValue("backoffFactor", backoffFactor.toString, ">= 1.0").invalidNel
     }
 
-    val delayValidation = if (initialDelay <= maxDelay) {
+    val delayValidation: ValidatedNel[ConfigError, Unit] = if (initialDelay <= maxDelay) {
       ().validNel
     } else {
       ConfigError
@@ -666,7 +668,18 @@ object PipelineConfig {
     }
   }
 
-  def builder: PipelineConfigBuilder = PipelineConfigBuilder()
+  object PipelineConfigBuilder {
+
+    /**
+     * A builder with nothing set yet.
+     *
+     * The primary constructor is private, and Scala 3 gives the generated `apply` the same access, so the
+     * companion is the only place that can call it.
+     */
+    val empty: PipelineConfigBuilder = PipelineConfigBuilder()
+  }
+
+  def builder: PipelineConfigBuilder = PipelineConfigBuilder.empty
 
   implicit val showPipelineConfig: Show[PipelineConfig] = Show.show { config =>
     s"""PipelineConfig(

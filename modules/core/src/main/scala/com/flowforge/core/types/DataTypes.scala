@@ -85,19 +85,20 @@ import java.time.Instant
  */
 object RefinedTypes {
 
-  import eu.timepit.refined.W
+  // Singleton literal types, not refined's `W` witness: `W` is Scala 2 only, and both 2.13 and 3
+  // accept a literal in a type position directly.
 
   // String pattern types
   type NonEmptyString = String Refined NonEmpty
-  type BucketNameType = String Refined MatchesRegex[W.`"^[a-z0-9][a-z0-9-]*[a-z0-9]$"`.T]
-  type TableNameType  = String Refined MatchesRegex[W.`"^[a-zA-Z_][a-zA-Z0-9_]*$"`.T]
-  type FieldNameType  = String Refined MatchesRegex[W.`"^[a-zA-Z_][a-zA-Z0-9_]*$"`.T]
-  type ProjectIdType  = String Refined MatchesRegex[W.`"^[a-z][a-z0-9-]*[a-z0-9]$"`.T]
+  type BucketNameType = String Refined MatchesRegex["^[a-z0-9][a-z0-9-]*[a-z0-9]$"]
+  type TableNameType  = String Refined MatchesRegex["^[a-zA-Z_][a-zA-Z0-9_]*$"]
+  type FieldNameType  = String Refined MatchesRegex["^[a-zA-Z_][a-zA-Z0-9_]*$"]
+  type ProjectIdType  = String Refined MatchesRegex["^[a-z][a-z0-9-]*[a-z0-9]$"]
 
   // Numeric types
   type PositiveInt    = Int Refined Positive
   type NonNegativeInt = Int Refined NonNegative
-  type PortNumber     = Int Refined eu.timepit.refined.numeric.Interval.Closed[W.`1`.T, W.`65535`.T]
+  type PortNumber     = Int Refined eu.timepit.refined.numeric.Interval.Closed[1, 65535]
 
   // Simplified case classes - removing AnyVal extension due to refined type conflicts
   case class BucketName(value: String) {
@@ -544,7 +545,18 @@ object DataSchema {
       )
   }
 
-  def builder: SchemaBuilder = SchemaBuilder()
+  object SchemaBuilder {
+
+    /**
+     * A builder with nothing set yet.
+     *
+     * The primary constructor is private, and Scala 3 gives the generated `apply` the same access, so the
+     * companion is the only place that can call it.
+     */
+    val empty: SchemaBuilder = SchemaBuilder()
+  }
+
+  def builder: SchemaBuilder = SchemaBuilder.empty
 
   // Common schema patterns
   def eventSchema: DataSchema = builder

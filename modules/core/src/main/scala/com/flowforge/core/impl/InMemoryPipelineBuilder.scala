@@ -45,16 +45,21 @@ class InMemoryPipelineBuilder[F[_]: EffectSystem] private (
 }
 
 /**
- * Type-safe in-memory pipeline builder with fs2.Stream integration
+ * Type-safe in-memory pipeline builder with fs2.Stream integration.
+ *
+ * `In` and `Out` are the values the built pipeline reads and produces, not the record types inside them. A
+ * source produces `Dataset[C]`, so the builder after one reports `Out = Dataset[C]`. The operations that work
+ * a record at a time live in [[InMemoryTypedBuilder.DatasetOps]], which only applies when `Out` is a dataset,
+ * so there is no longer one type parameter trying to mean both things at once.
  */
 class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
-  private val name: String,
-  private val dataAlgebra: InMemoryDataAlgebra[F],
-  private val stages: List[InMemoryStage[F, _, _]],
-  private val description: String = "",
-  private val config: Option[PipelineConfig] = None,
+  private[impl] val name: String,
+  private[impl] val dataAlgebra: InMemoryDataAlgebra[F],
+  private[impl] val stages: List[InMemoryStage[F, _, _]],
+  private[impl] val description: String = "",
+  private[impl] val config: Option[PipelineConfig] = None,
 )(implicit
-  ef: EffectSystem[F]) {
+  private[impl] val ef: EffectSystem[F]) {
 
   def withDescription(desc: String): InMemoryTypedBuilder[F, In, Out] =
     new InMemoryTypedBuilder(name, dataAlgebra, stages, desc, config)(ef)
@@ -68,23 +73,31 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
    * Every stage method used to call the constructor with three of the five fields, so `withDescription` and
    * `withConfig` were discarded by the next stage added. Carrying the fields in one place removes that.
    */
-  private def advance[In2, Out2](stage: InMemoryStage[F, _, _]): InMemoryTypedBuilder[F, In2, Out2] =
+  private[impl] def advance[In2, Out2](
+    stage: InMemoryStage[F, _, _],
+  ): InMemoryTypedBuilder[F, In2, Out2] =
     new InMemoryTypedBuilder[F, In2, Out2](name, dataAlgebra, stages :+ stage, description, config)(ef)
 
   /**
-   * Add a streaming data source with fs2.Stream processing
+   * Add a streaming data source with fs2.Stream processing.
+   *
+   * A source reads from outside the pipeline, so it takes no input. The `Out =:= Unit` evidence restricts it
+   * to a builder that has not produced a value yet. Without it, adding a source after a transform compiled
+   * and then failed at run time, because the source's arrow would be handed the transform's output.
    */
   def addStreamingSource[C](
     source: DataSource,
     decoder: com.flowforge.core.algebra.DataDecoder[C],
-  ): InMemoryTypedBuilder[F, Unit, C] = {
+  )(implicit atStart: Out =:= Unit,
+  ): InMemoryTypedBuilder[F, Unit, DataAlgebra.Dataset[C]] = {
+    val _ = atStart
     val stage = InMemoryStage.StreamingSource[F, C](
       name = s"stream-source-${stages.size}",
       description = s"Stream from ${source.format} with fs2",
       source = source,
       execute = Kleisli(_ => dataAlgebra.read(source)(decoder)),
     )
-    advance[Unit, C](stage)
+    advance[Unit, DataAlgebra.Dataset[C]](stage)
   }
 
   /**
@@ -100,78 +113,16 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
   }
 
   /**
-   * Add batch processing transformation (for compatibility)
-   */
-  def addBatchTransform[C](
-    transform: DataAlgebra.Dataset[Out] => DataAlgebra.Dataset[C],
-  ): InMemoryTypedBuilder[F, In, C] = {
-    val stage = InMemoryStage.BatchTransform[F, DataAlgebra.Dataset[Out], DataAlgebra.Dataset[C]](
-      name = s"batch-transform-${stages.size}",
-      description = "Batch transformation",
-      execute = Kleisli(data => ef.pure(transform(data))),
-    )
-    advance[In, C](stage)
-  }
-
-  /**
-   * Add data quality validation
-   */
-  def addQualityCheck(
-    contract: com.flowforge.core.types.PipelineTypes.DataContract[Out],
-  ): InMemoryTypedBuilder[F, In, Out] = {
-    val stage = InMemoryStage.Quality[F, Out](
-      name = s"quality-${stages.size}",
-      description = "Data quality validation",
-      contract = contract,
-      execute =
-        Kleisli(data => ef.flatMap(dataAlgebra.validate(data, contract))(result => ef.pure(result.data))),
-    )
-    advance[In, Out](stage)
-  }
-
-  /**
-   * Add streaming sink with fs2.Stream writing
-   */
-  def addStreamingSink(
-    sink: DataSink,
-    encoder: DataEncoder[Out],
-    options: DataAlgebra.WriteOptions = DataAlgebra.WriteOptions.default,
-  ): InMemoryTypedBuilder[F, In, Unit] = {
-    val stage = InMemoryStage.StreamingSink[F, Out](
-      name = s"stream-sink-${stages.size}",
-      description = s"Stream to ${sink.format} with fs2",
-      sink = sink,
-      execute = Kleisli(data => ef.flatMap(dataAlgebra.write(data, sink, options)(encoder))(_ => ef.pure(()))),
-    )
-    advance[In, Unit](stage)
-  }
-
-  /**
    * Build the final pipeline with memory-safe processing
    */
   def build(): Pipeline[F, In, Out] = {
-    // This builder cannot run its stages yet, and it must not pretend to.
-    //
-    // It used to return an identity arrow that discarded every stage and handed the input back cast to
-    // Out. Because the cast is erased it did not even fail: a pipeline that should have produced 42
-    // returned (), and the metadata below still listed the stages it had dropped.
-    //
-    // Composing the stages is not a small fix, because the stage types do not line up with the type
-    // parameters. addStreamingSource[C] reports Out = C while its stage produces Dataset[C], and
-    // addStreamTransform (Out => F[C]) and addBatchTransform (Dataset[Out] => Dataset[C]) disagree about
-    // whether Out is the element type or the value type. One Out cannot satisfy both, so the signatures
-    // have to change before the stages can be run. That is an API change, kept out of this fix.
-    //
-    // Until then, failing on run is the honest behaviour. Returning wrong data silently is the worse of
-    // the two, and this builder has no callers to break.
-    val kleisliPipeline = Kleisli[F, In, Out] { _ =>
-      ef.raiseError[Out](
-        new UnsupportedOperationException(
-          s"InMemoryTypedBuilder '$name' cannot execute its ${stages.size} stage(s): stage composition is " +
-            "not implemented. Use PipelineBuilder for a runnable typed pipeline.",
-        ),
-      )
-    }
+    // The stages run back to back, each reading what the one before produced, so they compose directly.
+    // This used to return an arrow that raised on run, because one Out was being asked to mean both the
+    // record type and the value type, and the stage types therefore did not line up.
+    val kleisliPipeline = StageComposer.compose[F, In, Out](
+      pipelineName = name,
+      stages = stages.map(st => ExecutableStage[F](st.name, st.asKleisli)),
+    )(ef)
 
     val metadata = PipelineMetadata(
       name = name,
@@ -188,6 +139,72 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
     )
 
     Pipeline(kleisliPipeline, metadata)
+  }
+}
+
+object InMemoryTypedBuilder {
+
+  /**
+   * The operations that work a record at a time.
+   *
+   * These only make sense once the pipeline is carrying a dataset, so they live here rather than on the
+   * class: the receiver type is what supplies the record type `E`, which means a caller never has to name it
+   * and a builder that is not carrying a dataset cannot reach them at all.
+   */
+  implicit class DatasetOps[F[_], In, E](
+    private val builder: InMemoryTypedBuilder[F, In, DataAlgebra.Dataset[E]]) {
+
+    /**
+     * Add batch processing transformation (for compatibility)
+     */
+    def addBatchTransform[C](
+      transform: DataAlgebra.Dataset[E] => DataAlgebra.Dataset[C],
+    ): InMemoryTypedBuilder[F, In, DataAlgebra.Dataset[C]] = {
+      val ef = builder.ef
+      val stage = InMemoryStage.BatchTransform[F, DataAlgebra.Dataset[E], DataAlgebra.Dataset[C]](
+        name = s"batch-transform-${builder.stages.size}",
+        description = "Batch transformation",
+        execute = Kleisli(data => ef.pure(transform(data))),
+      )
+      builder.advance[In, DataAlgebra.Dataset[C]](stage)
+    }
+
+    /**
+     * Add data quality validation
+     */
+    def addQualityCheck(
+      contract: com.flowforge.core.types.PipelineTypes.DataContract[E],
+    ): InMemoryTypedBuilder[F, In, DataAlgebra.Dataset[E]] = {
+      val ef      = builder.ef
+      val algebra = builder.dataAlgebra
+      val stage = InMemoryStage.Quality[F, E](
+        name = s"quality-${builder.stages.size}",
+        description = "Data quality validation",
+        contract = contract,
+        execute =
+          Kleisli(data => ef.flatMap(algebra.validate(data, contract))(result => ef.pure(result.data))),
+      )
+      builder.advance[In, DataAlgebra.Dataset[E]](stage)
+    }
+
+    /**
+     * Add streaming sink with fs2.Stream writing
+     */
+    def addStreamingSink(
+      sink: DataSink,
+      encoder: DataEncoder[E],
+      options: DataAlgebra.WriteOptions = DataAlgebra.WriteOptions.default,
+    ): InMemoryTypedBuilder[F, In, Unit] = {
+      val ef      = builder.ef
+      val algebra = builder.dataAlgebra
+      val stage = InMemoryStage.StreamingSink[F, E](
+        name = s"stream-sink-${builder.stages.size}",
+        description = s"Stream to ${sink.format} with fs2",
+        sink = sink,
+        execute = Kleisli(data => ef.flatMap(algebra.write(data, sink, options)(encoder))(_ => ef.pure(()))),
+      )
+      builder.advance[In, Unit](stage)
+    }
   }
 }
 
@@ -214,7 +231,7 @@ class InMemoryStreamBuilder[F[_], In, Out] private[impl] (
     val stage = InMemoryStage.Streaming[F, Out, B](
       name = stageName,
       description = "fs2.Stream operation",
-      execute = Kleisli { stream: fs2.Stream[F, Out] =>
+      execute = Kleisli { (stream: fs2.Stream[F, Out]) =>
         ef.pure(operation(stream))
       },
     )

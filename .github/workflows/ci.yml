@@ -50,6 +50,10 @@ jobs:
       - name: scalafmt check
         run: sbt clean scalafmtCheckAll
 
+      # Core's src/main/scala-3 is only on the source path under Scala 3, so the check above never sees it.
+      - name: scalafmt check (Scala 3 sources)
+        run: sbt "++3.3.3 core/scalafmtCheckAll"
+
       - name: Guard - ban println in production sources
         run: |
           if rg -n '\bprintln\(' modules --glob '**/src/main/**' --glob '!**/examples/**'; then
@@ -158,12 +162,21 @@ jobs:
           - os: ubuntu-latest
             scala: 2.13.16
             java: 17
+            command: testQuick
           - os: macos-latest
             scala: 2.13.16
             java: 17
+            command: testQuick
           - os: windows-latest
             scala: 2.13.16
             java: 17
+            command: testQuick
+          # Core is the only module built for Scala 3, so the command is core only. The whole aggregate
+          # cannot run here: the modules that stay on 2.13 fail dependency resolution under ++3.
+          - os: ubuntu-latest
+            scala: 3.3.3
+            java: 17
+            command: core/testQuick
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
     steps:
       - uses: actions/checkout@v6
@@ -177,7 +190,7 @@ jobs:
           cache: sbt
 
       - name: Run tests
-        run: sbt "-Dsbt.log.noformat=true" ++${{ matrix.scala }} testQuick
+        run: sbt "-Dsbt.log.noformat=true" ++${{ matrix.scala }} ${{ matrix.command }}
 
       - name: Upload test reports
         if: failure()

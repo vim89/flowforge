@@ -191,5 +191,10 @@ object PipelineBuilder {
    * build.
    */
   def apply[F[_]: EffectSystem](name: String): PipelineBuilder[BuilderState.Empty, F, Unit, Unit] =
-    PipelineBuilder[BuilderState.Empty, F, Unit, Unit](name)
+    // `stages` is passed rather than defaulted: Scala 3 solves a default argument's type parameters on
+    // their own, so the default would come back as List[PipelineStage[Nothing, _, _]].
+    PipelineBuilder[BuilderState.Empty, F, Unit, Unit](
+      name,
+      stages = List.empty[PipelineStage[F, _, _]],
+    )
 }
