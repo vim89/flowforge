@@ -11,16 +11,6 @@ sealed trait PipelineStage[F[_], -A, B] extends Product with Serializable {
   def execute: Kleisli[F, A, B]
   def metrics: StageMetrics
   def isTransform: Boolean = false
-
-  /**
-   * Whether this stage is run only for its effect, so the value the pipeline carries on with is the stage's
-   * input rather than its result.
-   *
-   * A sink is the one such stage: its result is `Unit`, while a builder keeps declaring the data type after a
-   * sink is added. Composing a sink's `Unit` result instead made the built pipeline claim it produced the
-   * data and hand back `()`, which only erasure hid.
-   */
-  def isEffectOnly: Boolean = false
 }
 
 object PipelineStage {
@@ -91,9 +81,7 @@ object PipelineStage {
     dataSink: DataSink,
     execute: Kleisli[F, A, Unit],
     metrics: StageMetrics = StageMetrics.empty)
-      extends PipelineStage[F, A, Unit] {
-    override val isEffectOnly: Boolean = true
-  }
+      extends PipelineStage[F, A, Unit]
 
   /**
    * Custom stage - user-defined processing
