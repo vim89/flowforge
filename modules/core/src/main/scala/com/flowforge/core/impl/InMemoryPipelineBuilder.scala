@@ -1,9 +1,8 @@
-// scalafix:off DisableSyntax.isInstanceOf
 package com.flowforge.core.impl
 
 import cats.data.Kleisli
 import com.flowforge.core.algebra.{ DataAlgebra, DataDecoder, DataEncoder, EffectSystem }
-import com.flowforge.core.exec.{ ExecutableStage, StageComposer }
+import com.flowforge.core.exec.{ StageChain, StageComposer, StageKind }
 import com.flowforge.core.types._
 import com.flowforge.framework.{ Pipeline, PipelineMetadata }
 
@@ -27,7 +26,7 @@ class InMemoryPipelineBuilder[F[_]: EffectSystem] private (
     new InMemoryTypedBuilder[F, Unit, Unit](
       name = name,
       dataAlgebra = dataAlgebra,
-      stages = List.empty,
+      stages = StageChain.empty[F, Unit],
     )(EffectSystem[F])
 
   /**
@@ -40,7 +39,7 @@ class InMemoryPipelineBuilder[F[_]: EffectSystem] private (
     new InMemoryStreamBuilder[F, A, A](
       name = name,
       dataAlgebra = dataAlgebra,
-      stages = List.empty,
+      stages = StageChain.empty[F, fs2.Stream[F, A]],
     )(EffectSystem[F])
 }
 
@@ -55,7 +54,7 @@ class InMemoryPipelineBuilder[F[_]: EffectSystem] private (
 class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
   private[impl] val name: String,
   private[impl] val dataAlgebra: InMemoryDataAlgebra[F],
-  private[impl] val stages: List[InMemoryStage[F, _, _]],
+  private[impl] val stages: StageChain[F, In, Out],
   private[impl] val description: String = "",
   private[impl] val config: Option[PipelineConfig] = None,
 )(implicit
@@ -72,11 +71,22 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
    *
    * Every stage method used to call the constructor with three of the five fields, so `withDescription` and
    * `withConfig` were discarded by the next stage added. Carrying the fields in one place removes that.
+   *
+   * The arrow has to read what the builder currently produces, so the stage chain and the builder's own type
+   * parameters cannot drift apart.
    */
-  private[impl] def advance[In2, Out2](
-    stage: InMemoryStage[F, _, _],
-  ): InMemoryTypedBuilder[F, In2, Out2] =
-    new InMemoryTypedBuilder[F, In2, Out2](name, dataAlgebra, stages :+ stage, description, config)(ef)
+  private[impl] def advance[Out2](
+    stageName: String,
+    kind: StageKind,
+    arrow: Kleisli[F, Out, Out2],
+  ): InMemoryTypedBuilder[F, In, Out2] =
+    new InMemoryTypedBuilder[F, In, Out2](
+      name,
+      dataAlgebra,
+      stages.andThen(stageName, kind, arrow),
+      description,
+      config,
+    )(ef)
 
   /**
    * Add a streaming data source with fs2.Stream processing.
@@ -89,15 +99,15 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
     source: DataSource,
     decoder: com.flowforge.core.algebra.DataDecoder[C],
   )(implicit atStart: Out =:= Unit,
-  ): InMemoryTypedBuilder[F, Unit, DataAlgebra.Dataset[C]] = {
-    val _ = atStart
+  ): InMemoryTypedBuilder[F, In, DataAlgebra.Dataset[C]] = {
     val stage = InMemoryStage.StreamingSource[F, C](
       name = s"stream-source-${stages.size}",
       description = s"Stream from ${source.format} with fs2",
       source = source,
       execute = Kleisli(_ => dataAlgebra.read(source)(decoder)),
     )
-    advance[Unit, DataAlgebra.Dataset[C]](stage)
+    // `=:=` is a function in both Scala versions, so the source's Unit input is adapted rather than cast.
+    advance[DataAlgebra.Dataset[C]](stage.name, StageKind.Source, stage.execute.local[Out](atStart))
   }
 
   /**
@@ -109,7 +119,7 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
       description = "Memory-safe transformation with fs2",
       execute = Kleisli(transform),
     )
-    advance[In, C](stage)
+    advance[C](stage.name, StageKind.Transform, stage.execute)
   }
 
   /**
@@ -121,14 +131,14 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
     // record type and the value type, and the stage types therefore did not line up.
     val kleisliPipeline = StageComposer.compose[F, In, Out](
       pipelineName = name,
-      stages = stages.map(st => ExecutableStage[F](st.name, st.asKleisli)),
+      stages = stages,
     )(ef)
 
     val metadata = PipelineMetadata(
       name = name,
-      stages = stages.map(_.name),
-      transformations = stages.count(_.isInstanceOf[InMemoryStage.Transform[F, _, _]]),
-      qualityChecks = stages.count(_.isInstanceOf[InMemoryStage.Quality[F, _]]),
+      stages = stages.names,
+      transformations = stages.count(StageKind.Transform),
+      qualityChecks = stages.count(StageKind.Quality),
       tags = Map(
         "engine"      -> "inmemory",
         "streaming"   -> "fs2",
@@ -166,7 +176,7 @@ object InMemoryTypedBuilder {
         description = "Batch transformation",
         execute = Kleisli(data => ef.pure(transform(data))),
       )
-      builder.advance[In, DataAlgebra.Dataset[C]](stage)
+      builder.advance[DataAlgebra.Dataset[C]](stage.name, StageKind.Transform, stage.execute)
     }
 
     /**
@@ -187,7 +197,7 @@ object InMemoryTypedBuilder {
         execute =
           Kleisli(data => ef.flatMap(algebra.validate(data, contract))(result => ef.pure(result.data))),
       )
-      builder.advance[In, DataAlgebra.Dataset[E]](stage)
+      builder.advance[DataAlgebra.Dataset[E]](stage.name, StageKind.Quality, stage.execute)
     }
 
     /**
@@ -206,7 +216,7 @@ object InMemoryTypedBuilder {
         sink = sink,
         execute = Kleisli(data => ef.flatMap(algebra.write(data, sink, options)(encoder))(_ => ef.pure(()))),
       )
-      builder.advance[In, Unit](stage)
+      builder.advance[Unit](stage.name, StageKind.Sink, stage.execute)
     }
   }
 }
@@ -222,7 +232,7 @@ object InMemoryTypedBuilder {
 class InMemoryStreamBuilder[F[_], In, Out] private[impl] (
   private val name: String,
   private val dataAlgebra: InMemoryDataAlgebra[F],
-  private val stages: List[InMemoryStage[F, _, _]],
+  private val stages: StageChain[F, fs2.Stream[F, In], fs2.Stream[F, Out]],
 )(implicit
   ef: EffectSystem[F]) {
 
@@ -238,7 +248,11 @@ class InMemoryStreamBuilder[F[_], In, Out] private[impl] (
         ef.pure(operation(stream))
       },
     )
-    new InMemoryStreamBuilder[F, In, B](name, dataAlgebra, stages :+ stage)(ef)
+    new InMemoryStreamBuilder[F, In, B](
+      name,
+      dataAlgebra,
+      stages.andThen(stageName, StageKind.Transform, stage.execute),
+    )(ef)
   }
 
   def buildStreaming(): Pipeline[F, fs2.Stream[F, In], fs2.Stream[F, Out]] = {
@@ -246,14 +260,14 @@ class InMemoryStreamBuilder[F[_], In, Out] private[impl] (
     // This used to return the input stream unchanged, ignoring every registered operation.
     val kleisliPipeline = StageComposer.compose[F, fs2.Stream[F, In], fs2.Stream[F, Out]](
       pipelineName = name,
-      stages = stages.map(st => ExecutableStage[F](st.name, st.asKleisli)),
+      stages = stages,
     )(ef)
 
     val metadata = PipelineMetadata(
       name = name,
-      stages = stages.map(_.name),
-      transformations = stages.size,
-      qualityChecks = 0,
+      stages = stages.names,
+      transformations = stages.count(StageKind.Transform),
+      qualityChecks = stages.count(StageKind.Quality),
       tags = Map(
         "engine"         -> "inmemory",
         "streaming"      -> "fs2",

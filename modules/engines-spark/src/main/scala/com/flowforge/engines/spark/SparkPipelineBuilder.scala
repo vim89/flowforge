@@ -5,7 +5,7 @@ import cats.effect.Resource
 import cats.implicits._
 import com.flowforge.core.algebra.DataAlgebra.WriteOptions
 import com.flowforge.core.algebra.{ DataAlgebra, DataDecoder, EffectSystem }
-import com.flowforge.core.exec.{ ExecutableStage, StageComposer }
+import com.flowforge.core.exec.{ StageChain, StageComposer, StageKind }
 import com.flowforge.core.types._
 import com.flowforge.framework.{ Pipeline, PipelineMetadata }
 import org.apache.spark.sql.SparkSession
@@ -42,18 +42,18 @@ class SparkPipelineBuilder[F[_]: EffectSystem] private (
       name = name,
       sparkSession = sparkSession,
       dataAlgebra = dataAlgebra,
-      stages = List.empty,
+      stages = StageChain.empty[F, Unit],
     )
 
   /**
    * Create a runtime pipeline builder with Spark backend
    */
-  def runtime(name: String): SparkRuntimeBuilder[F] =
-    new SparkRuntimeBuilder[F](
+  def runtime(name: String): SparkRuntimeBuilder[F, Unit, Unit] =
+    new SparkRuntimeBuilder[F, Unit, Unit](
       name = name,
       sparkSession = sparkSession,
       dataAlgebra = dataAlgebra,
-      stages = List.empty,
+      stages = StageChain.empty[F, Unit],
     )
 }
 
@@ -61,12 +61,12 @@ class SparkPipelineBuilder[F[_]: EffectSystem] private (
  * Type-safe Spark pipeline builder with compile-time guarantees
  */
 class SparkTypedBuilder[F[_]: EffectSystem, In, Out] private[spark] (
-  private val name: String,
-  private val sparkSession: SparkSession,
-  private val dataAlgebra: DataAlgebra[F],
-  private val stages: List[SparkStage[F, _, _]],
-  private val description: String = "",
-  private val config: Option[PipelineConfig] = None) {
+  private[spark] val name: String,
+  private[spark] val sparkSession: SparkSession,
+  private[spark] val dataAlgebra: DataAlgebra[F],
+  private[spark] val stages: StageChain[F, In, Out],
+  private[spark] val description: String = "",
+  private[spark] val config: Option[PipelineConfig] = None) {
 
   def withDescription(desc: String): SparkTypedBuilder[F, In, Out] =
     new SparkTypedBuilder(name, sparkSession, dataAlgebra, stages, desc, config)
@@ -74,20 +74,39 @@ class SparkTypedBuilder[F[_]: EffectSystem, In, Out] private[spark] (
   def withConfig(cfg: PipelineConfig): SparkTypedBuilder[F, In, Out] =
     new SparkTypedBuilder(name, sparkSession, dataAlgebra, stages, description, Some(cfg))
 
+  /** Append a stage. Its arrow has to read what the builder currently produces. */
+  private[spark] def advance[Out2](
+    stageName: String,
+    kind: StageKind,
+    arrow: Kleisli[F, Out, Out2],
+  ): SparkTypedBuilder[F, In, Out2] =
+    new SparkTypedBuilder[F, In, Out2](
+      name,
+      sparkSession,
+      dataAlgebra,
+      stages.andThen(stageName, kind, arrow),
+      description,
+      config,
+    )
+
   /**
-   * Add a Spark-optimized data source
+   * Add a Spark-optimized data source.
+   *
+   * A source takes no input, so the `Out =:= Unit` evidence restricts it to a builder that has not produced a
+   * value yet. At `typed(name)` the builder's `Out` is already `Unit`, so no caller names the evidence.
    */
   def addSource[C](
     source: DataSource,
     decoder: com.flowforge.core.algebra.DataDecoder[C],
-  ): SparkTypedBuilder[F, Unit, C] = {
+  )(implicit atStart: Out =:= Unit,
+  ): SparkTypedBuilder[F, In, DataAlgebra.Dataset[C]] = {
     val stage = SparkStage.Source[F, C](
       name = s"spark-source-${stages.size}",
       description = s"Read from ${source.format} using Spark",
       source = source,
       execute = Kleisli(_ => dataAlgebra.read(source)(decoder)),
     )
-    new SparkTypedBuilder[F, Unit, C](name, sparkSession, dataAlgebra, stages :+ stage)
+    advance[DataAlgebra.Dataset[C]](stage.name, StageKind.Source, stage.execute.local[Out](atStart))
   }
 
   /**
@@ -99,70 +118,26 @@ class SparkTypedBuilder[F[_]: EffectSystem, In, Out] private[spark] (
       description = "Spark distributed transformation",
       execute = Kleisli(transform),
     )
-    new SparkTypedBuilder[F, In, C](name, sparkSession, dataAlgebra, stages :+ stage)
-  }
-
-  /**
-   * Add a data quality check using Spark's distributed validation.
-   *
-   * The decoder is what lets the engine apply the contract to every record. See `DataAlgebra.validate`.
-   */
-  def addQualityCheck(
-    contract: com.flowforge.core.types.PipelineTypes.DataContract[Out],
-  )(implicit decoder: DataDecoder[Out],
-  ): SparkTypedBuilder[F, In, Out] = {
-    EffectSystem[F]
-    val stage = SparkStage.Quality[F, Out](
-      name = s"spark-quality-${stages.size}",
-      description = "Spark distributed quality validation",
-      contract = contract,
-      execute = Kleisli { data =>
-        for {
-          res <- dataAlgebra.validate(data, contract)
-        } yield res.data
-      },
-    )
-    new SparkTypedBuilder[F, In, Out](name, sparkSession, dataAlgebra, stages :+ stage)
-  }
-
-  /**
-   * Add a sink that uses Spark's distributed writing capabilities
-   */
-  def addSink(
-    sink: DataSink,
-    encoder: com.flowforge.core.algebra.DataEncoder[Out],
-    options: WriteOptions = WriteOptions.default,
-  ): SparkTypedBuilder[F, In, Unit] = {
-    val stage = SparkStage.Sink[F, Out](
-      name = s"spark-sink-${stages.size}",
-      description = s"Write to ${sink.format} using Spark",
-      sink = sink,
-      execute = Kleisli { data =>
-        for {
-          _ <- dataAlgebra.write(data, sink, options)(encoder)
-        } yield ()
-      },
-    )
-    new SparkTypedBuilder[F, In, Unit](name, sparkSession, dataAlgebra, stages :+ stage)
+    advance[C](stage.name, StageKind.Transform, stage.execute)
   }
 
   /**
    * Build the final pipeline with Spark optimizations
    */
   def build(): Pipeline[F, In, Out] = {
-    // Composition belongs to StageComposer, which is the one place that erases a stage arrow. This builder
-    // used to do its own fold and its own two casts, so the erasure existed in two places and only one of
-    // them was tested.
+    // Composition belongs to StageComposer, which is the one place that answers how a chain of stages runs.
+    // This builder used to do its own fold and its own two casts, so the erasure existed in two places and
+    // only one of them was tested.
     val typedPipeline = StageComposer.compose[F, In, Out](
       pipelineName = name,
-      stages = stages.map(st => ExecutableStage[F](st.name, st.asKleisli)),
+      stages = stages,
     )
 
     val metadata = PipelineMetadata(
       name = name,
-      stages = stages.map(_.name),
-      transformations = stages.collect { case _: SparkStage.Transform[_, _, _] => 1 }.size,
-      qualityChecks = stages.collect { case _: SparkStage.Quality[_, _] => 1 }.size,
+      stages = stages.names,
+      transformations = stages.count(StageKind.Transform),
+      qualityChecks = stages.count(StageKind.Quality),
       tags = Map(
         "engine"        -> "spark",
         "type_safe"     -> "true",
@@ -175,38 +150,97 @@ class SparkTypedBuilder[F[_]: EffectSystem, In, Out] private[spark] (
 }
 
 /**
- * Runtime pipeline builder for dynamic pipeline construction
+ * Stages that only make sense once the builder is carrying a dataset.
+ *
+ * A quality check validates records and a sink writes records, so both need the pipeline to be holding a
+ * `Dataset`. Keeping them here rather than on the class is what lets them say so: the implicit class only
+ * resolves for a builder whose `Out` is a dataset. On the class they were declared over the builder's `Out`
+ * while their stage arrows were over `Dataset[Out]`, and the composer's cast hid the mismatch.
  */
-class SparkRuntimeBuilder[F[_]: EffectSystem] private[spark] (
+object SparkTypedBuilder {
+
+  implicit class DatasetOps[F[_]: EffectSystem, In, E](
+    builder: SparkTypedBuilder[F, In, DataAlgebra.Dataset[E]]) {
+
+    /**
+     * Add a data quality check using Spark's distributed validation.
+     *
+     * The decoder is what lets the engine apply the contract to every record. See `DataAlgebra.validate`.
+     */
+    def addQualityCheck(
+      contract: com.flowforge.core.types.PipelineTypes.DataContract[E],
+    )(implicit decoder: DataDecoder[E],
+    ): SparkTypedBuilder[F, In, DataAlgebra.Dataset[E]] = {
+      val _ = decoder
+      val stage = SparkStage.Quality[F, E](
+        name = s"spark-quality-${builder.stages.size}",
+        description = "Spark distributed quality validation",
+        contract = contract,
+        execute = Kleisli(data => builder.dataAlgebra.validate(data, contract).map(_.data)),
+      )
+      builder.advance[DataAlgebra.Dataset[E]](stage.name, StageKind.Quality, stage.execute)
+    }
+
+    /**
+     * Add a sink that uses Spark's distributed writing capabilities
+     */
+    def addSink(
+      sink: DataSink,
+      encoder: com.flowforge.core.algebra.DataEncoder[E],
+      options: WriteOptions = WriteOptions.default,
+    ): SparkTypedBuilder[F, In, Unit] = {
+      val stage = SparkStage.Sink[F, E](
+        name = s"spark-sink-${builder.stages.size}",
+        description = s"Write to ${sink.format} using Spark",
+        sink = sink,
+        execute = Kleisli(data => builder.dataAlgebra.write(data, sink, options)(encoder).void),
+      )
+      builder.advance[Unit](stage.name, StageKind.Sink, stage.execute)
+    }
+  }
+}
+
+/**
+ * Runtime pipeline builder for dynamic pipeline construction.
+ *
+ * "Runtime" names where the stage operations come from, not whether the stage types line up. The chain still
+ * carries the type between each pair of stages, so `buildRuntime` returns the pipeline's own `In` and `Out`
+ * rather than the `Any` the old cast produced.
+ */
+class SparkRuntimeBuilder[F[_]: EffectSystem, In, Out] private[spark] (
   private val name: String,
   private val sparkSession: SparkSession,
   private val dataAlgebra: DataAlgebra[F],
-  private val stages: List[SparkStage[F, _, _]]) {
+  private val stages: StageChain[F, In, Out]) {
 
-  def addDynamicStage[A, B](
+  def addDynamicStage[B](
     stageName: String,
-    operation: DataAlgebra.Dataset[A] => F[DataAlgebra.Dataset[B]],
-  ): SparkRuntimeBuilder[F] = {
-    val stage = SparkStage.Dynamic[F, DataAlgebra.Dataset[A], DataAlgebra.Dataset[B]](
+    operation: Out => F[B],
+  ): SparkRuntimeBuilder[F, In, B] = {
+    val stage = SparkStage.Dynamic[F, Out, B](
       name = stageName,
       description = "Dynamic Spark operation",
       execute = Kleisli(operation),
     )
-    new SparkRuntimeBuilder[F](name, sparkSession, dataAlgebra, stages :+ stage)
+    new SparkRuntimeBuilder[F, In, B](
+      name,
+      sparkSession,
+      dataAlgebra,
+      stages.andThen(stageName, StageKind.Transform, stage.execute),
+    )
   }
 
-  def buildRuntime(): Pipeline[F, Any, Any] = {
-    // Runtime composition - less type safety but more flexibility
-    val kleisliPipeline = StageComposer.compose[F, Any, Any](
+  def buildRuntime(): Pipeline[F, In, Out] = {
+    val kleisliPipeline = StageComposer.compose[F, In, Out](
       pipelineName = name,
-      stages = stages.map(st => ExecutableStage[F](st.name, st.asKleisli)),
+      stages = stages,
     )
 
     val metadata = PipelineMetadata(
       name = name,
-      stages = stages.map(_.name),
-      transformations = stages.size,
-      qualityChecks = 0,
+      stages = stages.names,
+      transformations = stages.count(StageKind.Transform),
+      qualityChecks = stages.count(StageKind.Quality),
       tags = Map(
         "engine"    -> "spark",
         "type_safe" -> "false",
