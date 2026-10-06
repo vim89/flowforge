@@ -2,10 +2,10 @@
 
 Plan for moving FlowForge's compile-time contracts from Scala 2.13 to Scala 3.
 
-> Status: a plan, not a record of work done. The build runs on Scala 2.13.16 only. The one Scala 3
-> module is `experimental`, which is opt-in and not published. Every Scala 3 snippet below is a
-> proposal and does not exist in the codebase. Readiness for v1.0 is tracked in
-> [v1.0 readiness](../plan/v1.0-readiness.md).
+> Status: part plan, part record. `core` now cross-builds Scala 2.13.16 and 3.3.3, with the Scala 3
+> derivation in `modules/core/src/main/scala-3`, and CI runs `core/testQuick` on 3.3.3. Every other
+> module is 2.13.16 only. Snippets below that are marked proposed are still proposals. Readiness for
+> v1.0 is tracked in [v1.0 readiness](../plan/v1.0-readiness.md).
 
 ## Starting point
 
@@ -43,12 +43,12 @@ implicit def materialize[Out, Contract, P <: SchemaPolicy]: SchemaConforms[Out, 
 2. Policy comparison is plain data in, plain data out, so it is shared source across both versions.
 3. Error message text is produced from the comparison result, so the message can stay identical.
 
-### Proposed cross-build settings
+### Cross-build settings
 
-Not in `build.sbt` today. `ThisBuild / crossScalaVersions` is 2.13.16 only:
+`core` carries these settings today. The snippet is the shape of them, not a quote of `build.sbt`:
 
 ```scala
-// Proposed cross-build configuration (build.sbt)
+// Cross-build configuration (build.sbt)
 ThisBuild / crossScalaVersions := Seq("2.13.16", "3.3.3")
 
 // Version-specific dependencies ready
@@ -64,7 +64,7 @@ libraryDependencies ++= {
 
 ## 🏗️ Cross-build configuration
 
-The full set of settings the migration would add. None of it is in the build today.
+The full set of settings the cross-build uses. `core` has them; no other module does.
 
 ### SBT setup
 ```scala
@@ -272,7 +272,8 @@ class CrossVersionCompatSpec extends AnyWordSpec {
 
 ### Build matrix
 
-CI has no such workflow today. `ci.yml` runs 2.13.16 only.
+`ci.yml` has no separate cross-build workflow. Its `test` matrix carries one Scala 3 entry, which
+runs `core/testQuick` on Linux.
 
 ```yaml
 # Proposed .github/workflows/cross-build.yml
@@ -293,13 +294,12 @@ steps:
 - TypeShape ADT and policy-based comparison, derived by Magnolia macros
 - Policy behaviour covered by the tests in `modules/compile-fail-tests`
 
-### Phase 2: cross-build infrastructure (not started)
-- Add Scala 3 to `crossScalaVersions` and split version-specific source directories
-- Write the inline, Mirror-based derivation for Scala 3
-- Blocked on Spark artifacts for Scala 3
+### Phase 2: cross-build infrastructure (done for core)
+- Scala 3 is in `core`'s `crossScalaVersions`, with version-specific source directories
+- The Scala 3 derivation uses quotes reflection, and CI tests `core` on 3.3.3
 
 ### Phase 3: activation (not started)
-- Cross-publish core and contracts, then the engines once Spark allows it
+- Cross-publish core and contracts, then the engines once Spark ships Scala 3 artifacts
 
 ### 🔮 Phase 4: Future Enhancement
 - 📦 Union types for flexible contract definitions
@@ -329,9 +329,9 @@ steps:
 
 ## Current status
 
-- Scala 2.13.16 is the only version the build and CI run. The `experimental` module is the only
-  Scala 3 module, it is opt-in and it is not published.
-- The contract system works on 2.13: shape derivation, policy comparison and the compile error
+- `core` builds and tests on both 2.13.16 and 3.3.3. Every other module is 2.13.16, except
+  `experimental`, which is Scala 3 only, opt-in and not published.
+- The contract system works on both: shape derivation, policy comparison and the compile error
   message are in place, with the policy cases covered in `modules/compile-fail-tests`.
-- Nothing in this document's Scala 3 sections is implemented. They describe the intended port.
+- Nothing is cross-published yet, so the Scala 3 build is something you get from source.
 - Readiness statements live in one place: [v1.0 readiness](../plan/v1.0-readiness.md).

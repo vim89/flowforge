@@ -3,8 +3,9 @@
 The following versions are validated in CI on `main` today. v1.0.0 is not released; readiness for it is
 tracked in [v1.0 readiness](../plan/v1.0-readiness.md).
 
-- Scala: 2.13.16, on Linux, macOS and Windows. No other 2.13 patch and no other Scala version is in the test
-  matrix.
+- Scala: 2.13.16, on Linux, macOS and Windows, plus 3.3.3 on Linux for `core` only. `core` is the one module
+  that cross-builds; every other module is 2.13.16 and fails dependency resolution under `++3`. No other
+  patch of either line is in the test matrix.
 - JDK: 17. Nothing above or below it is tested, and Spark 3.5.x does not support a JDK above 17.
 - Spark (engines-spark): 3.5.6, the one version the build pins and the only one CI runs. No other Spark line
   is tested, including 3.4.x.
