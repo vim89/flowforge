@@ -6,7 +6,6 @@ object Dependencies {
   // ===== VERSION CATALOG =====
   object Versions {
     // Scala ecosystem
-    val scala212 = "2.12.20"
     val scala213 = "2.13.16"
     val scala3   = "3.3.3"
 
@@ -135,11 +134,14 @@ object Dependencies {
       "io.delta"         %% "delta-spark" % Versions.delta,
     )
 
+    // Flink's Java artifacts carry no Scala suffix, so they resolve on whatever Scala version the module is
+    // built for. The Scala API (`flink-scala`, `flink-streaming-scala`) is published for 2.12 only and is
+    // deprecated upstream; depending on it pinned this module to 2.12, which `core` does not publish for, so
+    // the module could not resolve at all.
     val flink = Seq(
-      // NOTE: Flink Scala API only available for 2.12, documented constraint
-      "org.apache.flink" % "flink-scala_2.12"           % Versions.flink % "provided",
-      "org.apache.flink" % "flink-streaming-scala_2.12" % Versions.flink % "provided",
-      "org.apache.flink" % "flink-table-runtime"        % Versions.flink % "provided",
+      "org.apache.flink" % "flink-streaming-java" % Versions.flink % "provided",
+      // The local MiniCluster `env.execute` runs on. Only the tests start one; a cluster supplies it.
+      "org.apache.flink" % "flink-clients" % Versions.flink % Test,
     )
 
     val all: Seq[ModuleID] = spark ++ flink

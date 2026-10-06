@@ -1,18 +1,24 @@
 package com.flowforge.engines.flink
 
+import org.apache.flink.api.common.functions.{ FilterFunction, MapFunction }
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.core.fs.FileSystem
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.ProcessFunction
-import org.apache.flink.streaming.api.scala._
 import org.apache.flink.util.Collector
+
+import scala.annotation.nowarn
+import scala.jdk.CollectionConverters._
 
 /**
  * Minimal Flink runner demo proving "same business logic, different runner".
  *
- * This demo shows that FlowForge's pure domain transforms can be reused across different execution engines
- * (Spark, Flink, etc.) without modification.
+ * The transforms below are pure functions of a `User`, so the same ones a Spark pipeline applies are the ones
+ * this job applies. Only the wrappers that hand a record to Flink are engine-specific.
  *
- * The business logic (data transformations) remains pure and engine-agnostic, while only the execution
- * framework changes.
+ * It uses the Java `DataStream` API, like the rest of this module: the Scala API is published for 2.12 only
+ * and is deprecated upstream, so depending on it would pin this module to a Scala version `core` does not
+ * publish for.
  */
 object FlinkStreamingDemo {
 
@@ -27,11 +33,11 @@ object FlinkStreamingDemo {
     email: String,
     processed: Boolean)
 
-  // Flink requires explicit TypeInformation for case classes
-  implicit val userTypeInfo: TypeInformation[User] = TypeInformation.of(classOf[User])
-  implicit val processedUserTypeInfo: TypeInformation[ProcessedUser] =
+  // The Java API infers no types from Scala signatures, so each one is stated.
+  private val userTypeInfo: TypeInformation[User] = TypeInformation.of(classOf[User])
+  private val processedUserTypeInfo: TypeInformation[ProcessedUser] =
     TypeInformation.of(classOf[ProcessedUser])
-  implicit val stringTypeInfo: TypeInformation[String] = TypeInformation.of(classOf[String])
+  private val stringTypeInfo: TypeInformation[String] = TypeInformation.of(classOf[String])
 
   /**
    * PURE DOMAIN TRANSFORM - Engine Agnostic
@@ -57,65 +63,49 @@ object FlinkStreamingDemo {
       user.name.nonEmpty &&
       user.email.contains("@")
 
+  /** The records the demo runs on. A bounded collection, so the job finishes. */
+  private val users: List[User] = List(
+    User(1, "john doe", "JOHN@EXAMPLE.COM"),
+    User(2, "jane smith", "JANE@TEST.ORG"),
+    User(0, "", "invalid"), // Invalid user - will be filtered
+    User(3, "bob wilson", "BOB@COMPANY.NET"),
+  )
+
+  /** Where the demo writes its results. */
+  val outputPath: String = "/tmp/flowforge-flink-output.txt"
+
+  @nowarn("cat=deprecation")
   def main(args: Array[String]): Unit = {
-    // Set up Flink execution environment
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(2)
 
-    // Option 1: Socket text stream (as specified in plan)
-    // Uncomment to read from socket: nc -l 9999
-    // val socketStream = env.socketTextStream("localhost", 9999)
-    //   .map(line => {
-    //     val parts = line.split(",")
-    //     if (parts.length >= 3) User(parts(0).toLong, parts(1), parts(2))
-    //     else User(0, "", "")
-    //   })
-
-    // Option 2: Test data stream for demo
-    val users = Seq(
-      User(1, "john doe", "JOHN@EXAMPLE.COM"),
-      User(2, "jane smith", "JANE@TEST.ORG"),
-      User(0, "", "invalid"), // Invalid user - will be filtered
-      User(3, "bob wilson", "BOB@COMPANY.NET"),
-    )
-
-    val dataStream = env.fromCollection(users)
-
-    // Apply the same business logic as Spark pipelines
-    val processedStream = dataStream
-      .filter(isValidUser)              // Pure domain filter
-      .process(new UserProcessFunction) // Flink wrapper around pure transform
+    val processedStream = env
+      .fromCollection(users.asJava, userTypeInfo)
+      .filter(ValidUser)                                       // Pure domain filter
+      .process(new UserProcessFunction, processedUserTypeInfo) // Flink wrapper around pure transform
       .name("Process Users")
 
-    // Output results - both console and file sink (as specified in plan)
-    processedStream.print("Processed Users")
+    // `DataStream.print` is a Flink sink, not Scala's `print`: it adds an operator to the job graph that
+    // writes each record as the job runs. The linter matches on the name, so the rule is waived here.
+    processedStream.print("Processed Users") // scalafix:ok DisableSyntax.noPrintln
 
-    // File sink as required by plan
     processedStream
-      .map((user: ProcessedUser) => user.toString)
-      .writeAsText("/tmp/flowforge-flink-output.txt")
+      .map(RenderUser, stringTypeInfo)
+      .writeAsText(outputPath, FileSystem.WriteMode.OVERWRITE)
       .setParallelism(1)
 
-    println("""
-=== FlowForge Flink Demo ===
-
-This demo proves FlowForge's engine abstraction:
-- Same pure domain transforms (processUser, isValidUser)
-- Different execution engine (Flink vs Spark)
-- Business logic remains unchanged
-- Only the engine-specific wrappers change
-
-Expected Output:
-- Processed User: ProcessedUser(1,JOHN DOE,john@example.com,true)
-- Processed User: ProcessedUser(2,JANE SMITH,jane@test.org,true) 
-- Processed User: ProcessedUser(3,BOB WILSON,bob@company.net,true)
-- Invalid user (id=0) filtered out
-
-Run this with: sbt "engines-flink/run"
-    """)
-
-    // Execute the Flink job
     env.execute("FlowForge Flink Demo")
+    ()
+  }
+
+  /** Flink's wrapper around [[isValidUser]]. */
+  private object ValidUser extends FilterFunction[User] {
+    override def filter(user: User): Boolean = isValidUser(user)
+  }
+
+  /** How a result reaches a text sink. The sink writes lines, so a record has to become one. */
+  private object RenderUser extends MapFunction[ProcessedUser, String] {
+    override def map(user: ProcessedUser): String = user.toString
   }
 
   /**
@@ -129,10 +119,8 @@ Run this with: sbt "engines-flink/run"
       user: User,
       ctx: ProcessFunction[User, ProcessedUser]#Context,
       out: Collector[ProcessedUser],
-    ): Unit = {
+    ): Unit =
       // Call the pure domain transform (same as used in Spark)
-      val processed = processUser(user)
-      out.collect(processed)
-    }
+      out.collect(processUser(user))
   }
 }

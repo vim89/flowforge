@@ -7,7 +7,7 @@ one place a readiness claim belongs.
 ## Build & Platform
 - CI runs on JDK 17 (Ubuntu 22.04), sbt 1.9+.
 - Scala 2.13 primary; Scala 3 sources compile in `core` (no Spark dependencies).
-- `engines-flink`: builds and resolves on a single axis, or the module is removed.
+- `engines-flink`: builds and resolves on Scala 2.13, and its tests run a Flink job rather than a delegation.
  - Spark IT job pinned to Java 17; println banned in production sources via CI guard.
 
 ## Contracts & Compile‑Time Safety

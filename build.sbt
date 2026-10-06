@@ -13,10 +13,7 @@ ThisBuild / dynverSeparator := "-"
 ThisBuild / dynverSonatypeSnapshots := true
 // Default Scala stays 2.13 for most modules; Spark/Deequ modules are handled pragmatically via deps.
 ThisBuild / scalaVersion := Dependencies.Versions.scala213
-// Cross-compile defaults: build-level + commands iterate over Scala 2.13 and 3 for speed and stability.
-// Module-specific overrides (e.g., enginesFlink) can still target 2.12 explicitly.
-// Global cross-build: keep 2.13 only for stability and speed.
-// Module overrides handle 2.12 (Flink) and Scala 3 (experimental) explicitly.
+// Global cross-build: keep 2.13 only for stability and speed. `core` additionally builds on Scala 3.
 ThisBuild / crossScalaVersions := Seq(
   Dependencies.Versions.scala213
 )
@@ -171,6 +168,7 @@ lazy val root = (project in file("."))
     connectorsGcs,
     connectorsJdbc,
     enginesSpark,
+    enginesFlink,
     qualityDeequ, // Removed empty quality module per v1.0-2 plan
     examples,
     compileFailTests,
@@ -199,7 +197,7 @@ lazy val infrastructure = moduleProject("infrastructure")
 lazy val core = moduleProject("core")
   .settings(
     description := "Core abstractions and custom type system",
-    // Core is the only module published for both. Flink-specific modules handle 2.12 separately.
+    // Core is the only module published for both.
     crossScalaVersions := Seq(Dependencies.Versions.scala213, Dependencies.Versions.scala3),
     libraryDependencies ++= Dependencies.forModule("core"),
     // Minimal, justified excludes only
@@ -317,10 +315,25 @@ lazy val enginesSpark = moduleProject("engines-spark")
 lazy val enginesFlink = moduleProject("engines-flink")
   .dependsOn(core, connectors, enginesSpark % "test->compile")
   .settings(
-    description        := "Apache Flink execution engine",
-    // Flink Scala API is 2.12-only; avoid invalid 2.13 cross build
-    crossScalaVersions := Seq(Dependencies.Versions.scala212),
+    description := "Apache Flink execution engine",
     libraryDependencies ++= Dependencies.forModule("engines-flink"),
+    // Flink serializes records with Kryo, which reflects into `java.base`. On Java 17 and later that is
+    // closed by default, and the failure arrives as an `InaccessibleObjectException` from inside a running
+    // job rather than at startup. These are the opens Flink's own scripts set for the same reason.
+    Test / javaOptions ++= Seq(
+      "--add-opens=java.base/java.lang=ALL-UNNAMED",
+      "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
+      "--add-opens=java.base/java.io=ALL-UNNAMED",
+      "--add-opens=java.base/java.net=ALL-UNNAMED",
+      "--add-opens=java.base/java.nio=ALL-UNNAMED",
+      "--add-opens=java.base/java.text=ALL-UNNAMED",
+      "--add-opens=java.base/java.time=ALL-UNNAMED",
+      "--add-opens=java.base/java.util=ALL-UNNAMED",
+      "--add-opens=java.base/java.util.concurrent=ALL-UNNAMED",
+      "--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED",
+      "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
+    ),
+    Test / fork := true,
   )
   .settings(mimaSettings("engines-flink"): _*)
 
@@ -537,7 +550,7 @@ lazy val experimental = moduleProject("experimental")
 import sbtunidoc.ScalaUnidocPlugin
 import sbtunidoc.ScalaUnidocPlugin.autoImport._
 
-// Only aggregate Scala 2.13 modules (Flink is 2.12-only). This keeps unidoc stable.
+// Only aggregate the Scala 2.13 modules. This keeps unidoc stable.
 lazy val unidocProjects = Seq(
   core,
   contracts,
@@ -545,6 +558,7 @@ lazy val unidocProjects = Seq(
   connectorsGcs,
   connectorsJdbc,
   enginesSpark,
+  enginesFlink,
   qualityDeequ,
   infrastructure,
   examples,
