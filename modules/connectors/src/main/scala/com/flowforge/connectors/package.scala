@@ -65,6 +65,16 @@ package object connectors {
     cause: Option[Throwable] = None,
     code: String = "CONNECTOR_ERROR")
 
+  /**
+   * Carries a [[ConnectorError]] through an effect's error channel.
+   *
+   * Most connector operations return the error as a value in `ConnectorResult`. The streaming ones cannot:
+   * their return type is the payload itself, with no room for a failure. Those raise this instead, so the
+   * error still travels in `F` rather than being thrown out of a `map`.
+   */
+  case class ConnectorFailure(error: ConnectorError)
+      extends RuntimeException(error.message, error.cause.orNull)
+
   // File system specific error types
   object FileSystemError {
     def fileNotFound(path: String): ConnectorError =

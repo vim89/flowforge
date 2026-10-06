@@ -242,7 +242,7 @@ class EffectSyntaxExtensionsSpec extends AnyFunSuite with Matchers {
 
     var closeable: TestCloseable = null
     val acquire                  = IO { closeable = new TestCloseable; closeable }
-    val use                      = (c: TestCloseable) => IO.pure(42)
+    val use                      = (_: TestCloseable) => IO.pure(42)
 
     val result = acquire.using(use).unsafeRunSync()
 
@@ -571,7 +571,7 @@ class EffectSyntaxExtensionsSpec extends AnyFunSuite with Matchers {
       .liftEffect[IO]
       .map(_ * 2)
       .flatMap(x => IO.pure(x + 5))
-      .tap(x => IO.unit)
+      .tap(_ => IO.unit)
       .mapWhen(_ > 20)(_ * 2)
       .unsafeRunSync()
 

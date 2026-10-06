@@ -2,11 +2,11 @@ package com.flowforge.core.codecs
 
 import com.flowforge.core.algebra._
 import com.flowforge.core.instances.DefaultCodecs._
+import com.flowforge.core.testing.What
 import com.flowforge.core.types._
 import io.circe.Json
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import com.flowforge.core.testing.What
 
 class CodecsMatrixSpec extends AnyFunSuite with Matchers {
 

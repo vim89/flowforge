@@ -2,7 +2,6 @@ package com.flowforge.core.observability
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import cats.syntax.flatMap._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
