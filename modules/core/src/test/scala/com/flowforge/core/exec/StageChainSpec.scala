@@ -21,6 +21,32 @@ class StageChainSpec extends AnyFunSuite with Matchers {
     def apply[A, B](stageName: String, stage: Kleisli[IO, A, B]): Kleisli[IO, A, B] = stage
   }
 
+  /**
+   * Runs `body` on a thread with a 512k stack and hands back whatever it produced.
+   *
+   * A deep-chain test on the default stack measures the runner, not the code: the JVM's main thread gets 8MB
+   * on macOS and about 1MB on the Linux and Windows runners. Naming the stack size makes the bound the test
+   * asserts the same everywhere. `StackOverflowError` is not `NonFatal`, so `Try` would not catch it.
+   */
+  private def onSmallStack[A](body: => A): A = {
+    var outcome: Either[Throwable, A] = Left(new IllegalStateException("thread never ran"))
+    val thread = new Thread(
+      null,
+      () =>
+        outcome =
+          try Right(body)
+          catch { case e: Throwable => Left(e) },
+      "small-stack",
+      512L * 1024L,
+    )
+    thread.start()
+    thread.join()
+    outcome match {
+      case Right(value) => value
+      case Left(e)      => throw e
+    }
+  }
+
   private def chain: StageChain[IO, Int, String] =
     StageChain
       .empty[IO, Int]
@@ -47,14 +73,16 @@ class StageChainSpec extends AnyFunSuite with Matchers {
     withSink.size shouldBe 3
   }
 
-  test("a chain long enough to be generated rather than written out still builds and runs") {
-    // 10k is far past any hand-written pipeline and well past what a generator would produce. It is here
-    // because `arrow` descends one frame per link, so this is the bound that assertion rests on.
-    val deep = (1 to 10000).foldLeft(StageChain.empty[IO, Int]) { (chain, i) =>
+  test("a chain deeper than the thread's stack still builds and runs") {
+    // Runs on a small stack on purpose. An arrow that walked its links eagerly overflowed here between 2k
+    // and 4k, and the depth it survived depended on the thread rather than the chain: the same 10k chain
+    // passed on macOS and overflowed on Linux and Windows CI. 50k on 512k of stack leaves no room for that
+    // to pass by accident.
+    val deep = (1 to 50000).foldLeft(StageChain.empty[IO, Int]) { (chain, i) =>
       chain.andThen(s"add-$i", StageKind.Transform, Kleisli((n: Int) => IO.pure(n + 1)))
     }
-    deep.size shouldBe 10000
-    deep.arrow(plain).run(0).unsafeRunSync() shouldBe 10000
+    deep.size shouldBe 50000
+    onSmallStack(deep.arrow(plain).run(0).unsafeRunSync()) shouldBe 50000
   }
 
   test("a stage that does not read the previous stage's output is rejected") {

@@ -80,12 +80,14 @@ sealed abstract class StageChain[F[_], In, Out] extends Product with Serializabl
    * `decorate` is applied at each stage's own input and output types rather than at `Any`, which is what
    * removes the need to erase. See [[StageDecorator]].
    *
-   * Building the arrow descends one frame per stage, so the chain's depth is bounded by the JVM stack: 10k
-   * stages build and run, 50k overflow. A left fold would not have that bound, but folding needs the chain
-   * reversed, and reversing a type-aligned sequence needs the same cast this type exists to remove. The bound
-   * is the one being accepted, and 10k is far past a pipeline anyone would run: every stage carries a span
-   * and a START/COMPLETE pair, so a chain near the bound is unusable for reasons that have nothing to do with
-   * the stack. [[StageChainSpec]] pins 10k so the bound cannot quietly drop.
+   * Returning the arrow costs one call per chain, not one stack frame per stage. Each link defers the rest of
+   * the chain through `EffectSystem.suspend`, so the descent happens inside `F`'s own loop rather than on the
+   * JVM stack. Walking the links eagerly instead would bound the chain's depth by whatever stack the thread
+   * happens to have, which is not a property of the pipeline: a chain that ran on a 8MB main thread
+   * overflowed at a third of the depth on a 1MB CI runner. The cost is that the links are walked once per run
+   * rather than once per build, and that stack safety rests on `F.flatMap` and `F.suspend` being stack-safe.
+   * `MonadError` does not promise that, but every effect type worth running a pipeline in provides it.
+   * [[StageChainSpec]] runs a chain deep enough that an eager walk would fail.
    */
   private[exec] def arrow(decorate: StageDecorator[F])(implicit F: EffectSystem[F]): Kleisli[F, In, Out]
 }
@@ -133,7 +135,13 @@ object StageChain {
     private[exec] def arrow(
       decorate: StageDecorator[F],
     )(implicit F: EffectSystem[F],
-    ): Kleisli[F, In, Out] = init.arrow(decorate).andThen(decorate(entry.name, stage))
+    ): Kleisli[F, In, Out] = {
+      val head = decorate(entry.name, stage)
+      // `suspend` is what keeps the preceding links off the stack: the rest of the chain is built when `F`
+      // reaches this step, not when the arrow is handed out, so the depth is `F`'s to carry rather than the
+      // thread's. `andThen` here would build the whole chain eagerly and recurse once per stage.
+      Kleisli[F, In, Out](in => F.flatMap(F.suspend(init.arrow(decorate).run(in)))(head.run))
+    }
   }
 }
 
