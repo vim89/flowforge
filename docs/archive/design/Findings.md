@@ -1,6 +1,9 @@
 # FlowForge Production Readiness Assessment
 *Senior Staff Scala/Data Architect Assessment - CORRECTED 2025-09-01*
 
+> **Archived**: a snapshot taken on 2025-09-01. Its scores are not current and are not authoritative. For
+> readiness see `docs/plan/v1.0-readiness.md`; this file is kept for decision lineage only.
+
 ## Executive Summary
 
 **🎯 PRODUCTION READINESS VERDICT: REALITY-CORRECTED - Strong Design, Major Implementation Gaps**

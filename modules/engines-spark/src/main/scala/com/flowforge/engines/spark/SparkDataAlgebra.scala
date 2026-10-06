@@ -39,16 +39,16 @@ import java.util.UUID
 import scala.concurrent.duration.{ DurationLong, FiniteDuration, NANOSECONDS }
 
 /**
- * PRODUCTION-READY Spark Data Algebra Implementation
+ * Spark implementation of `DataAlgebra`.
  *
- * This implementation uses real Spark Dataset APIs with production-grade:
- *   - Proper Delta Lake MERGE INTO statements with hash-based change detection
- *   - Real SCD1/SCD2 patterns with temporal versioning
- *   - Memory-safe operations using Spark's distributed computing
- *   - Production-ready CDC with proper key extraction
- *   - Resource-safe session management with bracket patterns
+ * What it covers:
+ *   - Delta Lake MERGE INTO with hash-based change detection
+ *   - SCD1 and SCD2 with temporal versioning
+ *   - Session lifecycle through bracket patterns
  *
- * PRODUCTION READINESS: 95% - All critical operations use real Spark APIs
+ * What it does not cover: `read` accepts a local path or a JDBC source, `write` accepts a local path or a
+ * JDBC sink, and the other cases raise `UnsupportedOperationException`. A readiness statement belongs in one
+ * place, so this comment does not make one; see `docs/plan/v1.0-readiness.md`.
  */
 object SparkDataAlgebra {
 
