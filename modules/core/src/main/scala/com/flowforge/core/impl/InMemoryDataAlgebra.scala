@@ -283,11 +283,22 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
   override def queryLineage(query: LineageQuery): F[List[LineageRecord]] = F.pure(Nil)
 
   // ---------- Quality ----------
-  override def validate[A](
+  // The contract used to be ignored, so `passed` was true whatever the records were and a caller could not
+  // tell a conforming dataset from a non-conforming one. It is applied to every record now.
+  override def validate[A: DataDecoder](
     dataset: Dataset[A],
     contract: PDataContract[A],
-  ): F[QualityResult[Dataset[A]]] =
-    F.pure(QualityResult(dataset, passed = true, violations = Nil, score = 1.0))
+  ): F[QualityResult[Dataset[A]]] = F.pure {
+    val perRecord        = dataset.data.map(a => contract(a).fold(_.toList.map(_.message), _ => Nil))
+    val violatingRecords = perRecord.count(_.nonEmpty).toLong
+    val messageCounts = perRecord.flatMap(_.distinct).groupBy(identity).view.mapValues(_.size.toLong).toList
+    DataAlgebra.contractResult(
+      dataset,
+      dataset.data.size.toLong,
+      violatingRecords,
+      messageCounts.sortBy(_._1),
+    )
+  }
 
   override def runQualityChecks[A: DataDecoder](
     dataset: Dataset[A],

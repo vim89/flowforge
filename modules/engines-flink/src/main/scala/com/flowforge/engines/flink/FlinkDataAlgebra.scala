@@ -129,7 +129,7 @@ final class FlinkDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataAlge
   override def queryLineage(query: LineageQuery): F[List[LineageRecord]] =
     delegate.queryLineage(query)
 
-  override def validate[A](
+  override def validate[A: DataDecoder](
     dataset: Dataset[A],
     contract: PDataContract[A],
   ): F[QualityResult[Dataset[A]]] =

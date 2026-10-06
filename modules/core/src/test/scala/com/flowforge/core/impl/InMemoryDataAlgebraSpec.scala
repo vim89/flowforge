@@ -892,6 +892,47 @@ test2"""
     result.data shouldBe dataset
   }
 
+  test("validate reports the records the contract rejects") {
+    val rows = List("ok", "bad", "bad", "ok")
+    val dataset = SimpleDataset(
+      rows,
+      DataSchema.builder.build,
+      DatasetMetadata(rows.size.toLong, DataSchema.builder.build, 1, Instant.now()),
+    )
+
+    // The contract used to be ignored, so this passed. A rejected record has to show up now.
+    val rejectBad: PDataContract[String] = s =>
+      if (s != "bad") ().validNel
+      else ValidationError.SchemaViolation("value", "not bad", s, message = "value is bad").invalidNel
+
+    val result = algebra.validate(dataset, rejectBad).unsafeRunSync()
+
+    result.passed shouldBe false
+    result.score shouldBe 0.5
+    // One message, counted once per record that reported it, not once per report.
+    result.violations.map(v => (v.message, v.recordsAffected)) shouldBe List(("value is bad", 2L))
+    result.violations.map(_.severity) shouldBe List(ViolationSeverity.Critical)
+    // Validating reports on the records; it does not drop the ones that failed.
+    result.data shouldBe dataset
+  }
+
+  test("validate passes on an empty dataset") {
+    val dataset = SimpleDataset(
+      List.empty[String],
+      DataSchema.builder.build,
+      DatasetMetadata(0, DataSchema.builder.build, 1, Instant.now()),
+    )
+    val rejectEverything: PDataContract[String] =
+      s => ValidationError.SchemaViolation("value", "nothing", s, message = "rejected").invalidNel
+
+    val result = algebra.validate(dataset, rejectEverything).unsafeRunSync()
+
+    // A contract cannot be violated by a record that is not there.
+    result.passed shouldBe true
+    result.score shouldBe 1.0
+    result.violations shouldBe List.empty
+  }
+
   test("runQualityChecks returns results for all checks") {
     val dataset = SimpleDataset(
       List("test"),

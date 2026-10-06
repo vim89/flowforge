@@ -359,10 +359,13 @@ object PipelineSyntax {
     }
 
     /**
-     * Apply quality check
+     * Apply quality check.
+     *
+     * The decoder is what lets the engine apply the contract to every record. See `DataAlgebra.validate`.
      */
     def quality(
       contract: DataContract[A],
+    )(implicit decoder: DataDecoder[A],
     ): F[DatasetPipelineBuilder[F, A]] =
       dataAlgebra.validate(dataset, contract).flatMap { result =>
         if (result.passed) F.pure(this)
