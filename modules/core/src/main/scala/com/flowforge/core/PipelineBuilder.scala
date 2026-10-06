@@ -3,7 +3,7 @@ package com.flowforge.core
 import cats.data.Kleisli
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
-import com.flowforge.core.exec.{ ExecutableStage, StageComposer }
+import com.flowforge.core.exec.{ StageChain, StageComposer, StageKind }
 import com.flowforge.core.lineage.OpenLineageEmitter
 import com.flowforge.core.observability.Tracer
 import com.flowforge.core.types.BuilderState.{ WithContract, WithTransform }
@@ -32,7 +32,7 @@ import com.flowforge.framework.{ Pipeline => FFPipeline, PipelineMetadata }
 case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] private (
   name: String,
   description: String = "",
-  stages: List[PipelineStage[F, _, _]] = List.empty,
+  stages: StageChain[F, In, Out],
   config: Option[PipelineConfig] = None,
   lineageEmitter: Option[OpenLineageEmitter[F]] = None,
   tracer: Option[Tracer[F]] = None) {
@@ -53,18 +53,23 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
   /**
    * Append a stage and move to the next phantom state.
    *
-   * `copy` cannot do this because the phantom state and the In/Out types change, and `copy` returns the same
+   * `copy` cannot do this because the phantom state and the Out type change, and `copy` returns the same
    * type. That forced a hand-written constructor call in each stage method, and three of them listed five of
    * the six fields, so a tracer attached before the first stage was dropped. Carrying the fields here means
    * there is one place to update when a field is added.
+   *
+   * The arrow has to read what the builder currently produces, which is what makes the stage chain and the
+   * builder's own type parameters say the same thing rather than two things that happen to agree.
    */
-  private def advance[S2 <: BuilderState, In2, Out2](
-    stage: PipelineStage[F, _, _],
-  ): PipelineBuilder[S2, F, In2, Out2] =
-    PipelineBuilder[S2, F, In2, Out2](
+  private def advance[S2 <: BuilderState, Out2](
+    stageName: String,
+    kind: StageKind,
+    arrow: Kleisli[F, Out, Out2],
+  ): PipelineBuilder[S2, F, In, Out2] =
+    PipelineBuilder[S2, F, In, Out2](
       name,
       description,
-      stages :+ stage,
+      stages.andThen(stageName, kind, arrow),
       config,
       lineageEmitter,
       tracer,
@@ -76,19 +81,27 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
    *
    * SOURCE: produced C must conform to declared contract R under policy P Advances phantom state: Empty ->
    * HasSource with HasContract
+   *
+   * A source reads from outside the pipeline, so its arrow takes no input. The `Out =:= Unit` evidence
+   * restricts it to a builder that has not produced a value yet; without it a source could be appended after
+   * a transform, which discarded the transform's output. At `Empty` the builder's `Out` is already `Unit`, so
+   * the evidence resolves on its own and no caller names it.
    */
   def addTypedSource[C, R, P <: SchemaPolicy](
     source: TypedSource[R],
     reader: DataSource => F[C],
-  )(implicit ev: SchemaConforms[C, R, P],
-  ): PipelineBuilder[WithContract, F, Unit, C] = {
+  )(implicit
+    ev: SchemaConforms[C, R, P],
+    atStart: Out =:= Unit,
+  ): PipelineBuilder[WithContract, F, In, C] = {
     val stage = PipelineStage.Source[F, C](
       name = s"contract-source-${stages.size}",
       description = s"Contract-aware source with compile-time validation",
       dataSource = source.underlying,
       execute = Kleisli(_ => reader(source.underlying)),
     )
-    advance[WithContract, Unit, C](stage)
+    // `=:=` is a function in both Scala versions, so the source's Unit input is adapted rather than cast.
+    advance[WithContract, C](stage.name, StageKind.Source, stage.execute.local[Out](atStart))
   }
 
   /**
@@ -105,7 +118,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
       description = "Contract-aware transformation",
       execute = Kleisli(transform),
     )
-    advance[WithTransform, In, C](stage)
+    advance[WithTransform, C](stage.name, StageKind.Transform, stage.execute)
   }
 
   /**
@@ -148,7 +161,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
         writer(data, sink.underlying),
       ),
     )
-    advance[BuilderState.Complete, In, Unit](stage)
+    advance[BuilderState.Complete, Unit](stage.name, StageKind.Sink, stage.execute)
   }
 
   /**
@@ -162,15 +175,15 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
 
     val kleisli: Kleisli[F, In, Out] = StageComposer.compose[F, In, Out](
       pipelineName = name,
-      stages = stages.map(st => ExecutableStage[F](st.name, st.execute)),
+      stages = stages,
       tracer = tracer,
       lineage = lineageEmitter,
     )
 
     val md = PipelineMetadata(
       name = name,
-      stages = stages.map(_.name),
-      transformations = stages.count(_.isTransform),
+      stages = stages.names,
+      transformations = stages.count(StageKind.Transform),
       qualityChecks = 0,
       tags = Map(
         "builder" -> "contract-aware",
@@ -191,10 +204,10 @@ object PipelineBuilder {
    * build.
    */
   def apply[F[_]: EffectSystem](name: String): PipelineBuilder[BuilderState.Empty, F, Unit, Unit] =
-    // `stages` is passed rather than defaulted: Scala 3 solves a default argument's type parameters on
-    // their own, so the default would come back as List[PipelineStage[Nothing, _, _]].
+    // `stages` has no default: an empty chain's input and output types are the same type, which is only true
+    // of a builder that has not added a stage yet, so there is nothing for a default to mean elsewhere.
     PipelineBuilder[BuilderState.Empty, F, Unit, Unit](
       name,
-      stages = List.empty[PipelineStage[F, _, _]],
+      stages = StageChain.empty[F, Unit],
     )
 }
