@@ -14,31 +14,9 @@ import java.time.Instant
 import scala.concurrent.duration.FiniteDuration
 
 /**
- * 🚀 **FlowForge Reader Pattern - Functional Dependency Injection**
- *
- * This module implements the Reader monad pattern for dependency injection in FlowForge pipelines. It
- * integrates seamlessly with the existing Kleisli-based pipeline architecture to provide clean, composable
- * DI.
- *
- * **Key Benefits:**
- *   - **Type-Safe DI**: All dependencies resolved at compile time
- *   - **Composable**: Reader instances compose naturally via monad operations
- *   - **Testable**: Easy to provide test implementations
- *   - **Pure Functional**: No side effects in dependency resolution
- *   - **Effect Polymorphic**: Works with any effect system F[_]
- *   - **Pipeline Integration**: Works with existing FlowForge components
- *
- * **Usage Patterns:**
- *   - Configuration injection for pipeline components
- *   - Service layer dependency injection
- *   - Cross-cutting concerns (logging, metrics, auditing)
- *   - Multi-environment support (dev, staging, prod)
- *
- * @author
- *   FlowForge Core Team
- * @since 0.1.0
+ * Reader monad dependency injection: a stage reads its config and services from an environment value instead
+ * of closing over a global. `ReaderPipeline` joins a reader to the Kleisli a pipeline runs on.
  */
-
 object ReaderPattern {
 
   // ===============================
@@ -209,6 +187,7 @@ object ReaderPattern {
   // CLOUD SERVICE ABSTRACTIONS
   // ===============================
 
+  /** Object storage: read, write, list and delete by path. */
   trait StorageService[F[_]] {
     def read(path: String): F[Array[Byte]]
     def write(path: String, data: Array[Byte]): F[Unit]
@@ -217,6 +196,7 @@ object ReaderPattern {
     def delete(path: String): F[Unit]
   }
 
+  /** Message queue: publish, subscribe and queue lifecycle. */
   trait QueueService[F[_]] {
     def publish[A](queue: String, message: A): F[Unit]
     def subscribe[A](queue: String): F[QueueSubscription[F, A]]
@@ -224,6 +204,7 @@ object ReaderPattern {
     def deleteQueue(name: String): F[Unit]
   }
 
+  /** Outbound notifications: email, Slack and webhooks. */
   trait NotificationService[F[_]] {
     def sendEmail(
       to: List[String],
@@ -234,6 +215,7 @@ object ReaderPattern {
     def sendWebhook(url: String, payload: Map[String, Any]): F[Unit]
   }
 
+  /** Alert definitions and their lifecycle. */
   trait MonitoringService[F[_]] {
     def createAlert(
       name: String,
@@ -249,24 +231,28 @@ object ReaderPattern {
   // DATABASE ABSTRACTIONS
   // ===============================
 
+  /** Pooled database connections, with pool stats and health. */
   trait ConnectionPool[F[_]] {
     def withConnection[A](operation: Connection[F] => F[A]): F[A]
     def stats: F[PoolStats]
     def health: F[PoolHealth]
   }
 
+  /** Transaction boundaries around an effect. */
   trait TransactionManager[F[_]] {
     def transaction[A](operation: F[A]): F[A]
     def rollback: F[Unit]
     def commit: F[Unit]
   }
 
+  /** Schema migrations: run, roll back and report status. */
   trait MigrationService[F[_]] {
     def runMigrations: F[MigrationResult]
     def rollbackMigration(version: String): F[MigrationResult]
     def migrationStatus: F[List[MigrationInfo]]
   }
 
+  /** A single database connection: query, execute and batch. */
   trait Connection[F[_]] {
     def query[A](sql: String, params: List[Any]): F[List[A]]
     def execute(sql: String, params: List[Any]): F[Int]
@@ -534,6 +520,8 @@ object ReaderPattern {
   // ===============================
 
   sealed trait LogLevel extends Product with Serializable
+
+  /** The log levels a `Logger` accepts. */
   object LogLevel {
     case object Debug extends LogLevel
     case object Info  extends LogLevel
@@ -542,6 +530,8 @@ object ReaderPattern {
   }
 
   sealed trait MetricType extends Product with Serializable
+
+  /** The metric kinds a `MetricsCollector` accepts. */
   object MetricType {
     case object Counter   extends MetricType
     case object Gauge     extends MetricType
@@ -549,6 +539,8 @@ object ReaderPattern {
   }
 
   final case class RequestId(value: String) extends AnyVal
+
+  /** Constructors for `RequestId`. */
   object RequestId {
     def generate: RequestId = RequestId(java.util.UUID.randomUUID().toString)
   }
@@ -574,6 +566,8 @@ object ReaderPattern {
     lastHealthCheck: Instant)
 
   sealed trait ResourceStatus extends Product with Serializable
+
+  /** The states a managed resource can report. */
   object ResourceStatus {
     case object Healthy   extends ResourceStatus
     case object Degraded  extends ResourceStatus
