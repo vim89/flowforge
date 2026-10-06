@@ -88,7 +88,7 @@ trait FlowForgeError extends RuntimeException with Product with Serializable {
   def severity: ErrorSeverity
 
   /** Optional error context for debugging */
-  def context: Map[String, Any]
+  def context: Map[String, ContextValue]
 
   /** Optional underlying cause */
   def cause: Option[Throwable]
@@ -113,12 +113,12 @@ trait FlowForgeError extends RuntimeException with Product with Serializable {
   /**
    * Enrich this error with additional context. Returns a new error instance with merged context.
    */
-  def withContext(additionalContext: Map[String, Any]): FlowForgeError
+  def withContext(additionalContext: Map[String, ContextValue]): FlowForgeError
 
   /**
    * Enrich this error with a single context value.
    */
-  def withContext(key: String, value: Any): FlowForgeError =
+  def withContext(key: String, value: ContextValue): FlowForgeError =
     withContext(Map(key -> value))
 
   /**
@@ -234,7 +234,7 @@ object ValidationError {
     schemaName: Option[String] = None,
     message: String = "Schema validation failed",
     severity: ErrorSeverity = ErrorSeverity.Error,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, ContextValue] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString)
@@ -246,7 +246,7 @@ object ValidationError {
       "Review schema evolution settings",
     )
 
-    def withContext(additionalContext: Map[String, Any]): SchemaViolation =
+    def withContext(additionalContext: Map[String, ContextValue]): SchemaViolation =
       copy(context = context ++ additionalContext)
 
     def withCause(underlyingCause: Throwable): SchemaViolation =
@@ -262,7 +262,7 @@ object ValidationError {
     threshold: Option[String] = None,
     message: String = "Data quality constraint violated",
     severity: ErrorSeverity = ErrorSeverity.Warning,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, ContextValue] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString)
@@ -274,7 +274,7 @@ object ValidationError {
       "Consider data cleansing steps",
     )
 
-    def withContext(additionalContext: Map[String, Any]): QualityViolation =
+    def withContext(additionalContext: Map[String, ContextValue]): QualityViolation =
       copy(context = context ++ additionalContext)
 
     def withCause(underlyingCause: Throwable): QualityViolation =
@@ -289,7 +289,7 @@ object ValidationError {
     recordId: Option[String] = None,
     message: String = "Required field is missing",
     severity: ErrorSeverity = ErrorSeverity.Error,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, ContextValue] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString)
@@ -301,7 +301,7 @@ object ValidationError {
       "Review field mapping configuration",
     )
 
-    def withContext(additionalContext: Map[String, Any]): MissingRequiredField =
+    def withContext(additionalContext: Map[String, ContextValue]): MissingRequiredField =
       copy(context = context ++ additionalContext)
 
     def withCause(underlyingCause: Throwable): MissingRequiredField =
@@ -318,7 +318,7 @@ object ValidationError {
     value: String,
     message: String = "Data type mismatch",
     severity: ErrorSeverity = ErrorSeverity.Error,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, ContextValue] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString)
@@ -330,7 +330,7 @@ object ValidationError {
       "Update type conversion rules",
     )
 
-    def withContext(additionalContext: Map[String, Any]): TypeMismatch =
+    def withContext(additionalContext: Map[String, ContextValue]): TypeMismatch =
       copy(context = context ++ additionalContext)
 
     def withCause(underlyingCause: Throwable): TypeMismatch =
@@ -361,7 +361,7 @@ object SystemError {
     current: String,
     message: String = "System resource exhausted",
     severity: ErrorSeverity = ErrorSeverity.Critical,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, ContextValue] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString,
@@ -375,7 +375,7 @@ object SystemError {
       "Retry after delay",
     )
 
-    def withContext(additionalContext: Map[String, Any]): ResourceExhausted =
+    def withContext(additionalContext: Map[String, ContextValue]): ResourceExhausted =
       copy(context = context ++ additionalContext)
 
     def withCause(underlyingCause: Throwable): ResourceExhausted =
@@ -390,7 +390,7 @@ object SystemError {
     endpoint: Option[String] = None,
     message: String = "Required service is unavailable",
     severity: ErrorSeverity = ErrorSeverity.Error,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, ContextValue] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString,
@@ -404,7 +404,7 @@ object SystemError {
       "Fall back to alternative service",
     )
 
-    def withContext(additionalContext: Map[String, Any]): ServiceUnavailable =
+    def withContext(additionalContext: Map[String, ContextValue]): ServiceUnavailable =
       copy(context = context ++ additionalContext)
 
     def withCause(underlyingCause: Throwable): ServiceUnavailable =
@@ -420,7 +420,7 @@ object SystemError {
     elapsed: FiniteDuration,
     message: String = "Operation timed out",
     severity: ErrorSeverity = ErrorSeverity.Error,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, ContextValue] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString,
@@ -434,7 +434,7 @@ object SystemError {
       "Retry with circuit breaker",
     )
 
-    def withContext(additionalContext: Map[String, Any]): OperationTimeout =
+    def withContext(additionalContext: Map[String, ContextValue]): OperationTimeout =
       copy(context = context ++ additionalContext)
 
     def withCause(underlyingCause: Throwable): OperationTimeout =
@@ -467,7 +467,7 @@ object BusinessError {
     datasetId: String,
     message: String = "Data contract violated",
     severity: ErrorSeverity = ErrorSeverity.Error,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, ContextValue] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString)
@@ -480,7 +480,7 @@ object BusinessError {
       "Implement data transformation",
     )
 
-    def withContext(additionalContext: Map[String, Any]): DataContractViolation =
+    def withContext(additionalContext: Map[String, ContextValue]): DataContractViolation =
       copy(context = context ++ additionalContext)
 
     def withCause(underlyingCause: Throwable): DataContractViolation =
@@ -497,7 +497,7 @@ object BusinessError {
     violationDuration: Duration,
     message: String = "SLA violation detected",
     severity: ErrorSeverity = ErrorSeverity.Warning,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, ContextValue] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString)
@@ -510,7 +510,7 @@ object BusinessError {
       "Update SLA agreements",
     )
 
-    def withContext(additionalContext: Map[String, Any]): SlaViolation =
+    def withContext(additionalContext: Map[String, ContextValue]): SlaViolation =
       copy(context = context ++ additionalContext)
 
     def withCause(underlyingCause: Throwable): SlaViolation =
@@ -533,7 +533,7 @@ object DataProcessingError {
     reason: String,
     message: String = "Data processing failed",
     severity: ErrorSeverity = ErrorSeverity.Error,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, ContextValue] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString)
@@ -546,7 +546,7 @@ object DataProcessingError {
       "Implement error handling in pipeline",
     )
 
-    def withContext(additionalContext: Map[String, Any]): ProcessingFailure =
+    def withContext(additionalContext: Map[String, ContextValue]): ProcessingFailure =
       copy(context = context ++ additionalContext)
 
     def withCause(underlyingCause: Throwable): ProcessingFailure =
@@ -570,7 +570,7 @@ object FlowForgeError {
     message: String,
     field: Option[String] = None,
     severity: ErrorSeverity = ErrorSeverity.Error,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, ContextValue] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString)
@@ -585,7 +585,7 @@ object FlowForgeError {
       "Review validation rules",
     )
 
-    def withContext(additionalContext: Map[String, Any]): ValidationError =
+    def withContext(additionalContext: Map[String, ContextValue]): ValidationError =
       copy(context = context ++ additionalContext)
 
     def withCause(underlyingCause: Throwable): ValidationError =
@@ -599,7 +599,7 @@ object FlowForgeError {
     message: String,
     configKey: Option[String] = None,
     severity: ErrorSeverity = ErrorSeverity.Error,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, ContextValue] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString)
@@ -614,7 +614,7 @@ object FlowForgeError {
       "Review configuration documentation",
     )
 
-    def withContext(additionalContext: Map[String, Any]): ConfigurationError =
+    def withContext(additionalContext: Map[String, ContextValue]): ConfigurationError =
       copy(context = context ++ additionalContext)
 
     def withCause(underlyingCause: Throwable): ConfigurationError =
@@ -629,7 +629,7 @@ object FlowForgeError {
     errors: NonEmptyList[FlowForgeError],
     message: String = "Multiple errors occurred",
     severity: ErrorSeverity = ErrorSeverity.Error,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, ContextValue] = Map.empty,
     cause: Option[Throwable] = None,
     timestamp: Instant = Instant.now(),
     errorId: String = UUID.randomUUID().toString)
@@ -644,7 +644,7 @@ object FlowForgeError {
       "Review batch processing configuration",
     )
 
-    def withContext(additionalContext: Map[String, Any]): CompositeError =
+    def withContext(additionalContext: Map[String, ContextValue]): CompositeError =
       copy(context = context ++ additionalContext)
 
     def withCause(underlyingCause: Throwable): CompositeError =
@@ -656,7 +656,7 @@ object FlowForgeError {
    */
   def fromThrowable(
     throwable: Throwable,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, ContextValue] = Map.empty,
   ): SystemError.ServiceUnavailable =
     SystemError.ServiceUnavailable(
       serviceName = "unknown-service",
@@ -688,7 +688,7 @@ object FlowForgeError {
    */
   implicit val showFlowForgeError: Show[FlowForgeError] = Show.show { error =>
     val contextStr = if (error.context.nonEmpty) {
-      error.context.map { case (k, v) => s"$k=$v" }.mkString(", ")
+      error.context.map { case (k, v) => s"$k=${v.render}" }.mkString(", ")
     } else {
       "none"
     }
