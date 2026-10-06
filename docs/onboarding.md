@@ -1,10 +1,12 @@
-# flowforge nnboarding guide
+# flowforge onboarding guide
 
-Welcome to FlowForge! This guide will help you get productive quickly with our functional data engineering platform.
+This guide is the learning path. For the commands that run today, start with
+[getting started](getting-started.md). What ships and what does not is listed in
+[v1.0 readiness](plan/v1.0-readiness.md).
 
 ## Pre-requisites
 
-- Scala 2.13+ knowledge
+- Scala 2.13 knowledge, and JDK 17, the only JDK the build is tested on
 - Familiarity with functional programming concepts (Option, Either, IO)
 - Basic understanding of data pipelines
 - SBT build tool experience
@@ -16,10 +18,10 @@ Welcome to FlowForge! This guide will help you get productive quickly with our f
    ```bash
    # Install required tools
    sdk install sbt
-   sdk install scala 2.13.12
-   
-   # Generate your first project  
-   sbt new vim89/flowforge.g8
+   sdk install scala 2.13.16
+
+   # Generate your first project from the template in this repository
+   sbt new file://$PWD/flowforge.g8
    ```
 
 2. **Core concepts**
@@ -29,13 +31,16 @@ Welcome to FlowForge! This guide will help you get productive quickly with our f
    - Resource management
 
 3. **First pipeline**
-   ```scala
-   // Start with this simple example
-   val pipeline = pipeline[IO, String]("hello-world", csvSource)
-     .map(_.trim.toUpperCase)
-     .filter(_.nonEmpty) 
-     .to(consoleSink)
+
+   Run the example that ships with the repository, then read its source:
+
+   ```bash
+   sbt "examples/runMain com.flowforge.examples.SimpleGoldenPath"
    ```
+
+   The typed builder it uses, step by step, is in
+   [getting started](getting-started.md#your-first-pipeline). `PipelineBuilder` is the only way to
+   build a pipeline: a source, a transform and a sink are all required before `build()` compiles.
 
 ### Day 2: Data Contracts & validation
 1. **Data Contracts DSL**
@@ -72,30 +77,45 @@ Welcome to FlowForge! This guide will help you get productive quickly with our f
 ## Common patterns
 
 ### ETL pipeline
+
 ```scala
-val etlPipeline = pipeline[IO, RawData]("etl-pipeline", source)
-  .transform(extract)
-  .transform(transform) 
-  .validate(businessRules)
-  .to(warehouse)
+import cats.effect.IO
+import com.flowforge.core.PipelineBuilder
+import com.flowforge.core.contracts._
+import com.flowforge.core.instances.EffectInstances._
+import com.flowforge.core.types._
+
+final case class Raw(id: Long, email: String)
+final case class Clean(id: Long, email: String)
+
+val etl = PipelineBuilder[IO]("etl-pipeline")
+  .addTypedSource[Raw, Raw, SchemaPolicy.Exact](
+    TypedSource[Raw](LocalDataSource("/tmp/raw", DataFormat.Parquet)),
+    _ => IO.pure(Raw(1L, "A@B.COM")),
+  )
+  .addTransform[Clean](r => IO.pure(Clean(r.id, r.email.toLowerCase)))
+  .addTypedSink[Clean, SchemaPolicy.Exact](
+    TypedSink[Clean](LocalDataSink("/tmp/clean", DataFormat.Parquet)),
+    (_, _) => IO.unit,
+  )
+  .build()
 ```
+
+Reading and writing happen in the two functions passed to the source and the sink. On a real pipeline
+they call a `DataAlgebra`, which is what
+`modules/examples/src/main/scala/com/flowforge/examples/HelloPipeline.scala` does with the Spark
+algebra.
 
 ### Stream processing
-```scala
-val streamPipeline = pipeline[IO, Event]("stream-pipeline", kafkaSource)
-  .map(enrichWithContext)
-  .filter(isRelevant)
-  .to(eventStore)
-```
+
+There is no streaming API. Pages that show windows, watermarks or a Kafka source describe a design,
+not shipped code. Track it in [v1.0 readiness](plan/v1.0-readiness.md).
 
 ### Data quality
-```scala
-val qualityPipeline = pipeline[IO, Dataset]("quality-pipeline", source)
-  .withQualityCheck(schemaValidation)
-  .withQualityCheck(businessRules)
-  .withQualityCheck(dataFreshness)
-  .to(cleanDataSink)
-```
+
+Quality checks run through the Deequ adapter, which uses native Spark checks by default and Amazon
+Deequ when `-Dff.quality.mode=deequ` is set and Deequ is on the classpath. The worked example is
+[the quality and lineage tutorial](tutorials/quality-and-lineage.mdoc).
 
 ## Development workflow
 

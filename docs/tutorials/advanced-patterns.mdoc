@@ -1,5 +1,11 @@
 # Advanced FlowForge Patterns
 
+> Status: this page is a design sketch, not a description of shipped code. There is no streaming API,
+> no multi-cloud connector set, and `engines-flink` does not build, so the streaming, Flink and
+> multi-cloud sections below do not compile against `main`. The build does not run mdoc either, so
+> none of the snippets are compiler-checked. What ships today is listed in
+> [v1.0 readiness](../plan/v1.0-readiness.md).
+
 This tutorial covers sophisticated FlowForge patterns for users who have mastered the basics and want to explore advanced capabilities. We'll dive into multi-engine pipelines, complex schema evolution, streaming CDC, multi-cloud integration, custom quality rules, and production-scale performance optimization.
 
 ## Prerequisites
@@ -12,12 +18,10 @@ Before starting this tutorial, ensure you have:
 
 ## Setup
 
-Generate a new FlowForge project with advanced examples:
+The giter8 template lives in this repository rather than in a project of its own:
 
 ```bash
-sbt new flowforge/flowforge.g8
-# Choose project name: advanced-patterns-demo
-# Include advanced examples: yes
+sbt new file://$PWD/flowforge.g8
 ```
 
 ## 1. Multi-Engine Pipelines: Engine-Agnostic Business Logic
@@ -1761,7 +1765,7 @@ This tutorial covered advanced FlowForge patterns that enable sophisticated data
 
 - Explore the [Performance Benchmarks](../../modules/performance-benchmarks/README.md) for detailed optimization guidance
 - Review the [Migration Guides](../migration/) for transitioning from other tools
-- Check out the [Advanced Examples](https://github.com/flowforge/flowforge.g8) in the project template
+- Read the sample code in the [g8 template](../../flowforge.g8)
 - Ask questions on [GitHub issues](https://github.com/vim89/flowforge/issues)
 
 ### Performance Considerations
