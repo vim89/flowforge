@@ -1,10 +1,9 @@
 # flowforge - Type‑safe-first Data Engineering
 
 <!-- CI/CD Status -->
+<!-- One badge, because there is one workflow. Security scans and docs lint are jobs inside it, and the
+     nightly workflow these badges used to point at does not exist. -->
 ![Build](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/ci.yml?branch=main&label=CI&logo=github)
-[![Nightly](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/nightly.yml?branch=main&label=nightly&logo=github)](https://github.com/vim89/flowforge/actions/workflows/nightly.yml)
-[![Security](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/security.yml?branch=main&label=security&logo=github)](https://github.com/vim89/flowforge/actions/workflows/security.yml)
-[![Docs Lint](https://img.shields.io/github/actions/workflow/status/vim89/flowforge/docs-lint.yml?branch=main&label=docs&logo=github)](https://github.com/vim89/flowforge/actions/workflows/docs-lint.yml)
 
 <!-- Code Quality -->
 [![codecov](https://codecov.io/gh/vim89/flowforge/graph/badge.svg)](https://codecov.io/gh/vim89/flowforge)
