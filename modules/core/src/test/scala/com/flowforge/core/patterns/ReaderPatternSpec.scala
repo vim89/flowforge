@@ -117,6 +117,21 @@ class ReaderPatternSpec extends AnyFunSuite with Matchers {
     built.execute(21).unsafeRunSync() shouldBe 42
   }
 
+  test("the default stage list reports one stage and one transformation", How) {
+    val recorder = new Recorder
+
+    val built = ReaderPattern
+      .pipeline[IO, Int, Int](
+        "doubler",
+        ReaderPattern.component[IO, Int, Int]("double", (_, n) => IO.pure(n * 2)),
+      )
+      .run(context(recorder))
+      .unsafeRunSync()
+
+    built.stages shouldBe List("doubler")
+    built.metadata.transformations shouldBe built.stages.size
+  }
+
   test("composed components run in order and each one sees the same context", How) {
     val recorder = new Recorder
 

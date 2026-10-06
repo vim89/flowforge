@@ -25,6 +25,16 @@ class PolicyValidationTest extends AnyWordSpec {
     Name: String,
     Email: String)
 
+  case class Item(sku: String, qty: Int)
+  case class WiderItem(
+    sku: String,
+    qty: Int,
+    note: Option[String] = None)
+  case class OrderWithList(id: Long, items: List[Item])
+  case class OrderWithVector(id: Long, items: Vector[Item])
+  case class OrderWithSeq(id: Long, items: Seq[Item])
+  case class OrderWithWiderItems(id: Long, items: List[WiderItem])
+
   // Shape instances
   implicit val userShape: Shape[User]                         = Shape.gen[User]
   implicit val userWithAgeShape: Shape[UserWithAge]           = Shape.gen[UserWithAge]
@@ -61,6 +71,20 @@ class PolicyValidationTest extends AnyWordSpec {
       // ExactUnorderedCI should accept case-insensitive names and order differences
       val ok1: SchemaConforms[UserCaseDiff, User, SchemaPolicy.ExactUnorderedCI] = implicitly
       assert(ok1 != null)
+    }
+
+    "read List and Vector as sequences, not as opaque types" in {
+      // Both shape readers have to agree here. If a collection were read as a primitive, its name would be
+      // compared instead of its element, so List[Item] against Seq[Item] would be a mismatch and a
+      // backward-compatible element change inside a List would be rejected.
+      val listAgainstSeq: SchemaConforms[OrderWithList, OrderWithSeq, SchemaPolicy.Exact] = implicitly
+      assert(listAgainstSeq != null)
+
+      val vectorAgainstSeq: SchemaConforms[OrderWithVector, OrderWithSeq, SchemaPolicy.Exact] = implicitly
+      assert(vectorAgainstSeq != null)
+
+      val widerElement: SchemaConforms[OrderWithWiderItems, OrderWithList, SchemaPolicy.Backward] = implicitly
+      assert(widerElement != null)
     }
   }
 }

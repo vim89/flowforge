@@ -125,11 +125,8 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
         val recordCount = dataset.data.size.toLong
         val wr          = WriteResult(recordCount, 1, recordCount * 100L, success = true) // Estimate bytes
 
-        try
-          com.flowforge.core.observability.PrometheusMetrics.Data.writeTotal
-            .labels("inmemory", format.toString)
-            .inc()
-        catch { case _: Throwable => () }
+        com.flowforge.core.observability.MetricsCollector.prometheusOrNoop
+          .incWrite("inmemory", format.toString)
         wr
       }
     case _ =>

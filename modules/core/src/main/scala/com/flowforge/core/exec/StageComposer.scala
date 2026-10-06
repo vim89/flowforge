@@ -24,24 +24,7 @@ object ExecutableStage {
    * than in the stage list. Keeping the cast here means it exists once rather than once per builder.
    */
   def apply[F[_]](name: String, stage: Kleisli[F, _, _]): ExecutableStage[F] =
-    new ExecutableStage[F](name, erase(stage))
-
-  /**
-   * Erase a stage arrow that is run only for its effect, keeping its input as the result.
-   *
-   * This is what a sink needs. A sink writes and returns `Unit`, but the builder that appended it goes on
-   * declaring the data type, so the value written is what the pipeline produces and it has to survive the
-   * stage. Without this the composed arrow returned `()` while claiming the data type, and the lie stayed
-   * invisible for as long as nobody looked at the result.
-   */
-  def effectOnly[F[_]](name: String, stage: Kleisli[F, _, _])(implicit F: EffectSystem[F])
-    : ExecutableStage[F] = {
-    val run = erase(stage)
-    new ExecutableStage[F](name, Kleisli(in => F.map(run.run(in))(_ => in)))
-  }
-
-  private def erase[F[_]](stage: Kleisli[F, _, _]): Kleisli[F, Any, Any] =
-    stage.asInstanceOf[Kleisli[F, Any, Any]]
+    new ExecutableStage[F](name, stage.asInstanceOf[Kleisli[F, Any, Any]])
 }
 
 /**

@@ -162,10 +162,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
 
     val kleisli: Kleisli[F, In, Out] = StageComposer.compose[F, In, Out](
       pipelineName = name,
-      stages = stages.map(st =>
-        if (st.isEffectOnly) ExecutableStage.effectOnly[F](st.name, st.execute)
-        else ExecutableStage[F](st.name, st.execute),
-      ),
+      stages = stages.map(st => ExecutableStage[F](st.name, st.execute)),
       tracer = tracer,
       lineage = lineageEmitter,
     )
