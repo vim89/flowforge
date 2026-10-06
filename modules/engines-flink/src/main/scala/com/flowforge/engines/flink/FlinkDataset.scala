@@ -60,7 +60,10 @@ object FlinkDataset {
    * @param source
    *   where the records came from, which a plan does not carry
    */
-  def fromPlan[A](plan: FlinkPlan, source: Option[DataSource] = None)(implicit
+  def fromPlan[A](
+    plan: FlinkPlan,
+    source: Option[DataSource] = None,
+  )(implicit
     decoder: DataDecoder[A],
   ): FlinkDataset[A] = {
     val sampleRows = FlinkStreamOps.collect(plan, sampleSize)

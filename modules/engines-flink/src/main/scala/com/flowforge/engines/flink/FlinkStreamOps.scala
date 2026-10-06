@@ -26,8 +26,8 @@ import scala.jdk.CollectionConverters._
  * `DataEncoder` are `Serializable` and why the function classes here are named rather than anonymous: a named
  * top-level class holds only the fields it declares, so there is no enclosing instance to serialize.
  *
- * A record the decoder rejects is dropped, for the same reason it is in `SparkFrameOps`: a pure operation that
- * returns a `Dataset` has nowhere to report the failure.
+ * A record the decoder rejects is dropped, for the same reason it is in `SparkFrameOps`: a pure operation
+ * that returns a `Dataset` has nowhere to report the failure.
  */
 private[flink] object FlinkStreamOps {
 
@@ -61,7 +61,10 @@ private[flink] object FlinkStreamOps {
   }
 
   /** Apply `f` to every decoded record and carry the results on as JSON rows. */
-  def mapRows[A, B](plan: FlinkPlan, f: A => List[B])(implicit
+  def mapRows[A, B](
+    plan: FlinkPlan,
+    f: A => List[B],
+  )(implicit
     decoder: DataDecoder[A],
     encoder: DataEncoder[B],
   ): FlinkPlan = {
@@ -73,7 +76,10 @@ private[flink] object FlinkStreamOps {
   def union(left: FlinkPlan, right: FlinkPlan): FlinkPlan = env => left(env).union(right(env))
 
   /** Re-encode every record in `format`, for a sink that wants something other than the plan's JSON. */
-  def encodeRows[A](plan: FlinkPlan, format: DataFormat)(implicit
+  def encodeRows[A](
+    plan: FlinkPlan,
+    format: DataFormat,
+  )(implicit
     decoder: DataDecoder[A],
     encoder: DataEncoder[A],
   ): FlinkPlan = {
@@ -117,11 +123,11 @@ private[flink] object FlinkStreamOps {
    * A key is counted once per record: a record that reports the same key twice has still broken that rule
    * once, which is what the count claims to say.
    *
-   * At most `limit` keys come back, because a key built from a record's own values is otherwise as numerous as
-   * the dataset. Which keys survive the cap is not specified. The Spark engine orders by key before capping,
-   * so it truncates deterministically; a `DataStream` has no cheap global sort, so this does not. A caller
-   * that needs an exact answer over an unbounded key set needs a count, not a key list, and [[count]] gives
-   * one.
+   * At most `limit` keys come back, because a key built from a record's own values is otherwise as numerous
+   * as the dataset. Which keys survive the cap is not specified. The Spark engine orders by key before
+   * capping, so it truncates deterministically; a `DataStream` has no cheap global sort, so this does not. A
+   * caller that needs an exact answer over an unbounded key set needs a count, not a key list, and [[count]]
+   * gives one.
    */
   def countKeys[A](
     plan: FlinkPlan,
@@ -177,7 +183,10 @@ private[flink] final class DecodedFlatMap[A, B](
 }
 
 /** Re-encodes each row in `format`, leaving the record itself alone. */
-private[flink] final class ReEncode[A](decoder: DataDecoder[A], encoder: DataEncoder[A], format: DataFormat)
+private[flink] final class ReEncode[A](
+  decoder: DataDecoder[A],
+  encoder: DataEncoder[A],
+  format: DataFormat)
     extends FlatMapFunction[String, String] {
 
   override def flatMap(json: String, out: Collector[String]): Unit =

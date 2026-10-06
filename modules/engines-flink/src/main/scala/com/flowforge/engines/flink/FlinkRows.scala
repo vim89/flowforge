@@ -24,7 +24,11 @@ private[flink] object FlinkRows {
       .toOption
 
   /** Encode one record in `format`. `None` when the encoder rejects it. */
-  def encode[A](value: A, encoder: DataEncoder[A], format: DataFormat): Option[String] =
+  def encode[A](
+    value: A,
+    encoder: DataEncoder[A],
+    format: DataFormat,
+  ): Option[String] =
     encoder.encode(value, format).toOption.map(ed => new String(ed.data, StandardCharsets.UTF_8))
 
   /**
@@ -101,7 +105,8 @@ private[flink] object FlinkRows {
       jsonObject = obj =>
         DataType.Struct(
           obj.toList.map {
-            case (name, field) => StructField(FieldName.unsafeFrom(name), typeOf(field), nullable = field.isNull)
+            case (name, field) =>
+              StructField(FieldName.unsafeFrom(name), typeOf(field), nullable = field.isNull)
           },
         ),
     )
