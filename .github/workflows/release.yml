@@ -45,7 +45,7 @@ jobs:
 
       - name: Ensure CI succeeded for tag commit
         id: verify_ci
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           RELEASE_TAG: ${{ steps.tag.outputs.tag }}
         with:
@@ -110,7 +110,7 @@ jobs:
 
     steps:
       - name: Checkout tag
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: refs/tags/${{ env.RELEASE_TAG }}
           fetch-depth: 0
@@ -217,7 +217,7 @@ jobs:
           updateOnlyUnreleased: false
 
       - name: Trigger Changelog update
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             await github.rest.repos.createDispatchEvent({
