@@ -81,8 +81,8 @@ com.flowforge.core.types.QualityConstraint:
 
 ### Production features
 - **Memory Safety**: No driver OOM through sampling strategies
-- **Delta Lake Integration**: ACID transactions with table constraints
-- **Multi-Cloud**: S3A/ABFS/GCS support via Spark's native drivers
+- **Delta Lake Integration**: reads and writes the `delta` format, and the CDC operations use MERGE INTO. Table constraints (NOT NULL, CHECK) are plain Delta SQL that a pipeline issues itself; see `modules/examples/src/test/scala/com/flowforge/examples/spark/DeltaConstraintsIT.scala`. They are not a flowforge API.
+- **Multi-Cloud**: a source or sink location is handed to Spark unchanged, so any URI scheme on your Spark classpath works, including `s3a://`, `abfss://` and `gs://`. flowforge ships none of those Hadoop drivers and tests none of them; you add the driver and its configuration. See [docs/operating/multi-cloud-storage.md](operating/multi-cloud-storage.md).
 - **Performance**: Adaptive query execution, partition optimization
 
 ## Examples & utilities (v1.0 reference)
@@ -133,34 +133,22 @@ com.flowforge.core.types.QualityConstraint:
 - Build configuration
 - Documentation format
 
-## Multi-cloud storage support (v1.0)
+## Multi-cloud storage support
 
-### Storage strategy: Spark's native drivers
-flowforge v1.0 uses Spark's production-ready storage drivers instead of custom connectors:
+### Storage strategy: Spark's own drivers
+flowforge writes no storage connector of its own for object stores. A location string is passed to Spark
+unchanged, so the driver on your classpath decides which URI schemes resolve.
 
-### Supported storage systems
-- **Amazon S3**: Via Spark's S3A driver (`s3a://` URIs)
-  - Uses `hadoop-aws` + AWS SDK v2
-  - Production-ready with retry logic, multipart uploads
-  - Configure via `spark.hadoop.fs.s3a.*` properties
-- **Azure Data lake Gen2**: Via ABFS driver (`abfss://` URIs)
-  - Uses `hadoop-azure` with native Azure SDK integration
-  - Enable via `HADOOP_OPTIONAL_TOOLS=hadoop-azure`
-  - Configure via `fs.azure.account.*` properties
-- **Google cloud storage**: Via GCS Hadoop connector (`gs://` URIs)
-  - Uses official Google Cloud Dataproc Hadoop connector
-  - Production-ready with workload identity support
-  - Configure via service account JSON or workload identity
-- **Local/HDFS**: Standard Hadoop filesystem support
+### Storage systems this is expected to work with
+- **Amazon S3**: Spark's S3A driver (`s3a://`), from `hadoop-aws`. Configure via `spark.hadoop.fs.s3a.*`.
+- **Azure Data Lake Gen2**: the ABFS driver (`abfss://`), from `hadoop-azure`. Configure via `fs.azure.account.*`.
+- **Google Cloud Storage**: the Google Cloud Dataproc Hadoop connector (`gs://`). Configure via service
+  account JSON or workload identity.
+- **Local/HDFS**: whatever Hadoop filesystem support Spark already brings.
 
-### Storage configuration recipes
-Available in documentation with copy-pasteable examples for each cloud provider.
-
-### Delta lake Multi-cloud support
-- **NOT NULL constraints**: Schema-level enforcement across all storage backends
-- **CHECK constraints**: Business rule validation on S3A/ABFS/GCS
-- **ACID transactions**: Full Delta Lake support on all cloud storage systems
-- **Schema evolution**: Compatible constraint enforcement across storage types
+None of these drivers is a flowforge dependency and none of these schemes is covered by a test. Only local
+paths and JDBC are exercised in CI. Treat the list above as the supported shape of the integration, not as a
+tested one. Configuration recipes are in [docs/operating/multi-cloud-storage.md](operating/multi-cloud-storage.md).
 
 ---
 
