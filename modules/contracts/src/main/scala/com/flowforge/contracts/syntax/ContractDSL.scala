@@ -3,6 +3,11 @@
  *
  * Provides idiomatic syntax extensions for building data contracts in a fluent, type-safe manner. This DSL
  * significantly reduces verbosity while maintaining compile-time safety.
+ *
+ * Every builder here is immutable: a step returns a new builder carrying the contract built so far, rather
+ * than mutating a shared root. That is why a field-level builder holds the contract it came from. The chain
+ * `Contract("u").field("id").required.long.positive.field("email")...` therefore has to commit the field in
+ * progress whenever it moves on, which is what [[FieldBuilder.commit]] does.
  */
 package com.flowforge.contracts.syntax
 
@@ -15,106 +20,82 @@ import eu.timepit.refined.types.string.NonEmptyString
 import scala.util.matching.Regex
 
 /**
- * Enhanced Contract Builder with fluent DSL
+ * Accumulates the parts of a contract. `fields` is in declaration order.
  */
-case class ContractBuilder(name: String) {
-  private var fields: List[FieldBuilder]          = List.empty
-  private var versionOpt: Option[ContractVersion] = None
-  private var slaOpt: Option[String]              = None
-  private var ownerOpt: Option[String]            = None
-  private var metadata: Map[String, String]       = Map.empty
+case class ContractBuilder(
+  name: String,
+  fields: List[FieldContract] = List.empty,
+  versionOpt: Option[ContractVersion] = None,
+  slaOpt: Option[String] = None,
+  ownerOpt: Option[String] = None,
+  metadata: Map[String, String] = Map.empty) {
 
-  def field(name: String): FieldBuilder = {
-    val fieldBuilder = FieldBuilder(name, this)
-    fields = fieldBuilder :: fields
-    fieldBuilder
-  }
+  def field(name: String): FieldBuilder = FieldBuilder(name, this)
 
-  def withSLA(sla: String): ContractBuilder = {
-    slaOpt = Some(sla)
-    this
-  }
+  def withSLA(sla: String): ContractBuilder = copy(slaOpt = Some(sla))
 
-  def withOwner(owner: String): ContractBuilder = {
-    ownerOpt = Some(owner)
-    this
-  }
+  def withOwner(owner: String): ContractBuilder = copy(ownerOpt = Some(owner))
 
   def withVersion(
     major: Int,
     minor: Int,
     patch: Int,
-  ): ContractBuilder = {
-    versionOpt = Some(ContractVersion(major, minor, patch))
-    this
-  }
+  ): ContractBuilder = copy(versionOpt = Some(ContractVersion(major, minor, patch)))
 
-  def withMetadata(key: String, value: String): ContractBuilder = {
-    metadata = metadata + (key -> value)
-    this
-  }
+  def withMetadata(key: String, value: String): ContractBuilder =
+    copy(metadata = metadata + (key -> value))
 
-  private[syntax] def addField(fieldBuilder: FieldBuilder): ContractBuilder =
-    // Field is already added to the list in field() method
-    this
+  private[syntax] def addField(fieldContract: FieldContract): ContractBuilder =
+    copy(fields = fields :+ fieldContract)
 
   def build: ContractSchema = {
-    versionOpt.getOrElse(ContractVersion(1, 0, 0))
     val finalMetadata = metadata ++
       slaOpt.map("sla" -> _) ++
       ownerOpt.map("owner" -> _)
 
     ContractSchema(
       name = NonEmptyString.unsafeFrom(name),
-      fields = fields.reverse.map(_.build),
-      version = SchemaVersion.unsafeFrom(1),
+      fields = fields,
+      // ContractSchema carries a single positive integer version, so only the major part survives. A major
+      // of 0 has no representation there and falls back to 1.
+      version = SchemaVersion.unsafeFrom(versionOpt.map(_.major).filter(_ > 0).getOrElse(1)),
       metadata = finalMetadata,
     )
   }
 }
 
 /**
- * Enhanced Field Builder with fluent DSL
+ * One field in progress, together with the contract it belongs to.
  */
-case class FieldBuilder(name: String, parent: ContractBuilder) {
-  private var fieldType: Option[FieldType] = None
-
-  private var isOptional: Boolean                = false
-  private var constraints: List[FieldConstraint] = List.empty
-  private var descriptionOpt: Option[String]     = None
+case class FieldBuilder(
+  name: String,
+  parent: ContractBuilder,
+  fieldType: Option[FieldType] = None,
+  isOptional: Boolean = false,
+  constraints: List[FieldConstraint] = List.empty,
+  descriptionOpt: Option[String] = None) {
 
   // Type specification methods
-  def required: TypedFieldBuilder = {
-    isOptional = false
-    TypedFieldBuilder(this)
-  }
+  def required: TypedFieldBuilder = TypedFieldBuilder(copy(isOptional = false))
 
-  def optional: TypedFieldBuilder = {
-    isOptional = true
-    TypedFieldBuilder(this)
-  }
+  def optional: TypedFieldBuilder = TypedFieldBuilder(copy(isOptional = true))
 
-  private[syntax] def setFieldType(ft: FieldType): FieldBuilder = {
-    fieldType = Some(ft)
-    this
-  }
+  private[syntax] def setFieldType(ft: FieldType): FieldBuilder = copy(fieldType = Some(ft))
 
-  private[syntax] def addConstraint(constraint: FieldConstraint): FieldBuilder = {
-    constraints = constraint :: constraints
-    this
-  }
+  private[syntax] def addConstraint(constraint: FieldConstraint): FieldBuilder =
+    copy(constraints = constraints :+ constraint)
 
-  private[syntax] def setDescription(desc: String): FieldBuilder = {
-    descriptionOpt = Some(desc)
-    this
-  }
+  private[syntax] def setDescription(desc: String): FieldBuilder = copy(descriptionOpt = Some(desc))
+
+  /** Folds this field into its contract. Called whenever the chain leaves the field. */
+  private[syntax] def commit: ContractBuilder = parent.addField(build)
 
   def build: FieldContract =
     FieldContract(
       name = NonEmptyString.unsafeFrom(name),
       dataType = fieldType.getOrElse(FieldType.StringType), // Default to string
       nullable = isOptional,
-      constraints = constraints.reverse,
+      constraints = constraints,
       description = descriptionOpt,
     )
 }
@@ -125,156 +106,112 @@ case class FieldBuilder(name: String, parent: ContractBuilder) {
 case class TypedFieldBuilder(fieldBuilder: FieldBuilder) {
 
   // Basic types
-  def string: StringFieldBuilder = {
-    fieldBuilder.setFieldType(FieldType.StringType)
-    new StringFieldBuilder(fieldBuilder)
-  }
+  def string: StringFieldBuilder =
+    StringFieldBuilder(fieldBuilder.setFieldType(FieldType.StringType))
 
-  def int: NumericFieldBuilder[Int] = {
-    fieldBuilder.setFieldType(FieldType.IntType)
-    new NumericFieldBuilder[Int](fieldBuilder)
-  }
+  def int: NumericFieldBuilder[Int] =
+    NumericFieldBuilder[Int](fieldBuilder.setFieldType(FieldType.IntType))
 
-  def long: NumericFieldBuilder[Long] = {
-    fieldBuilder.setFieldType(FieldType.LongType)
-    new NumericFieldBuilder[Long](fieldBuilder)
-  }
+  def long: NumericFieldBuilder[Long] =
+    NumericFieldBuilder[Long](fieldBuilder.setFieldType(FieldType.LongType))
 
-  def double: NumericFieldBuilder[Double] = {
-    fieldBuilder.setFieldType(FieldType.DoubleType)
-    new NumericFieldBuilder[Double](fieldBuilder)
-  }
+  def double: NumericFieldBuilder[Double] =
+    NumericFieldBuilder[Double](fieldBuilder.setFieldType(FieldType.DoubleType))
 
-  def boolean: FieldTerminator = {
-    fieldBuilder.setFieldType(FieldType.BooleanType)
-    FieldTerminator(fieldBuilder)
-  }
+  def boolean: FieldTerminator =
+    FieldTerminator(fieldBuilder.setFieldType(FieldType.BooleanType))
 
-  def timestamp: FieldTerminator = {
-    fieldBuilder.setFieldType(FieldType.TimestampType)
-    FieldTerminator(fieldBuilder)
-  }
+  def timestamp: FieldTerminator =
+    FieldTerminator(fieldBuilder.setFieldType(FieldType.TimestampType))
 
-  def decimal(precision: Int, scale: Int): NumericFieldBuilder[BigDecimal] = {
-    fieldBuilder.setFieldType(FieldType.DecimalType(precision, scale))
-    new NumericFieldBuilder[BigDecimal](fieldBuilder)
-  }
+  def decimal(precision: Int, scale: Int): NumericFieldBuilder[BigDecimal] =
+    NumericFieldBuilder[BigDecimal](fieldBuilder.setFieldType(FieldType.DecimalType(precision, scale)))
 
-  def array(elementType: FieldType): FieldTerminator = {
-    fieldBuilder.setFieldType(FieldType.ArrayType(elementType))
-    FieldTerminator(fieldBuilder)
-  }
+  def array(elementType: FieldType): FieldTerminator =
+    FieldTerminator(fieldBuilder.setFieldType(FieldType.ArrayType(elementType)))
 }
 
 /**
  * String-specific field builder with string constraints
  */
-class StringFieldBuilder(fieldBuilder: FieldBuilder) extends FieldTerminator(fieldBuilder) {
+case class StringFieldBuilder(fieldBuilder: FieldBuilder) extends FieldStep[StringFieldBuilder] {
 
-  def minLength(length: Int): StringFieldBuilder = {
-    fieldBuilder.addConstraint(FieldConstraint.MinLength(length))
-    this
-  }
+  protected def withField(fb: FieldBuilder): StringFieldBuilder = copy(fieldBuilder = fb)
 
-  def maxLength(length: Int): StringFieldBuilder = {
-    fieldBuilder.addConstraint(FieldConstraint.MaxLength(length))
-    this
-  }
+  def minLength(length: Int): StringFieldBuilder = constrain(FieldConstraint.MinLength(length))
 
-  def matches(regex: Regex): StringFieldBuilder = {
-    fieldBuilder.addConstraint(FieldConstraint.Pattern(regex))
-    this
-  }
+  def maxLength(length: Int): StringFieldBuilder = constrain(FieldConstraint.MaxLength(length))
 
-  def matches(pattern: String): StringFieldBuilder = {
-    fieldBuilder.addConstraint(FieldConstraint.Pattern(pattern.r))
-    this
-  }
+  def matches(regex: Regex): StringFieldBuilder = constrain(FieldConstraint.Pattern(regex))
 
-  def oneOf(values: String*): StringFieldBuilder = {
-    fieldBuilder.addConstraint(FieldConstraint.OneOf(values.toSet))
-    this
-  }
+  def matches(pattern: String): StringFieldBuilder = constrain(FieldConstraint.Pattern(pattern.r))
 
-  def email: StringFieldBuilder = {
-    val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$".r
-    fieldBuilder.addConstraint(FieldConstraint.Pattern(emailRegex))
-    this
-  }
+  def oneOf(values: String*): StringFieldBuilder = constrain(FieldConstraint.OneOf(values.toSet))
 
-  def url: StringFieldBuilder = {
-    val urlRegex = "^(https?|ftp)://[^\\s/$.?#].[^\\s]*$".r
-    fieldBuilder.addConstraint(FieldConstraint.Pattern(urlRegex))
-    this
-  }
+  def email: StringFieldBuilder = constrain(FieldConstraint.Pattern(ContractDSL.Patterns.EMAIL))
 
-  def uuid: StringFieldBuilder = {
-    val uuidRegex =
-      "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$".r
-    fieldBuilder.addConstraint(FieldConstraint.Pattern(uuidRegex))
-    this
-  }
+  def url: StringFieldBuilder = constrain(FieldConstraint.Pattern(ContractDSL.Patterns.URL))
+
+  def uuid: StringFieldBuilder = constrain(FieldConstraint.Pattern(ContractDSL.Patterns.UUID))
 }
 
 /**
  * Numeric field builder with numeric constraints
  */
-class NumericFieldBuilder[T](fieldBuilder: FieldBuilder) extends FieldTerminator(fieldBuilder) {
+case class NumericFieldBuilder[T](fieldBuilder: FieldBuilder) extends FieldStep[NumericFieldBuilder[T]] {
 
-  def min(minValue: Double): NumericFieldBuilder[T] = {
-    fieldBuilder.addConstraint(FieldConstraint.Range(minValue, Double.MaxValue))
-    this
-  }
+  protected def withField(fb: FieldBuilder): NumericFieldBuilder[T] = copy(fieldBuilder = fb)
 
-  def max(maxValue: Double): NumericFieldBuilder[T] = {
-    fieldBuilder.addConstraint(FieldConstraint.Range(Double.MinValue, maxValue))
-    this
-  }
+  def min(minValue: Double): NumericFieldBuilder[T] =
+    constrain(FieldConstraint.Range(minValue, Double.MaxValue))
 
-  def range(minValue: Double, maxValue: Double): NumericFieldBuilder[T] = {
-    fieldBuilder.addConstraint(FieldConstraint.Range(minValue, maxValue))
-    this
-  }
+  def max(maxValue: Double): NumericFieldBuilder[T] =
+    constrain(FieldConstraint.Range(Double.MinValue, maxValue))
 
-  def positive: NumericFieldBuilder[T] = {
-    fieldBuilder.addConstraint(FieldConstraint.Range(0.0, Double.MaxValue))
-    this
-  }
+  def range(minValue: Double, maxValue: Double): NumericFieldBuilder[T] =
+    constrain(FieldConstraint.Range(minValue, maxValue))
 
-  def negative: NumericFieldBuilder[T] = {
-    fieldBuilder.addConstraint(FieldConstraint.Range(Double.MinValue, 0.0))
-    this
-  }
+  def positive: NumericFieldBuilder[T] = constrain(FieldConstraint.Range(0.0, Double.MaxValue))
+
+  def negative: NumericFieldBuilder[T] = constrain(FieldConstraint.Range(Double.MinValue, 0.0))
 }
 
 /**
- * Field terminator that allows returning to contract building
+ * What every field-level step can do: add a constraint of its own kind, describe itself, or leave the field
+ * and go back to the contract. `Self` is the concrete step type so a constraint method keeps the
+ * type-specific methods available.
  */
-case class FieldTerminator(fieldBuilder: FieldBuilder) {
+trait FieldStep[Self] {
+  def fieldBuilder: FieldBuilder
 
-  def field(name: String): FieldBuilder =
-    fieldBuilder.parent.field(name)
+  protected def withField(fb: FieldBuilder): Self
 
-  def withSLA(sla: String): ContractBuilder =
-    fieldBuilder.parent.withSLA(sla)
+  protected def constrain(constraint: FieldConstraint): Self =
+    withField(fieldBuilder.addConstraint(constraint))
 
-  def withOwner(owner: String): ContractBuilder =
-    fieldBuilder.parent.withOwner(owner)
+  def describedAs(description: String): Self =
+    withField(fieldBuilder.setDescription(description))
+
+  def field(name: String): FieldBuilder = fieldBuilder.commit.field(name)
+
+  def withSLA(sla: String): ContractBuilder = fieldBuilder.commit.withSLA(sla)
+
+  def withOwner(owner: String): ContractBuilder = fieldBuilder.commit.withOwner(owner)
 
   def withVersion(
     major: Int,
     minor: Int,
     patch: Int,
-  ): ContractBuilder =
-    fieldBuilder.parent.withVersion(major, minor, patch)
+  ): ContractBuilder = fieldBuilder.commit.withVersion(major, minor, patch)
 
-  def build: ContractSchema =
-    fieldBuilder.parent.build
+  def build: ContractSchema = fieldBuilder.commit.build
+}
 
-  def describedAs(description: String): FieldTerminator = {
-    fieldBuilder.setDescription(description)
-    this
-  }
+/**
+ * Field step for types that carry no constraints of their own.
+ */
+case class FieldTerminator(fieldBuilder: FieldBuilder) extends FieldStep[FieldTerminator] {
+  protected def withField(fb: FieldBuilder): FieldTerminator = copy(fieldBuilder = fb)
 }
 
 /**
@@ -380,14 +317,8 @@ object ContractSyntax {
   }
 
   implicit class StringFieldOps(name: String) {
-    def requiredString: StringFieldBuilder = {
-      val builder = ContractBuilder(name).field(name)
-      builder.required.string
-    }
+    def requiredString: StringFieldBuilder = ContractBuilder(name).field(name).required.string
 
-    def optionalString: StringFieldBuilder = {
-      val builder = ContractBuilder(name).field(name)
-      builder.optional.string
-    }
+    def optionalString: StringFieldBuilder = ContractBuilder(name).field(name).optional.string
   }
 }

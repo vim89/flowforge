@@ -126,6 +126,10 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
    *
    * SINK: current Out must conform to declared contract R under policy P Advances phantom state: HasTransform
    * -> Complete (HasSource with HasContract with HasTransform with HasSink)
+   *
+   * The pipeline's output type becomes `Unit`, because that is what a sink produces: the writer returns
+   * `F[Unit]` and the stage has nothing else to hand on. It used to keep the record as the output type while
+   * the stage returned unit, so running the pipeline and reading its result threw a `ClassCastException`.
    */
   def addTypedSink[R, P <: SchemaPolicy](
     sink: TypedSink[R],
@@ -133,7 +137,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
   )(implicit
     transformComplete: S <:< WithTransform,
     ev: SchemaConforms[Out, R, P],
-  ): PipelineBuilder[BuilderState.Complete, F, In, Out] = {
+  ): PipelineBuilder[BuilderState.Complete, F, In, Unit] = {
     val stage = PipelineStage.Sink[F, Out](
       name = s"contract-sink-${stages.size}",
       description = s"Contract-aware sink with compile-time validation",
@@ -144,7 +148,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
         writer(data, sink.underlying),
       ),
     )
-    advance[BuilderState.Complete, In, Out](stage)
+    advance[BuilderState.Complete, In, Unit](stage)
   }
 
   /**
@@ -182,6 +186,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
 
 }
 
+/** The only entry point to the builder: a pipeline starts empty and the phantom state goes up from there. */
 object PipelineBuilder {
 
   /**

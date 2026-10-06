@@ -1,3 +1,7 @@
+// `fromTry` is the sanctioned way out of a `Try` returned by a library, so this is the one file that has to
+// name the type the rule bans everywhere else. The suppression sits here rather than around the import
+// because OrganizeImports rewrites the import block and drops any comment inside it.
+// scalafix:off DisableSyntax.noScalaUtilTry
 package com.flowforge.core.safety
 
 import cats.data.{ Validated, ValidatedNel }
@@ -7,7 +11,6 @@ import com.flowforge.core.logging.CoreLogger
 import com.flowforge.core.types.FlowForgeError
 
 import scala.util.Try
-// scalafix:on DisableSyntax
 
 /**
  * Universal safety helpers for pure and effectful code paths.

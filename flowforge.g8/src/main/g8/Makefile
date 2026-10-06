@@ -40,11 +40,11 @@ clean:
 # Code quality
 fmt:
 	@echo "💅 Formatting code..."
-	sbt scalafmt
+	sbt scalafmtSbt scalafmtAll
 
 lint:
 	@echo "🔍 Running linter..."
-	sbt "scalafix --check"
+	sbt "scalafixAll --check"
 
 check: fmt lint test
 	@echo "✅ Full quality check completed"
@@ -55,7 +55,7 @@ demo-contract-drift:
 	@echo "1. Current state should compile:"
 	@make build
 	@echo ""
-	@echo "2. Now edit Contract.scala and change 'id: Long' to 'id: String'"
+	@echo "2. Now edit src/main/scala/com/flowforge/app/PipelineApp.scala and change User's 'id: Long' to 'id: String'"
 	@echo "3. Run 'make build' again to see compile failure"
 	@echo "4. Revert the change to fix compilation"
 	@echo ""

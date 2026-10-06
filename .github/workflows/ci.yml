@@ -64,6 +64,9 @@ jobs:
       - name: compile all
         run: sbt clean compileAll
 
+      - name: scalafix check
+        run: sbt fixCheck
+
       - name: binary compatibility check
         run: >
           sbt clean
