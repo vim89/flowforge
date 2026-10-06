@@ -19,8 +19,8 @@ import java.nio.charset.StandardCharsets
  * caller's function and the codecs travel to the workers, which is why `DataDecoder` and `DataEncoder` are
  * `Serializable`.
  *
- * A record the decoder rejects is dropped. That matches what the sample path did before, and a pure
- * operation that returns a `Dataset` has nowhere to report the failure.
+ * A record the decoder rejects is dropped. That matches what the sample path did before, and a pure operation
+ * that returns a `Dataset` has nowhere to report the failure.
  */
 private[spark] object SparkFrameOps {
 
@@ -38,8 +38,8 @@ private[spark] object SparkFrameOps {
    * Keep the rows whose decoded record satisfies the predicate.
    *
    * The result is read back under the input frame's own schema, so the columns, their types and their
-   * nullability are the ones the caller started with. Inferring a schema from the kept rows instead would
-   * let a filter change the shape of what a later write produces.
+   * nullability are the ones the caller started with. Inferring a schema from the kept rows instead would let
+   * a filter change the shape of what a later write produces.
    */
   def filter[A](
     spark: SparkSession,
@@ -62,7 +62,8 @@ private[spark] object SparkFrameOps {
     spark: SparkSession,
     frame: DataFrame,
     f: A => List[B],
-  )(implicit decoder: DataDecoder[A],
+  )(implicit
+    decoder: DataDecoder[A],
     encoder: DataEncoder[B],
   ): DataFrame = {
     import spark.implicits._
@@ -100,15 +101,14 @@ private[spark] object SparkFrameOps {
     import spark.implicits._
     val rowDecoder = decoder
     val indexed    = checks.zipWithIndex
-    val violations = frame.toJSON
-      .flatMap { json =>
-        decodeRow(json, rowDecoder).toList.flatMap { a =>
-          indexed.flatMap { case (check, idx) => check(a).map(message => (idx, message)) }
-        }
+    val perRecord = frame.toJSON.flatMap { json =>
+      decodeRow(json, rowDecoder).toList.flatMap { a =>
+        indexed.flatMap { case (check, idx) => check(a).map(message => (idx, message)) }
       }
-      .distinct()
-    val failed   = violations.map(_._1).distinct().collect().toSet
-    val messages = violations.limit(messageLimit).collect().toList
+    }
+    val violations = perRecord.distinct()
+    val failed     = violations.map(_._1).distinct().collect().toSet
+    val messages   = violations.limit(messageLimit).collect().toList
     (failed, messages)
   }
 }
