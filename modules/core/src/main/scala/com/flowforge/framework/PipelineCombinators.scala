@@ -125,7 +125,7 @@ object PipelineCombinators {
     combine: (B, C) => Pipeline[F, A, (B, C)],
   ): Pipeline[F, A, (B, C)] = {
     val F = EffectSystem[F]
-    val run = Kleisli { a: A =>
+    val run = Kleisli { (a: A) =>
       F.parProduct(left.run(a), right.run(a)).flatMap { case (b, c) => combine(b, c).run(a) }
     }
     val md = left.metadata
@@ -139,7 +139,7 @@ object PipelineCombinators {
     ifTrue: Pipeline[F, A, A],
     ifFalse: Pipeline[F, A, A],
   ): Pipeline[F, A, A] = {
-    val run = Kleisli { a: A => if (predicate(a)) ifTrue.run(a) else ifFalse.run(a) }
+    val run = Kleisli((a: A) => if (predicate(a)) ifTrue.run(a) else ifFalse.run(a))
     val md = PipelineMetadata(name = s"conditional", stages = List("conditional"))
       .combine(ifTrue.metadata)
       .combine(ifFalse.metadata)
@@ -152,7 +152,7 @@ object PipelineCombinators {
     initialDelay: scala.concurrent.duration.FiniteDuration,
   ): Pipeline[F, A, B] = {
     val F   = EffectSystem[F]
-    val run = Kleisli { a: A => F.retryWithBackoff(pipeline.run(a), maxRetries, initialDelay) }
+    val run = Kleisli((a: A) => F.retryWithBackoff(pipeline.run(a), maxRetries, initialDelay))
     Pipeline(run, pipeline.metadata.copy(name = s"retry(${pipeline.metadata.name}, $maxRetries)"))
   }
 
@@ -161,7 +161,7 @@ object PipelineCombinators {
     batchSize: Int = 1000,
   ): Pipeline[F, List[A], List[B]] = {
     val F = EffectSystem[F]
-    val run = Kleisli { input: List[A] =>
+    val run = Kleisli { (input: List[A]) =>
       val groups = input.grouped(batchSize).toList
       F.parTraverse(groups)(g => pipeline.run(g)).map(_.flatten)
     }

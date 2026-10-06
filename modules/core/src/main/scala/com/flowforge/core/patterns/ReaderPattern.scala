@@ -7,37 +7,16 @@ import cats.{ Applicative, Monad }
 import com.flowforge.core.algebra.{ DataAlgebra, DataDecoder, EffectSystem, FlowforgeResource }
 import com.flowforge.core.instances.DataInstances
 import com.flowforge.core.types._
+import com.flowforge.framework.{ Pipeline, PipelineMetadata }
 import eu.timepit.refined.api.Refined
 
 import java.time.Instant
 import scala.concurrent.duration.FiniteDuration
 
 /**
- * 🚀 **FlowForge Reader Pattern - Functional Dependency Injection**
- *
- * This module implements the Reader monad pattern for dependency injection in FlowForge pipelines. It
- * integrates seamlessly with the existing Kleisli-based pipeline architecture to provide clean, composable
- * DI.
- *
- * **Key Benefits:**
- *   - **Type-Safe DI**: All dependencies resolved at compile time
- *   - **Composable**: Reader instances compose naturally via monad operations
- *   - **Testable**: Easy to provide test implementations
- *   - **Pure Functional**: No side effects in dependency resolution
- *   - **Effect Polymorphic**: Works with any effect system F[_]
- *   - **Pipeline Integration**: Works with existing FlowForge components
- *
- * **Usage Patterns:**
- *   - Configuration injection for pipeline components
- *   - Service layer dependency injection
- *   - Cross-cutting concerns (logging, metrics, auditing)
- *   - Multi-environment support (dev, staging, prod)
- *
- * @author
- *   FlowForge Core Team
- * @since 0.1.0
+ * Reader monad dependency injection: a stage reads its config and services from an environment value instead
+ * of closing over a global. `ReaderPipeline` joins a reader to the Kleisli a pipeline runs on.
  */
-
 object ReaderPattern {
 
   // ===============================
@@ -208,6 +187,7 @@ object ReaderPattern {
   // CLOUD SERVICE ABSTRACTIONS
   // ===============================
 
+  /** Object storage: read, write, list and delete by path. */
   trait StorageService[F[_]] {
     def read(path: String): F[Array[Byte]]
     def write(path: String, data: Array[Byte]): F[Unit]
@@ -216,6 +196,7 @@ object ReaderPattern {
     def delete(path: String): F[Unit]
   }
 
+  /** Message queue: publish, subscribe and queue lifecycle. */
   trait QueueService[F[_]] {
     def publish[A](queue: String, message: A): F[Unit]
     def subscribe[A](queue: String): F[QueueSubscription[F, A]]
@@ -223,6 +204,7 @@ object ReaderPattern {
     def deleteQueue(name: String): F[Unit]
   }
 
+  /** Outbound notifications: email, Slack and webhooks. */
   trait NotificationService[F[_]] {
     def sendEmail(
       to: List[String],
@@ -233,6 +215,7 @@ object ReaderPattern {
     def sendWebhook(url: String, payload: Map[String, Any]): F[Unit]
   }
 
+  /** Alert definitions and their lifecycle. */
   trait MonitoringService[F[_]] {
     def createAlert(
       name: String,
@@ -248,24 +231,28 @@ object ReaderPattern {
   // DATABASE ABSTRACTIONS
   // ===============================
 
+  /** Pooled database connections, with pool stats and health. */
   trait ConnectionPool[F[_]] {
     def withConnection[A](operation: Connection[F] => F[A]): F[A]
     def stats: F[PoolStats]
     def health: F[PoolHealth]
   }
 
+  /** Transaction boundaries around an effect. */
   trait TransactionManager[F[_]] {
     def transaction[A](operation: F[A]): F[A]
     def rollback: F[Unit]
     def commit: F[Unit]
   }
 
+  /** Schema migrations: run, roll back and report status. */
   trait MigrationService[F[_]] {
     def runMigrations: F[MigrationResult]
     def rollbackMigration(version: String): F[MigrationResult]
     def migrationStatus: F[List[MigrationInfo]]
   }
 
+  /** A single database connection: query, execute and batch. */
   trait Connection[F[_]] {
     def query[A](sql: String, params: List[Any]): F[List[A]]
     def execute(sql: String, params: List[Any]): F[Int]
@@ -444,6 +431,33 @@ object ReaderPattern {
     }
 
   /**
+   * Resolve a component against a context and return a runnable pipeline.
+   *
+   * This is the join to the rest of the framework: dependencies are supplied once, at the edge, and what
+   * comes back is an ordinary [[com.flowforge.framework.Pipeline]] whose type no longer mentions the context.
+   * Without it a caller holds a `DIComponent` and has to unwrap the `ReaderT` and build the metadata by hand.
+   */
+  def pipeline[F[_]: Monad, A, B](
+    name: String,
+    component: DIComponent[F, A, B],
+    stages: List[String] = Nil,
+  ): ReaderT[F, AppContext[F], Pipeline[F, A, B]] =
+    component.map { arrow =>
+      // One stage list, used for both fields. Deriving the count from the caller's argument instead left the
+      // default path reporting one stage and zero transformations.
+      val effectiveStages = if (stages.isEmpty) List(name) else stages
+      Pipeline(
+        arrow,
+        PipelineMetadata(
+          name = name,
+          stages = effectiveStages,
+          transformations = effectiveStages.size,
+          tags = Map("di" -> "reader"),
+        ),
+      )
+    }
+
+  /**
    * Compose multiple DI components
    */
   def composeComponents[F[_]: Monad, A, B, C](
@@ -506,6 +520,8 @@ object ReaderPattern {
   // ===============================
 
   sealed trait LogLevel extends Product with Serializable
+
+  /** The log levels a `Logger` accepts. */
   object LogLevel {
     case object Debug extends LogLevel
     case object Info  extends LogLevel
@@ -514,6 +530,8 @@ object ReaderPattern {
   }
 
   sealed trait MetricType extends Product with Serializable
+
+  /** The metric kinds a `MetricsCollector` accepts. */
   object MetricType {
     case object Counter   extends MetricType
     case object Gauge     extends MetricType
@@ -521,6 +539,8 @@ object ReaderPattern {
   }
 
   final case class RequestId(value: String) extends AnyVal
+
+  /** Constructors for `RequestId`. */
   object RequestId {
     def generate: RequestId = RequestId(java.util.UUID.randomUUID().toString)
   }
@@ -546,6 +566,8 @@ object ReaderPattern {
     lastHealthCheck: Instant)
 
   sealed trait ResourceStatus extends Product with Serializable
+
+  /** The states a managed resource can report. */
   object ResourceStatus {
     case object Healthy   extends ResourceStatus
     case object Degraded  extends ResourceStatus
