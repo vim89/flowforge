@@ -39,3 +39,14 @@ logs/
 /.home/
 
 AGENTS.md
+
+# Signing and publish key material. Untracked is not enough: one `git add -A` in a repo root
+# that holds these commits a private key to a public repository.
+*.asc
+*.gpg
+*.p12
+*.pem
+*.jks
+*_secret*
+secring*
+pgp*key*
