@@ -890,18 +890,40 @@ object SparkDataAlgebra {
       // DATA QUALITY (F[_] Required)
       // ========================================
 
-      override def validate[A](
+      // The contract used to be ignored, so `passed` was true whatever the records were. It is applied to
+      // every record now, over the frame rather than over the driver's sample of it.
+      override def validate[A: DataDecoder](
         dataset: DataAlgebra.Dataset[A],
         contract: PipelineDataContract[A],
-      ): F[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]] =
-        F.pure(
-          DataAlgebra.QualityResult(
-            data = dataset,
-            passed = true,
-            violations = List.empty,
-            score = 1.0,
-          ),
-        )
+      ): F[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]] = {
+
+        /** The messages for the violations the contract reports on one record, empty when it accepts it. */
+        val messagesOf: A => List[String] = a => contract(a).fold(_.toList.map(_.message), _ => Nil)
+
+        dataset match {
+          case pds: ProductionSparkDataset[A] =>
+            F.blocking {
+              val (violatingRecords, messageCounts) =
+                SparkFrameOps.countViolations(spark, pds.sparkDataFrame, messagesOf)
+              DataAlgebra.contractResult(
+                dataset,
+                pds.sparkDataFrame.count(),
+                violatingRecords,
+                messageCounts,
+              )
+            }
+
+          case other =>
+            // A dataset this engine did not produce, so the driver holds it in full.
+            F.pure {
+              val perRecord        = other.data.map(a => messagesOf(a).distinct)
+              val violatingRecords = perRecord.count(_.nonEmpty).toLong
+              val messageCounts =
+                perRecord.flatten.groupBy(identity).view.mapValues(_.size.toLong).toList.sortBy(_._1)
+              DataAlgebra.contractResult(dataset, other.data.size.toLong, violatingRecords, messageCounts)
+            }
+        }
+      }
 
       override def runQualityChecks[A: DataDecoder](
         dataset: DataAlgebra.Dataset[A],
