@@ -55,10 +55,13 @@ final class FlinkDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataAlge
   override def filter[A: DataDecoder](dataset: Dataset[A], predicate: A => Boolean): Dataset[A] =
     delegate.filter(dataset, predicate)
 
-  override def map[A: DataDecoder, B: DataEncoder](dataset: Dataset[A], f: A => B): Dataset[B] =
+  override def map[A: DataDecoder, B: DataEncoder: DataDecoder](dataset: Dataset[A], f: A => B): Dataset[B] =
     delegate.map(dataset, f)
 
-  override def flatMap[A: DataDecoder, B: DataEncoder](dataset: Dataset[A], f: A => Dataset[B]): Dataset[B] =
+  override def flatMap[A: DataDecoder, B: DataEncoder: DataDecoder](
+    dataset: Dataset[A],
+    f: A => Dataset[B],
+  ): Dataset[B] =
     delegate.flatMap(dataset, f)
 
   override def groupBy[A, K, V: DataEncoder](

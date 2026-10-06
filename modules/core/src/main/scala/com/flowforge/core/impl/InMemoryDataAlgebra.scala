@@ -145,13 +145,17 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
   override def filter[A: DataDecoder](dataset: Dataset[A], predicate: A => Boolean): Dataset[A] =
     SimpleDataset(dataset.data.filter(predicate), dataset.schema, dataset.metadata)
 
-  override def map[A: DataDecoder, B: DataEncoder](dataset: Dataset[A], f: A => B): Dataset[B] = {
+  override def map[A: DataDecoder, B: DataEncoder: DataDecoder](dataset: Dataset[A], f: A => B)
+    : Dataset[B] = {
     val out = dataset.data.map(f)
     val sch = DataEncoder[B].schema(DataFormat.JSON)
     SimpleDataset(out, sch, dataset.metadata.copy(recordCount = out.size.toLong))
   }
 
-  override def flatMap[A: DataDecoder, B: DataEncoder](dataset: Dataset[A], f: A => Dataset[B]): Dataset[B] = {
+  override def flatMap[A: DataDecoder, B: DataEncoder: DataDecoder](
+    dataset: Dataset[A],
+    f: A => Dataset[B],
+  ): Dataset[B] = {
     val out = dataset.data.flatMap(a => f(a).data)
     val sch = if (out.nonEmpty) DataEncoder[B].schema(DataFormat.JSON) else dataset.schema
     SimpleDataset(out, sch, dataset.metadata.copy(recordCount = out.size.toLong))

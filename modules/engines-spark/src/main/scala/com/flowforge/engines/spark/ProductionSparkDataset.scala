@@ -172,6 +172,27 @@ object ProductionSparkDataset {
     ProductionSparkDataset(sampleData, df, schema, metadata)
   }
 
+  /**
+   * Rebuild a dataset around a different frame.
+   *
+   * The sample, the schema and the record count all come from the new frame, so they describe what the
+   * dataset now holds rather than what it held before the operation. `metadata.source` is carried over,
+   * because it names where the records came from and a frame does not carry that.
+   *
+   * @param base
+   *   the dataset the operation started from
+   * @param frame
+   *   the frame the operation produced
+   */
+  def withFrame[A: DataDecoder](
+    base: ProductionSparkDataset[A],
+    frame: DataFrame,
+    spark: SparkSession,
+  ): ProductionSparkDataset[A] = {
+    val rebuilt = fromDataFrame[A](frame, spark)
+    rebuilt.copy(metadata = rebuilt.metadata.copy(source = base.metadata.source))
+  }
+
   /** Map Spark SQL DataType to FlowForge [[com.flowforge.core.types.DataType]]. */
   private def mapSparkTypeToFlowForgeType(
     sparkType: org.apache.spark.sql.types.DataType,

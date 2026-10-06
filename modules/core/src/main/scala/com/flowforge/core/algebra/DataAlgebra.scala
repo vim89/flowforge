@@ -102,9 +102,11 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] with Da
    * Map over dataset with pure function. PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
    *
    * `DataDecoder[A]` reads every record and `DataEncoder[B]` writes every result, for the reason given on
-   * [[filter]]. A record the decoder rejects is dropped, as is a result the encoder rejects.
+   * [[filter]]. `DataDecoder[B]` reads the results back, because the returned `Dataset[B]` is one an engine
+   * must be able to hand to the next operation. A record the decoder rejects is dropped, as is a result the
+   * encoder rejects.
    */
-  def map[A: DataDecoder, B: DataEncoder](dataset: Dataset[A], f: A => B): Dataset[B]
+  def map[A: DataDecoder, B: DataEncoder: DataDecoder](dataset: Dataset[A], f: A => B): Dataset[B]
 
   /**
    * FlatMap over dataset for pure nested operations. PURE OPERATION: No F[_] wrapper - direct Dataset
@@ -114,7 +116,10 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] with Da
    * evaluated away from the driver. It must build that dataset from its argument alone and must not capture
    * an engine session or any other local resource.
    */
-  def flatMap[A: DataDecoder, B: DataEncoder](dataset: Dataset[A], f: A => Dataset[B]): Dataset[B]
+  def flatMap[A: DataDecoder, B: DataEncoder: DataDecoder](
+    dataset: Dataset[A],
+    f: A => Dataset[B],
+  ): Dataset[B]
 
   /**
    * Group by key with pure aggregation. PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
