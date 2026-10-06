@@ -5,27 +5,10 @@ import cats.effect.Resource
 import cats.implicits._
 import com.flowforge.core.algebra.DataAlgebra.WriteOptions
 import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
+import com.flowforge.core.exec.{ ExecutableStage, StageComposer }
 import com.flowforge.core.types._
 import com.flowforge.framework.{ Pipeline, PipelineMetadata }
 
-/**
- * ARCHITECTURAL DECISION: Type-erased Kleisli composition
- *
- * This casting is architecturally necessary for the pipeline system design. FlowForge pipelines compose
- * heterogeneous stages with different input/output types. At runtime, type information is erased, making this
- * cast safe and necessary.
- *
- * This is NOT a design flaw - it's how functional pipeline composition works.
- */
-private object KleisliCasting {
-  def safeKleisliCast[F[_]](kleisli: Kleisli[F, _, _]): Kleisli[F, Any, Any] =
-    // ARCHITECTURAL: Type erasure allows this - required for heterogeneous pipeline stage composition
-    kleisli.asInstanceOf[Kleisli[F, Any, Any]]
-
-  def safeTypedCast[F[_], In, Out](kleisli: Kleisli[F, _, _]): Kleisli[F, In, Out] =
-    // ARCHITECTURAL: Type erasure allows this - required for final pipeline type alignment
-    kleisli.asInstanceOf[Kleisli[F, In, Out]]
-}
 import org.apache.spark.sql.SparkSession
 
 /**
@@ -165,12 +148,13 @@ class SparkTypedBuilder[F[_]: EffectSystem, In, Out] private[spark] (
    * Build the final pipeline with Spark optimizations
    */
   def build(): Pipeline[F, In, Out] = {
-    // Compose all stages using Kleisli arrows (erase types during folding)
-    val kleisliPipeline = stages
-      .foldLeft(Kleisli.ask[F, Any]) { (acc, stage) =>
-        acc.andThen(KleisliCasting.safeKleisliCast[F](stage.asKleisli))
-      }
-    val typedPipeline = KleisliCasting.safeTypedCast[F, In, Out](kleisliPipeline)
+    // Composition belongs to StageComposer, which is the one place that erases a stage arrow. This builder
+    // used to do its own fold and its own two casts, so the erasure existed in two places and only one of
+    // them was tested.
+    val typedPipeline = StageComposer.compose[F, In, Out](
+      pipelineName = name,
+      stages = stages.map(st => ExecutableStage[F](st.name, st.asKleisli)),
+    )
 
     val metadata = PipelineMetadata(
       name = name,
@@ -211,9 +195,10 @@ class SparkRuntimeBuilder[F[_]: EffectSystem] private[spark] (
 
   def buildRuntime(): Pipeline[F, Any, Any] = {
     // Runtime composition - less type safety but more flexibility
-    val kleisliPipeline = stages.foldLeft(Kleisli.ask[F, Any]) { (acc, stage) =>
-      acc.andThen(KleisliCasting.safeKleisliCast[F](stage.asKleisli))
-    }
+    val kleisliPipeline = StageComposer.compose[F, Any, Any](
+      pipelineName = name,
+      stages = stages.map(st => ExecutableStage[F](st.name, st.asKleisli)),
+    )
 
     val metadata = PipelineMetadata(
       name = name,

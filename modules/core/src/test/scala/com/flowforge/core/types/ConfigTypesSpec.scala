@@ -2,8 +2,6 @@
 package com.flowforge.core.types
 
 import cats.data.Validated
-import cats.syntax.all._
-import com.flowforge.core.types.RefinedTypes._
 import eu.timepit.refined.api.Refined
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers

@@ -12,11 +12,24 @@ object SchemaValidateCli extends IOApp {
     case object Parquet extends Mode
     case object Delta   extends Mode
     case object Hive    extends Mode
+
+    private val byName: Map[String, Mode] =
+      Map("parquet" -> Parquet, "delta" -> Delta, "hive" -> Hive)
+
+    def fromString(name: String): Option[Mode] = byName.get(name.toLowerCase)
+
+    val names: String = byName.keys.toList.sorted.mkString(" | ")
   }
 
   sealed trait ExpectedFormat
   object ExpectedFormat {
     case object Spark extends ExpectedFormat
+
+    /** Only the Spark schema JSON is read in this build. An empty value means the default. */
+    def fromString(name: String): Option[ExpectedFormat] = name.toLowerCase match {
+      case "spark" | "" => Some(Spark)
+      case _            => None
+    }
   }
 
   final case class Args(
@@ -34,15 +47,12 @@ object SchemaValidateCli extends IOApp {
       head("FlowForge", "schema-validate"),
       opt[String]("mode")
         .required()
-        .action((m, a) =>
-          a.copy(mode = m.toLowerCase match {
-            case "parquet" => Mode.Parquet
-            case "delta"   => Mode.Delta
-            case "hive"    => Mode.Hive
-            case other     => throw new IllegalArgumentException(s"Unknown mode: $other")
-          }),
-        )
-        .text("parquet | delta | hive"),
+        // An unrecognised mode leaves the default in place and is then rejected by validate, which is what
+        // prints the message and stops the run. The parsed config is discarded on a validation failure, so
+        // the default is never the mode anything actually runs with.
+        .action((m, a) => Mode.fromString(m).fold(a)(mode => a.copy(mode = mode)))
+        .validate(m => if (Mode.fromString(m).isDefined) success else failure(s"Unknown mode: $m"))
+        .text(Mode.names),
       opt[String]("input")
         .required()
         .action((p, a) => a.copy(pathOrTable = p))
@@ -53,14 +63,10 @@ object SchemaValidateCli extends IOApp {
         .text("expected schema file (Spark JSON or Avro or JSON Schema)"),
       opt[String]("expected-format")
         .optional()
-        .action((s, a) =>
-          a.copy(expectedFormat = s.toLowerCase match {
-            case "spark" | "" => ExpectedFormat.Spark
-            case other =>
-              throw new IllegalArgumentException(
-                s"Unsupported expected-format: $other (only 'spark' supported in this build)",
-              )
-          }),
+        .action((s, a) => ExpectedFormat.fromString(s).fold(a)(f => a.copy(expectedFormat = f)))
+        .validate(s =>
+          if (ExpectedFormat.fromString(s).isDefined) success
+          else failure(s"Unsupported expected-format: $s (only 'spark' supported in this build)"),
         )
         .text("spark (default)"),
       opt[String]("master")

@@ -78,35 +78,89 @@ trait FileSystemConnector[F[_]] {
 }
 
 /**
+ * Where an operation reads from or writes to.
+ *
+ * Every connector below asked this same question with the same code, and none of them could answer it for a
+ * source kind it does not handle. The answer is an Option rather than a String so that "I cannot address
+ * this" is a value the caller can report, not an exception thrown out of a method that promised a path.
+ */
+private[filesystem] trait LocationResolution[F[_]] {
+
+  protected val effectSystem: EffectSystem[F]
+
+  /** How this connector describes what it accepts, used in the message when something else arrives. */
+  protected def addressable: String = "a supported"
+
+  /** The path or table this source names, or None for a source kind this connector cannot address. */
+  protected def locationOf(source: DataSource): Option[String] = source match {
+    case local: LocalDataSource        => Some(local.location)
+    case gcs: DataSource.GcsSource     => Some(gcs.path)
+    case s3: DataSource.S3Source       => Some(s3.path)
+    case bq: DataSource.BigQuerySource => Some(bq.fullTableName)
+    case jdbc: DataSource.JdbcSource   => Some(jdbc.table.value)
+    case _                             => None
+  }
+
+  /** The path this sink names, or None for a sink kind this connector cannot address. */
+  protected def locationOf(sink: DataSink): Option[String] = sink match {
+    case local: LocalDataSink  => Some(local.location)
+    case gcs: DataSink.GcsSink => Some(gcs.path)
+    case s3: DataSink.S3Sink   => Some(s3.path)
+    case _                     => None
+  }
+
+  /** Runs `op` on the source's location. An unusable source comes back as a failure result. */
+  protected def onLocation[A](
+    source: DataSource,
+  )(
+    op: String => F[FileSystemResult[A]],
+  ): F[FileSystemResult[A]] =
+    locationOf(source).fold(
+      effectSystem.pure[FileSystemResult[A]](
+        FileSystemResult.failure(unsupported("source", source.getClass)),
+      ),
+    )(op)
+
+  /** Runs `op` on the sink's location. An unusable sink comes back as a failure result. */
+  protected def onSinkLocation[A](
+    sink: DataSink,
+  )(
+    op: String => F[FileSystemResult[A]],
+  ): F[FileSystemResult[A]] =
+    locationOf(sink).fold(
+      effectSystem.pure[FileSystemResult[A]](
+        FileSystemResult.failure(unsupported("sink", sink.getClass)),
+      ),
+    )(op)
+
+  /**
+   * The streaming variant. Those operations return the payload itself, with no room in the type for a failure
+   * value, so an unusable source travels in the effect's error channel instead.
+   */
+  protected def onLocationOrRaise[A](source: DataSource)(op: String => F[A]): F[A] =
+    locationOf(source).fold(
+      effectSystem.raiseError[A](ConnectorFailure(unsupported("source", source.getClass))),
+    )(op)
+
+  /** The streaming variant for sinks. See [[onLocationOrRaise]]. */
+  protected def onSinkLocationOrRaise[A](sink: DataSink)(op: String => F[A]): F[A] =
+    locationOf(sink).fold(
+      effectSystem.raiseError[A](ConnectorFailure(unsupported("sink", sink.getClass))),
+    )(op)
+
+  private def unsupported(kind: String, got: Class[_]): ConnectorError =
+    ConnectorError(
+      s"Expected $addressable $kind, got: ${got.getSimpleName}",
+      code = s"UNSUPPORTED_${kind.toUpperCase}",
+    )
+}
+
+/**
  * Local file system connector implementation
  */
-class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F] {
+class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F] with LocationResolution[F] {
 
-  private val effectSystem = EffectSystem[F]
-
-  // Helper method to extract location from different DataSource types
-  private def extractLocation(source: DataSource): String = source match {
-    case local: LocalDataSource        => local.location
-    case gcs: DataSource.GcsSource     => gcs.path
-    case s3: DataSource.S3Source       => s3.path
-    case bq: DataSource.BigQuerySource => bq.fullTableName
-    case jdbc: DataSource.JdbcSource   => jdbc.table.value
-    case _ =>
-      throw new IllegalArgumentException(
-        s"Unsupported DataSource type: ${source.getClass.getSimpleName}",
-      )
-  }
-
-  // Helper method to extract location from different DataSink types
-  private def extractSinkLocation(sink: DataSink): String = sink match {
-    case local: LocalDataSink  => local.location
-    case gcs: DataSink.GcsSink => gcs.path
-    case s3: DataSink.S3Sink   => s3.path
-    case _ =>
-      throw new IllegalArgumentException(
-        s"Unsupported DataSink type: ${sink.getClass.getSimpleName}",
-      )
-  }
+  protected val effectSystem: EffectSystem[F] = EffectSystem[F]
 
   // Helper method to infer data format from file path
   private def inferFormatFromPath(path: String): DataFormat = {
@@ -119,8 +173,7 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
     else DataFormat.JSON // default
   }
 
-  def read(source: DataSource): F[FileSystemResult[Array[Byte]]] = {
-    val location = extractLocation(source)
+  def read(source: DataSource): F[FileSystemResult[Array[Byte]]] = onLocation(source) { location =>
     effectSystem.handleError {
       for {
         path   <- effectSystem.delay(Paths.get(location))
@@ -135,24 +188,24 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
     }
   }
 
-  def write(sink: DataSink, data: Array[Byte]): F[FileSystemResult[WriteMetadata]] = {
-    val location = extractSinkLocation(sink)
-    effectSystem.handleError {
-      for {
-        path <- effectSystem.delay(Paths.get(location))
-        _    <- effectSystem.delay(Files.createDirectories(path.getParent))
-        _ <- effectSystem.delay(
-          Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING),
-        )
-        metadata = WriteMetadata(
-          path = location,
-          bytesWritten = data.length.toLong,
-        )
-      } yield FileSystemResult.success(metadata)
-    } { error =>
-      FileSystemResult.failure(FileSystemError.writeError(location, error.getMessage))
+  def write(sink: DataSink, data: Array[Byte]): F[FileSystemResult[WriteMetadata]] =
+    onSinkLocation(sink) { location =>
+      effectSystem.handleError {
+        for {
+          path <- effectSystem.delay(Paths.get(location))
+          _    <- effectSystem.delay(Files.createDirectories(path.getParent))
+          _ <- effectSystem.delay(
+            Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING),
+          )
+          metadata = WriteMetadata(
+            path = location,
+            bytesWritten = data.length.toLong,
+          )
+        } yield FileSystemResult.success(metadata)
+      } { error =>
+        FileSystemResult.failure(FileSystemError.writeError(location, error.getMessage))
+      }
     }
-  }
 
   def listFiles(path: String): F[FileSystemResult[List[FileMetadata]]] =
     effectSystem.handleError {
@@ -233,8 +286,7 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
       FileSystemResult.failure(FileSystemError.metadataError(path, error.getMessage))
     }
 
-  def streamRead(source: DataSource): F[List[Array[Byte]]] = {
-    val location = extractLocation(source)
+  def streamRead(source: DataSource): F[List[Array[Byte]]] = onLocationOrRaise(source) { location =>
     effectSystem.delay {
       val bytes = Files.readAllBytes(Paths.get(location))
       // Simplified: split into 8KB chunks
@@ -242,22 +294,22 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
     }
   }
 
-  def streamWrite(sink: DataSink, data: List[Array[Byte]]): F[WriteMetadata] = {
-    val location = extractSinkLocation(sink)
-    effectSystem.delay {
-      val allBytes = data.flatten.toArray
-      Files.write(
-        Paths.get(location),
-        allBytes,
-        StandardOpenOption.CREATE,
-        StandardOpenOption.TRUNCATE_EXISTING,
-      )
-      WriteMetadata(
-        path = location,
-        bytesWritten = allBytes.length.toLong,
-      )
+  def streamWrite(sink: DataSink, data: List[Array[Byte]]): F[WriteMetadata] =
+    onSinkLocationOrRaise(sink) { location =>
+      effectSystem.delay {
+        val allBytes = data.flatten.toArray
+        Files.write(
+          Paths.get(location),
+          allBytes,
+          StandardOpenOption.CREATE,
+          StandardOpenOption.TRUNCATE_EXISTING,
+        )
+        WriteMetadata(
+          path = location,
+          bytesWritten = allBytes.length.toLong,
+        )
+      }
     }
-  }
 
 }
 
@@ -267,33 +319,10 @@ class LocalFileSystemConnector[F[_]: EffectSystem] extends FileSystemConnector[F
 class HDFSFileSystemConnector[F[_]: EffectSystem](
   hdfsUrl: String,
   configuration: Map[String, String] = Map.empty)
-    extends FileSystemConnector[F] {
+    extends FileSystemConnector[F]
+    with LocationResolution[F] {
 
-  private val effectSystem = EffectSystem[F]
-
-  // Helper method to extract location from DataSource
-  private def extractLocation(source: DataSource): String = source match {
-    case local: LocalDataSource        => local.location
-    case gcs: DataSource.GcsSource     => gcs.path
-    case s3: DataSource.S3Source       => s3.path
-    case bq: DataSource.BigQuerySource => bq.fullTableName
-    case jdbc: DataSource.JdbcSource   => jdbc.table.value
-    case _ =>
-      throw new IllegalArgumentException(
-        s"Unsupported DataSource type: ${source.getClass.getSimpleName}",
-      )
-  }
-
-  // Helper method to extract location from DataSink
-  private def extractSinkLocation(sink: DataSink): String = sink match {
-    case local: LocalDataSink  => local.location
-    case gcs: DataSink.GcsSink => gcs.path
-    case s3: DataSink.S3Sink   => s3.path
-    case _ =>
-      throw new IllegalArgumentException(
-        s"Unsupported DataSink type: ${sink.getClass.getSimpleName}",
-      )
-  }
+  protected val effectSystem: EffectSystem[F] = EffectSystem[F]
 
   // Production-ready HDFS configuration setup
   private def createHadoopConfiguration(): org.apache.hadoop.conf.Configuration = {
@@ -311,8 +340,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
     conf
   }
 
-  def read(source: DataSource): F[FileSystemResult[Array[Byte]]] = {
-    val location = extractLocation(source)
+  def read(source: DataSource): F[FileSystemResult[Array[Byte]]] = onLocation(source) { location =>
     effectSystem.handleError {
       val acquire = effectSystem.blocking {
         val conf = createHadoopConfiguration(); org.apache.hadoop.fs.FileSystem.get(conf)
@@ -332,26 +360,26 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
     }(error => FileSystemResult.failure(FileSystemError.readError(location, error.getMessage)))
   }
 
-  def write(sink: DataSink, data: Array[Byte]): F[FileSystemResult[WriteMetadata]] = {
-    val location = extractSinkLocation(sink)
-    effectSystem.handleError {
-      val acquire = effectSystem.blocking {
-        val conf = createHadoopConfiguration(); org.apache.hadoop.fs.FileSystem.get(conf)
-      }
-      effectSystem.bracket(acquire) { fs =>
-        effectSystem.blocking {
-          val path         = new org.apache.hadoop.fs.Path(location)
-          val outputStream = fs.create(path, true)
-          outputStream.write(data)
-          outputStream.flush()
-          outputStream.close()
-          FileSystemResult.success(
-            WriteMetadata(path = location, bytesWritten = data.length.toLong),
-          )
+  def write(sink: DataSink, data: Array[Byte]): F[FileSystemResult[WriteMetadata]] =
+    onSinkLocation(sink) { location =>
+      effectSystem.handleError {
+        val acquire = effectSystem.blocking {
+          val conf = createHadoopConfiguration(); org.apache.hadoop.fs.FileSystem.get(conf)
         }
-      }(fs => effectSystem.blocking(fs.close()).void)
-    }(error => FileSystemResult.failure(FileSystemError.writeError(location, error.getMessage)))
-  }
+        effectSystem.bracket(acquire) { fs =>
+          effectSystem.blocking {
+            val path         = new org.apache.hadoop.fs.Path(location)
+            val outputStream = fs.create(path, true)
+            outputStream.write(data)
+            outputStream.flush()
+            outputStream.close()
+            FileSystemResult.success(
+              WriteMetadata(path = location, bytesWritten = data.length.toLong),
+            )
+          }
+        }(fs => effectSystem.blocking(fs.close()).void)
+      }(error => FileSystemResult.failure(FileSystemError.writeError(location, error.getMessage)))
+    }
 
   def listFiles(path: String): F[FileSystemResult[List[FileMetadata]]] =
     effectSystem.handleError {
@@ -440,8 +468,7 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
       }(fs => effectSystem.blocking(fs.close()).void)
     }(error => FileSystemResult.failure(FileSystemError.metadataError(path, error.getMessage)))
 
-  def streamRead(source: DataSource): F[List[Array[Byte]]] = {
-    val location = extractLocation(source)
+  def streamRead(source: DataSource): F[List[Array[Byte]]] = onLocationOrRaise(source) { location =>
     effectSystem.bracket(
       effectSystem.blocking(org.apache.hadoop.fs.FileSystem.get(createHadoopConfiguration())),
     ) { fs =>
@@ -455,22 +482,22 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
     }(fs => effectSystem.blocking(fs.close()).void)
   }
 
-  def streamWrite(sink: DataSink, data: List[Array[Byte]]): F[WriteMetadata] = {
-    val location = extractSinkLocation(sink)
-    effectSystem.bracket(
-      effectSystem.blocking(org.apache.hadoop.fs.FileSystem.get(createHadoopConfiguration())),
-    ) { fs =>
-      val path = new org.apache.hadoop.fs.Path(location)
-      effectSystem.bracket(effectSystem.blocking(fs.create(path, true))) { outputStream =>
-        effectSystem.blocking {
-          val totalBytes = data.map(_.length.toLong).sum
-          data.foreach(outputStream.write)
-          outputStream.flush()
-          WriteMetadata(path = location, bytesWritten = totalBytes)
-        }
-      }(os => effectSystem.blocking(os.close()).void)
-    }(fs => effectSystem.blocking(fs.close()).void)
-  }
+  def streamWrite(sink: DataSink, data: List[Array[Byte]]): F[WriteMetadata] =
+    onSinkLocationOrRaise(sink) { location =>
+      effectSystem.bracket(
+        effectSystem.blocking(org.apache.hadoop.fs.FileSystem.get(createHadoopConfiguration())),
+      ) { fs =>
+        val path = new org.apache.hadoop.fs.Path(location)
+        effectSystem.bracket(effectSystem.blocking(fs.create(path, true))) { outputStream =>
+          effectSystem.blocking {
+            val totalBytes = data.map(_.length.toLong).sum
+            data.foreach(outputStream.write)
+            outputStream.flush()
+            WriteMetadata(path = location, bytesWritten = totalBytes)
+          }
+        }(os => effectSystem.blocking(os.close()).void)
+      }(fs => effectSystem.blocking(fs.close()).void)
+    }
 
   // Helper method to infer data format from file path
   private def inferFormatFromPath(path: String): DataFormat = {
@@ -487,9 +514,11 @@ class HDFSFileSystemConnector[F[_]: EffectSystem](
 /**
  * Cloud storage connector base class
  */
-abstract class CloudStorageConnector[F[_]: EffectSystem] extends FileSystemConnector[F] {
+abstract class CloudStorageConnector[F[_]: EffectSystem]
+    extends FileSystemConnector[F]
+    with LocationResolution[F] {
 
-  protected val effectSystem = EffectSystem[F]
+  protected val effectSystem: EffectSystem[F] = EffectSystem[F]
 
   /**
    * Parse cloud storage URI to extract bucket and key
@@ -512,20 +541,17 @@ class GCSConnector[F[_]: EffectSystem](
   configuration: Map[String, String] = Map.empty)
     extends CloudStorageConnector[F] {
 
-  // Helper method to extract GCS path from DataSource
-  private def extractGcsPath(source: DataSource): String = source match {
-    case gcs: DataSource.GcsSource => gcs.path
-    case _ =>
-      throw new IllegalArgumentException(
-        s"Expected GCS source, got ${source.getClass.getSimpleName}",
-      )
+  override protected def addressable: String = "a GCS"
+
+  // This connector talks to one bucket store, so it narrows what the shared resolution accepts.
+  override protected def locationOf(source: DataSource): Option[String] = source match {
+    case gcs: DataSource.GcsSource => Some(gcs.path)
+    case _                         => None
   }
 
-  // Helper method to extract GCS path from DataSink
-  private def extractGcsSinkPath(sink: DataSink): String = sink match {
-    case gcs: DataSink.GcsSink => gcs.path
-    case _ =>
-      throw new IllegalArgumentException(s"Expected GCS sink, got ${sink.getClass.getSimpleName}")
+  override protected def locationOf(sink: DataSink): Option[String] = sink match {
+    case gcs: DataSink.GcsSink => Some(gcs.path)
+    case _                     => None
   }
 
   // Create GCS client with proper authentication
@@ -544,19 +570,16 @@ class GCSConnector[F[_]: EffectSystem](
     builder.build().getService
   }
 
-  def read(source: DataSource): F[FileSystemResult[Array[Byte]]] = {
-    val gcsPath       = extractGcsPath(source)
+  def read(source: DataSource): F[FileSystemResult[Array[Byte]]] = onLocation(source) { gcsPath =>
     val (bucket, key) = parseCloudUri(gcsPath)
 
     effectSystem.handleError {
       effectSystem.blocking {
         val storage = createStorageClient()
-        val blob    = storage.get(bucket, key)
-        if (blob == null || !blob.exists()) {
-          FileSystemResult.failure(FileSystemError.fileNotFound(gcsPath))
-        } else {
-          val bytes = blob.getContent()
-          FileSystemResult.success(bytes)
+        // The GCS client returns null for a blob that is not there, so Option is the lookup here.
+        Option(storage.get(bucket, key)).filter(_.exists()) match {
+          case None       => FileSystemResult.failure(FileSystemError.fileNotFound(gcsPath))
+          case Some(blob) => FileSystemResult.success(blob.getContent())
         }
       }
     } { error =>
@@ -564,30 +587,30 @@ class GCSConnector[F[_]: EffectSystem](
     }
   }
 
-  def write(sink: DataSink, data: Array[Byte]): F[FileSystemResult[WriteMetadata]] = {
-    val gcsPath       = extractGcsSinkPath(sink)
-    val (bucket, key) = parseCloudUri(gcsPath)
+  def write(sink: DataSink, data: Array[Byte]): F[FileSystemResult[WriteMetadata]] = onSinkLocation(sink) {
+    gcsPath =>
+      val (bucket, key) = parseCloudUri(gcsPath)
 
-    effectSystem.handleError {
-      effectSystem.blocking {
-        val storage = createStorageClient()
-        import com.google.cloud.storage.BlobInfo
-        import com.google.cloud.storage.BlobId
+      effectSystem.handleError {
+        effectSystem.blocking {
+          val storage = createStorageClient()
+          import com.google.cloud.storage.BlobInfo
+          import com.google.cloud.storage.BlobId
 
-        val blobId   = BlobId.of(bucket, key)
-        val blobInfo = BlobInfo.newBuilder(blobId).build()
-        storage.create(blobInfo, data)
+          val blobId   = BlobId.of(bucket, key)
+          val blobInfo = BlobInfo.newBuilder(blobId).build()
+          storage.create(blobInfo, data)
 
-        FileSystemResult.success(
-          WriteMetadata(
-            path = gcsPath,
-            bytesWritten = data.length.toLong,
-          ),
-        )
+          FileSystemResult.success(
+            WriteMetadata(
+              path = gcsPath,
+              bytesWritten = data.length.toLong,
+            ),
+          )
+        }
+      } { error =>
+        FileSystemResult.failure(FileSystemError.writeError(gcsPath, error.getMessage))
       }
-    } { error =>
-      FileSystemResult.failure(FileSystemError.writeError(gcsPath, error.getMessage))
-    }
   }
 
   def listFiles(path: String): F[FileSystemResult[List[FileMetadata]]] = {
@@ -622,8 +645,7 @@ class GCSConnector[F[_]: EffectSystem](
     effectSystem.handleError {
       effectSystem.blocking {
         val storage = createStorageClient()
-        val blob    = storage.get(bucket, key)
-        blob != null && blob.exists()
+        Option(storage.get(bucket, key)).exists(_.exists())
       }
     }(_ => false)
   }
@@ -663,18 +685,16 @@ class GCSConnector[F[_]: EffectSystem](
 
           val blobs = storage.list(bucket, BlobListOption.prefix(key)).iterateAll().asScala
           blobs.foreach(blob => storage.delete(blob.getBlobId))
+          FileSystemResult.success(())
+        } else if (storage.delete(bucket, key)) {
+          FileSystemResult.success(())
         } else {
-          val success = storage.delete(bucket, key)
-          if (!success) {
-            return effectSystem.pure(
-              FileSystemResult.failure(
-                FileSystemError.deleteError(path, "File not found or already deleted"),
-              ),
-            )
-          }
+          // A single-object delete reports a missing object by returning false rather than raising. This used
+          // to `return` from inside the blocking thunk, which never reached the caller.
+          FileSystemResult.failure(
+            FileSystemError.deleteError(path, "File not found or already deleted"),
+          )
         }
-
-        FileSystemResult.success(())
       }
     } { error =>
       FileSystemResult.failure(FileSystemError.deleteError(path, error.getMessage))
@@ -687,19 +707,18 @@ class GCSConnector[F[_]: EffectSystem](
     effectSystem.handleError {
       effectSystem.blocking {
         val storage = createStorageClient()
-        val blob    = storage.get(bucket, key)
-
-        if (blob == null || !blob.exists()) {
-          FileSystemResult.failure(FileSystemError.fileNotFound(path))
-        } else {
-          val metadata = FileMetadata(
-            name = blob.getName,
-            path = path,
-            size = blob.getSize,
-            lastModified = java.time.Instant.ofEpochMilli(blob.getUpdateTime),
-            format = inferFormatFromPath(blob.getName),
-          )
-          FileSystemResult.success(metadata)
+        Option(storage.get(bucket, key)).filter(_.exists()) match {
+          case None => FileSystemResult.failure(FileSystemError.fileNotFound(path))
+          case Some(blob) =>
+            FileSystemResult.success(
+              FileMetadata(
+                name = blob.getName,
+                path = path,
+                size = blob.getSize,
+                lastModified = java.time.Instant.ofEpochMilli(blob.getUpdateTime),
+                format = inferFormatFromPath(blob.getName),
+              ),
+            )
         }
       }
     } { error =>
@@ -707,8 +726,7 @@ class GCSConnector[F[_]: EffectSystem](
     }
   }
 
-  def streamRead(source: DataSource): F[List[Array[Byte]]] = {
-    val gcsPath       = extractGcsPath(source)
+  def streamRead(source: DataSource): F[List[Array[Byte]]] = onLocationOrRaise(source) { gcsPath =>
     val (bucket, key) = parseCloudUri(gcsPath)
 
     effectSystem.blocking {
@@ -720,25 +738,25 @@ class GCSConnector[F[_]: EffectSystem](
     }
   }
 
-  def streamWrite(sink: DataSink, data: List[Array[Byte]]): F[WriteMetadata] = {
-    val gcsPath       = extractGcsSinkPath(sink)
-    val (bucket, key) = parseCloudUri(gcsPath)
+  def streamWrite(sink: DataSink, data: List[Array[Byte]]): F[WriteMetadata] = onSinkLocationOrRaise(sink) {
+    gcsPath =>
+      val (bucket, key) = parseCloudUri(gcsPath)
 
-    effectSystem.blocking {
-      val storage = createStorageClient()
-      import com.google.cloud.storage.BlobInfo
-      import com.google.cloud.storage.BlobId
+      effectSystem.blocking {
+        val storage = createStorageClient()
+        import com.google.cloud.storage.BlobInfo
+        import com.google.cloud.storage.BlobId
 
-      val allBytes = data.flatten.toArray
-      val blobId   = BlobId.of(bucket, key)
-      val blobInfo = BlobInfo.newBuilder(blobId).build()
-      storage.create(blobInfo, allBytes)
+        val allBytes = data.flatten.toArray
+        val blobId   = BlobId.of(bucket, key)
+        val blobInfo = BlobInfo.newBuilder(blobId).build()
+        storage.create(blobInfo, allBytes)
 
-      WriteMetadata(
-        path = gcsPath,
-        bytesWritten = allBytes.length.toLong,
-      )
-    }
+        WriteMetadata(
+          path = gcsPath,
+          bytesWritten = allBytes.length.toLong,
+        )
+      }
   }
 
   // Helper method to infer data format from file path

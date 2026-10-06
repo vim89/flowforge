@@ -7,7 +7,8 @@ package com.flowforge.core.contracts
  * time.
  *
  * Policy behavior:
- *   - [[SchemaPolicy.Exact]]: Perfect match (unordered, case-insensitive)
+ *   - [[SchemaPolicy.Exact]]: Perfect match (unordered, case-sensitive)
+ *   - [[SchemaPolicy.ExactUnordered]]: Back-compat alias for [[SchemaPolicy.Exact]]
  *   - [[SchemaPolicy.ExactUnorderedCI]]: Perfect match, case-insensitive names, unordered
  *   - [[SchemaPolicy.ExactOrdered]]: Perfect match with enforced field order
  *   - [[SchemaPolicy.ExactOrderedCI]]: Perfect match, case-insensitive + ordered
@@ -18,6 +19,11 @@ package com.flowforge.core.contracts
  */
 sealed trait SchemaPolicy
 
+/**
+ * Each policy appears twice: as a sealed trait the macros match on at the type level, and as a case object
+ * for code that passes a policy as a value. The two are linked by the case object extending the trait of the
+ * same name, so a policy named in either position means the same thing.
+ */
 object SchemaPolicy {
   // Sealed traits for type-level usage in macros
   sealed trait Exact extends SchemaPolicy

@@ -43,12 +43,19 @@ object KafkaFacade {
       F.flatMap(mkParent)(_ => mkFile)
     }
 
+    /** The encoder reports a failure as a value, so it is lifted into F instead of thrown from the write. */
+    private def encoded(a: A): F[Array[Byte]] =
+      enc
+        .encode(a, DataFormat.JSON)
+        .fold(e => F.raiseError[Array[Byte]](new RuntimeException(e.message)), d => F.pure(d.data))
+
     def publish(a: A): F[Unit] =
       F.flatMap(ensureDir()) { _ =>
-        F.map(F.blocking {
-          val json = enc.encode(a, DataFormat.JSON).fold(e => throw new RuntimeException(e.message), _.data)
-          Files.write(path, json ++ "\n".getBytes("UTF-8"), StandardOpenOption.APPEND)
-        })(_ => ())
+        F.flatMap(encoded(a)) { json =>
+          F.map(
+            F.blocking(Files.write(path, json ++ "\n".getBytes("UTF-8"), StandardOpenOption.APPEND)),
+          )(_ => ())
+        }
       }
 
     def publishAll(as: List[A]): F[Unit] =
