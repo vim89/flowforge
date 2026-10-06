@@ -70,11 +70,6 @@ trait InfrastructureLayer[F[_]] {
 trait TestingFramework[F[_]] {
 
   /**
-   * Create test data algebra for unit testing.
-   */
-  def createTestDataAlgebra[A]: F[A]
-
-  /**
    * Create mock connector for testing.
    */
   def createMockConnector[Provider]: F[MockConnector[F, Provider]]
@@ -290,9 +285,6 @@ object InfrastructureLayer {
    * Default testing framework implementation.
    */
   private class DefaultTestingFramework[F[_]: Sync] extends TestingFramework[F] {
-
-    override def createTestDataAlgebra[A]: F[A] =
-      Sync[F].raiseError(new NotImplementedError("Test data algebra creation not yet implemented"))
 
     override def createMockConnector[Provider]: F[MockConnector[F, Provider]] =
       Sync[F].delay {

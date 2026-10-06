@@ -83,6 +83,7 @@ sealed trait ConfigError extends Product with Serializable {
   def field: Option[String]
 }
 
+/** Constructors and combinators for the configuration errors a load can accumulate. */
 object ConfigError {
 
   case class MissingRequired(fieldName: String) extends ConfigError {
@@ -157,6 +158,7 @@ sealed trait Environment extends Product with Serializable {
   def defaultTimeout: FiniteDuration
 }
 
+/** Parsing and ordering for the deployment environments a pipeline can run in. */
 object Environment {
 
   case object Development extends Environment {
@@ -240,6 +242,7 @@ case class RetryPolicy(
   }
 }
 
+/** Ready-made retry policies, and the arithmetic for the next delay. */
 object RetryPolicy {
 
   def exponential(maxRetries: Int, initialDelay: FiniteDuration): RetryPolicy =
@@ -285,6 +288,7 @@ case class CircuitBreakerConfig(
   callTimeout: FiniteDuration,
   maxConcurrentCalls: PositiveInt)
 
+/** Defaults for the circuit breaker, tuned for a call that talks to a cluster. */
 object CircuitBreakerConfig {
 
   val default: CircuitBreakerConfig = CircuitBreakerConfig(
@@ -353,6 +357,7 @@ case class SparkConfig(
   }
 }
 
+/** Spark settings as a typed value, with the defaults a local run needs. */
 object SparkConfig {
 
   def default(appName: String): SparkConfig =
@@ -400,6 +405,7 @@ case class FlinkConfig(
 
 sealed trait FlinkRestartStrategy extends Product with Serializable
 
+/** The restart strategies Flink accepts, as a closed set rather than a string. */
 object FlinkRestartStrategy {
   case object NoRestart extends FlinkRestartStrategy
 
@@ -410,6 +416,7 @@ object FlinkRestartStrategy {
   case object Exponential extends FlinkRestartStrategy
 }
 
+/** Flink settings as a typed value, with defaults for a single job manager. */
 object FlinkConfig {
 
   def default(jobName: String): FlinkConfig =
@@ -453,6 +460,7 @@ sealed trait LogLevel extends Product with Serializable {
   def level: Int
 }
 
+/** The log levels, ordered so a threshold comparison means what it reads like. */
 object LogLevel {
   case object Trace extends LogLevel {
     val level = 0
@@ -492,6 +500,7 @@ object LogLevel {
   }
 }
 
+/** Defaults for metrics and tracing, with everything off until it is asked for. */
 object MonitoringConfig {
 
   val default: MonitoringConfig = MonitoringConfig()
@@ -572,6 +581,7 @@ case class PipelineConfig(
   }
 }
 
+/** Construction and validation for a whole pipeline configuration. */
 object PipelineConfig {
 
   /**
@@ -670,44 +680,6 @@ object PipelineConfig {
   }
 
   def builder: PipelineConfigBuilder = PipelineConfigBuilder.empty
-
-  /**
-   * Parse configuration from a key-value map. This enables loading from environment variables, properties
-   * files, etc.
-   */
-  def fromMap(configMap: Map[String, String]): ValidatedNel[ConfigError, PipelineConfig] = {
-
-    def getString(key: String): ValidatedNel[ConfigError, String] =
-      configMap.get(key).toValidNel(ConfigError.MissingRequired(key))
-
-    // Parse all configuration components
-    val nameValidation = getString("pipeline.name")
-      .map(name => Refined.unsafeApply(name): NonEmptyString)
-
-    val environmentValidation = getString("pipeline.environment")
-      .andThen(Environment.fromString)
-
-    // This is a simplified version - in practice you'd parse source/sink configs too
-    val sourceValidation =
-      ConfigError.CustomError("Source parsing not implemented in fromMap").invalidNel[DataSource]
-    val sinkValidation =
-      ConfigError.CustomError("Sink parsing not implemented in fromMap").invalidNel[DataSink]
-
-    (nameValidation, environmentValidation, sourceValidation, sinkValidation).mapN {
-      (
-        name,
-        env,
-        source,
-        sink,
-      ) =>
-        PipelineConfig(
-          name = name,
-          environment = env,
-          source = source,
-          sink = sink,
-        )
-    }
-  }
 
   implicit val showPipelineConfig: Show[PipelineConfig] = Show.show { config =>
     s"""PipelineConfig(
