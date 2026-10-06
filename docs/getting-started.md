@@ -1,245 +1,198 @@
-# Getting Started with FlowForge
+# Getting started with FlowForge
 
-FlowForge is a revolutionary data engineering framework built with Scala's modern functional ecosystem, providing **compile-time data contracts** and **fiber-safe data pipelines**.
+FlowForge is a Scala data pipeline framework with two ideas at its centre: a data contract is checked by the
+compiler, and effects live at the edges of a pipeline rather than inside transforms.
 
-## 🚀 Quick Start (30 seconds)
+Read this page as a description of what works today on `main`. v1.0.0 is not released, nothing is published to
+Maven Central, and the gaps are listed in [v1.0 readiness](plan/v1.0-readiness.md). The versions CI runs are in
+[the compatibility matrix](reference/compatibility.md).
 
-The smallest possible pipeline in FlowForge:
-
-```scala
-import cats.effect.IO
-import com.flowforge.core.pipeline._
-
-object QuickStart extends IOApp.Simple {
-  def run: IO[Unit] =
-    DataPipelineFactory[IO]
-      .source(blob"gs://raw/sales.csv")
-      .contract(SalesContract.strict)
-      .transform(_.filter(_.amount >= 0))
-      .quality(nonNull("id") and unique("id"))
-      .sink(BigQuerySink("analytics.sales"))
-      .build
-      .run
-}
-```
-
-## 📦 Installation
-
-### 1. Generate a New Pipeline Project
+## Run a pipeline in two minutes
 
 ```bash
-sbt new vim89/flowforge.g8
+git clone https://github.com/vim89/flowforge.git && cd flowforge
+sbt "examples/runMain com.flowforge.examples.SimpleGoldenPath"
 ```
 
-Follow the prompts to configure:
-- Project name
-- Organization
-- Scala version (2.13 recommended, 2.12 for Flink)
-- Effect system (Cats Effect or ZIO)
+That example builds a typed source, one transform and a typed sink, proves the contract at compile time, and
+executes the pipeline with lineage emission in noop mode. It needs no cluster and no cloud account.
 
-### 2. Or Add to Existing Project
+The Spark path is exercised by tests rather than by a demo app:
 
-Add to your `build.sbt`:
+```bash
+sbt engines-spark/test
+```
+
+Delta and SCD tests in that module are opt-in integration tests, so a plain `test` run skips them.
+
+## Using FlowForge in your own project
+
+There are no `com.flowforge` artifacts on Maven Central yet, so publish to your local ivy cache first:
+
+```bash
+sbt publishLocal
+```
+
+sbt prints the version it published, which comes from the latest git tag through sbt-dynver. Use that version in
+your own `build.sbt`:
 
 ```scala
 libraryDependencies ++= Seq(
-  "com.flowforge" %% "flowforge-core" % "1.0.0",
-  "com.flowforge" %% "flowforge-contracts" % "1.0.0",
-  "com.flowforge" %% "flowforge-engines-spark" % "1.0.0"
+  "com.flowforge" %% "flowforge-core"          % "<version printed by publishLocal>",
+  "com.flowforge" %% "flowforge-contracts"     % "<version printed by publishLocal>",
+  "com.flowforge" %% "flowforge-engines-spark" % "<version printed by publishLocal>",
 )
 ```
 
-## 🏗️ Your First Pipeline
+To scaffold a new project, use the giter8 template in this repository. It is not a separate GitHub project, so
+point `sbt new` at the directory:
 
-### Step 1: Define Data Contract
+```bash
+sbt new file://$PWD/flowforge.g8
+```
+
+## Your first pipeline
+
+### Step 1: describe the contract
+
+A contract can be a plain case class. The compiler derives its shape, and `SchemaConforms` proves that what a
+stage produces fits what the next endpoint declared.
+
+```scala
+final case class User(id: Long, email: String)
+```
+
+For a contract with field-level constraints and ownership metadata, the contracts module has a DSL:
 
 ```scala
 import com.flowforge.contracts.syntax.ContractDSL._
 
 val userContract = Contract("user")
   .field("id").required.long.positive
-  .field("email").required.string.email.maxLength(255)
-  .field("name").required.string.minLength(2).maxLength(100)
+  .field("email").required.string.matches(Patterns.EMAIL)
   .withSLA("hourly")
   .withOwner("DataPlatformTeam")
   .build
 ```
 
-### Step 2: Create Type-Safe Pipeline
+### Step 2: build the pipeline
+
+The builder carries a phantom state, so `build()` only exists once a source, a transform and a sink are all
+present. An incomplete pipeline is a compile error, not a runtime failure.
 
 ```scala
 import cats.effect.IO
-import com.flowforge.core.syntax.PipelineSyntax._
+import com.flowforge.core.PipelineBuilder
+import com.flowforge.core.contracts._
+import com.flowforge.core.instances.EffectInstances._ // brings EffectSystem[IO]
+import com.flowforge.core.types._
 
-// Define case classes matching contract
-case class RawUser(id: Long, email: String, name: String)
-case class CleanUser(id: Long, email: String, name: String)
+final case class User(id: Long, email: String)
 
-// Create pipeline with compile-time schema validation
-val pipeline = EnhancedPipelineBuilder
-  .from[IO, RawUser]("user-pipeline", source)
-  .transform[CleanUser](user => IO.pure(cleanUser(user)))
-  .validate(user =>
-    if (user.isValid) ().validNel
-    else ValidationError("Invalid user").invalidNel
-  )
-  .to(sink)
-  .build
+val src  = TypedSource[User](LocalDataSource("/tmp/in", DataFormat.Parquet))
+val sink = TypedSink[User](LocalDataSink("/tmp/out", DataFormat.Parquet))
+
+val pipeline = PipelineBuilder[IO]("user-pipeline")
+  .addTypedSource[User, User, SchemaPolicy.Exact](src, _ => IO.pure(User(1L, "a@b.com")))
+  .addTransform[User](u => IO.pure(u.copy(email = u.email.toLowerCase)))
+  .addTypedSink[User, SchemaPolicy.Exact](sink, (_, _) => IO.unit)
+  .build()
 ```
 
-### Step 3: Run the Pipeline
+The reader and writer functions are where IO happens. On a real pipeline they call a `DataAlgebra`, which is what
+`modules/examples/src/main/scala/com/flowforge/examples/HelloPipeline.scala` does with the Spark algebra.
+
+### Step 3: run it
 
 ```scala
-object UserPipelineApp extends IOApp.Simple {
-  def run: IO[Unit] = pipeline.execute
+import com.flowforge.framework.PipelineExecution
+
+object UserPipelineApp extends cats.effect.IOApp.Simple {
+  def run: IO[Unit] = PipelineExecution.execute(pipeline)(()).void
 }
 ```
 
-## 🧪 3-Step Fast Feedback Loop (Developer Experience)
+## Seeing contract drift at compile time
 
-### 1. **Rapid Compilation** (< 3s for pure code)
-```bash
-sbt ffDev  # Compile + run focused tests
-```
+Start from a producer that is missing a field the contract requires:
 
-### 2. **Contract Drift Detection** (Compile-time)
 ```scala
-// Introduce schema drift - change field name
-case class DriftedUser(id: Long, emailAddress: String, name: String)
-//                                ^^^^^^^^^^^^^ Changed from "email"
+import com.flowforge.core.contracts._
 
-// Try to use in pipeline
-val broken = EnhancedPipelineBuilder
-  .from[IO, DriftedUser]("broken", source)
-  // ❌ COMPILE ERROR: Schema drift detected!
-  // Expected field 'email', found 'emailAddress'
+final case class Out(id: Long)
+final case class Contract(id: Long, email: String)
+
+implicitly[SchemaConforms[Out, Contract, SchemaPolicy.Exact]] // compile error: missing email
 ```
 
-### 3. **Fix or Relax Policy**
+The error names the policy, both types, and the missing, extra and mismatched fields.
+
+Relaxing the policy to `Backward` does not make that example compile. `Backward` lets a producer carry fields the
+contract does not declare, and lets it omit a field the contract declares optional. A required field that is
+absent is still an error under every policy:
+
 ```scala
-// Option A: Fix the schema
-case class FixedUser(id: Long, email: String, name: String)
+final case class OutWithExtra(id: Long, email: String, tag: String)
+implicitly[SchemaConforms[OutWithExtra, Contract, SchemaPolicy.Backward]] // ok: tag is extra
 
-// Option B: Relax policy from Exact to BackwardCompatible
-val pipeline = EnhancedPipelineBuilder
-  .from[IO, DriftedUser, SchemaPolicy.BackwardCompatible]("flexible", source)
-  // ✅ Compiles - backward compatible changes allowed
+final case class OptionalEmail(id: Long, email: Option[String])
+implicitly[SchemaConforms[Out, OptionalEmail, SchemaPolicy.Backward]] // ok: email is optional
 ```
 
-## 🔑 Key Features
+The full policy lattice, including the ordered, case-insensitive and by-position variants, is in
+[how it fails](how-it-fails.md). Proof that the failures are real is in `modules/compile-fail-tests`.
 
-### 100% Type-Safe
-- Compile-time guarantees eliminate runtime errors
-- Schema mismatches caught before deployment
-- No runtime surprises
+## Fast feedback
 
-### Functional-First
-- Pure functions and immutability
-- Explicit effect management (Cats Effect or ZIO)
-- Referential transparency
+| Goal | Command |
+|------|---------|
+| Compile everything and run the quick tests | `sbt ffDev` |
+| Core only, on file save | `sbt dev` |
+| Formatting and lint, as CI runs them | `sbt fmtCheck` and `sbt fixCheck` |
 
-### Contract-Driven
-- Data contracts enforced at compile time
-- Schema evolution with policy modes
-- Automatic validation
+## What exists today
 
-### Multi-Engine
-- Write once, run on Spark, Flink, or future engines
-- Engine-agnostic pipeline definitions
-- Consistent semantics across engines
+- Contracts and the typestate builder: the part of the framework that is finished.
+- Spark engine: `read` and `write` handle a local path and a JDBC endpoint. Other sources and sinks raise
+  `UnsupportedOperationException`.
+- Flink engine: pinned to Scala 2.12, does not resolve its dependencies, built by no CI job.
+- Data quality: native checks by default, Deequ when it is on the classpath (`-Dff.quality.mode=deequ`).
+- Lineage: OpenLineage emission, noop unless configured.
+- There is no streaming API. Documents that show windowing, watermarks or a streaming CDC operator describe a
+  design, not shipped code.
 
-### Production-Ready
-- Built-in monitoring and observability
-- Resource safety with automatic cleanup
-- Structured logging and lineage tracking
+[v1.0 readiness](plan/v1.0-readiness.md) is the single place that states how close any of this is to a release.
 
-## 📁 Project Structure
+## Troubleshooting
 
-Generated projects follow this structure:
+**"could not find implicit value for evidence parameter of type EffectSystem[IO]"**
+Add `import com.flowforge.core.instances.EffectInstances._`.
 
-```
-my-pipeline/
-├── src/main/scala/
-│   ├── contracts/           # Data contracts and schemas
-│   │   └── UserContract.scala
-│   ├── pipelines/          # Pipeline definitions
-│   │   └── UserPipeline.scala
-│   ├── transformations/    # Data transformation logic
-│   │   └── UserTransforms.scala
-│   └── Main.scala         # Application entry point
-├── src/test/scala/
-│   └── pipelines/         # Pipeline tests
-└── build.sbt
-```
+**"Compile-time contract drift"**
+The producer shape does not satisfy the contract under the policy you chose. Read the missing, extra and
+mismatched field lists in the message, then either fix the shape or pick a policy that genuinely allows the
+difference.
 
-## 📚 Next Steps
+**"value build is not a member of ..."**
+The phantom state says the pipeline is incomplete. A source, at least one transform and a sink are all required
+before `build()` appears.
 
-### Essential Reading (in order)
-1. [AGENTS.md](../AGENTS.md) - Complete framework guide
-2. [Contracts Overview](contracts/OVERVIEW.md) - Understanding data contracts
-3. [Architecture Diagrams](diagrams/architecture.md) - How components fit together
-4. [ADR Index](adr/INDEX.md) - Architectural decisions
+**Spark fails to start with `IllegalAccessError: class sun.nio.ch.DirectBuffer`**
+Spark needs `--add-exports=java.base/sun.nio.ch=ALL-UNNAMED` on JDK 17. The build sets it for forked runs and
+tests, so run Spark code through `sbt test` or a forked `run` rather than an unforked sbt session.
 
-### By Use Case
-- **Data Engineers**: [Pipeline Patterns](examples/)
-- **Platform Engineers**: [Operating Guide](operating/)
-- **Contributors**: [Contributing Guide](../CONTRIBUTING.md)
+**Spark fails on macOS with `BindException: Can't assign requested address`**
+Export `SPARK_LOCAL_IP=127.0.0.1`, or set `spark.driver.bindAddress` and `spark.driver.host` to `127.0.0.1` in the
+session builder.
 
-### Advanced Topics
-- [Effect System](effects/bring-your-own-effect.md) - Cats Effect vs ZIO
-- [Multi-Engine Abstraction](design/core-design.md)
-- [Compile-Time Contracts](diagrams/compile-time-contracts/)
-- [Quality & Testing](adr/014-qa-strategy.md)
+## Where to go next
 
-## 🎯 Core Concepts
+- [How it fails](how-it-fails.md): the anatomy of a contract error.
+- [Public API](public-api.md): what is supported surface and what is internal.
+- [Contracts overview](contracts/OVERVIEW.md): contracts in depth.
+- [Bring your own effect](effects/bring-your-own-effect.md): Cats Effect or ZIO.
+- [Core design](design/core-design.md) and [framework behaviors](design/framework-behaviors.md).
+- [ADR index](adr/INDEX.md): the decisions and why they were made.
+- Working code: [modules/examples](../modules/examples).
 
-### Type-Safe Pipelines
-FlowForge ensures your pipelines are type-safe from source to sink, catching schema mismatches at **compile time**, not runtime.
-
-### Effect Management
-Choose between Cats Effect or ZIO for fiber-safe concurrency and resource management. Your pipeline code stays the same.
-
-### Contract-First Design
-Define data contracts that are enforced throughout pipeline execution. The compiler prevents contract violations.
-
-### Compile-Time Guarantees
-Our killer feature: **pipelines literally cannot be built** if schemas drift. This is proven by compile-fail tests in `modules/compile-fail-tests/`.
-
-## ❓ Troubleshooting
-
-### Common Issues
-
-**"Cannot find implicit SchemaConforms"**
-- Your schema doesn't match the contract
-- Check field names, types, and order
-- Review the SchemaPolicy you're using (Exact vs BackwardCompatible, etc.)
-
-**"Type mismatch in PipelineBuilder"**
-- Phantom type state machine preventing incorrect construction
-- Ensure all required components added (source, transform, sink)
-
-**"Cross-compilation failed"**
-- Using Flink? Must use Scala 2.12
-- Spark works with Scala 2.13 and 2.12
-- See [Compatibility Matrix](reference/compatibility.md)
-
-## 🆘 Getting Help
-
-- **Documentation**: Check [docs/](.) directory first
-- **Examples**: See [examples/](examples/) for working code
-- **Issues**: Search [GitHub Issues](https://github.com/vim89/flowforge/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/vim89/flowforge/discussions)
-
-## 🚦 What's Next?
-
-After getting your first pipeline running:
-
-1. ✅ Add data quality checks with ValidatedNel
-2. ✅ Implement proper error handling
-3. ✅ Add observability (metrics, logging)
-4. ✅ Write compile-fail tests to prove guarantees
-5. ✅ Review [30-Point Checklist](adr/020-pipeline-30-point-checklist.md)
-
----
-
-**Welcome to FlowForge - where functional programming meets data engineering reality!** 🚀
+Questions and bug reports go to [GitHub issues](https://github.com/vim89/flowforge/issues).
