@@ -183,6 +183,7 @@ case class PipelineBuilder[S <: BuilderState, F[_]: EffectSystem, In, Out] priva
 
 }
 
+/** The only entry point to the builder: a pipeline starts empty and the phantom state goes up from there. */
 object PipelineBuilder {
 
   /**
