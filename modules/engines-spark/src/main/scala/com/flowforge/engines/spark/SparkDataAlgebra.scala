@@ -12,14 +12,20 @@ package com.flowforge.engines.spark
 private object ReflectionCasting {
   import com.flowforge.core.algebra.DataAlgebra
 
-  def castQualityResult[A](result: Any): DataAlgebra.QualityResult[DataAlgebra.Dataset[A]] =
+  /**
+   * Reads a reflectively-obtained quality result back as the typed one.
+   *
+   * None means the adapter returned something else. The caller treats that the same as the adapter not being
+   * on the classpath at all, so there is nothing here worth raising.
+   */
+  def castQualityResult[A](result: Any): Option[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]] =
     result match {
       case qr: DataAlgebra.QualityResult[_] =>
         // ARCHITECTURAL: Reflection guarantees type safety here - required for modular quality system
         // scalafix:off DisableSyntax.noAsInstanceOf
-        qr.asInstanceOf[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]]
+        Some(qr.asInstanceOf[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]])
       // scalafix:on DisableSyntax.noAsInstanceOf
-      case _ => throw new RuntimeException(s"Unexpected result type: ${result.getClass}")
+      case _ => None
     }
 }
 
@@ -115,29 +121,33 @@ object SparkDataAlgebra {
       // EXTERNAL IO OPERATIONS (F[_] Required)
       // ========================================
 
+      /** The Spark reader for a format, or None for a format this engine cannot read. */
+      private def readerFor(
+        format: DataFormat,
+      ): Option[String => org.apache.spark.sql.DataFrame] = format match {
+        case DataFormat.CSV =>
+          Some(path => spark.read.option("header", "true").option("inferSchema", "true").csv(path))
+        case DataFormat.JSON    => Some(path => spark.read.json(path))
+        case DataFormat.Parquet => Some(path => spark.read.parquet(path))
+        case DataFormat.Delta   => Some(path => spark.read.format("delta").load(path))
+        case _                  => None
+      }
+
       override def read[A: DataDecoder](source: DataSource): F[DataAlgebra.Dataset[A]] = {
         val result: F[DataAlgebra.Dataset[A]] = source match {
           case local: LocalDataSource =>
-            F.blocking {
-              // Read with Spark - PRODUCTION: Using real DataFrame operations
-              val df = local.format match {
-                case DataFormat.CSV =>
-                  spark.read
-                    .option("header", "true")
-                    .option("inferSchema", "true")
-                    .csv(local.location)
-                case DataFormat.JSON =>
-                  spark.read.json(local.location)
-                case DataFormat.Parquet =>
-                  spark.read.parquet(local.location)
-                case DataFormat.Delta =>
-                  spark.read.format("delta").load(local.location)
-                case other =>
-                  throw new UnsupportedOperationException(s"Format $other not supported")
-              }
-
-              // PRODUCTION: Convert to ProductionSparkDataset for hybrid operations
-              ProductionSparkDataset.fromDataFrame[A](df, spark)
+            // The reader is chosen before the read runs, so an unsupported format fails in F instead of
+            // throwing out of the blocking block.
+            readerFor(local.format) match {
+              case None =>
+                F.raiseError[DataAlgebra.Dataset[A]](
+                  new UnsupportedOperationException(s"Format ${local.format} not supported"),
+                )
+              case Some(load) =>
+                F.blocking {
+                  // PRODUCTION: Convert to ProductionSparkDataset for hybrid operations
+                  ProductionSparkDataset.fromDataFrame[A](load(local.location), spark)
+                }
             }
 
           case jdbc: DataSource.JdbcSource =>
@@ -220,24 +230,11 @@ object SparkDataAlgebra {
             case s: LocalDataSink =>
               import com.flowforge.engines.spark.SparkWriteHelpers._
 
-              val (bytesWritten, recordsWritten, partitionsWritten) = dataset match {
+              val counts: Either[String, (Long, Long, Int)] = dataset match {
                 case pds: ProductionSparkDataset[A] =>
                   val dfTuned = tuned(pds.sparkDataFrame, options)
-                  s.format match {
-                    case DataFormat.Parquet =>
-                      dfTuned.write.mode("overwrite").parquet(s.location)
-                    case DataFormat.Delta =>
-                      dfTuned.write.format("delta").mode("overwrite").save(s.location)
-                    case DataFormat.JSON | DataFormat.JSONL =>
-                      import com.flowforge.engines.spark.SparkWriteHelpers.singlePartition
-                      singlePartition(dfTuned.toJSON, options.coalesce).write
-                        .mode("overwrite").text(s.location)
-                    case DataFormat.CSV =>
-                      import com.flowforge.engines.spark.SparkWriteHelpers.singlePartition
-                      singlePartition(dfTuned, options.coalesce).write.mode("overwrite").csv(s.location)
-                    case _ => throw new UnsupportedOperationException("Unsupported sink format")
-                  }
-                  (0L, pds.size.toLong, pds.metadata.partitions)
+                  writeDataFrame(dfTuned, s, options.coalesce)
+                    .map(_ => (0L, pds.size.toLong, pds.metadata.partitions))
                 case _ =>
                   // Fallback: encode to JSON then write
                   val jsonStrings: List[String] = dataset.data.map { a =>
@@ -246,33 +243,27 @@ object SparkDataAlgebra {
                       .fold(_ => "{}", ed => new String(ed.data, "UTF-8"))
                   }
                   val ds = spark.createDataset(jsonStrings)(org.apache.spark.sql.Encoders.STRING)
-                  s.format match {
-                    case DataFormat.JSON | DataFormat.JSONL =>
-                      import com.flowforge.engines.spark.SparkWriteHelpers.singlePartition
-                      singlePartition(ds, None).write.mode("overwrite").text(s.location)
-                    case DataFormat.CSV =>
-                      import com.flowforge.engines.spark.SparkWriteHelpers.singlePartition
-                      singlePartition(ds, None).write.mode("overwrite").text(s.location)
-                    case DataFormat.Parquet =>
-                      spark.read.json(ds).write.mode("overwrite").parquet(s.location)
-                    case _ => throw new UnsupportedOperationException("Unsupported sink format")
+                  writeJsonRows(ds, s).map { _ =>
+                    val bytes = jsonStrings.map(_.length.toLong).sum
+                    (bytes, dataset.data.size.toLong, 1)
                   }
-                  val bytes = jsonStrings.map(_.length.toLong).sum
-                  (bytes, dataset.data.size.toLong, 1)
               }
 
-              val wr = DataAlgebra.WriteResult(
-                recordsWritten = recordsWritten,
-                partitionsWritten = partitionsWritten,
-                bytesWritten = bytesWritten,
-                success = true,
-              )
-              try
-                com.flowforge.core.observability.PrometheusMetrics.Data.writeTotal
-                  .labels("spark", sink.format.toString)
-                  .inc()
-              catch { case _: Throwable => () }
-              wr
+              counts.map {
+                case (bytesWritten, recordsWritten, partitionsWritten) =>
+                  val wr = DataAlgebra.WriteResult(
+                    recordsWritten = recordsWritten,
+                    partitionsWritten = partitionsWritten,
+                    bytesWritten = bytesWritten,
+                    success = true,
+                  )
+                  try
+                    com.flowforge.core.observability.PrometheusMetrics.Data.writeTotal
+                      .labels("spark", sink.format.toString)
+                      .inc()
+                  catch { case _: Throwable => () }
+                  wr
+              }
 
             case j: JdbcSink =>
               val (recordsWritten, partitionsWritten) = dataset match {
@@ -302,36 +293,86 @@ object SparkDataAlgebra {
                     .save()
                   (dataset.data.size.toLong, 1)
               }
-              DataAlgebra.WriteResult(
-                recordsWritten = recordsWritten,
-                partitionsWritten = partitionsWritten,
-                bytesWritten = 0L,
-                success = true,
+              Right(
+                DataAlgebra.WriteResult(
+                  recordsWritten = recordsWritten,
+                  partitionsWritten = partitionsWritten,
+                  bytesWritten = 0L,
+                  success = true,
+                ),
               )
 
-            case _ => throw new UnsupportedOperationException("Unsupported sink type for this path")
+            case other =>
+              Left(s"Unsupported sink type for this path: ${other.getClass.getSimpleName}")
           }
         }).flatMap { t =>
-            val wr  = t._1
             val dur = t._2
-            val loc = sink match {
-              case l: LocalDataSink    => l.location
-              case g: DataSink.GcsSink => g.path
-              case s: DataSink.S3Sink  => s.path
-              case _                   => sink.getClass.getSimpleName
+            // An unsupported sink or format comes back as the reason rather than an exception, so the failure
+            // is raised here instead of escaping the blocking block above.
+            t._1 match {
+              case Left(reason) =>
+                F.raiseError[DataAlgebra.WriteResult](new UnsupportedOperationException(reason))
+              case Right(wr) =>
+                val loc = sink match {
+                  case l: LocalDataSink    => l.location
+                  case g: DataSink.GcsSink => g.path
+                  case s: DataSink.S3Sink  => s.path
+                  case _                   => sink.getClass.getSimpleName
+                }
+                for {
+                  _ <- F.delay {
+                    try
+                      com.flowforge.core.observability.PrometheusMetrics.Data.opLatencyMs
+                        .labels("write", "spark").observe(dur.toMillis.toDouble)
+                    catch { case _: Throwable => () }
+                  }
+                  _ <- log.info(
+                    s"spark.write ok format=${sink.format} loc=$loc ms=${dur.toMillis} records=${wr.recordsWritten}",
+                  )
+                } yield wr
             }
-            for {
-              _ <- F.delay {
-                try
-                  com.flowforge.core.observability.PrometheusMetrics.Data.opLatencyMs
-                    .labels("write", "spark").observe(dur.toMillis.toDouble)
-                catch { case _: Throwable => () }
-              }
-              _ <- log.info(
-                s"spark.write ok format=${sink.format} loc=$loc ms=${dur.toMillis} records=${wr.recordsWritten}",
-              )
-            } yield wr
           }
+
+      /**
+       * Writes a DataFrame in the sink's format.
+       *
+       * Returns the reason for an unsupported format rather than throwing it, so `write` can raise the
+       * failure in F. Left here means nothing was written.
+       */
+      private def writeDataFrame(
+        df: org.apache.spark.sql.DataFrame,
+        sink: LocalDataSink,
+        coalesce: Option[Int],
+      ): Either[String, Unit] = {
+        import com.flowforge.engines.spark.SparkWriteHelpers.singlePartition
+        sink.format match {
+          case DataFormat.Parquet => Right(df.write.mode("overwrite").parquet(sink.location))
+          case DataFormat.Delta =>
+            Right(df.write.format("delta").mode("overwrite").save(sink.location))
+          case DataFormat.JSON | DataFormat.JSONL =>
+            Right(singlePartition(df.toJSON, coalesce).write.mode("overwrite").text(sink.location))
+          case DataFormat.CSV =>
+            Right(singlePartition(df, coalesce).write.mode("overwrite").csv(sink.location))
+          case other => Left(s"Unsupported sink format: $other")
+        }
+      }
+
+      /** The JSON round-trip variant of [[writeDataFrame]], for datasets that are not Spark-backed. */
+      private def writeJsonRows(
+        rows: org.apache.spark.sql.Dataset[String],
+        sink: LocalDataSink,
+      ): Either[String, Unit] = {
+        import com.flowforge.engines.spark.SparkWriteHelpers.singlePartition
+        sink.format match {
+          case DataFormat.JSON | DataFormat.JSONL =>
+            Right(singlePartition(rows, None).write.mode("overwrite").text(sink.location))
+          case DataFormat.CSV =>
+            Right(singlePartition(rows, None).write.mode("overwrite").text(sink.location))
+          case DataFormat.Parquet =>
+            Right(spark.read.json(rows).write.mode("overwrite").parquet(sink.location))
+          case other => Left(s"Unsupported sink format: $other")
+        }
+      }
 
       // ========================================
       // CDC (SCD1 + Delta Lake MERGE)
@@ -472,16 +513,21 @@ object SparkDataAlgebra {
             val isEmpty = tgtRaw.limit(1).count() == 0
             if (isEmpty) {
               // SECURITY FIX: Validate path and use safe column names before SQL
-              Either.catchNonFatal {
-                // Path validation to prevent injection
-                val safePath = validateAndSanitizePath(targetPath)
-                val addCols = missing.map {
-                  case c if c == scdCur => s"${sanitizeColumnName(c)} BOOLEAN"
-                  case c                => s"${sanitizeColumnName(c)} TIMESTAMP"
-                }.mkString(", ")
-                spark.sql(s"ALTER TABLE delta.`$safePath` ADD COLUMNS ($addCols)")
-              }
-                .leftMap(t => s"Failed to add SCD2 columns to empty target at '$targetPath': ${t.getMessage}")
+              (for {
+                safePath <- sanitizedPath(targetPath)
+                addCols <- missing.traverse {
+                  case c if c == scdCur => sanitizedColumn(c).map(name => s"$name BOOLEAN")
+                  case c                => sanitizedColumn(c).map(name => s"$name TIMESTAMP")
+                }
+                altered <- Either
+                  .catchNonFatal(
+                    spark.sql(
+                      s"ALTER TABLE delta.`$safePath` ADD COLUMNS (${addCols.mkString(", ")})",
+                    ),
+                  )
+                  .leftMap(_.getMessage)
+              } yield altered)
+                .leftMap(reason => s"Failed to add SCD2 columns to empty target at '$targetPath': $reason")
             } else {
               Left(
                 s"Target table at '$targetPath' missing SCD2 columns: ${missing.mkString(", ")}. " +
@@ -548,12 +594,16 @@ object SparkDataAlgebra {
               }
 
               // SECURITY FIX: Optional optimize/ZORDER hooks with safe SQL construction
-              val _ = Either.catchNonFatal {
-                config.zOrderBy.foreach { cols =>
-                  val safePath = validateAndSanitizePath(targetPath)
-                  val colsSql  = cols.toList.map(col => sanitizeColumnName(col.value)).mkString(", ")
-                  spark.sql(s"OPTIMIZE delta.`$safePath` ZORDER BY ($colsSql)")
-                }
+              val _ = config.zOrderBy.traverse { cols =>
+                for {
+                  safePath <- sanitizedPath(targetPath)
+                  colsSql  <- cols.toList.traverse(col => sanitizedColumn(col.value))
+                  optimized <- Either
+                    .catchNonFatal(
+                      spark.sql(s"OPTIMIZE delta.`$safePath` ZORDER BY (${colsSql.mkString(", ")})"),
+                    )
+                    .leftMap(_.getMessage)
+                } yield optimized
               }
 
               Right((insertedCnt, updatedCnt, deletedCnt, unchangedCnt))
@@ -903,7 +953,8 @@ object SparkDataAlgebra {
                   classOf[List[_]],
                 )
                 val qualityResult = method.invoke(module, spark, pds, constraints)
-                val quality       = ReflectionCasting.castQualityResult[A](qualityResult)
+                ReflectionCasting.castQualityResult[A](qualityResult)
+              }.toOption.flatten.map { quality =>
                 if (quality.violations.isEmpty)
                   List(
                     DataAlgebra
@@ -918,7 +969,7 @@ object SparkDataAlgebra {
                   quality.violations.map { v =>
                     DataAlgebra.QualityCheckResult(v.rule, passed = false, message = v.message, score = 0.0)
                   }
-              }.toOption
+              }
             }
 
             F.flatMap(deequResultsF) {
@@ -1058,23 +1109,25 @@ object SparkDataAlgebra {
           ),
         )
       // SECURITY UTILITIES: Path and column name validation
-      private def validateAndSanitizePath(path: String): String = {
-        // Remove any suspicious characters that could lead to path traversal or injection
+      /**
+       * The path with the characters that could break out of a quoted SQL identifier removed, or the reason
+       * it was rejected.
+       *
+       * Both callers already build an Either, so the rejection is returned rather than thrown.
+       */
+      private def sanitizedPath(path: String): Either[String, String] = {
         val sanitized = path.replaceAll("[<>:\"|?*]", "")
-        // Ensure it doesn't start with dangerous patterns
-        if (sanitized.contains("..") || sanitized.startsWith("/proc") || sanitized.startsWith("/etc")) {
-          throw new SecurityException(s"Unsafe path detected: $path")
-        }
-        sanitized
+        if (sanitized.contains("..") || sanitized.startsWith("/proc") || sanitized.startsWith("/etc"))
+          Left(s"Unsafe path detected: $path")
+        else Right(sanitized)
       }
 
-      private def sanitizeColumnName(columnName: String): String = {
-        // Allow only alphanumeric characters, underscores, and periods
+      /** The column name if it is already safe to interpolate, or the reason it was rejected. */
+      private def sanitizedColumn(columnName: String): Either[String, String] = {
         val sanitized = columnName.replaceAll("[^a-zA-Z0-9_.]", "")
-        if (sanitized.isEmpty || sanitized != columnName) {
-          throw new SecurityException(s"Unsafe column name detected: $columnName")
-        }
-        sanitized
+        if (sanitized.isEmpty || sanitized != columnName)
+          Left(s"Unsafe column name detected: $columnName")
+        else Right(sanitized)
       }
 
     } // End of algebra DataAlgebra[F]

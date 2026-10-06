@@ -1,7 +1,6 @@
 package com.flowforge.app
 
 import org.scalatest.funsuite.AnyFunSuite
-import org.scalatest.Assertions._
 
 class PolicyCompileFailSpec extends AnyFunSuite {
 
@@ -29,7 +28,7 @@ class PolicyCompileFailSpec extends AnyFunSuite {
          |  .addTypedSource[Producer, User, SchemaPolicy.Exact](src, _ => IO.pure(null.asInstanceOf[Producer]))
          |  .addTypedSink[User, SchemaPolicy.Exact](sink, (_, _) => IO.pure(()))
          |  .build()
-      """.stripMargin,
+      """.stripMargin
     )
   }
 
@@ -56,7 +55,7 @@ class PolicyCompileFailSpec extends AnyFunSuite {
          |  .addTypedSource[C2, C1, SchemaPolicy.ExactOrdered](src, _ => IO.pure(null.asInstanceOf[C2]))
          |  .addTypedSink[C1, SchemaPolicy.ExactOrdered](sink, (_, _) => IO.pure(()))
          |  .build()
-      """.stripMargin,
+      """.stripMargin
     )
   }
 
@@ -86,7 +85,7 @@ class PolicyCompileFailSpec extends AnyFunSuite {
          |  .addTransform[C2](c => IO.pure(c))
          |  .addTypedSink[C1, SchemaPolicy.ExactUnordered](sink, (_, _) => IO.pure(()))
          |  .build()
-      """.stripMargin,
+      """.stripMargin
     )
   }
 
@@ -99,7 +98,7 @@ class PolicyCompileFailSpec extends AnyFunSuite {
          |type Contract = List[Int]
          |
          |implicitly[SchemaConforms[Out, Contract, SchemaPolicy.Exact]]
-      """.stripMargin,
+      """.stripMargin
     )
   }
 
@@ -112,7 +111,7 @@ class PolicyCompileFailSpec extends AnyFunSuite {
          |type Contract = Map[String, Int]
          |
          |implicitly[SchemaConforms[Out, Contract, SchemaPolicy.Exact]]
-      """.stripMargin,
+      """.stripMargin
     )
   }
 
@@ -142,7 +141,7 @@ class PolicyCompileFailSpec extends AnyFunSuite {
          |  .addTransform[V2](c => IO.pure(c))
          |  .addTypedSink[V1, SchemaPolicy.Backward](sink, (_, _) => IO.pure(()))
          |  .build()
-      """.stripMargin,
+      """.stripMargin
     )
   }
 
@@ -172,7 +171,7 @@ class PolicyCompileFailSpec extends AnyFunSuite {
          |  .addTransform[Producer](c => IO.pure(c))
          |  .addTypedSink[Consumer, SchemaPolicy.Forward](sink, (_, _) => IO.pure(()))
          |  .build()
-      """.stripMargin,
+      """.stripMargin
     )
   }
 
@@ -202,7 +201,7 @@ class PolicyCompileFailSpec extends AnyFunSuite {
          |  .addTransform[B](c => IO.pure(c))
          |  .addTypedSink[A, SchemaPolicy.Full](sink, (_, _) => IO.pure(()))
          |  .build()
-      """.stripMargin,
+      """.stripMargin
     )
   }
 }

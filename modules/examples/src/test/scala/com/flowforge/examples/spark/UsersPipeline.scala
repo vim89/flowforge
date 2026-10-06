@@ -1,4 +1,5 @@
-// scalafix:off DisableSyntax.var DisableSyntax.throw DisableSyntax.null DisableSyntax.noUnsafeRunSync
+// Runnable example that happens to live in test sources: it prints its results so it can be read when run.
+// scalafix:off DisableSyntax.var, DisableSyntax.throw, DisableSyntax.null, DisableSyntax.noUnsafeRunSync, DisableSyntax.noPrintln
 package com.flowforge.examples.spark
 
 import cats.effect.{ IO, Resource }

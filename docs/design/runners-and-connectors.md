@@ -89,5 +89,11 @@ No engine in this repository reads or writes a stream. `DataAlgebra.stream` exis
 batch read and returns the result as a single chunk. Nothing calls `readStream` or `writeStream`, and Kafka is
 not a source `read` accepts.
 
+A sketch of the shape an implementation would take:
+
+- Spark Structured Streaming with Kafka: `readStream` and `writeStream` inside the Spark runner, with
+  `DataAlgebra[F]` still the interface pipeline code sees.
+- Flink with Kafka: the DataStream API inside the Flink runner, behind the same surface.
+
 Streaming would be added behind the same `DataAlgebra[F]` surface, so pipeline code would not change. That is
 a direction, not something this version does.

@@ -1,9 +1,9 @@
 package com.flowforge.core.types
 
 import cats.syntax.show._
+import com.flowforge.core.testing.What
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import com.flowforge.core.testing.What
 
 class DataSchemaShowCoverageSpec extends AnyFunSuite with Matchers {
   test("showDataSchema produces formatted output and evolve updates version", What) {

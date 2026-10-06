@@ -93,8 +93,7 @@ import com.flowforge.contracts._
 import com.flowforge.contracts.ValidationRules._
 
 implicit val customerSummaryContract: DataContract[CustomerSummary] =
-  DataContract.builder[CustomerSummary]
-    .withSchema(
+  DataContract.builder[CustomerSummary](
       ContractSchema(
         name = NonEmptyString.unsafeFrom("CustomerSummary"),
         fields = List(
@@ -181,8 +180,7 @@ case class User(
 implicit val userContract: DataContract[User] = {
   val emailRegex = """^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$""".r
   
-  DataContract.builder[User]
-    .withSchema(
+  DataContract.builder[User](
       ContractSchema(
         name = NonEmptyString.unsafeFrom("User"),
         fields = List(
@@ -564,8 +562,7 @@ class SalesAnalyticsPipeline extends Pipeline {
 **FlowForge contracts serve as living documentation:**
 ```scala
 implicit val salesAnalyticsContract: DataContract[DailySalesAnalytics] =
-  DataContract.builder[DailySalesAnalytics]
-    .withSchema(
+  DataContract.builder[DailySalesAnalytics](
       ContractSchema(
         name = NonEmptyString.unsafeFrom("DailySalesAnalytics"),
         fields = List(
