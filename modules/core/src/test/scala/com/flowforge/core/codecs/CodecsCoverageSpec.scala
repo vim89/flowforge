@@ -1,6 +1,4 @@
 package com.flowforge.core.codecs
-
-import com.flowforge.core.algebra._
 import com.flowforge.core.instances.DefaultCodecs._
 import com.flowforge.core.types._
 import io.circe.Json

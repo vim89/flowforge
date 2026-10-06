@@ -1,19 +1,22 @@
 # flowforge Public API (v1.0)
 
-Status: RC-ready public surface. APIs listed here are intended for public use and will maintain binary compatibility within 1.x (see guarantees below).
+Status: pre-1.0. APIs listed here are intended for public use. The binary compatibility promise described below starts at the 1.0.0 release; releases before that may break it.
 
 ## Core public APIs
 
 ### Primary pipeline construction
 - **Core**: `com.flowforge.core.*` - Main pipeline builder and execution system
 - **Contracts**: `com.flowforge.core.contracts.*` - Schema validation and policy enforcement  
-- **Types**: `com.flowforge.core.types.*` - Type-safe data structures and builders
+- **Types**: the types named in this document under `com.flowforge.core.types` - `DataSchema`, `DataType`, `StructField`, `QualityConstraint`, `DataSource`, `DataSink`, `RefinedTypes`, `TypedSource`, `TypedSink`, `BuilderState` and the phantom traits it aliases (`HasSource`, `HasContract`, `HasTransform`, `HasSink`). The rest of the package is not covered by this surface.
 - **Main Builder**: `com.flowforge.core.PipelineBuilder` - 100% compile-time contract enforcement
+- **Effect abstraction**: `com.flowforge.core.algebra.EffectSystem[F]` - required to construct a `PipelineBuilder`
+
+Every type a public signature mentions is itself public. `PipelineBuilder.addTypedSource` and `addTypedSink` take `TypedSource[R]` and `TypedSink[R]`, its phantom parameter is a `BuilderState`, and constructing either endpoint needs a `Shape` instance from `com.flowforge.core.contracts.derive`. Those are therefore in the surface and under the same compatibility promise, not implementation detail.
 
 ### Data algebra & operations
-- **DataAlgebra**: `com.flowforge.core.algebra.DataAlgebra[F[_], DS[_]]` - Core data operations abstraction
+- **DataAlgebra**: `com.flowforge.core.algebra.DataAlgebra[F[_]]` - Core data operations abstraction
 - **Quality Framework**: `com.flowforge.core.algebra.DataAlgebra.QualityResult[A]` - Quality validation results
-- **Pipeline Types**: `com.flowforge.core.types.Pipeline[Input, Output]` - Type-safe pipeline execution
+- **Pipeline Types**: `com.flowforge.core.FlowForgePipeline[F[_]: EffectSystem, A, B]` - Type-safe pipeline execution
 
 ### Quality constraints DSL
 ```scala
@@ -30,9 +33,9 @@ com.flowforge.core.types.QualityConstraint:
 
 ### Spark integration
 - **ProductionSparkDataset**: `com.flowforge.engines.spark.ProductionSparkDataset[A]`
-  - File operations: `writeParquet()`, `writeDelta()`, `writeCSV()`
-  - Schema operations: `printSchema()`, `show()`
-  - Factory methods: `fromDataFrame()`, `fromParquet()`, `fromDelta()`
+  - File operations: `writeParquet()`, `writeDelta()`
+  - Spark interop: `asSparkDataset()`, `show()`, `cache()`, `persist()`, `repartition()`
+  - Factory methods: `fromDataFrame()`, `fromData()`
 - **SparkDataAlgebra**: Spark-specific DataAlgebra implementation
 
 ### Flink integration
@@ -66,26 +69,26 @@ com.flowforge.core.types.QualityConstraint:
 ### Type safety
 - **100% Compile-Time Contracts**: Pipelines won't build if schemas don't match (improved implementation)
 - **Phantom-State Builder**: Type system prevents incomplete pipelines
-- **Superior Schema Policy System**: Exact, ExactUnorderedCI, ExactOrdered, ExactByPosition, Backward, Forward, Full policies
+- **Schema Policy System**: Exact, ExactUnordered, ExactUnorderedCI, ExactOrdered, ExactOrderedCI, ExactByPosition, Backward, Forward, Full policies
 - **TypeShape ADT**: Clean, functional schema representation replacing old SchemaAST
 - **Policy-Based Comparison**: Maintainable, extensible schema validation engine
 - **Refined Types**: `FieldName`, `SchemaVersion` with compile-time validation
 
 ### Effect system support
 - **Effect-Safe**: Works with any `F[_]: EffectSystem` (IO, Task, etc.)
-- **Resource Management**: All operations use `Resource[F, _]` for automatic cleanup
+- **Resource Management**: `com.flowforge.core.algebra.FlowforgeResource[F, _]` for acquire-and-release cleanup. `DataAlgebra` operations themselves return plain `F[_]`; the table operations in `EnterpriseTableAlgebra` return `cats.effect.Resource`.
 - **Error Handling**: Either monads throughout (CONTRIBUTING.md compliance)
 
 ### Production features
 - **Memory Safety**: No driver OOM through sampling strategies
-- **Delta Lake Integration**: ACID transactions with table constraints
-- **Multi-Cloud**: S3A/ABFS/GCS support via Spark's native drivers
+- **Delta Lake Integration**: reads and writes the `delta` format, and the CDC operations use MERGE INTO. Table constraints (NOT NULL, CHECK) are plain Delta SQL that a pipeline issues itself; see `modules/examples/src/test/scala/com/flowforge/examples/spark/DeltaConstraintsIT.scala`. They are not a flowforge API.
+- **Multi-Cloud**: a source or sink location is handed to Spark unchanged, so any URI scheme on your Spark classpath works, including `s3a://`, `abfss://` and `gs://`. flowforge ships none of those Hadoop drivers and tests none of them; you add the driver and its configuration. See [docs/operating/multi-cloud-storage.md](operating/multi-cloud-storage.md).
 - **Performance**: Adaptive query execution, partition optimization
 
 ## Examples & utilities (v1.0 reference)
 
 ### Complete pipeline example
-- **UsersPipeline**: `com.flowforge.examples.spark.UsersPipeline`
+- **UsersPipeline**: `com.flowforge.examples.spark.UsersPipeline` (test sources of the `examples` module, so it is read as a reference rather than depended on)
   - End-to-end ETL demonstration
   - Quality validation with 6 constraint types
   - Delta Lake constraints (NOT NULL, CHECK)
@@ -99,8 +102,7 @@ com.flowforge.core.types.QualityConstraint:
 ## Internal APIs (not public)
 
 ### Implementation details
-- **Internal**: `com.flowforge.core.internal.*` - Implementation details, not for public use
-- **Instances**: `com.flowforge.core.instances.internal.*` - Internal type class instances  
+- **Internal**: any `*.internal.*` package, such as `com.flowforge.core.contracts.internal` (the contract macros) - implementation details, not for public use
 - **Test Utilities**: Test fixtures and helpers
 - **Build Configuration**: SBT modules and dependency management
 
@@ -131,36 +133,24 @@ com.flowforge.core.types.QualityConstraint:
 - Build configuration
 - Documentation format
 
-## Multi-cloud storage support (v1.0)
+## Multi-cloud storage support
 
-### Storage strategy: Spark's native drivers
-flowforge v1.0 uses Spark's production-ready storage drivers instead of custom connectors:
+### Storage strategy: Spark's own drivers
+flowforge writes no storage connector of its own for object stores. A location string is passed to Spark
+unchanged, so the driver on your classpath decides which URI schemes resolve.
 
-### Supported storage systems
-- **Amazon S3**: Via Spark's S3A driver (`s3a://` URIs)
-  - Uses `hadoop-aws` + AWS SDK v2
-  - Production-ready with retry logic, multipart uploads
-  - Configure via `spark.hadoop.fs.s3a.*` properties
-- **Azure Data lake Gen2**: Via ABFS driver (`abfss://` URIs)
-  - Uses `hadoop-azure` with native Azure SDK integration
-  - Enable via `HADOOP_OPTIONAL_TOOLS=hadoop-azure`
-  - Configure via `fs.azure.account.*` properties
-- **Google cloud storage**: Via GCS Hadoop connector (`gs://` URIs)
-  - Uses official Google Cloud Dataproc Hadoop connector
-  - Production-ready with workload identity support
-  - Configure via service account JSON or workload identity
-- **Local/HDFS**: Standard Hadoop filesystem support
+### Storage systems this is expected to work with
+- **Amazon S3**: Spark's S3A driver (`s3a://`), from `hadoop-aws`. Configure via `spark.hadoop.fs.s3a.*`.
+- **Azure Data Lake Gen2**: the ABFS driver (`abfss://`), from `hadoop-azure`. Configure via `fs.azure.account.*`.
+- **Google Cloud Storage**: the Google Cloud Dataproc Hadoop connector (`gs://`). Configure via service
+  account JSON or workload identity.
+- **Local/HDFS**: whatever Hadoop filesystem support Spark already brings.
 
-### Storage configuration recipes
-Available in documentation with copy-pasteable examples for each cloud provider.
-
-### Delta lake Multi-cloud support
-- **NOT NULL constraints**: Schema-level enforcement across all storage backends
-- **CHECK constraints**: Business rule validation on S3A/ABFS/GCS
-- **ACID transactions**: Full Delta Lake support on all cloud storage systems
-- **Schema evolution**: Compatible constraint enforcement across storage types
+None of these drivers is a flowforge dependency and none of these schemes is covered by a test. Only local
+paths and JDBC are exercised in CI. Treat the list above as the supported shape of the integration, not as a
+tested one. Configuration recipes are in [docs/operating/multi-cloud-storage.md](operating/multi-cloud-storage.md).
 
 ---
 
-Document Status: RC-ready
-Last Updated: 2025‑10‑02
+Document Status: pre-1.0
+Last Updated: 2026‑10‑05

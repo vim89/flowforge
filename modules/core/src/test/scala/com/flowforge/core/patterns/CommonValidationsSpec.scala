@@ -1,7 +1,6 @@
 package com.flowforge.core.patterns
 
 import com.flowforge.core.patterns.ValidationTypes._
-import com.flowforge.core.types.RefinedTypes._
 import com.flowforge.core.types._
 import eu.timepit.refined.api.Refined
 import org.scalatest.funsuite.AnyFunSuite

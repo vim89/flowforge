@@ -1,6 +1,4 @@
 package com.flowforge.core.coverage
-
-import cats.data.Validated
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.flowforge.core.patterns.ValidationRuleBuilder

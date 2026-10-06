@@ -1,11 +1,15 @@
 ThisBuild / organization := "$organization$"
-ThisBuild / name         := "$name$"
 ThisBuild / scalaVersion := "2.13.16"
 
+// Scalafix needs semanticdb files and the unused warnings to run the rules in .scalafix.conf.
+ThisBuild / semanticdbEnabled := true
+ThisBuild / semanticdbVersion := "4.10.1" // The version sbt-scalafix defaults to does not build for 2.13.16.
+ThisBuild / scalacOptions ++= Seq("-Wunused:imports", "-Wunused:locals", "-Wunused:privates")
+// ExplicitResultTypes reads the compiled classes, so it has to run on the same binary version as they do.
+ThisBuild / scalafixScalaBinaryVersion := "2.13"
+
 // Repos
-resolvers ++= Resolver.sonatypeOssRepos("public") ++ Seq(
-  Resolver.mavenCentral,
-)
+resolvers += Resolver.mavenCentral
 
 // FlowForge version (set during template generation)
 lazy val flowforgeVersion = "$flowforgeVersion$"
@@ -16,7 +20,7 @@ lazy val ffDeps = Seq(
   "com.flowforge" %% "flowforge-contracts"     % flowforgeVersion,
   "com.flowforge" %% "flowforge-engines-spark" % flowforgeVersion,
   "com.flowforge" %% "flowforge-quality-deequ" % flowforgeVersion,
-  "com.flowforge" %% "flowforge-connectors"    % flowforgeVersion,
+  "com.flowforge" %% "flowforge-connectors"    % flowforgeVersion
 )
 
 // Spark runtime
@@ -26,11 +30,11 @@ lazy val sparkDeps = Seq(
 
 // Logging & Metrics quickstart
 lazy val loggingDeps = Seq(
-  "com.typesafe.scala-logging" %% "scala-logging"    % "3.9.5",
-  "ch.qos.logback"              %  "logback-classic"  % "1.5.6",
-  "io.prometheus"               %  "simpleclient"     % "0.16.0",
-  "io.prometheus"               %  "simpleclient_hotspot" % "0.16.0",
-  "io.prometheus"               %  "simpleclient_httpserver" % "0.16.0",
+  "com.typesafe.scala-logging" %% "scala-logging"           % "3.9.5",
+  "ch.qos.logback"              % "logback-classic"         % "1.5.6",
+  "io.prometheus"               % "simpleclient"            % "0.16.0",
+  "io.prometheus"               % "simpleclient_hotspot"    % "0.16.0",
+  "io.prometheus"               % "simpleclient_httpserver" % "0.16.0"
 )
 
 // JDBC (H2) for audit demo
@@ -52,15 +56,15 @@ lazy val testDeps = Seq(
 lazy val root = (project in file("."))
   .settings(
     name := "$name$",
-    publish / skip := true,
-    Test / parallelExecution := false,
-    fork := true,
+    // Several demo objects have a main method, so `sbt run` has to be told which one the quickstart means.
+    Compile / run / mainClass := Some("com.flowforge.app.PipelineApp"),
+    publish / skip            := true,
+    Test / parallelExecution  := false,
+    fork                      := true,
     javaOptions ++= Seq(
       "-Duser.timezone=UTC",
       "-Dnet.bytebuddy.experimental=true",
-      "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED",
+      "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED"
     ),
-    libraryDependencies ++= ffDeps ++ sparkDeps ++ loggingDeps ++ jdbcDeps ++ zioDeps ++ testDeps,
+    libraryDependencies ++= ffDeps ++ sparkDeps ++ loggingDeps ++ jdbcDeps ++ zioDeps ++ testDeps
   )
-
-// TODO: Not compiling, check & fix

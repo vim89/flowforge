@@ -2,8 +2,7 @@ package com.flowforge.core.patterns
 
 import com.flowforge.core.algebra.SchemaIncompatible
 import com.flowforge.core.patterns.ValidationTypes._
-import com.flowforge.core.types.{ DataSchema, DataType, StructField }
-import com.flowforge.core.types.RefinedTypes.{ FieldName, SchemaVersion }
+import com.flowforge.core.types.{ DataSchema, DataType }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 

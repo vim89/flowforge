@@ -1,10 +1,9 @@
 package com.flowforge.example
 
-/**
- * Logging & Metrics Quickstart
- *
- * Demonstrates SLF4J/Logback logging and a Prometheus HTTP server exposing basic process metrics.
- */
+/** Logging & Metrics Quickstart
+  *
+  * Demonstrates SLF4J/Logback logging and a Prometheus HTTP server exposing basic process metrics.
+  */
 object LoggingAndMetrics {
   def main(args: Array[String]): Unit = {
     // Logging
@@ -13,7 +12,10 @@ object LoggingAndMetrics {
 
     // Prometheus: default JVM metrics and a custom counter
     io.prometheus.client.hotspot.DefaultExports.initialize()
-    val requests = io.prometheus.client.Counter
+    val requests = io
+      .prometheus
+      .client
+      .Counter
       .build("demo_requests_total", "Total demo requests processed")
       .register()
 
@@ -34,4 +36,3 @@ object LoggingAndMetrics {
     server.close()
   }
 }
-

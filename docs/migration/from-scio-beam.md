@@ -229,8 +229,7 @@ case class User(id: Long, name: String, email: String)
 case class ProcessedUser(id: Long, name: String, email: String, processed: Boolean)
 
 // Define contracts
-implicit val userContract: DataContract[User] = DataContract.builder[User]
-  .withSchema(ContractSchema(
+implicit val userContract: DataContract[User] = DataContract.builder[User](ContractSchema(
     name = NonEmptyString.unsafeFrom("User"),
     fields = List(
       FieldContract(NonEmptyString.unsafeFrom("id"), FieldType.LongType),
@@ -696,8 +695,7 @@ object Phase1Migration {
 ```scala
 // Phase 2: Add contracts and quality
 implicit val wordCountContract: DataContract[WordCount] = 
-  DataContract.builder[WordCount]
-    .withSchema(ContractSchema(
+  DataContract.builder[WordCount](ContractSchema(
       name = NonEmptyString.unsafeFrom("WordCount"),
       fields = List(
         FieldContract(

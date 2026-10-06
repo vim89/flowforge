@@ -1,9 +1,9 @@
 package com.flowforge.core.types
 
-import org.scalatest.funsuite.AnyFunSuite
-import org.scalatest.matchers.should.Matchers
 import com.flowforge.core.testing.What
 import com.flowforge.core.types.DataSink.WriteMode
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
 class DataSourcesSinksOptionsSpec extends AnyFunSuite with Matchers {
 

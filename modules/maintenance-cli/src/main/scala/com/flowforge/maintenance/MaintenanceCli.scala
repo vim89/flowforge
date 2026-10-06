@@ -15,6 +15,13 @@ object MaintenanceCli extends IOApp {
   case class Vacuum(c: VacuumCmd)   extends Command
   case class Compact(c: CompactCmd) extends Command
 
+  /**
+   * The state the parser starts in, before a subcommand is seen. scopt needs an initial config value, and
+   * this says "no subcommand yet" without using null: the option actions below already fall through on a
+   * command they do not recognise, so they fall through on this one too.
+   */
+  case object NoCommand extends Command
+
   def run(args: List[String]): IO[ExitCode] = {
     implicit val F: EffectSystem[IO] = EffectInstances.catsEffectSystemInstance
     implicit val L: CoreLogger[IO]   = com.flowforge.core.logging.CoreLogger.noOp[IO]
@@ -59,8 +66,11 @@ object MaintenanceCli extends IOApp {
         )
     }
 
-    parser.parse(args, null) match {
+    parser.parse(args, NoCommand) match {
       case None => IO.pure(ExitCode.Error)
+      // No subcommand given. Say so and stop, rather than starting a Spark session for no work.
+      case Some(NoCommand) =>
+        L.error("No subcommand given. Expected one of: vacuum, compact").as(ExitCode.Error)
       case Some(cmd) =>
         val sparkR: Resource[IO, SparkSession] = Resource.make {
           IO {
@@ -87,6 +97,8 @@ object MaintenanceCli extends IOApp {
                   .format("delta").load(path).coalesce(target).write
                   .format("delta").mode("overwrite").option("dataChange", "false").save(path),
               ) *> L.info(s"Compaction (coalesce=$target) completed for $path")
+            // Already handled above, before the session was opened.
+            case NoCommand => IO.unit
           }
         }
           .as(ExitCode.Success)
