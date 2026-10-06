@@ -47,6 +47,16 @@ class StageChainSpec extends AnyFunSuite with Matchers {
     withSink.size shouldBe 3
   }
 
+  test("a chain long enough to be generated rather than written out still builds and runs") {
+    // 10k is far past any hand-written pipeline and well past what a generator would produce. It is here
+    // because `arrow` descends one frame per link, so this is the bound that assertion rests on.
+    val deep = (1 to 10000).foldLeft(StageChain.empty[IO, Int]) { (chain, i) =>
+      chain.andThen(s"add-$i", StageKind.Transform, Kleisli((n: Int) => IO.pure(n + 1)))
+    }
+    deep.size shouldBe 10000
+    deep.arrow(plain).run(0).unsafeRunSync() shouldBe 10000
+  }
+
   test("a stage that does not read the previous stage's output is rejected") {
     assertDoesNotCompile(
       """

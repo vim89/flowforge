@@ -38,8 +38,8 @@ object StageKind {
  * output to a stage expecting something else, with no cast error to say so.
  *
  * This type is the same sequence with the links kept. `Link` holds the type between two stages as its own
- * parameter, so appending a stage that does not read the previous stage's output does not compile and there is
- * nothing left to cast.
+ * parameter, so appending a stage that does not read the previous stage's output does not compile and there
+ * is nothing left to cast.
  *
  * The trade: `Mid` is hidden inside `Link`, so the chain can be folded but not re-indexed or reordered after
  * it is built. That is what a type-aligned sequence costs in Scala 2.13, and nothing here reorders stages
@@ -47,17 +47,24 @@ object StageKind {
  */
 sealed abstract class StageChain[F[_], In, Out] extends Product with Serializable {
 
-  /** Each stage's name and kind, in the order they run. */
-  private[exec] def entries: List[StageChain.Entry]
+  /**
+   * Each stage's name and kind, most recently appended first.
+   *
+   * Reversed because that is the order a cons list can be extended in without copying. Appending with `:+`
+   * copies every node before it, so a chain of n stages would hold n lists of average length n/2 rather than
+   * sharing one spine, and a pipeline whose stages are generated rather than written out would pay for it.
+   * Only `names` needs the running order, and only once per build.
+   */
+  private[exec] def entriesReversed: List[StageChain.Entry]
+
+  /** How many stages the chain holds. Held per link, because a builder reads it on every append. */
+  def size: Int
 
   /** The stage names, in the order they run. */
-  final def names: List[String] = entries.map(_.name)
-
-  /** How many stages the chain holds. */
-  final def size: Int = entries.size
+  final def names: List[String] = entriesReversed.reverseIterator.map(_.name).toList
 
   /** How many stages of one kind the chain holds. */
-  final def count(kind: StageKind): Int = entries.count(_.kind == kind)
+  final def count(kind: StageKind): Int = entriesReversed.count(_.kind == kind)
 
   /** Append a stage. It has to read what the chain currently produces. */
   final def andThen[Next](
@@ -72,6 +79,13 @@ sealed abstract class StageChain[F[_], In, Out] extends Product with Serializabl
    *
    * `decorate` is applied at each stage's own input and output types rather than at `Any`, which is what
    * removes the need to erase. See [[StageDecorator]].
+   *
+   * Building the arrow descends one frame per stage, so the chain's depth is bounded by the JVM stack: 10k
+   * stages build and run, 50k overflow. A left fold would not have that bound, but folding needs the chain
+   * reversed, and reversing a type-aligned sequence needs the same cast this type exists to remove. The bound
+   * is the one being accepted, and 10k is far past a pipeline anyone would run: every stage carries a span
+   * and a START/COMPLETE pair, so a chain near the bound is unusable for reasons that have nothing to do with
+   * the stack. [[StageChainSpec]] pins 10k so the bound cannot quietly drop.
    */
   private[exec] def arrow(decorate: StageDecorator[F])(implicit F: EffectSystem[F]): Kleisli[F, In, Out]
 }
@@ -93,7 +107,9 @@ object StageChain {
    */
   private final case class Identity[F[_], A]() extends StageChain[F, A, A] {
 
-    private[exec] def entries: List[Entry] = Nil
+    private[exec] def entriesReversed: List[Entry] = Nil
+
+    val size: Int = 0
 
     private[exec] def arrow(
       decorate: StageDecorator[F],
@@ -107,9 +123,12 @@ object StageChain {
     stage: Kleisli[F, Mid, Out])
       extends StageChain[F, In, Out] {
 
-    // Computed once per append rather than per read: `names`, `size` and `count` are all called while a
-    // pipeline is being built, and the next stage's name is derived from `size`.
-    private[exec] val entries: List[Entry] = init.entries :+ entry
+    // Both are computed once per append and share the preceding link's spine, so appending is constant
+    // time and the whole chain holds one list. The next stage's name is derived from `size`, so a builder
+    // reads it on every append.
+    private[exec] val entriesReversed: List[Entry] = entry :: init.entriesReversed
+
+    val size: Int = init.size + 1
 
     private[exec] def arrow(
       decorate: StageDecorator[F],
