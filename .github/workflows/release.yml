@@ -24,7 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
-      require_ci: ${{ steps.verify_ci.outputs.require_ci }}
     steps:
       - name: Determine tag to release
         id: tag
@@ -75,34 +74,20 @@ jobs:
             });
 
             const run = data.workflow_runs[0];
-            let requireCi = false;
             if (!run) {
-              core.warning(`No CI workflow run found for commit ${sha}. Release workflow will rerun CI.`);
-              requireCi = true;
+              core.setFailed(`No CI run found for commit ${sha}. Get CI green on that commit, then run this workflow again.`);
             } else if (run.conclusion !== 'success') {
-              core.warning(`CI workflow run ${run.html_url} has conclusion ${run.conclusion}. Release workflow will rerun CI.`);
-              requireCi = true;
+              core.setFailed(`CI run ${run.html_url} concluded ${run.conclusion}. Get CI green on commit ${sha}, then run this workflow again.`);
             } else {
-              core.info(`CI workflow run ${run.html_url} succeeded at ${run.updated_at}.`);
+              core.info(`CI run ${run.html_url} succeeded at ${run.updated_at}.`);
             }
-
-            core.setOutput('require_ci', requireCi ? 'true' : 'false');
-
-  ci:
-    name: Rerun CI if required
-    needs: prepare
-    if: needs.prepare.outputs.require_ci == 'true'
-    uses: ./.github/workflows/ci.yml
-    permissions:
-      contents: read
-      pull-requests: write
 
   publish:
     name: Publish to Maven Central
-    needs: [prepare, ci]
-    if: |
-      needs.prepare.outputs.require_ci != 'true' ||
-      (needs.prepare.outputs.require_ci == 'true' && needs.ci.result == 'success')
+    needs: prepare
+    # Publishing to Maven Central cannot be undone, so a tag alone does not release. A tag run stops after
+    # `prepare`, which checks the tag exists and that CI passed on its commit. Releasing is a manual act.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
