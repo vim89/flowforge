@@ -35,15 +35,9 @@ class PipelineSyntaxSpec extends AnyFunSuite with Matchers {
     result.toOption.get.name shouldBe "test-pipeline"
   }
 
-  test("EnhancedPipelineBuilder should fail without source") {
-    val builder = EnhancedPipelineBuilder[IO, String, String](
-      name = "test",
-      transformation = Kleisli(IO.pure(_)),
-    )
-
-    val result = builder.build
-    result.isLeft shouldBe true
-  }
+  // There is no "should fail without source" test: `from` is the only way to make a builder and it always
+  // sets one. Scala 2 let this test reach the private constructor through the synthesized `apply`; Scala 3
+  // closes that, which is the behaviour the private constructor always asked for.
 
   test("EnhancedPipelineBuilder should fail without sink") {
     val builder = EnhancedPipelineBuilder.from[IO, String]("test", testSource)

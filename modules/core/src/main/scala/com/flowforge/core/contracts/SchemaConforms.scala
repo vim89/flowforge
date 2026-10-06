@@ -21,15 +21,10 @@ Missing: <> | Extra: <> | Mismatched: <>
 """)
 trait SchemaConforms[Out, Contract, P <: SchemaPolicy]
 
-object SchemaConforms {
-  import scala.language.experimental.macros
-
-  /**
-   * Materialize compile-time evidence that Out conforms to Contract under policy P.
-   *
-   * Uses improved macro that builds TypeShape representations and performs policy-specific comparison. No
-   * runtime overhead - pure compile-time validation.
-   */
-  implicit def materialize[Out, Contract, P <: SchemaPolicy]: SchemaConforms[Out, Contract, P] =
-    macro internal.ContractMacros.conformsImpl[Out, Contract, P]
-}
+/**
+ * The evidence itself has no members, so everything here is the materializer, and the materializer is the one
+ * part of contract checking that cannot be written once: it is a macro, and the two Scala versions spell
+ * macros differently. [[SchemaConformsMaterializer]] is supplied per version from its own source directory.
+ * Both spellings end up calling the same comparison in `internal.ShapeDiff`.
+ */
+object SchemaConforms extends SchemaConformsMaterializer
