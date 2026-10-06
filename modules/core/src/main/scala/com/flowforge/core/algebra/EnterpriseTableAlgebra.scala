@@ -40,7 +40,7 @@ import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.effect.{ MonadCancel, Resource }
 import cats.implicits._
 import com.flowforge.core.types.RefinedTypes.{ FieldName, TableName }
-import com.flowforge.core.types.{ ErrorCategory, ErrorSeverity, FlowForgeError }
+import com.flowforge.core.types.{ ContextValue, ErrorCategory, ErrorSeverity, FlowForgeError }
 
 import java.time.Instant
 import scala.concurrent.duration.FiniteDuration
@@ -486,15 +486,15 @@ case class TableNotFound(tableName: TableName) extends TableError {
   val message       = s"Table '${tableName.value}' not found"
   val category      = ErrorCategory.System
   val severity      = ErrorSeverity.Error
-  val context       = Map("tableName" -> tableName.value)
+  val context       = Map("tableName" -> ContextValue.Text(tableName.value))
   val cause         = None
   val timestamp     = java.time.Instant.now()
   val errorId       = java.util.UUID.randomUUID().toString
   val isRetryable   = false
   val recoveryHints = List("Check table name spelling", "Verify table exists", "Check permissions")
 
-  def withContext(additionalContext: Map[String, Any]) = this
-  def withCause(underlyingCause: Throwable)            = this
+  def withContext(additionalContext: Map[String, ContextValue]) = this
+  def withCause(underlyingCause: Throwable)                     = this
 }
 
 sealed trait PartitionError extends FlowForgeError
@@ -502,15 +502,15 @@ case class PartitionNotFound(partitionSpec: PartitionSpec) extends PartitionErro
   val message       = s"Partition '${partitionSpec.toPartitionPath}' not found"
   val category      = ErrorCategory.System
   val severity      = ErrorSeverity.Error
-  val context       = Map("partitionSpec" -> partitionSpec.toPartitionPath)
+  val context       = Map("partitionSpec" -> ContextValue.Text(partitionSpec.toPartitionPath))
   val cause         = None
   val timestamp     = java.time.Instant.now()
   val errorId       = java.util.UUID.randomUUID().toString
   val isRetryable   = false
   val recoveryHints = List("Check partition specification", "Verify partition exists")
 
-  def withContext(additionalContext: Map[String, Any]) = this
-  def withCause(underlyingCause: Throwable)            = this
+  def withContext(additionalContext: Map[String, ContextValue]) = this
+  def withCause(underlyingCause: Throwable)                     = this
 }
 
 sealed trait BlobError extends FlowForgeError
@@ -519,18 +519,22 @@ case class BlobAccessError(
   blobName: String,
   reason: String)
     extends BlobError {
-  val message       = s"Cannot access blob '$blobName' in bucket '$bucketName': $reason"
-  val category      = ErrorCategory.System
-  val severity      = ErrorSeverity.Error
-  val context       = Map("bucketName" -> bucketName, "blobName" -> blobName, "reason" -> reason)
+  val message  = s"Cannot access blob '$blobName' in bucket '$bucketName': $reason"
+  val category = ErrorCategory.System
+  val severity = ErrorSeverity.Error
+  val context = Map(
+    "bucketName" -> ContextValue.Text(bucketName),
+    "blobName"   -> ContextValue.Text(blobName),
+    "reason"     -> ContextValue.Text(reason),
+  )
   val cause         = None
   val timestamp     = java.time.Instant.now()
   val errorId       = java.util.UUID.randomUUID().toString
   val isRetryable   = true
   val recoveryHints = List("Check cloud permissions", "Verify bucket exists", "Retry operation")
 
-  def withContext(additionalContext: Map[String, Any]) = this
-  def withCause(underlyingCause: Throwable)            = this
+  def withContext(additionalContext: Map[String, ContextValue]) = this
+  def withCause(underlyingCause: Throwable)                     = this
 }
 
 // ===============================

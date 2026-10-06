@@ -753,17 +753,17 @@ object EncodingHints {
  */
 sealed trait EncodingError extends FlowForgeError
 case class UnsupportedFormat(format: DataFormat, dataType: String) extends EncodingError {
-  val message       = s"Format $format is not supported for data type $dataType"
-  val category      = ErrorCategory.Validation
-  val severity      = ErrorSeverity.Error
-  val context       = Map("format" -> format.toString, "dataType" -> dataType)
-  val cause         = None
+  val message  = s"Format $format is not supported for data type $dataType"
+  val category = ErrorCategory.Validation
+  val severity = ErrorSeverity.Error
+  val context = Map("format" -> ContextValue.Text(format.toString), "dataType" -> ContextValue.Text(dataType))
+  val cause   = None
   val timestamp     = Instant.now()
   val errorId       = java.util.UUID.randomUUID().toString
   val isRetryable   = false
   val recoveryHints = List("Use a supported format", "Implement custom encoder")
 
-  def withContext(additionalContext: Map[String, Any]): EncodingError =
+  def withContext(additionalContext: Map[String, ContextValue]): EncodingError =
     copy() // Simplified for brevity
   def withCause(underlyingCause: Throwable): EncodingError =
     copy() // Simplified for brevity
@@ -777,14 +777,14 @@ case class CorruptedData(details: String) extends DecodingError {
   val message       = s"Data is corrupted: $details"
   val category      = ErrorCategory.Validation
   val severity      = ErrorSeverity.Error
-  val context       = Map("details" -> details)
+  val context       = Map("details" -> ContextValue.Text(details))
   val cause         = None
   val timestamp     = Instant.now()
   val errorId       = java.util.UUID.randomUUID().toString
   val isRetryable   = false
   val recoveryHints = List("Check data source", "Re-download data", "Use backup data")
 
-  def withContext(additionalContext: Map[String, Any]): DecodingError =
+  def withContext(additionalContext: Map[String, ContextValue]): DecodingError =
     copy() // Simplified for brevity
   def withCause(underlyingCause: Throwable): DecodingError =
     copy() // Simplified for brevity
@@ -797,16 +797,17 @@ sealed trait SchemaError extends FlowForgeError
 case class SchemaIncompatible(expected: DataSchema, actual: DataSchema) extends SchemaError {
   val message =
     s"Schema incompatible: expected ${expected.fields.length} fields, got ${actual.fields.length}"
-  val category      = ErrorCategory.Validation
-  val severity      = ErrorSeverity.Error
-  val context       = Map("expected" -> expected.toString, "actual" -> actual.toString)
+  val category = ErrorCategory.Validation
+  val severity = ErrorSeverity.Error
+  val context =
+    Map("expected" -> ContextValue.Text(expected.toString), "actual" -> ContextValue.Text(actual.toString))
   val cause         = None
   val timestamp     = Instant.now()
   val errorId       = java.util.UUID.randomUUID().toString
   val isRetryable   = false
   val recoveryHints = List("Update schema", "Enable schema evolution", "Transform data")
 
-  def withContext(additionalContext: Map[String, Any]): SchemaError =
+  def withContext(additionalContext: Map[String, ContextValue]): SchemaError =
     copy() // Simplified for brevity
   def withCause(underlyingCause: Throwable): SchemaError =
     copy() // Simplified for brevity
@@ -820,14 +821,14 @@ case class SerializationFailed(reason: String) extends SerializationError {
   val message       = s"Serialization failed: $reason"
   val category      = ErrorCategory.System
   val severity      = ErrorSeverity.Error
-  val context       = Map("reason" -> reason)
+  val context       = Map("reason" -> ContextValue.Text(reason))
   val cause         = None
   val timestamp     = Instant.now()
   val errorId       = java.util.UUID.randomUUID().toString
   val isRetryable   = true
   val recoveryHints = List("Retry operation", "Check data format", "Use alternative serializer")
 
-  def withContext(additionalContext: Map[String, Any]): SerializationError =
+  def withContext(additionalContext: Map[String, ContextValue]): SerializationError =
     copy() // Simplified for brevity
   def withCause(underlyingCause: Throwable): SerializationError =
     copy() // Simplified for brevity
@@ -841,14 +842,14 @@ case class RuleViolation(ruleName: String, details: String) extends ContractViol
   val message       = s"Contract rule '$ruleName' violated: $details"
   val category      = ErrorCategory.Business
   val severity      = ErrorSeverity.Error
-  val context       = Map("rule" -> ruleName, "details" -> details)
+  val context       = Map("rule" -> ContextValue.Text(ruleName), "details" -> ContextValue.Text(details))
   val cause         = None
   val timestamp     = Instant.now()
   val errorId       = java.util.UUID.randomUUID().toString
   val isRetryable   = false
   val recoveryHints = List("Fix data quality", "Update contract rules", "Contact data owner")
 
-  def withContext(additionalContext: Map[String, Any]): ContractViolation =
+  def withContext(additionalContext: Map[String, ContextValue]): ContractViolation =
     copy() // Simplified for brevity
   def withCause(underlyingCause: Throwable): ContractViolation =
     copy() // Simplified for brevity

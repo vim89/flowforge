@@ -18,7 +18,9 @@ private object ReflectionCasting {
    * None means the adapter returned something else. The caller treats that the same as the adapter not being
    * on the classpath at all, so there is nothing here worth raising.
    */
-  def castQualityResult[A](result: Any): Option[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]] =
+  // `AnyRef` rather than `Any`: the argument is whatever `Method.invoke` returned, and that is an
+  // `Object`. Nothing wider can reach here.
+  def castQualityResult[A](result: AnyRef): Option[DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]] =
     result match {
       case qr: DataAlgebra.QualityResult[_] =>
         // ARCHITECTURAL: Reflection guarantees type safety here - required for modular quality system

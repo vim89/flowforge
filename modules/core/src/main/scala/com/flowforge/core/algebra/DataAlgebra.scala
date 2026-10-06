@@ -455,13 +455,18 @@ object DataAlgebra {
 
   /**
    * Data profile for understanding dataset characteristics.
+   *
+   * `statistics` is numeric because a profile's statistics are: min, max, mean, stddev, percentiles. It was
+   * `Map[String, Any]`, and every one of the three implementations passes `Map.empty`, so nothing was relying
+   * on the wider type. A profile that needs to report a non-numeric statistic should say what that is rather
+   * than reopening the map to anything.
    */
   case class DataProfile[A](
     recordCount: Long,
     nullCount: Long,
     distinctCount: Long,
     schema: DataSchema,
-    statistics: Map[String, Any])
+    statistics: Map[String, Double])
 
   /**
    * Schema migration for evolution.

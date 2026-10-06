@@ -21,19 +21,19 @@ class DataQualityValidationSpec extends AnyFunSuite with Matchers {
 
   test("freshness validates recent timestamp") {
     val recentTimestamp = Instant.now().minusSeconds(30)
-    val result          = DataQualityValidation.freshness[Unit]("field", recentTimestamp, 1.minute)
-    result.isValid shouldBe true
+    val result          = DataQualityValidation.freshness("field", "row", recentTimestamp, 1.minute)
+    result.toOption shouldBe Some("row")
   }
 
   test("freshness validates timestamp at exact max age") {
     val timestamp = Instant.now().minusSeconds(60)
-    val result    = DataQualityValidation.freshness[Unit]("field", timestamp, 1.minute)
+    val result    = DataQualityValidation.freshness("field", "row", timestamp, 1.minute)
     result.isValid shouldBe true
   }
 
   test("freshness rejects old timestamp") {
     val oldTimestamp = Instant.now().minusSeconds(120)
-    val result       = DataQualityValidation.freshness[Unit]("field", oldTimestamp, 1.minute)
+    val result       = DataQualityValidation.freshness("field", "row", oldTimestamp, 1.minute)
     result.isInvalid shouldBe true
 
     getErrors(result).map(_.head) match {
@@ -49,7 +49,7 @@ class DataQualityValidationSpec extends AnyFunSuite with Matchers {
 
   test("freshness validates with millisecond precision") {
     val timestamp = Instant.now().minusMillis(500)
-    val result    = DataQualityValidation.freshness[Unit]("field", timestamp, 1.second)
+    val result    = DataQualityValidation.freshness("field", "row", timestamp, 1.second)
     result.isValid shouldBe true
   }
 

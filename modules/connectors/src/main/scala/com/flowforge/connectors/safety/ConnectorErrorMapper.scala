@@ -2,7 +2,7 @@ package com.flowforge.connectors.safety
 
 import com.flowforge.core.safety.ErrorMapper
 import com.flowforge.core.types.FlowForgeError.{ ConfigurationError, ValidationError }
-import com.flowforge.core.types.SystemError
+import com.flowforge.core.types.{ ContextValue, SystemError }
 
 /**
  * Connector-focused ErrorMapper.
@@ -13,17 +13,25 @@ import com.flowforge.core.types.SystemError
 object ConnectorErrorMapper {
   implicit val connectorMapper: ErrorMapper = {
     case e: java.nio.file.NoSuchFileException =>
-      ValidationError(s"File not found: ${e.getMessage}", None, context = Map("cause" -> "NoSuchFile"))
+      ValidationError(
+        s"File not found: ${e.getMessage}",
+        None,
+        context = Map("cause" -> ContextValue.Text("NoSuchFile")),
+      )
         .withCause(e)
     case e: java.io.FileNotFoundException =>
-      ValidationError(s"File not found: ${e.getMessage}", None, context = Map("cause" -> "FileNotFound"))
+      ValidationError(
+        s"File not found: ${e.getMessage}",
+        None,
+        context = Map("cause" -> ContextValue.Text("FileNotFound")),
+      )
         .withCause(e)
     case e: java.io.IOException =>
       SystemError.ServiceUnavailable(serviceName = "filesystem", message = e.getMessage, cause = Some(e))
     case e: java.sql.SQLException =>
       ConfigurationError(
         s"JDBC error: ${e.getMessage}",
-        context = Map("sqlState" -> String.valueOf(e.getSQLState)),
+        context = Map("sqlState" -> ContextValue.Text(String.valueOf(e.getSQLState))),
       ).withCause(e)
     case other => ErrorMapper.default(other)
   }

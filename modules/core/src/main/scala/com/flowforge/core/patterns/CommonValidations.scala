@@ -83,7 +83,6 @@ package com.flowforge.core.patterns
 
 import cats.syntax.all._
 import com.flowforge.core.patterns.ValidationTypes._
-import com.flowforge.core.types.RefinedTypes._
 import com.flowforge.core.types._
 
 /**
@@ -146,10 +145,22 @@ object CommonValidations {
     if (data.nonEmpty) {
       valid(data)
     } else {
-      val violation = QualityConstraint.NotNull(
-        FieldName.unsafeFrom("data"),
+      // The cast here was hiding a mismatch in the error type, not the value type: this built a
+      // `QualityConstraint.NotNull`, which is a constraint rather than a violation, so `invalid` produced a
+      // `ValidatedNel[QualityConstraint, _]` and the cast forced it into the declared result. Reporting an
+      // actual `QualityViolation` is what the signature promised all along.
+      //
+      // `severity` is passed because `QualityViolation` defaults it to `Warning`, while the constraint this
+      // replaces defaulted to `Error`. This branch rejects the dataset, so anything routing or alerting on
+      // severity has to see a failure rather than a warning.
+      invalid(
+        ValidationError.QualityViolation(
+          constraint = "nonEmpty",
+          violatedValue = "data",
+          message = "Dataset is empty",
+          severity = ErrorSeverity.Error,
+        ),
       )
-      invalid(violation).asInstanceOf[QualityValidationResult[List[A]]]
     }
 
   /**

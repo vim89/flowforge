@@ -93,8 +93,8 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
 
   test("ValidationError.SchemaViolation should support withContext") {
     val error    = ValidationError.SchemaViolation("userId", "String", "Int")
-    val enriched = error.withContext("pipelineId", "test-pipeline")
-    enriched.context should contain("pipelineId" -> "test-pipeline")
+    val enriched = error.withContext("pipelineId", ContextValue.Text("test-pipeline"))
+    enriched.context should contain("pipelineId" -> ContextValue.Text("test-pipeline"))
   }
 
   test("ValidationError.SchemaViolation should support withCause") {
@@ -280,8 +280,9 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
 
   test("FlowForgeError.fromThrowable should include context") {
     val throwable = new RuntimeException("Error")
-    val context   = Map("pipelineId" -> "test-123", "stage" -> "transform")
-    val error     = FlowForgeError.fromThrowable(throwable, context)
+    val context =
+      Map("pipelineId" -> ContextValue.Text("test-123"), "stage" -> ContextValue.Text("transform"))
+    val error = FlowForgeError.fromThrowable(throwable, context)
 
     error.context shouldBe context
   }
@@ -320,23 +321,25 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
   }
 
   test("All errors should support withContext with map") {
-    val error    = FlowForgeError.ValidationError("Error")
-    val enriched = error.withContext(Map("key1" -> "value1", "key2" -> "value2"))
-    enriched.context should contain("key1" -> "value1")
-    enriched.context should contain("key2" -> "value2")
+    val error = FlowForgeError.ValidationError("Error")
+    val enriched =
+      error.withContext(Map("key1" -> ContextValue.Text("value1"), "key2" -> ContextValue.Text("value2")))
+    enriched.context should contain("key1" -> ContextValue.Text("value1"))
+    enriched.context should contain("key2" -> ContextValue.Text("value2"))
   }
 
   test("All errors should support withContext with key-value") {
     val error    = FlowForgeError.ValidationError("Error")
-    val enriched = error.withContext("pipelineId", "test-pipeline")
-    enriched.context should contain("pipelineId" -> "test-pipeline")
+    val enriched = error.withContext("pipelineId", ContextValue.Text("test-pipeline"))
+    enriched.context should contain("pipelineId" -> ContextValue.Text("test-pipeline"))
   }
 
   test("Errors should preserve existing context when adding new context") {
-    val error    = FlowForgeError.ValidationError("Error", context = Map("existing" -> "value"))
-    val enriched = error.withContext("new", "data")
-    enriched.context should contain("existing" -> "value")
-    enriched.context should contain("new" -> "data")
+    val error =
+      FlowForgeError.ValidationError("Error", context = Map("existing" -> ContextValue.Text("value")))
+    val enriched = error.withContext("new", ContextValue.Text("data"))
+    enriched.context should contain("existing" -> ContextValue.Text("value"))
+    enriched.context should contain("new" -> ContextValue.Text("data"))
   }
 
   test("getMessage should return message") {
@@ -362,12 +365,13 @@ class ErrorTypesSpec extends AnyFunSuite with Matchers {
   // Removed: FlowForgeError Show instance tests - Show instance not available
   // Test that FlowForgeError properties can be accessed directly
   test("FlowForgeError should have accessible properties") {
-    val error = FlowForgeError.ValidationError("Test error", context = Map("key" -> "value"))
+    val error =
+      FlowForgeError.ValidationError("Test error", context = Map("key" -> ContextValue.Text("value")))
 
     error.message should include("Test error")
     error.category shouldBe ErrorCategory.Validation
     error.severity shouldBe ErrorSeverity.Error
-    error.context should contain("key" -> "value")
+    error.context should contain("key" -> ContextValue.Text("value"))
     error.isRetryable shouldBe false
     error.errorId should not be empty
   }

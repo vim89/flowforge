@@ -16,9 +16,15 @@ object DataQualityValidation {
 
   /**
    * Validate data freshness - ensure data is not older than specified duration.
+   *
+   * Takes the data it is vouching for and hands it back, the same way [[completeness]] does, so the check
+   * composes into a validation chain. It used to claim `QualityValidationResult[A]` while having no `A` to
+   * return, and bridged the gap with `().asInstanceOf[A]`. That threw `ClassCastException` on the success
+   * path for every `A` except `Unit`, which is why every caller pinned `freshness[Unit]`.
    */
   def freshness[A](
     fieldName: String,
+    value: A,
     timestamp: Instant,
     maxAge: FiniteDuration,
   ): QualityValidationResult[A] = {
@@ -27,9 +33,7 @@ object DataQualityValidation {
     val maxAgeInMillis = maxAge.toMillis
 
     if (age.toMillis <= maxAgeInMillis) {
-      // Can't return A without having an A - this method signature needs fixing
-      // For now, return a unit value cast to A as placeholder
-      ().asInstanceOf[A].validNel
+      value.validNel
     } else {
       val violation = QualityViolation(
         constraint = "freshness",

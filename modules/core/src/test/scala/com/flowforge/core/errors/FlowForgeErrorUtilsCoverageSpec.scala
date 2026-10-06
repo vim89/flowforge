@@ -1,13 +1,13 @@
 package com.flowforge.core.errors
 
-import com.flowforge.core.types.{ FlowForgeError, ValidationError }
+import com.flowforge.core.types.{ ContextValue, FlowForgeError, ValidationError }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
 class FlowForgeErrorUtilsCoverageSpec extends AnyFunSuite with Matchers {
   test("fromThrowable and factory helpers") {
     val ex  = new RuntimeException("boom")
-    val err = FlowForgeError.fromThrowable(ex, Map("k" -> "v"))
+    val err = FlowForgeError.fromThrowable(ex, Map("k" -> ContextValue.Text("v")))
     err.message should include("boom")
 
     val mf = FlowForgeError.missingField("id")

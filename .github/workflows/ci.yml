@@ -61,6 +61,11 @@ jobs:
             exit 1
           fi
 
+      - name: Guard - ban Any and asInstanceOf in production sources
+        run: |
+          chmod +x scripts/check-type-safety.sh
+          ./scripts/check-type-safety.sh
+
       - name: compile all
         run: sbt clean compileAll
 
