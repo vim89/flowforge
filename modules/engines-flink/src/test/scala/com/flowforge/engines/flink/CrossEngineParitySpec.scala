@@ -15,6 +15,13 @@ import org.scalatest.matchers.should.Matchers
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
+/**
+ * What this spec can check is delegation, not parity. `FlinkDataAlgebra` holds an `InMemoryDataAlgebra` and
+ * forwards every method to it, so comparing the two compares an object with itself and passes whatever they
+ * both do. Parity between two implementations is checked in
+ * `modules/engines-spark/src/test/scala/com/flowforge/engines/spark/EngineParitySpec.scala`, against Spark,
+ * which is the only other algebra with an implementation of its own.
+ */
 class CrossEngineParitySpec extends AnyFunSuite with Matchers {
 
   case class User(id: Int, name: String)
@@ -63,7 +70,7 @@ class CrossEngineParitySpec extends AnyFunSuite with Matchers {
     tmp
   }
 
-  test("Flink matches in-memory engine on basic read/write/quality operations") {
+  test("the Flink algebra forwards read, write and quality calls to the in-memory engine") {
     val sourcePath = writeSourceFile()
     val source     = LocalDataSource(sourcePath.toString, DataFormat.CSV)
 

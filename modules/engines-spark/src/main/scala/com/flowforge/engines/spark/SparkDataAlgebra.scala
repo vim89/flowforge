@@ -205,6 +205,12 @@ object SparkDataAlgebra {
       ): F[ValidatedNel[FlowForgeError, DataAlgebra.Dataset[A]]] =
         read[A](source).map(dataset => dataset.validNel[FlowForgeError])
 
+      /**
+       * One batch read, handed back as a stream of a single chunk. This is not Spark Structured Streaming:
+       * nothing here calls `readStream`, there is no checkpoint, no trigger and no watermark, and a source
+       * that only makes sense as a stream (Kafka) is not among the sources `read` accepts. A caller that
+       * needs streaming semantics does not get them from this method.
+       */
       override def stream[A: DataDecoder](source: DataSource): F[DataAlgebra.DataStream[F, A]] =
         F.pure(new DataAlgebra.DataStream[F, A] {
           def chunks: F[List[DataAlgebra.Dataset[A]]] =
@@ -973,8 +979,18 @@ object SparkDataAlgebra {
       // UTILITIES
       // ========================================
 
-      override def count[A](dataset: DataAlgebra.Dataset[A]): Long      = dataset.data.size.toLong
-      override def isEmpty[A](dataset: DataAlgebra.Dataset[A]): Boolean = dataset.data.isEmpty
+      // `data` on a Spark-backed dataset is a sample of at most 100 records, so counting it reported 100 for
+      // every larger input. `size` and `isEmpty` are what the dataset answers for itself, and the Spark one
+      // answers from the frame.
+      //
+      // The frame is asked directly rather than through `size`, because `Dataset.size` is an `Int` and the
+      // Spark wrapper narrows `count()` into it. This method returns a `Long`, so going through `size` would
+      // wrap a frame of more than `Int.MaxValue` rows into a negative count.
+      override def count[A](dataset: DataAlgebra.Dataset[A]): Long = dataset match {
+        case pds: ProductionSparkDataset[A] => pds.sparkDataFrame.count()
+        case other                          => other.size.toLong
+      }
+      override def isEmpty[A](dataset: DataAlgebra.Dataset[A]): Boolean = dataset.isEmpty
 
       override def cache[A](
         dataset: DataAlgebra.Dataset[A],
