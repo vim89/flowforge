@@ -138,7 +138,7 @@ val b2 = PipelineBuilder2
 
 ## 11. Prototype integration & incremental adoption
 - Start typed→gate one path; wrap legacy untyped with adapters; add gates (compile/build) gradually.
-- Prototypes: see `modules/examples-spark/` for end-to-end pipeline examples.
+- Prototypes: see `modules/examples/` for end-to-end pipeline examples.
 
 ### 11.1 Prototype index (Repo paths)
 - Simple pipeline: `modules/core/src/main/scala/com/flowforge/core/examples/SimpleWorkingPipeline.scala`
@@ -148,7 +148,7 @@ val b2 = PipelineBuilder2
 - FileSystem example: `modules/connectors/src/main/scala/com/flowforge/connectors/filesystem/examples/FileSystemExample.scala`
 - Schema validation CLI: `modules/validation-cli/src/main/scala/com/flowforge/validation/SchemaValidateCli.scala`
 - Contracts extractor CLI: `modules/contracts-extractor-cli/src/main/scala/com/flowforge/contracts/extractor/ContractsExtractorCli.scala`
-- g8 template sample: `templates/data-pipeline.g8/src/main/g8/src/main/scala/example/Pipeline.scala`
+- g8 template sample: `flowforge.g8/src/main/g8/src/main/scala/com/flowforge/app/PipelineApp.scala`
 
 ## 12. Refactoring strategy
 - Make pure: remove `F[_]` from Spark transforms; extract IO boundaries; add tests, then optimize.
