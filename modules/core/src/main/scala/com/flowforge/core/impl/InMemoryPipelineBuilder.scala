@@ -88,7 +88,8 @@ class InMemoryTypedBuilder[F[_], In, Out] private[impl] (
   def addStreamingSource[C](
     source: DataSource,
     decoder: com.flowforge.core.algebra.DataDecoder[C],
-  )(implicit atStart: Out =:= Unit): InMemoryTypedBuilder[F, Unit, DataAlgebra.Dataset[C]] = {
+  )(implicit atStart: Out =:= Unit,
+  ): InMemoryTypedBuilder[F, Unit, DataAlgebra.Dataset[C]] = {
     val _ = atStart
     val stage = InMemoryStage.StreamingSource[F, C](
       name = s"stream-source-${stages.size}",
