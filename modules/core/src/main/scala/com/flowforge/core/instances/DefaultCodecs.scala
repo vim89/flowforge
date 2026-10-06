@@ -25,6 +25,26 @@ object DefaultCodecs {
     def optimizationHints(data: Int, format: DataFormat): EncodingHints = EncodingHints.default
   }
 
+  implicit val intDecoder: DataDecoder[Int] = new DataDecoder[Int] {
+    def decode(encodedData: EncodedData, format: DataFormat) =
+      scala.util
+        .Try(new String(encodedData.data, "UTF-8").trim.toInt)
+        .toEither
+        .left
+        .map(err => CorruptedData(s"Not an integer: ${err.getMessage}"))
+    def validateSchema(encodedData: EncodedData, expectedSchema: DataSchema) = Right(())
+    def decodeWithEvolution(
+      encodedData: EncodedData,
+      format: DataFormat,
+      targetSchema: DataSchema,
+    ) = decode(encodedData, format)
+    override def supportsFormat(format: DataFormat): Boolean =
+      format match {
+        case DataFormat.JSON | DataFormat.JSONL | DataFormat.CSV => true
+        case _                                                   => false
+      }
+  }
+
   implicit val stringEncoder: DataEncoder[String] = new DataEncoder[String] {
     def encode(data: String, format: DataFormat) =
       Right(EncodedData(data.getBytes("UTF-8"), format))

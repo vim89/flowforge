@@ -76,10 +76,14 @@ import scala.concurrent.duration.FiniteDuration
  * Enables polymorphic data serialization across formats like Parquet, Avro, JSON, etc. Implementations can
  * optimize for specific data types and formats while providing a uniform interface.
  *
+ * An encoder is `Serializable` because a distributed engine encodes records on the worker that holds them,
+ * not on the driver. An instance that captures a connection, a session or any other local resource will fail
+ * when the engine ships it. Keep instances free of captured state.
+ *
  * @tparam A
  *   The data type to encode
  */
-trait DataEncoder[A] {
+trait DataEncoder[A] extends Serializable {
 
   /**
    * Encode data to the specified format.
@@ -175,10 +179,13 @@ object DataEncoder {
  * Companion to DataEncoder, enables polymorphic deserialization with format-specific optimizations and error
  * handling.
  *
+ * A decoder is `Serializable` for the same reason as [[DataEncoder]]: a distributed engine decodes records on
+ * the worker that holds them. Keep instances free of captured state.
+ *
  * @tparam A
  *   The data type to decode to
  */
-trait DataDecoder[A] {
+trait DataDecoder[A] extends Serializable {
 
   /**
    * Decode data from the specified format.
