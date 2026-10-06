@@ -1,4 +1,3 @@
-// scalafix:off DisableSyntax.null
 package com.flowforge.core.patterns
 
 import cats.data.{ Kleisli, Reader, ReaderT }
@@ -75,13 +74,17 @@ object ReaderPattern {
     def config: PipelineConfig = core.config
 
     /**
-     * Get environment-specific configuration
+     * Get environment-specific configuration.
+     *
+     * Returns a `String` because `PipelineConfig.settings` is a `Map[String, String]`. The signature used to
+     * be `envConfig[A]` with an `asInstanceOf[Option[A]]` behind it, so asking for anything but a `String`
+     * compiled and then threw `ClassCastException` at the point of use. Parsing a setting into a richer type
+     * belongs to the caller, which is the only place that knows what the key means.
      */
-    def envConfig[A](key: String): Option[A] =
+    def envConfig(key: String): Option[String] =
       core.config.settings
         .get(s"${environment.toString.toLowerCase}.$key")
         .orElse(core.config.settings.get(key))
-        .asInstanceOf[Option[A]]
   }
 
   // ===============================
@@ -212,7 +215,15 @@ object ReaderPattern {
       body: String,
     ): F[Unit]
     def sendSlack(channel: String, message: String): F[Unit]
-    def sendWebhook(url: String, payload: Map[String, Any]): F[Unit]
+
+    /**
+     * Post a payload to a webhook.
+     *
+     * The payload is string-valued, like every other property map in this file. It was `Map[String, Any]`,
+     * which meant the type promised a shape no sender could serialise without guessing. A caller that needs
+     * nesting should encode it and pass the encoded document under one key.
+     */
+    def sendWebhook(url: String, payload: Map[String, String]): F[Unit]
   }
 
   /** Alert definitions and their lifecycle. */
@@ -254,8 +265,8 @@ object ReaderPattern {
 
   /** A single database connection: query, execute and batch. */
   trait Connection[F[_]] {
-    def query[A](sql: String, params: List[Any]): F[List[A]]
-    def execute(sql: String, params: List[Any]): F[Int]
+    def query[A](sql: String, params: List[SqlValue]): F[List[A]]
+    def execute(sql: String, params: List[SqlValue]): F[Int]
     def batch(operations: List[SqlOperation]): F[List[Int]]
   }
 
@@ -306,12 +317,12 @@ object ReaderPattern {
     /**
      * Access configuration with environment awareness
      */
-    def getConfig[F[_]: Applicative, A](
+    def getConfig[F[_]: Applicative](
       key: String,
-      default: A,
-    ): FlowForgeReaderT[F, A] =
+      default: String,
+    ): FlowForgeReaderT[F, String] =
       ReaderT { context =>
-        val config = context.envConfig[A](key).getOrElse(default)
+        val config = context.envConfig(key).getOrElse(default)
         Applicative[F].pure(config)
       }
 
@@ -562,7 +573,7 @@ object ReaderPattern {
   final case class ResourceInfo(
     name: String,
     status: ResourceStatus,
-    config: Map[String, Any],
+    config: Map[String, String],
     lastHealthCheck: Instant)
 
   sealed trait ResourceStatus extends Product with Serializable
@@ -627,7 +638,7 @@ object ReaderPattern {
 
   case class SqlOperation(
     sql: String,
-    params: List[Any])
+    params: List[SqlValue])
 
   // ===============================
   // TEST IMPLEMENTATIONS
@@ -698,9 +709,15 @@ object ReaderPattern {
 
     def mockResourceManager[F[_]: EffectSystem]: ResourceManager[F] = new ResourceManager[F] {
       def acquireResource[R](name: String, config: ResourceConfig): FlowforgeResource[F, R] = {
-        // Safe no-op resource that yields a null placeholder of requested type R
+        // A mock has no way to produce an `R`, so it fails on acquire instead of pretending. It used to hand
+        // back `null.asInstanceOf[R]`, which left the null to surface somewhere further along, after the
+        // acquire had already reported success.
         val F = implicitly[EffectSystem[F]]
-        FlowforgeResource.make(F.pure(null.asInstanceOf[R]))(_ => F.unit)
+        FlowforgeResource.make(
+          F.raiseError[R](
+            new UnsupportedOperationException(s"mock resource manager cannot acquire '$name'"),
+          ),
+        )(_ => F.unit)
       }
       def releaseResource(name: String): F[Unit]      = implicitly[EffectSystem[F]].delay(())
       def listResources: F[List[ResourceInfo]]        = implicitly[EffectSystem[F]].delay(List.empty)
@@ -712,8 +729,8 @@ object ReaderPattern {
       def withConnection[A](operation: Connection[F] => F[A]): F[A] = {
         val F = implicitly[EffectSystem[F]]
         val conn = new Connection[F] {
-          def query[A](sql: String, params: List[Any]): F[List[A]] = F.pure(Nil)
-          def execute(sql: String, params: List[Any]): F[Int]      = F.pure(0)
+          def query[A](sql: String, params: List[SqlValue]): F[List[A]] = F.pure(Nil)
+          def execute(sql: String, params: List[SqlValue]): F[Int]      = F.pure(0)
           def batch(operations: List[SqlOperation]): F[List[Int]] =
             F.pure(List.fill(operations.size)(0))
         }
@@ -783,7 +800,7 @@ object ReaderPattern {
           implicitly[EffectSystem[F]].delay(())
         def sendSlack(channel: String, message: String): F[Unit] =
           implicitly[EffectSystem[F]].delay(())
-        def sendWebhook(url: String, payload: Map[String, Any]): F[Unit] =
+        def sendWebhook(url: String, payload: Map[String, String]): F[Unit] =
           implicitly[EffectSystem[F]].delay(())
       }
 

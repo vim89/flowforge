@@ -193,8 +193,8 @@ class ReaderPatternSpec extends AnyFunSuite with Matchers {
       Map("batch.size" -> "10", "testing.batch.size" -> "99"),
     )
 
-    Operations.getConfig[IO, String]("batch.size", "0").run(ctx).unsafeRunSync() shouldBe "99"
-    Operations.getConfig[IO, String]("missing.key", "fallback").run(ctx).unsafeRunSync() shouldBe
+    Operations.getConfig[IO]("batch.size", "0").run(ctx).unsafeRunSync() shouldBe "99"
+    Operations.getConfig[IO]("missing.key", "fallback").run(ctx).unsafeRunSync() shouldBe
       "fallback"
   }
 

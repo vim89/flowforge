@@ -207,6 +207,9 @@ class CommonValidationsSpec extends AnyFunSuite with Matchers {
     val result = CommonValidations.validateDataQuality(data, rules)
 
     result.isInvalid shouldBe true
+    // The severity is asserted because `QualityViolation` defaults it to `Warning`, and a rejected dataset
+    // reported as a warning is the kind of thing that routes an alert to the wrong place.
+    result.swap.toOption.map(_.head.severity) shouldBe Some(ErrorSeverity.Error)
   }
 
   test("validateDataQuality works with different data types") {
