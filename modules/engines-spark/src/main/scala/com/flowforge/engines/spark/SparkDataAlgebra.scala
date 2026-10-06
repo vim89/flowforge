@@ -939,8 +939,11 @@ object SparkDataAlgebra {
       // UTILITIES
       // ========================================
 
-      override def count[A](dataset: DataAlgebra.Dataset[A]): Long      = dataset.data.size.toLong
-      override def isEmpty[A](dataset: DataAlgebra.Dataset[A]): Boolean = dataset.data.isEmpty
+      // `data` on a Spark-backed dataset is a sample of at most 100 records, so counting it reported 100 for
+      // every larger input. `size` and `isEmpty` are what the dataset answers for itself, and the Spark one
+      // answers from the frame.
+      override def count[A](dataset: DataAlgebra.Dataset[A]): Long      = dataset.size.toLong
+      override def isEmpty[A](dataset: DataAlgebra.Dataset[A]): Boolean = dataset.isEmpty
 
       override def cache[A](
         dataset: DataAlgebra.Dataset[A],
