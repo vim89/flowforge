@@ -948,7 +948,14 @@ object SparkDataAlgebra {
       // `data` on a Spark-backed dataset is a sample of at most 100 records, so counting it reported 100 for
       // every larger input. `size` and `isEmpty` are what the dataset answers for itself, and the Spark one
       // answers from the frame.
-      override def count[A](dataset: DataAlgebra.Dataset[A]): Long      = dataset.size.toLong
+      //
+      // The frame is asked directly rather than through `size`, because `Dataset.size` is an `Int` and the
+      // Spark wrapper narrows `count()` into it. This method returns a `Long`, so going through `size` would
+      // wrap a frame of more than `Int.MaxValue` rows into a negative count.
+      override def count[A](dataset: DataAlgebra.Dataset[A]): Long = dataset match {
+        case pds: ProductionSparkDataset[A] => pds.sparkDataFrame.count()
+        case other                          => other.size.toLong
+      }
       override def isEmpty[A](dataset: DataAlgebra.Dataset[A]): Boolean = dataset.isEmpty
 
       override def cache[A](
