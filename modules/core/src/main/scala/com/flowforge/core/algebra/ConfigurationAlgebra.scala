@@ -271,9 +271,18 @@ trait ConfigValidator[A] {
 object ConfigValidator {
   def apply[A](implicit ev: ConfigValidator[A]): ConfigValidator[A] = ev
 
+  /**
+   * A validator with no extra constraints.
+   *
+   * An overload rather than a default argument: Scala 3 solves a default argument's type parameters on their
+   * own, so `List.empty` would come back as `List[ConfigConstraint[Nothing]]`.
+   */
+  def instance[A](validateF: A => ValidatedNel[ConfigError, A]): ConfigValidator[A] =
+    instance(validateF, List.empty[ConfigConstraint[A]])
+
   def instance[A](
     validateF: A => ValidatedNel[ConfigError, A],
-    configConstraints: List[ConfigConstraint[A]] = List.empty,
+    configConstraints: List[ConfigConstraint[A]],
   ): ConfigValidator[A] = new ConfigValidator[A] {
     def validate(config: A): ValidatedNel[ConfigError, A] = validateF(config)
     val constraints: List[ConfigConstraint[A]]            = configConstraints
@@ -874,31 +883,34 @@ object ConfigurationAlgebra {
     (sparkV, flinkV).mapN((_, _) => ())
   }
   private def validateConnectors(config: ConnectorConfig): ValidatedNel[ConfigError, Unit] = {
-    val gcsV = config.gcs
+    // Annotated, not inferred: each check yields a different ConfigError subtype, and Scala 3 infers a
+    // union of them that no Semigroup covers.
+    type Checked = ValidatedNel[ConfigError, Unit]
+    val gcsV: Checked = config.gcs
       .map(c =>
         if (c.projectId.nonEmpty) ().validNel
         else ConfigError.MissingRequired("connectors.gcs.projectId").invalidNel,
       )
       .getOrElse(().validNel)
-    val s3V = config.s3
+    val s3V: Checked = config.s3
       .map(c =>
         if (c.region.nonEmpty) ().validNel
         else ConfigError.MissingRequired("connectors.s3.region").invalidNel,
       )
       .getOrElse(().validNel)
-    val bqV = config.bigquery
+    val bqV: Checked = config.bigquery
       .map(c =>
         if (c.projectId.nonEmpty && c.dataset.nonEmpty) ().validNel
         else ConfigError.CustomError("BigQuery requires projectId and dataset").invalidNel,
       )
       .getOrElse(().validNel)
-    val kafkaV = config.kafka
+    val kafkaV: Checked = config.kafka
       .map(c =>
         if (c.brokers.nonEmpty) ().validNel
         else ConfigError.MissingRequired("connectors.kafka.brokers").invalidNel,
       )
       .getOrElse(().validNel)
-    val azV = config.azure
+    val azV: Checked = config.azure
       .map(c =>
         if (c.storageAccount.nonEmpty && c.containerName.nonEmpty) ().validNel
         else ConfigError.CustomError("Azure requires storageAccount and container").invalidNel,

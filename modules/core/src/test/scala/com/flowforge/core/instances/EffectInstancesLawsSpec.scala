@@ -110,6 +110,6 @@ class EffectInstancesLawsSpec extends AsyncFunSpec with AsyncIOSpec with Matcher
     }
   }
 
-  // ZIO tests would go here if ZIO test dependencies were available
-  // For now, focusing on Cats-Effect which is more commonly used
+  // ZioEffectInstancesLawsSpec covers the ZIO instance, and EffectSystemLawsSpec holds both instances to
+  // one shared list of laws.
 }

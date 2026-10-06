@@ -37,18 +37,18 @@ class PipelineBuilderSpec extends AnyFunSuite with Matchers {
     }
     val lineage = OpenLineageEmitter.noop[IO]
 
-    val built = PipelineBuilder[BuilderState.Empty, IO, Unit, Unit]("pb-spec")
+    val built = PipelineBuilder[IO]("pb-spec")
       .withDescription("desc")
       .withLineageEmitter(lineage)
       .withTracer(tracer)
       .addTypedSource[PipelineOut, UserContract, SchemaPolicy.Exact](source, reader)
       .noTransform
       .addTypedSink[UserContract, SchemaPolicy.Exact](sink, writer)
-      .build
+      .build()
 
     // Execute and verify metadata
     import cats.effect.unsafe.implicits.global
-    built.execute(()).unsafeRunSync() shouldBe (())
+    built.execute(()).unsafeRunSync()
 
     val md = built.metadata
     md.name shouldBe "pb-spec"
@@ -60,11 +60,11 @@ class PipelineBuilderSpec extends AnyFunSuite with Matchers {
 
   test("identity transform via noTransform preserves shape and completes builder state", How) {
     import cats.effect.unsafe.implicits.global
-    val b = PipelineBuilder[BuilderState.Empty, IO, Unit, Unit]("pb-identity")
+    val b = PipelineBuilder[IO]("pb-identity")
       .addTypedSource[PipelineOut, UserContract, SchemaPolicy.Exact](source, reader)
       .noTransform
       .addTypedSink[UserContract, SchemaPolicy.Exact](sink, writer)
-      .build
-    b.execute(()).unsafeRunSync() shouldBe (())
+      .build()
+    b.execute(()).unsafeRunSync()
   }
 }

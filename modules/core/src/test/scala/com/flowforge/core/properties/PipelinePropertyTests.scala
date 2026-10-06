@@ -7,7 +7,9 @@
  */
 package com.flowforge.core.properties
 
+import cats.effect.IO
 import cats.effect.testing.scalatest.AsyncIOSpec
+import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.instances.EffectInstances._
 import org.scalacheck.Gen
 import org.scalatest.funsuite.AsyncFunSuite
@@ -17,7 +19,7 @@ import scala.concurrent.duration.DurationInt
 
 class PipelinePropertyTests extends AsyncFunSuite with AsyncIOSpec with ScalaCheckPropertyChecks {
 
-  implicit val es = catsEffectSystemInstance
+  implicit val es: EffectSystem[IO] = catsEffectSystemInstance
 
   // Custom generators for testing edge cases
   val nonEmptyIntListGen: Gen[List[Int]] = Gen.nonEmptyListOf(Gen.chooseNum(-1000, 1000))

@@ -10,8 +10,11 @@ import com.flowforge.core.types._
 import java.time.Instant
 
 /**
- * Minimal Flink-backed DataAlgebra implementation. Delegates to InMemoryDataAlgebra while exposing engine
- * capabilities so that pipelines behave consistently across Spark and Flink.
+ * `DataAlgebra` for the Flink module. It runs no Flink: every method forwards to `InMemoryDataAlgebra`, so
+ * the work happens on the driver heap and nothing is submitted to a Flink cluster.
+ *
+ * It exists so a pipeline written against the algebra can be named for Flink and run, which is a placeholder
+ * for an implementation rather than one. See `docs/plan/v1.0-readiness.md` for where that stands.
  */
 final class FlinkDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataAlgebra[F] {
 

@@ -42,7 +42,7 @@ This guide helps Spark developers migrate existing applications to FlowForge whi
 | Basic DataFrame operations | **Low** | Compile-time schema validation |
 | Complex SQL transformations | **Medium** | Type-safe transformations |
 | Custom UDFs/UDAFs | **High** | Functional composition |
-| Streaming applications | **Medium** | Engine-agnostic streaming |
+| Streaming applications | **Not supported** | None, streaming is not implemented |
 | Delta Lake operations | **Low** | Enhanced CDC operations |
 
 ## Quick Start: Your First Migration
@@ -545,83 +545,12 @@ val result = algebra.map(step2)(transform2)
 
 ## Streaming Applications
 
-### Spark Structured Streaming to FlowForge
+Streaming is not implemented. `DataAlgebra.stream` exists, and on Spark it performs one batch read and hands
+the result back as a stream of a single chunk. No engine in this repository calls `readStream` or
+`writeStream`, there is no checkpointing, trigger or watermark, and Kafka is not a source `read` accepts.
 
-**Before: Spark Streaming**
-```scala
-val kafkaStream = spark.readStream
-  .format("kafka")
-  .option("kafka.bootstrap.servers", "localhost:9092")
-  .option("subscribe", "events")
-  .load()
-
-val parsed = kafkaStream
-  .select(from_json(col("value").cast("string"), eventSchema).as("data"))
-  .select("data.*")
-
-val query = parsed.writeStream
-  .format("delta")
-  .option("checkpointLocation", "/tmp/checkpoint")
-  .start("s3://lake/events/")
-```
-
-**After: FlowForge Streaming**
-```scala
-case class Event(id: String, timestamp: Long, data: String)
-
-for {
-  stream <- algebra.stream[Event](
-    DataSource.KafkaSource("localhost:9092", "events", DataFormat.JSON)
-  )
-  
-  chunks <- stream.chunks
-  
-  _ <- chunks.traverse { chunk =>
-    algebra.write(
-      chunk,
-      DataSink.S3Sink("lake", "events/", DataFormat.Delta),
-      DataAlgebra.WriteOptions.default.copy(mode = SaveMode.Append)
-    )
-  }
-} yield ()
-```
-
-### Real-time CDC with FlowForge
-
-```scala
-// Streaming CDC pipeline
-def processCDCStream[F[_]: EffectSystem](algebra: DataAlgebra[F]): F[Unit] = {
-  val cdcConfig = CDCOperations.CDCConfig(
-    keyColumns = NonEmptyList.one(FieldName.unsafeFrom("id")),
-    timestampColumn = Some(FieldName.unsafeFrom("updated_at")),
-    scd2 = Some(CDCOperations.SCD2Config(
-      effectiveFrom = FieldName.unsafeFrom("effective_from"),
-      effectiveTo = FieldName.unsafeFrom("effective_to"),
-      isCurrent = FieldName.unsafeFrom("is_current")
-    ))
-  )
-  
-  for {
-    stream <- algebra.stream[Customer](
-      DataSource.KafkaSource("localhost:9092", "customer-changes", DataFormat.JSON)
-    )
-    
-    _ <- stream.chunks.flatMap { chunks =>
-      chunks.traverse { batch =>
-        for {
-          target <- algebra.read[Customer](
-            DataSource.S3Source("lake", "customers/", DataFormat.Delta)
-          )
-          result <- algebra.performDelta(batch, target, cdcConfig)
-          _ <- EffectSystem[F].delay(
-            println(s"Processed batch: ${result.inserted} inserted, ${result.updated} updated")
-          )
-        } yield result
-      }
-    }
-  } yield ()
-}
-```
+So there is no migration path from Spark Structured Streaming today. Keep a streaming job on Spark native. The
+same contract types can still be used for the batch parts of a mixed workload.
 
 ## Troubleshooting
 

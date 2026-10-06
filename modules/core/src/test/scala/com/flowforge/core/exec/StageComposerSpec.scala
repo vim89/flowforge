@@ -88,7 +88,7 @@ class StageComposerSpec extends AnyFunSuite with Matchers {
     lineage: Option[OpenLineageEmitter[IO]] = None,
     tracerFirst: Boolean = true,
   ) = {
-    val empty       = PipelineBuilder[BuilderState.Empty, IO, Unit, Unit](name)
+    val empty       = PipelineBuilder[IO](name)
     val head        = if (tracerFirst) tracer.fold(empty)(empty.withTracer) else empty
     val withLineage = lineage.fold(head)(head.withLineageEmitter)
     val sourced = withLineage
@@ -171,7 +171,7 @@ class StageComposerSpec extends AnyFunSuite with Matchers {
   test("a stage failure emits FAIL and re-raises the original error", How) {
     val emitter = new RecordingEmitter
     val boom    = new RuntimeException("source exploded")
-    val failing = PipelineBuilder[BuilderState.Empty, IO, Unit, Unit]("lineage-fail")
+    val failing = PipelineBuilder[IO]("lineage-fail")
       .withLineageEmitter(emitter)
       .addTypedSource[UserContract, UserContract, SchemaPolicy.Exact](
         source,
@@ -191,7 +191,7 @@ class StageComposerSpec extends AnyFunSuite with Matchers {
 
   test("an emitter that fails does not fail the pipeline it describes", How) {
     val emitter = new RecordingEmitter(failEveryEmit = true)
-    pipelineWith("emitter-down", lineage = Some(emitter)).execute(()).unsafeRunSync() shouldBe (())
+    pipelineWith("emitter-down", lineage = Some(emitter)).execute(()).unsafeRunSync()
 
     emitter.events.toList should not be empty
   }
@@ -219,7 +219,7 @@ class StageComposerSpec extends AnyFunSuite with Matchers {
         IO.raiseError(new RuntimeException("emitter threw"))
     }
 
-    pipelineWith("emitter-throws", lineage = Some(throwing)).execute(()).unsafeRunSync() shouldBe (())
+    pipelineWith("emitter-throws", lineage = Some(throwing)).execute(()).unsafeRunSync()
   }
 
   test("an emitter that throws before returning its effect does not fail the pipeline", How) {
@@ -249,12 +249,12 @@ class StageComposerSpec extends AnyFunSuite with Matchers {
     }
     // scalafix:on DisableSyntax.throw
 
-    pipelineWith("emitter-throws-early", lineage = Some(throwing)).execute(()).unsafeRunSync() shouldBe (())
+    pipelineWith("emitter-throws-early", lineage = Some(throwing)).execute(()).unsafeRunSync()
   }
 
   test("stages run in order and produce the sink result", How) {
     val seen = ListBuffer.empty[String]
-    val built = PipelineBuilder[BuilderState.Empty, IO, Unit, Unit]("ordering")
+    val built = PipelineBuilder[IO]("ordering")
       .addTypedSource[UserContract, UserContract, SchemaPolicy.Exact](
         source,
         (_: DataSource) => IO(seen += "read") *> IO.pure(UserContract(7L, "Bob")),

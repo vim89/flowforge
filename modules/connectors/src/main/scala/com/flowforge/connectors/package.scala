@@ -106,9 +106,6 @@ package object connectors {
 
     def metadataError(path: String, message: String): ConnectorError =
       ConnectorError(s"Metadata error for path $path: $message", code = "METADATA_ERROR")
-
-    def NotImplemented(operation: String): ConnectorError =
-      ConnectorError(s"Operation not implemented: $operation", code = "NOT_IMPLEMENTED")
   }
 
   // Metadata types for connector operations
