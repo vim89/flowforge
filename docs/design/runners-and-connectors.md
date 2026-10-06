@@ -85,6 +85,8 @@ DON’T
 
 ## Advanced: streaming
 
+Not implemented yet. `DataAlgebra.stream` performs one batch read and returns it as a single chunk. The shape a real implementation would take:
+
 - Spark Structured Streaming + Kafka: use Spark SS readStream/writeStream in the Spark runner; keep `DataAlgebra[F]` the interface.
 - Flink + Kafka: use DataStream API in Flink runner; same `DataAlgebra[F]` surface.
 

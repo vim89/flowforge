@@ -4,10 +4,9 @@ import com.flowforge.core.algebra.EffectSystem
 
 object EffectsDemo {
 
-  /**
-    * Demonstrate FlowForge's polymorphic EffectSystem:
-    * - parallel computation via parTraverse
-    * - resource safety via bracket
+  /** Demonstrate FlowForge's polymorphic EffectSystem:
+    *   - parallel computation via parTraverse
+    *   - resource safety via bracket
     */
   def demo[F[_]](implicit F: EffectSystem[F]): F[(Int, Boolean)] = {
     val closed = new java.util.concurrent.atomic.AtomicBoolean(false)

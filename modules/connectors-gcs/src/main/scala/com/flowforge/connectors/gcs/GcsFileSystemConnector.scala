@@ -1,6 +1,4 @@
 package com.flowforge.connectors.gcs
-
-import cats.implicits._
 import com.flowforge.connectors._
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.types._
@@ -57,9 +55,11 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
         case Right(GsUri(bucket, key)) =>
           F.handleError {
             F.blocking {
-              val blob = storage.get(bucket, key)
-              if (blob == null) FileSystemResult.failure(FileSystemError.fileNotFound(g.path))
-              else FileSystemResult.success(blob.getContent())
+              // The GCS client returns null for a blob that is not there, so Option is the lookup here.
+              Option(storage.get(bucket, key)) match {
+                case None       => FileSystemResult.failure(FileSystemError.fileNotFound(g.path))
+                case Some(blob) => FileSystemResult.success(blob.getContent())
+              }
             }
           }(t => FileSystemResult.failure(FileSystemError.readError(g.path, t.getMessage)))
       }
@@ -123,7 +123,7 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
   def exists(path: String): F[Boolean] =
     parseGsUri(path) match {
       case Left(_)              => F.pure(false)
-      case Right(GsUri(b, key)) => F.blocking(storage.get(b, key) != null)
+      case Right(GsUri(b, key)) => F.blocking(Option(storage.get(b, key)).isDefined)
     }
 
   def createDirectory(path: String): F[FileSystemResult[Unit]] =
@@ -170,35 +170,37 @@ class GcsFileSystemConnector[F[_]: EffectSystem](
       case Right(GsUri(b, key)) =>
         F.handleError {
           F.blocking {
-            val blob = storage.get(b, key)
-            if (blob == null) FileSystemResult.failure(FileSystemError.fileNotFound(path))
-            else {
-              val size       = Option(blob.getSize).map(_.longValue()).getOrElse(0L)
-              val updateTime = Option(blob.getUpdateTime).map(_.longValue()).getOrElse(0L)
-              FileSystemResult.success(
-                FileMetadata(
-                  name = blob.getName,
-                  path = s"gs://$b/${blob.getName}",
-                  size = size,
-                  lastModified = java.time.Instant.ofEpochMilli(updateTime),
-                  format = DataFormat.JSON,
-                ),
-              )
+            Option(storage.get(b, key)) match {
+              case None => FileSystemResult.failure(FileSystemError.fileNotFound(path))
+              case Some(blob) =>
+                val size       = Option(blob.getSize).map(_.longValue()).getOrElse(0L)
+                val updateTime = Option(blob.getUpdateTime).map(_.longValue()).getOrElse(0L)
+                FileSystemResult.success(
+                  FileMetadata(
+                    name = blob.getName,
+                    path = s"gs://$b/${blob.getName}",
+                    size = size,
+                    lastModified = java.time.Instant.ofEpochMilli(updateTime),
+                    format = DataFormat.JSON,
+                  ),
+                )
             }
           }
         }(t => FileSystemResult.failure(FileSystemError.metadataError(path, t.getMessage)))
     }
 
+  // A failure is raised in F rather than thrown out of the map: these two return the payload itself, so
+  // there is no room in the type for an error value.
   def streamRead(source: DataSource): F[List[Array[Byte]]] =
-    read(source).map {
-      case FileSystemResult.Success(bytes) => bytes.grouped(8192).toList
-      case FileSystemResult.Failure(err)   => throw new RuntimeException(err.message)
+    F.flatMap(read(source)) {
+      case FileSystemResult.Success(bytes) => F.pure(bytes.grouped(8192).toList)
+      case FileSystemResult.Failure(err)   => F.raiseError[List[Array[Byte]]](ConnectorFailure(err))
     }
 
   def streamWrite(sink: DataSink, data: List[Array[Byte]]): F[WriteMetadata] =
-    write(sink, data.flatten.toArray).map {
-      case FileSystemResult.Success(meta) => meta
-      case FileSystemResult.Failure(err)  => throw new RuntimeException(err.message)
+    F.flatMap(write(sink, data.flatten.toArray)) {
+      case FileSystemResult.Success(meta) => F.pure(meta)
+      case FileSystemResult.Failure(err)  => F.raiseError[WriteMetadata](ConnectorFailure(err))
     }
 }
 

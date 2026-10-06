@@ -73,12 +73,19 @@ object DeequAdapter {
     df: org.apache.spark.sql.DataFrame,
     constraints: List[FFConstraint],
     originalDataset: DataAlgebra.Dataset[A],
-  ): DataAlgebra.QualityResult[DataAlgebra.Dataset[A]] = {
-
+  ): DataAlgebra.QualityResult[DataAlgebra.Dataset[A]] =
     if (constraints.isEmpty) {
-      return DataAlgebra.QualityResult(originalDataset, passed = true, violations = Nil, score = 1.0)
+      DataAlgebra.QualityResult(originalDataset, passed = true, violations = Nil, score = 1.0)
+    } else {
+      verifyWithDeequ(df, constraints, originalDataset)
     }
 
+  /** The reflection path, reached only once there is at least one constraint to check. */
+  private def verifyWithDeequ[A](
+    df: org.apache.spark.sql.DataFrame,
+    constraints: List[FFConstraint],
+    originalDataset: DataAlgebra.Dataset[A],
+  ): DataAlgebra.QualityResult[DataAlgebra.Dataset[A]] = {
     // Use reflection to call Deequ VerificationSuite
     val deequResult: Either[Throwable, DataAlgebra.QualityResult[DataAlgebra.Dataset[A]]] =
       Either.catchNonFatal {
@@ -122,13 +129,17 @@ object DeequAdapter {
     checkLevelClass: Class[_],
   ): Any = {
     // Create Check(CheckLevel.Error, "FlowForge Constraints")
-    val errorLevel       = checkLevelClass.getField("Error").get(null)
+    // `Field.get` takes the instance to read from, and a static field has none. null is the value the JDK
+    // reflection API defines for that case, so there is nothing to replace it with here.
+    // scalafix:off DisableSyntax.null
+    val errorLevel = checkLevelClass.getField("Error").get(null)
+    // scalafix:on DisableSyntax.null
     val checkConstructor = checkClass.getConstructor(checkLevelClass, classOf[String])
-    var check            = checkConstructor.newInstance(errorLevel, "FlowForge Constraints")
+    val initialCheck     = checkConstructor.newInstance(errorLevel, "FlowForge Constraints")
 
-    // Apply constraints using reflection
-    constraints.foreach { constraint =>
-      check = constraint match {
+    // Apply constraints using reflection. Each one returns a new Check, so this folds rather than mutates.
+    constraints.foldLeft[Any](initialCheck) { (check, constraint) =>
+      constraint match {
         case FFConstraint.NotNull(field, _) =>
           val method = checkClass.getMethod("isComplete", classOf[String])
           method.invoke(check, field.value)
@@ -176,7 +187,6 @@ object DeequAdapter {
         case _ => check
       }
     }
-    check
   }
 
   private def processDeequResultReflection[A](
@@ -188,11 +198,19 @@ object DeequAdapter {
     val checkResultsField = resultClass.getMethod("checkResults")
     val checkResults      = checkResultsField.invoke(result).asInstanceOf[Seq[Any]]
 
-    if (checkResults.isEmpty) {
-      return DataAlgebra.QualityResult(originalDataset, passed = true, violations = Nil, score = 1.0)
+    checkResults.headOption match {
+      case None =>
+        DataAlgebra.QualityResult(originalDataset, passed = true, violations = Nil, score = 1.0)
+      case Some(firstCheckResult) =>
+        summarize(firstCheckResult, originalDataset)
     }
+  }
 
-    val firstCheckResult        = checkResults.head
+  /** Turns one Deequ check result into a QualityResult. */
+  private def summarize[A](
+    firstCheckResult: Any,
+    originalDataset: DataAlgebra.Dataset[A],
+  ): DataAlgebra.QualityResult[DataAlgebra.Dataset[A]] = {
     val constraintResultsMethod = firstCheckResult.getClass.getMethod("constraintResults")
     val constraintResults       = constraintResultsMethod.invoke(firstCheckResult).asInstanceOf[Map[Any, Any]]
 

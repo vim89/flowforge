@@ -6,4 +6,3 @@ object Hello {
     println(msg)
   }
 }
-

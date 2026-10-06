@@ -134,12 +134,12 @@ object RunnerWiringExample {
             val line  = new String(ed.data, "UTF-8")
             val parts = line.split(",", -1)
             if (parts.length >= 3) {
-              scala.util.Try {
-                val id    = parts(0).trim.toLong
-                val email = parts(1).trim
-                val age   = parts(2).trim.toInt
-                User(id, email, age)
-              }.toEither.left.map(e => FFCorruptedData(s"CSV parse error: ${e.getMessage}"))
+              for {
+                id <- parts(0).trim.toLongOption
+                  .toRight(FFCorruptedData(s"CSV parse error: id is not a number: ${parts(0)}"))
+                age <- parts(2).trim.toIntOption
+                  .toRight(FFCorruptedData(s"CSV parse error: age is not a number: ${parts(2)}"))
+              } yield User(id, parts(1).trim, age)
             } else Left(FFCorruptedData(s"CSV requires 3 columns (id,email,age), got: ${parts.toList}"))
 
           case other =>
