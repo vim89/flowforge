@@ -655,25 +655,4 @@ class ConfigTypesSpec extends AnyFunSuite with Matchers {
     ConfigUtils.validateConfiguration(invalidConfig).isInvalid shouldBe true
   }
 
-  // ===============================
-  // PIPELINE CONFIG FROM MAP TESTS
-  // ===============================
-
-  test("PipelineConfig.fromMap should parse basic configuration") {
-    val configMap = Map(
-      "pipeline.name"        -> "test-pipeline",
-      "pipeline.environment" -> "production",
-    )
-
-    val result = PipelineConfig.fromMap(configMap)
-    // Note: Source/Sink parsing is not implemented, so this will fail
-    result.isInvalid shouldBe true
-  }
-
-  test("PipelineConfig.fromMap should handle missing required fields") {
-    val configMap = Map("pipeline.name" -> "test-pipeline")
-
-    val result = PipelineConfig.fromMap(configMap)
-    result.isInvalid shouldBe true
-  }
 }

@@ -658,44 +658,6 @@ object PipelineConfig {
 
   def builder: PipelineConfigBuilder = PipelineConfigBuilder()
 
-  /**
-   * Parse configuration from a key-value map. This enables loading from environment variables, properties
-   * files, etc.
-   */
-  def fromMap(configMap: Map[String, String]): ValidatedNel[ConfigError, PipelineConfig] = {
-
-    def getString(key: String): ValidatedNel[ConfigError, String] =
-      configMap.get(key).toValidNel(ConfigError.MissingRequired(key))
-
-    // Parse all configuration components
-    val nameValidation = getString("pipeline.name")
-      .map(name => Refined.unsafeApply(name): NonEmptyString)
-
-    val environmentValidation = getString("pipeline.environment")
-      .andThen(Environment.fromString)
-
-    // This is a simplified version - in practice you'd parse source/sink configs too
-    val sourceValidation =
-      ConfigError.CustomError("Source parsing not implemented in fromMap").invalidNel[DataSource]
-    val sinkValidation =
-      ConfigError.CustomError("Sink parsing not implemented in fromMap").invalidNel[DataSink]
-
-    (nameValidation, environmentValidation, sourceValidation, sinkValidation).mapN {
-      (
-        name,
-        env,
-        source,
-        sink,
-      ) =>
-        PipelineConfig(
-          name = name,
-          environment = env,
-          source = source,
-          sink = sink,
-        )
-    }
-  }
-
   implicit val showPipelineConfig: Show[PipelineConfig] = Show.show { config =>
     s"""PipelineConfig(
        |  name: ${config.name.value}
