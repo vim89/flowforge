@@ -54,10 +54,10 @@ Your pipeline `pipelineWithTypedStages` doesn’t change.
 
 | Connector | Read (DataSource) | Write (DataSink) | Notes |
 |----------|--------------------|------------------|-------|
-| S3       | `DataSource.s3`    | `DataSink.s3`    | Spark, Flink, batch or streaming configs |
+| S3       | `DataSource.s3`    | `DataSink.s3`    | Cloud auth & path style |
 | GCS      | `DataSource.gcs`   | `DataSink.gcs`   | Cloud auth & path style |
 | JDBC     | `DataSource.jdbc`  | `DataSink.jdbc`  | Use for small side tables or sinks |
-| Kafka    | engine‑specific    | engine‑specific  | Use Spark SS/Flink streaming; examples include a JSONL facade |
+| Kafka    | not implemented    | not implemented  | Examples use a JSONL facade, not a broker |
 
 Kafka: In examples we ship a minimal JSONL facade (`KafkaFacade`) to simulate topics without heavy deps. Real Kafka wiring belongs to engines/connectors with the same engine‑swap pattern.
 
@@ -83,10 +83,11 @@ DON’T
 - Entangle pipeline composition with SparkSession/StreamExecutionEnvironment creation.
 - Leak engine config into typed contracts.
 
-## Advanced: streaming
+## Streaming is not implemented
 
-- Spark Structured Streaming + Kafka: use Spark SS readStream/writeStream in the Spark runner; keep `DataAlgebra[F]` the interface.
-- Flink + Kafka: use DataStream API in Flink runner; same `DataAlgebra[F]` surface.
+No engine in this repository reads or writes a stream. `DataAlgebra.stream` exists, and on Spark it does one
+batch read and returns the result as a single chunk. Nothing calls `readStream` or `writeStream`, and Kafka is
+not a source `read` accepts.
 
-The same swap‑by‑trait principle applies.
-
+Streaming would be added behind the same `DataAlgebra[F]` surface, so pipeline code would not change. That is
+a direction, not something this version does.

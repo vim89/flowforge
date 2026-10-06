@@ -32,7 +32,9 @@ import java.nio.file.{ Files, Path }
  */
 object SparkLocalBatchSpec {
 
-  /** Spark derives a product encoder from the type, so it has to be nameable from outside the test instance. */
+  /**
+   * Spark derives a product encoder from the type, so it has to be nameable from outside the test instance.
+   */
   final case class Person(id: Int, name: String)
 
   implicit val personEncoder: DataEncoder[Person] = new DataEncoder[Person] {
@@ -43,8 +45,8 @@ object SparkLocalBatchSpec {
     }
     def schema(format: DataFormat): DataSchema =
       DataSchema.builder.addField("id", DataType.Integer).addField("name", DataType.String).build
-    def estimateSize(p: Person, format: DataFormat): Long               = json(p).length.toLong
-    def supportsFormat(format: DataFormat): Boolean                     = format == DataFormat.CSV || format == DataFormat.JSON
+    def estimateSize(p: Person, format: DataFormat): Long = json(p).length.toLong
+    def supportsFormat(format: DataFormat): Boolean = format == DataFormat.CSV || format == DataFormat.JSON
     def optimizationHints(p: Person, format: DataFormat): EncodingHints = EncodingHints.default
 
     private def json(p: Person): String = s"""{"id":${p.id},"name":"${p.name}"}"""
@@ -75,9 +77,14 @@ object SparkLocalBatchSpec {
       }
     }
     def validateSchema(encoded: EncodedData, expected: DataSchema) = Right(())
-    def decodeWithEvolution(encoded: EncodedData, format: DataFormat, target: DataSchema) =
+    def decodeWithEvolution(
+      encoded: EncodedData,
+      format: DataFormat,
+      target: DataSchema,
+    ) =
       decode(encoded, format)
-    override def supportsFormat(format: DataFormat): Boolean = format == DataFormat.CSV || format == DataFormat.JSON
+    override def supportsFormat(format: DataFormat): Boolean =
+      format == DataFormat.CSV || format == DataFormat.JSON
   }
 }
 
@@ -133,7 +140,8 @@ class SparkLocalBatchSpec extends AnyFunSuite with Matchers with BeforeAndAfterA
     written.recordsWritten shouldBe 3L
 
     // Read the sink back with Spark rather than through the algebra: the point is what landed on disk.
-    val readBack = spark.read.parquet(out).orderBy("id").collect().toList
+    val readBack = spark.read
+      .parquet(out).orderBy("id").collect().toList
       .map(r => Person(r.getAs[Int]("id"), r.getAs[String]("name")))
     readBack shouldBe rows
   }

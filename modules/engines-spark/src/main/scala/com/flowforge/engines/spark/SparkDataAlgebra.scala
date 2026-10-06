@@ -197,6 +197,12 @@ object SparkDataAlgebra {
       ): F[ValidatedNel[FlowForgeError, DataAlgebra.Dataset[A]]] =
         read[A](source).map(dataset => dataset.validNel[FlowForgeError])
 
+      /**
+       * One batch read, handed back as a stream of a single chunk. This is not Spark Structured Streaming:
+       * nothing here calls `readStream`, there is no checkpoint, no trigger and no watermark, and a source
+       * that only makes sense as a stream (Kafka) is not among the sources `read` accepts. A caller that
+       * needs streaming semantics does not get them from this method.
+       */
       override def stream[A: DataDecoder](source: DataSource): F[DataAlgebra.DataStream[F, A]] =
         F.pure(new DataAlgebra.DataStream[F, A] {
           def chunks: F[List[DataAlgebra.Dataset[A]]] =

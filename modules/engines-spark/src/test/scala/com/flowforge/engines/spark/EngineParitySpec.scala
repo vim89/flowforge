@@ -28,7 +28,7 @@ import java.nio.file.Files
  */
 class EngineParitySpec extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
-  import SparkLocalBatchSpec.{ personDecoder, personEncoder, Person }
+  import SparkLocalBatchSpec.{ personDecoder, Person }
 
   implicit private val F: EffectSystem[IO] = EffectInstances.catsEffectSystemInstance
 
@@ -68,7 +68,9 @@ class EngineParitySpec extends AnyFunSuite with Matchers with BeforeAndAfterAll 
 
   private val idIsNegative: QualityCheck[Person] = p =>
     if (p.id < 0) ().validNel
-    else ValidationError.SchemaViolation("id", "negative", p.id.toString, message = "id is not negative").invalidNel
+    else
+      ValidationError
+        .SchemaViolation("id", "negative", p.id.toString, message = "id is not negative").invalidNel
 
   test("both engines read the same records and the same count from one csv") {
     val source = fixture
@@ -85,8 +87,10 @@ class EngineParitySpec extends AnyFunSuite with Matchers with BeforeAndAfterAll 
     val source = fixture
     val checks = NonEmptyList.of(nameNotBlank, idIsNegative)
 
-    val sparkResults  = sparkAlgebra.runQualityChecks(sparkAlgebra.read[Person](source).unsafeRunSync(), checks).unsafeRunSync()
-    val memoryResults = memoryAlgebra.runQualityChecks(memoryAlgebra.read[Person](source).unsafeRunSync(), checks).unsafeRunSync()
+    val sparkResults =
+      sparkAlgebra.runQualityChecks(sparkAlgebra.read[Person](source).unsafeRunSync(), checks).unsafeRunSync()
+    val memoryResults = memoryAlgebra
+      .runQualityChecks(memoryAlgebra.read[Person](source).unsafeRunSync(), checks).unsafeRunSync()
 
     // The second check fails on every record. An engine that reports it as passing is not running the check.
     sparkResults.map(r => r.checkName -> r.passed) shouldBe List("check_0" -> true, "check_1" -> false)
