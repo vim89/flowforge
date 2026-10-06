@@ -8,9 +8,9 @@ import scala.concurrent.duration._
  * The laws an `EffectSystem[F]` instance must satisfy, written once for every instance.
  *
  * Each law is a description of a check, not a run of it: a law is an `F[Boolean]` that a caller runs with
- * whatever runtime its `F` needs. That is what lets the Cats Effect and the ZIO adapter be held to one
- * list instead of two hand-written ones, which is the only way a reader can tell that the two adapters
- * agree. Per-adapter suites say what each adapter does; this list says what both of them owe.
+ * whatever runtime its `F` needs. That is what lets the Cats Effect and the ZIO adapter be held to one list
+ * instead of two hand-written ones, which is the only way a reader can tell that the two adapters agree.
+ * Per-adapter suites say what each adapter does; this list says what both of them owe.
  *
  * The laws deliberately avoid asserting on elapsed time. A law that passes only on an unloaded machine
  * reports the machine rather than the adapter.
@@ -35,8 +35,8 @@ object EffectSystemLaws {
   /**
    * Wait until a flag is set, polling.
    *
-   * Polling rather than a promise because `EffectSystem` has no promise, and polling is enough: the point
-   * of the wait is that it can only finish if something else is running, which is the property under test.
+   * Polling rather than a promise because `EffectSystem` has no promise, and polling is enough: the point of
+   * the wait is that it can only finish if something else is running, which is the property under test.
    */
   private def awaitFlag[F[_]](flag: AtomicBoolean)(implicit F: EffectSystem[F]): F[Unit] =
     F.void(F.repeatUntil(F.flatMap(F.sleep(5.millis))(_ => F.delay(flag.get())))(identity))
@@ -82,11 +82,13 @@ object EffectSystemLaws {
         "handleErrorWith leaves a success alone",
         F.map(F.handleErrorWith(F.pure(1))(_ => F.pure(2)))(_ == 1),
       ),
-      Law("attempt reports a raised error as Left", F.map(F.attempt(F.raiseError[Int](boom)))(_ == Left(boom))),
+      Law(
+        "attempt reports a raised error as Left",
+        F.map(F.attempt(F.raiseError[Int](boom)))(_ == Left(boom)),
+      ),
       Law("attempt reports a success as Right", F.map(F.attempt(F.pure(1)))(_ == Right(1))),
       Law(
-        "a raised error skips the rest of the chain",
-        {
+        "a raised error skips the rest of the chain", {
           val reached = new AtomicInteger(0)
           val chain   = F.flatMap(F.raiseError[Int](boom))(_ => F.delay(reached.incrementAndGet()))
           F.map(F.attempt(chain))(result => result == Left(boom) && reached.get() == 0)
@@ -99,8 +101,7 @@ object EffectSystemLaws {
       Law("fromEither of a Left raises it", F.map(F.attempt(F.fromEither[Int](Left(boom))))(_ == Left(boom))),
       Law("fromEither of a Right succeeds", F.map(F.fromEither[Int](Right(1)))(_ == 1)),
       Law(
-        "retryWithBackoff runs the effect again until it succeeds",
-        {
+        "retryWithBackoff runs the effect again until it succeeds", {
           val attempts = new AtomicInteger(0)
           val flaky = F.flatMap(F.delay(attempts.incrementAndGet())) { attempt =>
             if (attempt < 3) F.raiseError[Int](boom) else F.pure(attempt)
@@ -113,8 +114,7 @@ object EffectSystemLaws {
   private def suspension[F[_]](implicit F: EffectSystem[F]): List[Law[F]] =
     List(
       Law(
-        "delay does not run its thunk until the effect is run, and runs it once per run",
-        {
+        "delay does not run its thunk until the effect is run, and runs it once per run", {
           val runs   = new AtomicInteger(0)
           val effect = F.delay(runs.incrementAndGet())
           // The read is itself an effect, so it has to happen inside the law rather than beside it.
@@ -126,8 +126,7 @@ object EffectSystemLaws {
         },
       ),
       Law(
-        "suspend does not build the effect until it is run",
-        {
+        "suspend does not build the effect until it is run", {
           val builds = new AtomicInteger(0)
           val effect = F.suspend {
             builds.incrementAndGet()
@@ -147,16 +146,14 @@ object EffectSystemLaws {
   private def resources[F[_]](implicit F: EffectSystem[F]): List[Law[F]] =
     List(
       Law(
-        "bracket releases the resource after use",
-        {
+        "bracket releases the resource after use", {
           val released = new AtomicBoolean(false)
-          val run = F.bracket(F.pure("resource"))(_ => F.pure(1))(_ => F.delay(released.set(true)))
+          val run      = F.bracket(F.pure("resource"))(_ => F.pure(1))(_ => F.delay(released.set(true)))
           F.map(run)(value => value == 1 && released.get())
         },
       ),
       Law(
-        "bracket releases the resource when use fails, and re-raises the original error",
-        {
+        "bracket releases the resource when use fails, and re-raises the original error", {
           val released = new AtomicBoolean(false)
           val run =
             F.bracket(F.pure("resource"))(_ => F.raiseError[Int](boom))(_ => F.delay(released.set(true)))
@@ -164,8 +161,7 @@ object EffectSystemLaws {
         },
       ),
       Law(
-        "bracketCase reports Completed when use succeeds",
-        {
+        "bracketCase reports Completed when use succeeds", {
           val seen = new AtomicInteger(0)
           val run = F.bracketCase(F.pure("resource"))(_ => F.pure(1)) {
             case (_, F.ExitCase.Completed) => F.void(F.delay(seen.incrementAndGet()))
@@ -175,19 +171,17 @@ object EffectSystemLaws {
         },
       ),
       Law(
-        "bracketCase reports the error when use fails",
-        {
+        "bracketCase reports the error when use fails", {
           val seen = new AtomicInteger(0)
           val run = F.bracketCase(F.pure("resource"))(_ => F.raiseError[Int](boom)) {
             case (_, F.ExitCase.Error(error)) if error == boom => F.void(F.delay(seen.incrementAndGet()))
-            case _                                            => F.pure(())
+            case _                                             => F.pure(())
           }
           F.map(F.attempt(run))(result => result == Left(boom) && seen.get() == 1)
         },
       ),
       Law(
-        "guarantee runs the finalizer whether the effect succeeds or fails",
-        {
+        "guarantee runs the finalizer whether the effect succeeds or fails", {
           val finalized = new AtomicInteger(0)
           val finalizer = F.delay(finalized.incrementAndGet())
           F.flatMap(F.guarantee(F.pure(1))(F.void(finalizer))) { value =>
@@ -210,8 +204,7 @@ object EffectSystemLaws {
         F.map(F.parTraverse(List(1, 2, 3, 4, 5))(i => F.pure(i * 2)))(_ == List(2, 4, 6, 8, 10)),
       ),
       Law(
-        "parProduct runs both effects at the same time",
-        {
+        "parProduct runs both effects at the same time", {
           val leftStarted  = new AtomicBoolean(false)
           val rightStarted = new AtomicBoolean(false)
           val left  = F.flatMap(F.delay(leftStarted.set(true)))(_ => F.map(awaitFlag(rightStarted))(_ => 1))

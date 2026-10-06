@@ -12,8 +12,8 @@ import zio.{ Runtime, Task, Unsafe }
  * Runs [[EffectSystemLaws]] against every shipped `EffectSystem` instance.
  *
  * The laws are the same list for each instance, so an adapter cannot pass by being tested differently from
- * the other one. Adding an instance means adding an [[EffectSystemLawsSpec.Adapter]] here, which is the
- * whole cost of holding it to the laws.
+ * the other one. Adding an instance means adding an [[EffectSystemLawsSpec.Adapter]] here, which is the whole
+ * cost of holding it to the laws.
  *
  * Running an effect is the one thing a law cannot do for itself, since it needs a runtime, so each adapter
  * supplies that and nothing else.
@@ -45,8 +45,8 @@ object EffectSystemLawsSpec {
 
   private object CatsEffect extends Adapter("IO") {
     type Eff[A] = IO[A]
-    val effectSystem: EffectSystem[IO]   = EffectInstances.catsEffectSystemInstance
-    def run(law: IO[Boolean]): Boolean   = law.unsafeRunSync()
+    val effectSystem: EffectSystem[IO] = EffectInstances.catsEffectSystemInstance
+    def run(law: IO[Boolean]): Boolean = law.unsafeRunSync()
   }
 
   private object Zio extends Adapter("Task") {

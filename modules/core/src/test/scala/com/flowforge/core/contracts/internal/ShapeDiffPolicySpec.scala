@@ -8,24 +8,31 @@ import org.scalatest.matchers.should.Matchers
 /**
  * What each policy accepts and rejects, checked one policy at a time.
  *
- * The compile-fail suite already proves the macros reject what they should, but it can only ask the
- * compiler, so it cannot cover every policy against every kind of drift without a case class and a test
- * file per combination. [[ShapeDiff]] is the same comparison without a compiler in front of it, so the
- * matrix fits in one file and a policy's behaviour is stated rather than inferred from which files fail to
- * compile.
+ * The compile-fail suite already proves the macros reject what they should, but it can only ask the compiler,
+ * so it cannot cover every policy against every kind of drift without a case class and a test file per
+ * combination. [[ShapeDiff]] is the same comparison without a compiler in front of it, so the matrix fits in
+ * one file and a policy's behaviour is stated rather than inferred from which files fail to compile.
  *
- * The reference is the standalone compile-time-data-contracts work these policies came from. FlowForge
- * agrees with it on every policy except `Exact`, which is deliberate and is recorded in
+ * The reference is the standalone compile-time-data-contracts work these policies came from. FlowForge agrees
+ * with it on every policy except `Exact`, which is deliberate and is recorded in
  * [[ShapeDiffPolicySpec.exactIsCaseSensitive]] below.
  */
 class ShapeDiffPolicySpec extends AnyFunSpec with Matchers {
 
   import ShapeDiffPolicySpec._
 
-  private def drift(policy: SchemaPolicy, out: TypeShape, contract: TypeShape): ShapeDiff.Drift =
+  private def drift(
+    policy: SchemaPolicy,
+    out: TypeShape,
+    contract: TypeShape,
+  ): ShapeDiff.Drift =
     ShapeDiff.diff(ShapeDiff.Flags.forName(policy.toString), out, contract)
 
-  private def conforms(policy: SchemaPolicy, out: TypeShape, contract: TypeShape): Boolean =
+  private def conforms(
+    policy: SchemaPolicy,
+    out: TypeShape,
+    contract: TypeShape,
+  ): Boolean =
     drift(policy, out, contract).isEmpty
 
   describe("Exact") {
@@ -185,8 +192,8 @@ object ShapeDiffPolicySpec {
    * There, `Exact` matches field names case-insensitively. In FlowForge `Exact` is case-sensitive and the
    * case-insensitive comparison is its own policy, `ExactUnorderedCI`, so a producer renaming `userId` to
    * `userid` is drift unless the contract says that is acceptable. A column name's case is load-bearing in
-   * some of the stores FlowForge writes to, so accepting case drift by default would hide a real break;
-   * the case-insensitive behaviour is still available, it just has to be asked for by name.
+   * some of the stores FlowForge writes to, so accepting case drift by default would hide a real break; the
+   * case-insensitive behaviour is still available, it just has to be asked for by name.
    */
   val exactIsCaseSensitive =
     "rejects field names that differ only in case, unlike compile-time-data-contracts"
@@ -198,11 +205,11 @@ object ShapeDiffPolicySpec {
   private val name  = field("name", PrimitiveShape("String"))
   private val email = field("email", PrimitiveShape("String"))
 
-  private val user       = StructShape(List(id, name, email))
-  private val reordered  = StructShape(List(id, email, name))
-  private val withAge    = StructShape(List(id, name, email, field("age", PrimitiveShape("Int"))))
+  private val user         = StructShape(List(id, name, email))
+  private val reordered    = StructShape(List(id, email, name))
+  private val withAge      = StructShape(List(id, name, email, field("age", PrimitiveShape("Int"))))
   private val withoutEmail = StructShape(List(id, name))
-  private val idAsString = StructShape(List(field("id", PrimitiveShape("String")), name, email))
+  private val idAsString   = StructShape(List(field("id", PrimitiveShape("String")), name, email))
   private val differentCase =
     StructShape(List(field("Id", PrimitiveShape("Long")), field("NAME", PrimitiveShape("String")), email))
   private val renamed = StructShape(
