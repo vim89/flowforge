@@ -3,7 +3,7 @@ package com.flowforge.engines.flink
 import com.flowforge.core.algebra.{ DataDecoder, DataEncoder }
 import com.flowforge.core.types.DataFormat
 import org.apache.flink.api.common.RuntimeExecutionMode
-import org.apache.flink.api.common.functions.{ FilterFunction, FlatMapFunction }
+import org.apache.flink.api.common.functions.{ FilterFunction, FlatMapFunction, MapFunction }
 import org.apache.flink.api.common.typeinfo.Types
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.tuple.Tuple2
@@ -45,14 +45,16 @@ private[flink] object FlinkStreamOps {
   def readJsonLines(path: String): FlinkPlan = env => env.readTextFile(path)
 
   /**
-   * Read a CSV file as JSON rows, under the given column names.
+   * Read a CSV file as JSON rows, under the column names its header line gives.
    *
    * The header is a driver-side fact: it has to be known before the job is built, because it names the fields
    * every row will carry. The job itself still reads the whole file.
    */
   @nowarn("cat=deprecation")
-  def readCsv(path: String, header: List[String]): FlinkPlan =
+  def readCsv(path: String, headerLine: String): FlinkPlan = {
+    val header = FlinkRows.header(headerLine)
     env => env.readTextFile(path).flatMap(new CsvLineToJson(header), Types.STRING)
+  }
 
   /** Keep the rows whose decoded record satisfies the predicate. */
   def filter[A](plan: FlinkPlan, predicate: A => Boolean)(implicit decoder: DataDecoder[A]): FlinkPlan = {
@@ -109,12 +111,21 @@ private[flink] object FlinkStreamOps {
   /**
    * Run the plan and count its rows.
    *
-   * The rows are counted as they arrive and never held, so this is bounded whatever the dataset's size.
+   * The job counts; the driver reads one number. Counting on the driver instead would send every row through
+   * `executeAndCollect`, which carries each one to this process over the REST API, so a count of a large
+   * dataset would cost a transfer of the whole dataset. It would also be counted as an `Int` and so could
+   * overflow, which a `Long` sum inside the job cannot.
+   *
+   * Every row carries the same key, so the sum runs in one place. That is what a single total means, and a
+   * count is one record out however many went in.
    */
   def count(plan: FlinkPlan): Long = {
-    val rows = plan(batchEnv()).executeAndCollect()
-    try rows.asScala.length.toLong
-    finally rows.close()
+    val counted = plan(batchEnv())
+      .map(OnePerRow, pairType)
+      .keyBy(new FirstField, Types.STRING)
+      .sum(1)
+    // An empty plan reports no total rather than a total of zero, because there is no key to report under.
+    counted.executeAndCollect(1).asScala.toList.headOption.fold(0L)(_.f1.longValue())
   }
 
   /**
@@ -193,8 +204,15 @@ private[flink] final class ReEncode[A](
     FlinkRows.decode(json, decoder).foreach(a => FlinkRows.encode(a, encoder, format).foreach(out.collect))
 }
 
+/** Pairs every row with the one key a total is reported under, and a count of one to sum. */
+private[flink] object OnePerRow extends MapFunction[String, Tuple2[String, java.lang.Long]] {
+  override def map(row: String): Tuple2[String, java.lang.Long] =
+    Tuple2.of("", java.lang.Long.valueOf(1L))
+}
+
 /** Turns one CSV line into one JSON row. Emits nothing for the header line and for a blank line. */
-private[flink] final class CsvLineToJson(header: List[String]) extends FlatMapFunction[String, String] {
+private[flink] final class CsvLineToJson(header: FlinkRows.CsvHeader)
+    extends FlatMapFunction[String, String] {
   override def flatMap(line: String, out: Collector[String]): Unit =
     FlinkRows.csvLineToJson(header, line).foreach(out.collect)
 }

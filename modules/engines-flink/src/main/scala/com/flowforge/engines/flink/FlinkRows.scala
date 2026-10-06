@@ -32,20 +32,40 @@ private[flink] object FlinkRows {
     encoder.encode(value, format).toOption.map(ed => new String(ed.data, StandardCharsets.UTF_8))
 
   /**
+   * A CSV file's header: the line as the file holds it, and the column names read off it.
+   *
+   * Both are needed and neither is derivable from the other. The names are what a row's cells are named
+   * under, and they are trimmed, so rebuilding a line from them does not give back the line - a header
+   * written `id, name` rebuilds as `id,name`. The line is what [[csvLineToJson]] compares against to leave
+   * the header out of the records.
+   */
+  final case class CsvHeader(line: String, names: List[String])
+
+  /** Read the column names off a file's header line. */
+  def header(line: String): CsvHeader =
+    CsvHeader(line, line.trim.split(",", -1).toList.map(_.trim))
+
+  /**
    * Read one CSV line as a JSON object, under the column names the file's header line gave.
    *
    * `None` for a blank line and for the header line itself, because the source hands every line of the file
-   * to the same function and the header is not a record.
+   * to the same function and the header is not a record. The comparison is against the header line as the
+   * file holds it, so a header the reader had to trim is still recognised as the header.
+   *
+   * A record whose text is the header line is dropped with it. A line-oriented source reports no line number,
+   * so there is nothing to tell the two apart by; the alternative is reading the header as a record, which is
+   * worse for every file that has one.
    *
    * A line with fewer cells than the header leaves the remaining fields null. Extra cells are dropped: the
    * header is what names a column, so a cell with no name has nowhere to go.
    */
-  def csvLineToJson(header: List[String], line: String): Option[String] = {
+  def csvLineToJson(header: CsvHeader, line: String): Option[String] = {
     val trimmed = line.trim
-    if (trimmed.isEmpty || trimmed == header.mkString(",")) None
+    if (trimmed.isEmpty || trimmed == header.line.trim) None
     else {
-      val cells  = trimmed.split(",", -1).toList
-      val fields = header.zipAll(cells, "", "").collect { case (name, cell) if name.nonEmpty => name -> cell }
+      val cells = trimmed.split(",", -1).toList
+      val fields =
+        header.names.zipAll(cells, "", "").collect { case (name, cell) if name.nonEmpty => name -> cell }
       Some(Json.obj(fields.map { case (name, cell) => name -> cellToJson(cell) }: _*).noSpaces)
     }
   }

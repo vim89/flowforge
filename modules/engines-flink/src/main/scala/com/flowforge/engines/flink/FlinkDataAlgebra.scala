@@ -43,16 +43,12 @@ final class FlinkDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataAlge
    */
   private def planFor(local: LocalDataSource): Option[FlinkPlan] = local.format match {
     case DataFormat.CSV =>
-      val header = {
+      val headerLine = {
         val lines = scala.io.Source.fromFile(local.location, "UTF-8")
-        try
-          lines
-            .getLines().find(_.trim.nonEmpty).fold(List.empty[String])(
-              _.trim.split(",", -1).toList.map(_.trim),
-            )
+        try lines.getLines().find(_.trim.nonEmpty).getOrElse("")
         finally lines.close()
       }
-      Some(FlinkStreamOps.readCsv(local.location, header))
+      Some(FlinkStreamOps.readCsv(local.location, headerLine))
     case DataFormat.JSON | DataFormat.JSONL => Some(FlinkStreamOps.readJsonLines(local.location))
     case _                                  => None
   }
