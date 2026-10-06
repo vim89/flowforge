@@ -942,6 +942,5 @@ After completing the migration:
 
 For additional support during migration, refer to:
 - [FlowForge Documentation](../README.md)
-- [Interactive Tutorials](../tutorials/README.md)
-- [Community Discord/Slack](#) 
-- [GitHub Issues](https://github.com/flowforge/flowforge/issues)
+- [Tutorials](../tutorials/first-contract.mdoc)
+- [GitHub Issues](https://github.com/vim89/flowforge/issues)

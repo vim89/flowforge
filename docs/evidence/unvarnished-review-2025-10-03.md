@@ -35,7 +35,7 @@ Scope: full-tree scan of docs, modules, build, CI; deep reads of core compile-ti
 - Fix: added `docs/talks/WHY-HOW-WHAT-outline.md` (this review) with a story and boundary slides. Update decks accordingly.
 
 6) Documentation acceptance checks
-- Evidence: Good baselines in `docs/quality/release-criteria.md` and `docs/plan/v1.0-readiness.md` but acceptance criteria lack explicit “builder typestate compile-fail” and “Spark IT JDK lock”.
+- Evidence: Good baselines in `docs/plan/release-criteria.md` and `docs/plan/v1.0-readiness.md` but acceptance criteria lack explicit “builder typestate compile-fail” and “Spark IT JDK lock”.
 - Fix plan: extend both docs with explicit criteria and pointers to tests/jobs.
 
 ## v1.0 Readiness - Current Verdict

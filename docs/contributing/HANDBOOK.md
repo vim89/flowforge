@@ -24,7 +24,7 @@ This bridge indexes the canonical documents while preserving legacy anchors requ
 - See: docs/effects/bring-your-own-effect.md
 
 ## 5. Production Pipeline Concerns (35+)
-- See: docs/quality/release-criteria.md
+- See: docs/plan/release-criteria.md
 
 ## 6. Technical Implementation Strategy
 - See: docs/plan/INDEX.md
@@ -72,13 +72,13 @@ This bridge indexes the canonical documents while preserving legacy anchors requ
 - See: modules/infrastructure and docs/plan/INDEX.md
 
 ## 14. Testing & QA
-- See: docs/quality/release-criteria.md
+- See: docs/plan/release-criteria.md
 
 ## 15. Anti-Patterns to Reject
 - See: docs/design/framework-behaviors.md
 
 ## 16. 30-Point Checklist (Pointer)
-- See: docs/quality/release-criteria.md
+- See: docs/plan/release-criteria.md
 
 ## 17. Session Workflow (Developer Tooling)
 - See: docs/talks/presenter-cheatsheet.md

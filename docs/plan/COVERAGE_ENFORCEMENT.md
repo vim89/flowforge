@@ -192,7 +192,7 @@ coverage:
 #### Step 4: Update Documentation
 
 ```diff
-# README.md or docs/quality/release-criteria.md
+# README.md or docs/plan/release-criteria.md
 -**Status**: 🟡 Development Mode (Report Only)
 +**Status**: 🟢 Production Mode (Enforcement Active)
 ```

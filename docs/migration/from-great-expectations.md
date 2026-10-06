@@ -474,11 +474,11 @@ object CustomExpectationMigration {
 
 ## Getting Help
 
-- **Documentation**: [FlowForge Quality Guide](/docs/quality/README.md)
+- **Documentation**: [FlowForge Quality Guide](../quality/README.md)
 - **Examples**: Check the `examples/` module for working code
 - **Community**: Join our Slack for migration support
 - **Professional Services**: Contact us for enterprise migration assistance
 
 ---
 
-**Next Steps**: Once you've migrated from Great Expectations, explore FlowForge's advanced features like multi-engine support and streaming contract validation in our [Advanced Tutorials](/docs/tutorials/advanced-patterns.mdoc).
+**Next Steps**: Once you've migrated from Great Expectations, explore FlowForge's advanced features like multi-engine support and streaming contract validation in our [Advanced Tutorials](../tutorials/advanced-patterns.mdoc).

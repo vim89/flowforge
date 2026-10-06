@@ -183,20 +183,20 @@ The diagrams above summarize derivation and policy checks; see also [docs/diagra
 
 ## Documentation map
 
-- Start here: [docs/start-here.md](docs/start-here.md); quick: [docs/getting-started.md](docs/getting-started.md)
+- Start here: [docs/getting-started.md](docs/getting-started.md)
 - Why compile‑time: [docs/why-compile-time.md](docs/why-compile-time.md)
 - How it fails: [docs/how-it-fails.md](docs/how-it-fails.md)
 - Public API: [docs/public-api.md](docs/public-api.md)
 - ADR index: [docs/adr/INDEX.md](docs/adr/INDEX.md)
 - Evidence: [docs/evidence](docs/evidence) (e.g., [scala3-alignment.md](docs/evidence/scala3-alignment.md))
-- Plan & Readiness: [docs/plan/v1.0-readiness.md](docs/plan/v1.0-readiness.md), [docs/quality/release-criteria.md](docs/plan/release-criteria.md)
+- Plan & Readiness: [docs/plan/v1.0-readiness.md](docs/plan/v1.0-readiness.md), [docs/plan/release-criteria.md](docs/plan/release-criteria.md)
 - Talks: [docs/talks](docs/talks) (WHY→HOW→WHAT outline)
 
 ## Release & versioning
 
 - CHANGELOG: [CHANGELOG.md](CHANGELOG.md)
 - Security: [SECURITY.md](SECURITY.md)
-- v1.0 Plan/Readiness: [docs/plan/v1.0-readiness.md](docs/plan/v1.0-readiness.md), [docs/quality/release-criteria.md](docs/plan/release-criteria.md)
+- v1.0 Plan/Readiness: [docs/plan/v1.0-readiness.md](docs/plan/v1.0-readiness.md), [docs/plan/release-criteria.md](docs/plan/release-criteria.md)
 
 ## FAQ
 
