@@ -13,12 +13,11 @@
 [![Infrastructure](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=infrastructure&label=infrastructure&logo=codecov)](https://app.codecov.io/gh/vim89/flowforge/flags/infrastructure)
 
 <!-- Release & Distribution -->
+<!-- Only the git release badge, because nothing is published yet. There are no com.flowforge artifacts on
+     Maven Central, no ghcr.io image and no published Scaladoc site, so those three badges were dead. -->
 ![Release](https://img.shields.io/github/v/release/vim89/flowforge?include_prereleases&label=release&logo=github)
-[![Maven Central](https://img.shields.io/maven-central/v/com.flowforge/core_2.13?label=maven)](https://search.maven.org/search?q=g:com.flowforge)
-[![Docker](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/vim89/flowforge/pkgs/container/flowforge)
 
 <!-- Documentation -->
-[![Scaladoc](https://img.shields.io/badge/api-Scaladoc-informational?logo=scala)](https://vim89.github.io/flowforge/api/)
 [![Changelog](https://img.shields.io/badge/changelog-Keep%20a%20Changelog-blue)](CHANGELOG.md)
 [![Docs](https://img.shields.io/badge/docs-start--here-blue)](docs/start-here.md)
 
@@ -55,7 +54,7 @@ You get compile‑time guarantees (not CI or runtime heuristics), a small opinio
 ## What (The framework)
 
 - Core: contracts, builder, EffectSystem, DataAlgebra.
-- Engines: Spark (primary 1.0), Flink (2.12 only).
+- Engines: Spark. Flink is pinned to Scala 2.12 and does not build today, see the Flink note below.
 - Connectors: filesystem, JDBC, GCS (more coming).
 - Data Quality: native checks by default; optional Deequ when present.
 - Template: flowforge.g8 for new projects.
@@ -79,8 +78,6 @@ You get compile‑time guarantees (not CI or runtime heuristics), a small opinio
 - Cut a release: [docs/release/how-to-cut-a-release.md](docs/release/how-to-cut-a-release.md)
 
 ### Module status (coverage)
-
->Nightly runs provide broader integration coverage.
 
 - Core: [![Core Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=core&label=core)](https://app.codecov.io/gh/vim89/flowforge/flags/core)
 - Contracts: [![Contracts Coverage](https://img.shields.io/codecov/c/github/vim89/flowforge?flag=contracts&label=contracts)](https://app.codecov.io/gh/vim89/flowforge/flags/contracts)
@@ -106,23 +103,29 @@ sbt compile
 
 **2) See a compile‑time contract failure (red → green)**
 ```scala
-// Paste in REPL or a scratch test to feel it
+// Paste in a scratch file under modules/examples and run `sbt examples/compile`
 import com.flowforge.core.contracts._
 final case class Out(id: Long)
 final case class Contract(id: Long, email: String)
-implicitly[SchemaConforms[Out, Contract, SchemaPolicy.Exact]] // ❌ compile‑time error (missing email)
+implicitly[SchemaConforms[Out, Contract, SchemaPolicy.Exact]] // compile error: missing email
 ```
-Relax the policy to Backward (allows extra producer fields and missing optional/defaults):
+Green needs the shape to satisfy the contract. `Backward` allows a producer to carry extra fields and to omit a
+field the contract declares optional, so it does not rescue a missing required field:
 ```scala
-implicitly[SchemaConforms[Out, Contract, SchemaPolicy.Backward]] // ✅
+final case class OutWithExtra(id: Long, email: String, tag: String)
+implicitly[SchemaConforms[OutWithExtra, Contract, SchemaPolicy.Backward]] // ok: tag is extra
+
+final case class OptionalEmail(id: Long, email: Option[String])
+implicitly[SchemaConforms[Out, OptionalEmail, SchemaPolicy.Backward]] // ok: email is optional
 ```
 
 **3) Build a pipeline - typestate forbids incomplete builds**
 ```scala
 import cats.effect.IO
 import com.flowforge.core.PipelineBuilder
-import com.flowforge.core.types._
 import com.flowforge.core.contracts._
+import com.flowforge.core.instances.EffectInstances._ // brings EffectSystem[IO]
+import com.flowforge.core.types._
 
 final case class User(id: Long, email: String)
 val src  = TypedSource[User](LocalDataSource("/tmp/in", DataFormat.Parquet))
@@ -132,7 +135,7 @@ PipelineBuilder[IO]("demo")
   .addTypedSource[User, User, SchemaPolicy.Exact](src, _ => IO.pure(User(1, "a@b")))
   .noTransform
   .addTypedSink[User, SchemaPolicy.Exact](sink, (_, _) => IO.unit)
-  .build() // ✅ build is available only now
+  .build() // build is available only now
 ```
 
 **4) Explore diagrams and failure messages**
@@ -143,33 +146,22 @@ PipelineBuilder[IO]("demo")
 
 | Path | Goal | Commands |
 |------|------|----------|
-| A - Examples | Try locally (no cluster) | `sbt ffDev` (compile + focused tests), `sbt ffRunSpark` (Spark local[*]) |
+| A - Examples | Run a pipeline locally (no cluster) | `sbt "examples/runMain com.flowforge.examples.SimpleGoldenPath"` |
 | B - Red→Green | See compile‑time error then fix | Use the snippet above; run `sbt compile` |
-| C - New project | Scaffold with g8 | `sbt new flowforge.g8 --name="ff-demo" --organization="com.acme"` then `sbt test` / `sbt run` |
+| C - Spark path | Exercise the Spark algebra | `sbt engines-spark/test` (Delta and SCD tests are opt‑in integration tests) |
+| D - New project | Scaffold with g8 | The template lives in this repo: `sbt new file://$PWD/flowforge.g8` |
 
 ## Compatibility
 
-| Component | Version | Notes |
-|-----------|---------|-------|
-| JDK | 17+ | CI pinned to 17; Spark 3.5.x compatibility |
-| sbt | 1.9+ |  |
-| Scala | 2.13 (primary) | Scala 3 for core only (no Spark deps) |
-| Spark | 3.5.x | Runs on Java 17 |
-| Flink | Scala 2.12 only | Scala API constraints |
+The versions CI runs are listed in [docs/reference/compatibility.md](docs/reference/compatibility.md). That file is
+the only place this repo states a tested version, so the list is not repeated here.
 
 ### Flink (2.12)
 
-Flink’s Scala API is 2.12‑only. The root build excludes Flink from the default aggregate so that `+compile`, `+test:compile`, and `+test` stay green for 2.13 (and Scala 3 where applicable). Build/test Flink explicitly when you need it:
-
-```
-# Compile Flink (Scala 2.12)
-sbt "++2.12.* enginesFlink/compile"
-
-# Run Flink tests (Scala 2.12)
-sbt "++2.12.* enginesFlink/test"
-```
-
-References: Flink documents binary incompatibility across Scala lines and the need to select the matching `_2.12` artifacts for the Scala API. See Flink’s docs on Scala versions and sbt cross‑build guidance. 
+Flink's Scala API is 2.12-only, so `engines-flink` is pinned to Scala 2.12. `core` and `connectors` publish 2.13
+and 3 only, so the module cannot resolve its own dependencies, and no CI job builds it. Treat Flink as unfinished
+work rather than an engine you can pick today. The gap is tracked in
+[docs/plan/v1.0-readiness.md](docs/plan/v1.0-readiness.md).
 
 ## Architecture (at a glance)
 
