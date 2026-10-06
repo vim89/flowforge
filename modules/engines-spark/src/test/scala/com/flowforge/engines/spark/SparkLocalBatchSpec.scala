@@ -15,7 +15,7 @@ import com.flowforge.core.algebra.{
   UnsupportedFormat,
 }
 import com.flowforge.core.instances.EffectInstances
-import com.flowforge.core.types.PipelineTypes.QualityCheck
+import com.flowforge.core.types.PipelineTypes.{ DataContract, QualityCheck }
 import com.flowforge.core.types.RefinedTypes.BucketName
 import com.flowforge.core.types._
 import org.apache.spark.sql.SparkSession
@@ -230,6 +230,30 @@ class SparkLocalBatchSpec extends AnyFunSuite with Matchers with BeforeAndAfterA
 
     results.map(r => r.checkName -> r.passed) shouldBe List("check_0" -> false)
     results.head.message should include("id is 150")
+  }
+
+  test("validate sees a contract violation past the sample") {
+    val rows   = (1 to 150).map(i => Person(i, s"p$i")).toList
+    val source = LocalDataSource(csvFixture(rows).toString, DataFormat.CSV)
+    val alg    = SparkDataAlgebra.createSparkDataAlgebra[IO](spark).algebra
+
+    val dataset = alg.read[Person](source).unsafeRunSync()
+
+    assume(!dataset.data.exists(_.id > 100), "the sample must not hold the violating records")
+
+    val idUnder101: DataContract[Person] = p =>
+      if (p.id <= 100) ().validNel
+      else
+        ValidationError
+          .SchemaViolation("id", "at most 100", p.id.toString, message = "id is too large").invalidNel
+
+    val result = alg.validate(dataset, idUnder101).unsafeRunSync()
+
+    result.passed shouldBe false
+    // 50 of 150 records break the contract, and all 50 are outside the sample the driver holds.
+    result.violations.map(v => (v.message, v.recordsAffected)) shouldBe List(("id is too large", 50L))
+    result.score shouldBe (100.0 / 150.0)
+    result.data shouldBe dataset
   }
 
   test("an empty local source reads as an empty dataset") {

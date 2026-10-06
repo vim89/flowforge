@@ -4,7 +4,7 @@ import cats.data.Kleisli
 import cats.effect.Resource
 import cats.implicits._
 import com.flowforge.core.algebra.DataAlgebra.WriteOptions
-import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
+import com.flowforge.core.algebra.{ DataAlgebra, DataDecoder, EffectSystem }
 import com.flowforge.core.exec.{ ExecutableStage, StageComposer }
 import com.flowforge.core.types._
 import com.flowforge.framework.{ Pipeline, PipelineMetadata }
@@ -103,10 +103,13 @@ class SparkTypedBuilder[F[_]: EffectSystem, In, Out] private[spark] (
   }
 
   /**
-   * Add a data quality check using Spark's distributed validation
+   * Add a data quality check using Spark's distributed validation.
+   *
+   * The decoder is what lets the engine apply the contract to every record. See `DataAlgebra.validate`.
    */
   def addQualityCheck(
     contract: com.flowforge.core.types.PipelineTypes.DataContract[Out],
+  )(implicit decoder: DataDecoder[Out],
   ): SparkTypedBuilder[F, In, Out] = {
     EffectSystem[F]
     val stage = SparkStage.Quality[F, Out](
