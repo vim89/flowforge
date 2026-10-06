@@ -82,6 +82,50 @@ private[spark] object SparkFrameOps {
   val violationMessageLimit: Int = 1000
 
   /**
+   * Count the records that report a violation, and the records behind each distinct message.
+   *
+   * `violationsOf` maps a record to the messages for the violations it has, empty when it has none.
+   *
+   * The record count is exact and the message list is capped, for the reason given on [[collectViolations]]:
+   * a dataset where every record violates the contract would otherwise bring one message per record back to
+   * the driver, while whether the contract passed only needs the count.
+   *
+   * A message is counted once per record. A record that reports the same message twice has still broken that
+   * rule once, which is what `recordsAffected` claims to say.
+   *
+   * This walks the frame twice, once for each half of the answer. One pass would mean holding the messages to
+   * count them, which is the cost the cap exists to avoid.
+   *
+   * @return
+   *   the number of records that reported at least one violation, and the record count per message
+   */
+  def countViolations[A](
+    spark: SparkSession,
+    frame: DataFrame,
+    violationsOf: A => List[String],
+    messageLimit: Int = violationMessageLimit,
+  )(implicit decoder: DataDecoder[A],
+  ): (Long, List[(String, Long)]) = {
+    import spark.implicits._
+    val rowDecoder = decoder
+    val perRecord = frame.toJSON.map { json =>
+      decodeRow(json, rowDecoder).toList.flatMap(violationsOf).distinct
+    }
+    val violatingRecords = perRecord.filter((messages: Seq[String]) => messages.nonEmpty).count()
+    val messageCounts = perRecord
+      .flatMap(identity)
+      .groupByKey(identity)
+      .count()
+      // `key` is the message. Ordering before the cap keeps which messages survive it deterministic, and
+      // leaves the result in the same order the in-memory algebra produces.
+      .orderBy("key")
+      .limit(messageLimit)
+      .collect()
+      .toList
+    (violatingRecords, messageCounts.map { case (message, count) => (message, count) })
+  }
+
+  /**
    * Apply every check to every decoded record.
    *
    * Each element of `checks` maps a record to the messages for the violations it has, and the index of a

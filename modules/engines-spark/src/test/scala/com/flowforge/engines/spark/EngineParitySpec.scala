@@ -8,7 +8,7 @@ import cats.syntax.validated._
 import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
 import com.flowforge.core.impl.InMemoryDataAlgebra
 import com.flowforge.core.instances.EffectInstances
-import com.flowforge.core.types.PipelineTypes.QualityCheck
+import com.flowforge.core.types.PipelineTypes.{ DataContract => PDataContract, QualityCheck }
 import com.flowforge.core.types._
 import org.apache.spark.sql.SparkSession
 import org.scalatest.BeforeAndAfterAll
@@ -95,6 +95,29 @@ class EngineParitySpec extends AnyFunSuite with Matchers with BeforeAndAfterAll 
     // The second check fails on every record. An engine that reports it as passing is not running the check.
     sparkResults.map(r => r.checkName -> r.passed) shouldBe List("check_0" -> true, "check_1" -> false)
     memoryResults.map(r => r.checkName -> r.passed) shouldBe sparkResults.map(r => r.checkName -> r.passed)
+  }
+
+  test("both engines report the same contract result") {
+    val source = fixture
+
+    // Rejects Bob and nobody else, so a passing result means the contract was not applied.
+    val nameIsNotBob: PDataContract[Person] = p =>
+      if (p.name != "Bob") ().validNel
+      else ValidationError.SchemaViolation("name", "not Bob", p.name, message = "name is Bob").invalidNel
+
+    val fromSpark =
+      sparkAlgebra.validate(sparkAlgebra.read[Person](source).unsafeRunSync(), nameIsNotBob).unsafeRunSync()
+    val fromMemory =
+      memoryAlgebra.validate(memoryAlgebra.read[Person](source).unsafeRunSync(), nameIsNotBob).unsafeRunSync()
+
+    fromSpark.passed shouldBe false
+    fromSpark.score shouldBe (2.0 / 3.0)
+    fromSpark.violations.map(v => (v.message, v.recordsAffected)) shouldBe List(("name is Bob", 1L))
+
+    // `data` differs - each engine returns its own dataset - so compare what the contract said about it.
+    fromMemory.passed shouldBe fromSpark.passed
+    fromMemory.score shouldBe fromSpark.score
+    fromMemory.violations shouldBe fromSpark.violations
   }
 
   test("a format neither engine supports fails on both, with the error type each one raises") {
