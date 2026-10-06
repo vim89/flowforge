@@ -76,12 +76,11 @@ object FieldType {
 /** Algebraic data type for field‑level constraints. */
 sealed trait FieldConstraint
 object FieldConstraint {
-  case class MinLength(value: Int)                           extends FieldConstraint
-  case class MaxLength(value: Int)                           extends FieldConstraint
-  case class Range(min: Double, max: Double)                 extends FieldConstraint
-  case class Pattern(regex: Regex)                           extends FieldConstraint
-  case class OneOf(values: Set[String])                      extends FieldConstraint
-  case class Custom(name: String, validator: Any => Boolean) extends FieldConstraint
+  case class MinLength(value: Int)           extends FieldConstraint
+  case class MaxLength(value: Int)           extends FieldConstraint
+  case class Range(min: Double, max: Double) extends FieldConstraint
+  case class Pattern(regex: Regex)           extends FieldConstraint
+  case class OneOf(values: Set[String])      extends FieldConstraint
 }
 
 /** Composable validation rules evaluated at runtime. */
@@ -100,19 +99,21 @@ object RuleSeverity {
 
 /** Common validation rules provided out of the box. */
 object ValidationRules {
-  def nonNull[A](fieldName: String)(extract: A => Any): ValidationRule[A] =
+  def nonNull[A](fieldName: String)(extract: A => AnyRef): ValidationRule[A] =
     new ValidationRule[A] {
       val name = s"nonNull($fieldName)"
       def validate(data: A): ValidatedNel[ContractViolation, Unit] =
-        // `extract` returns Any because it reaches into caller data this module does not control, so a null
-        // genuinely can arrive here. Option is the narrowest way to ask without naming the literal.
+        // `extract` returns a reference because that is the only thing a null can be, and this rule exists to
+        // catch a null arriving from caller data the module does not control. It was `A => Any`, which also
+        // accepted a primitive the check could never fail for. `Option` is the narrowest way to ask without
+        // naming the literal.
         Option(extract(data)) match {
           case Some(_) => ().validNel
           case None    => ContractViolation.NullValue(fieldName).invalidNel
         }
     }
 
-  def unique[A](fieldName: String)(extract: A => Any): ValidationRule[A] =
+  def unique[A, B](fieldName: String)(@annotation.unused extract: A => B): ValidationRule[A] =
     new ValidationRule[A] {
       val name = s"unique($fieldName)"
       def validate(data: A): ValidatedNel[ContractViolation, Unit] =
