@@ -3,7 +3,7 @@ package com.flowforge.core.syntax
 import cats.data.{ Kleisli, NonEmptyList, ReaderT, ValidatedNel }
 import cats.implicits._
 import com.flowforge.core.FlowForgePipeline
-import com.flowforge.core.algebra.{ DataAlgebra, DataEncoder, EffectSystem }
+import com.flowforge.core.algebra.{ DataAlgebra, DataDecoder, DataEncoder, EffectSystem }
 import com.flowforge.core.types._
 
 import scala.concurrent.duration.{ Duration, FiniteDuration }
@@ -345,9 +345,15 @@ object PipelineSyntax {
       }
 
     /**
-     * Apply filter
+     * Apply filter.
+     *
+     * The decoder is what lets the engine apply the predicate to every record rather than to the records it
+     * happens to hold on the driver. See `DataAlgebra.filter`.
      */
-    def filter(predicate: A => Boolean): F[DatasetPipelineBuilder[F, A]] = {
+    def filter(
+      predicate: A => Boolean,
+    )(implicit decoder: DataDecoder[A],
+    ): F[DatasetPipelineBuilder[F, A]] = {
       val filtered = dataAlgebra.filter(dataset, predicate)
       F.pure(DatasetPipelineBuilder(filtered, dataAlgebra))
     }

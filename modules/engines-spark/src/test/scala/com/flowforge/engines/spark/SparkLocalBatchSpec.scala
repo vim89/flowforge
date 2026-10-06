@@ -1,8 +1,10 @@
 // scalafix:off DisableSyntax.throw DisableSyntax.noUnsafeRunSync
 package com.flowforge.engines.spark
 
+import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
+import cats.syntax.validated._
 import com.flowforge.core.algebra.{
   CorruptedData,
   DataDecoder,
@@ -13,6 +15,7 @@ import com.flowforge.core.algebra.{
   UnsupportedFormat,
 }
 import com.flowforge.core.instances.EffectInstances
+import com.flowforge.core.types.PipelineTypes.QualityCheck
 import com.flowforge.core.types.RefinedTypes.BucketName
 import com.flowforge.core.types._
 import org.apache.spark.sql.SparkSession
@@ -166,6 +169,67 @@ class SparkLocalBatchSpec extends AnyFunSuite with Matchers with BeforeAndAfterA
     alg.count(dataset) shouldBe 150L
     alg.isEmpty(dataset) shouldBe false
     dataset.metadata.recordCount shouldBe 150L
+  }
+
+  test("a filter before a write writes only the records that passed") {
+    assume(
+      !sys.props.getOrElse("os.name", "").toLowerCase.contains("win"),
+      "Spark local write needs winutils",
+    )
+
+    // The predicate used to narrow the decoded sample and leave the frame alone, and the write writes the
+    // frame. So a filter followed by a write wrote every record the source held, filtered or not.
+    val rows   = (1 to 150).map(i => Person(i, s"p$i")).toList
+    val source = LocalDataSource(csvFixture(rows).toString, DataFormat.CSV)
+    val out    = tempDir("ff-filtered-out")
+    val alg    = SparkDataAlgebra.createSparkDataAlgebra[IO](spark).algebra
+
+    val written = (for {
+      dataset <- alg.read[Person](source)
+      kept = alg.filter(dataset, (p: Person) => p.id <= 10)
+      result <- alg.write(kept, LocalDataSink(out, DataFormat.Parquet))
+    } yield result).unsafeRunSync()
+
+    written.recordsWritten shouldBe 10L
+
+    val readBack = spark.read
+      .parquet(out).orderBy("id").collect().toList
+      .map(r => Person(r.getAs[Int]("id"), r.getAs[String]("name")))
+    readBack shouldBe rows.take(10)
+  }
+
+  test("map applies to every record, not just the sample") {
+    val rows   = (1 to 150).map(i => Person(i, s"p$i")).toList
+    val source = LocalDataSource(csvFixture(rows).toString, DataFormat.CSV)
+    val alg    = SparkDataAlgebra.createSparkDataAlgebra[IO](spark).algebra
+
+    val doubled = alg.map(alg.read[Person](source).unsafeRunSync(), (p: Person) => Person(p.id * 2, p.name))
+
+    alg.count(doubled) shouldBe 150L
+    // 300 only exists if the record with id 150 went through the function, and that record is past the
+    // sample the driver holds.
+    alg.count(alg.filter(doubled, (p: Person) => p.id == 300)) shouldBe 1L
+  }
+
+  test("a quality check sees a violation past the sample") {
+    val rows   = (1 to 150).map(i => Person(i, s"p$i")).toList
+    val source = LocalDataSource(csvFixture(rows).toString, DataFormat.CSV)
+    val alg    = SparkDataAlgebra.createSparkDataAlgebra[IO](spark).algebra
+
+    val dataset = alg.read[Person](source).unsafeRunSync()
+
+    // The sample is the first records of the frame, so the last one is outside it. Checking that here keeps
+    // the test from passing for the wrong reason if the sample ever grows.
+    assume(!dataset.data.exists(_.id == 150), "the sample must not hold the violating record")
+
+    val onlyRecord150Violates: QualityCheck[Person] = p =>
+      if (p.id != 150) ().validNel
+      else ValidationError.SchemaViolation("id", "not 150", "150", message = "id is 150").invalidNel
+
+    val results = alg.runQualityChecks(dataset, NonEmptyList.one(onlyRecord150Violates)).unsafeRunSync()
+
+    results.map(r => r.checkName -> r.passed) shouldBe List("check_0" -> false)
+    results.head.message should include("id is 150")
   }
 
   test("an empty local source reads as an empty dataset") {

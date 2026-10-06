@@ -686,38 +686,44 @@ object SparkDataAlgebra {
       // PURE DATA TRANSFORMATIONS (No F[_])
       // ========================================
 
-      override def filter[A](
+      // `pds.sampleData` holds at most 100 records, so an operation that read it answered for a sample and
+      // called the answer the dataset. For `filter` that was a wrong result rather than a partial one: the
+      // predicate narrowed the sample and left the frame alone, so a filter followed by a write wrote every
+      // row. These three operations run in the frame now, through `SparkFrameOps`.
+      override def filter[A: DataDecoder](
         dataset: DataAlgebra.Dataset[A],
         predicate: A => Boolean,
       ): DataAlgebra.Dataset[A] = dataset match {
         case pds: ProductionSparkDataset[A] =>
-          // PRODUCTION: Use Spark DataFrame operations for distributed filtering
-          val filteredData = pds.sampleData.filter(predicate)
-          pds.copy(
-            sampleData = filteredData,
-            metadata = pds.metadata.copy(recordCount = filteredData.size.toLong),
-          )
+          val filtered = SparkFrameOps.filter[A](spark, pds.sparkDataFrame, predicate)
+          ProductionSparkDataset.withFrame[A](pds, filtered, spark)
         case _ =>
           // Fallback for other dataset types
           SimpleDataset(dataset.data.filter(predicate), dataset.schema, dataset.metadata)
       }
 
-      override def map[A, B: DataEncoder](
+      override def map[A: DataDecoder, B: DataEncoder: DataDecoder](
         dataset: DataAlgebra.Dataset[A],
         f: A => B,
-      ): DataAlgebra.Dataset[B] = {
-        val transformed = dataset.data.map(f)
-        // Prefer Spark-backed dataset to minimize non-Spark fallbacks
-        ProductionSparkDataset.fromData[B](transformed, spark)
+      ): DataAlgebra.Dataset[B] = dataset match {
+        case pds: ProductionSparkDataset[A] =>
+          val mapped = SparkFrameOps.mapRows[A, B](spark, pds.sparkDataFrame, a => List(f(a)))
+          ProductionSparkDataset.fromDataFrame[B](mapped, spark)
+        case _ =>
+          // Prefer Spark-backed dataset to minimize non-Spark fallbacks
+          ProductionSparkDataset.fromData[B](dataset.data.map(f), spark)
       }
 
-      override def flatMap[A, B: DataEncoder](
+      override def flatMap[A: DataDecoder, B: DataEncoder: DataDecoder](
         dataset: DataAlgebra.Dataset[A],
         f: A => DataAlgebra.Dataset[B],
-      ): DataAlgebra.Dataset[B] = {
-        val transformed = dataset.data.flatMap(a => f(a).data)
-        // Prefer Spark-backed dataset to minimize non-Spark fallbacks
-        ProductionSparkDataset.fromData[B](transformed, spark)
+      ): DataAlgebra.Dataset[B] = dataset match {
+        case pds: ProductionSparkDataset[A] =>
+          val mapped = SparkFrameOps.mapRows[A, B](spark, pds.sparkDataFrame, a => f(a).data)
+          ProductionSparkDataset.fromDataFrame[B](mapped, spark)
+        case _ =>
+          // Prefer Spark-backed dataset to minimize non-Spark fallbacks
+          ProductionSparkDataset.fromData[B](dataset.data.flatMap(a => f(a).data), spark)
       }
 
       override def groupBy[A, K, V: DataEncoder](
@@ -897,20 +903,45 @@ object SparkDataAlgebra {
           ),
         )
 
-      override def runQualityChecks[A](
+      override def runQualityChecks[A: DataDecoder](
         dataset: DataAlgebra.Dataset[A],
         checks: NonEmptyList[QualityCheck[A]],
       ): F[List[DataAlgebra.QualityCheckResult]] = {
-        // Helper: evaluate function-based checks over in-memory data
+
+        /** The messages for the violations one check reports on one record, empty when it is satisfied. */
+        val messagesPerCheck: List[A => List[String]] =
+          checks.toList.map(chk => (a: A) => chk(a).fold(_.toList.map(_.message), _ => Nil))
+
+        // Evaluating the checks over `dataset.data` read at most 100 records on a Spark-backed dataset, so a
+        // violation in record 101 went unreported and the dataset passed. The checks run over the frame now.
+        def evaluateInFrame(frame: org.apache.spark.sql.DataFrame): List[DataAlgebra.QualityCheckResult] = {
+          val (failed, messages) = SparkFrameOps.collectViolations(spark, frame, messagesPerCheck)
+          val byCheck            = messages.groupBy(_._1)
+          messagesPerCheck.indices.toList.map { idx =>
+            if (!failed.contains(idx))
+              DataAlgebra.QualityCheckResult(s"check_$idx", passed = true, message = "ok", score = 1.0)
+            else {
+              // A check can be in `failed` with no message here, because the messages are capped and the
+              // index set is not. Saying so beats reporting an empty message.
+              val msg = byCheck.getOrElse(idx, Nil).map(_._2).take(3) match {
+                case Nil      => "violations found, messages not collected"
+                case reported => reported.mkString("; ")
+              }
+              DataAlgebra.QualityCheckResult(s"check_$idx", passed = false, message = msg, score = 0.0)
+            }
+          }
+        }
+
+        /** The driver-side path, for a dataset this engine did not produce and so holds in full. */
         def evaluateFunctional: List[DataAlgebra.QualityCheckResult] = {
           val dataList = dataset.data
-          checks.toList.zipWithIndex.map {
-            case (chk, idx) =>
-              val invalids = dataList.flatMap(a => chk(a).toEither.left.toOption.map(_.toList).getOrElse(Nil))
+          messagesPerCheck.zipWithIndex.map {
+            case (check, idx) =>
+              val invalids = dataList.flatMap(check)
               if (invalids.isEmpty)
                 DataAlgebra.QualityCheckResult(s"check_$idx", passed = true, message = "ok", score = 1.0)
               else {
-                val msg = invalids.map(_.message).distinct.take(3).mkString("; ")
+                val msg = invalids.distinct.take(3).mkString("; ")
                 DataAlgebra.QualityCheckResult(s"check_$idx", passed = false, message = msg, score = 0.0)
               }
           }
@@ -957,23 +988,42 @@ object SparkDataAlgebra {
 
             F.flatMap(deequResultsF) {
               case Some(res) => F.pure(res)
-              case None      => F.pure(evaluateFunctional)
+              case None      => F.blocking(evaluateInFrame(pds.sparkDataFrame))
             }
 
           case _ => F.pure(evaluateFunctional)
         }
       }
 
+      // The counts came from `dataset.data`, which is a sample of at most 100 records on a Spark-backed
+      // dataset, so a larger input was profiled as having 100 records. They come from the frame now.
+      //
+      // `nullCount` stays 0 on both engines. It is the one field of the profile with no agreed meaning -
+      // records with a null field, or null records - and inventing one here would make the two engines
+      // disagree. See docs/plan/v1.0-readiness.md.
       override def profile[A](dataset: DataAlgebra.Dataset[A]): F[DataAlgebra.DataProfile[A]] =
-        F.pure(
-          DataAlgebra.DataProfile(
-            recordCount = dataset.data.size.toLong,
-            nullCount = 0L,
-            distinctCount = dataset.data.distinct.size.toLong,
-            schema = dataset.schema,
-            statistics = Map.empty,
-          ),
-        )
+        dataset match {
+          case pds: ProductionSparkDataset[A] =>
+            F.blocking(
+              DataAlgebra.DataProfile(
+                recordCount = pds.sparkDataFrame.count(),
+                nullCount = 0L,
+                distinctCount = pds.sparkDataFrame.distinct().count(),
+                schema = pds.schema,
+                statistics = Map.empty,
+              ),
+            )
+          case other =>
+            F.pure(
+              DataAlgebra.DataProfile(
+                recordCount = other.data.size.toLong,
+                nullCount = 0L,
+                distinctCount = other.data.distinct.size.toLong,
+                schema = other.schema,
+                statistics = Map.empty,
+              ),
+            )
+        }
 
       // ========================================
       // UTILITIES

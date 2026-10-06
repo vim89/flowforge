@@ -88,19 +88,38 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] with Da
 
   /**
    * Filter data based on predicate. PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
+   *
+   * The predicate is applied to every record, so an engine that holds its records outside the driver needs
+   * `DataDecoder[A]` to turn each one back into an `A`. Without that bound the only records an engine could
+   * reach are the ones already on the driver, which is how this method used to filter a sample and leave the
+   * rest of the dataset untouched.
+   *
+   * A record the decoder rejects is dropped.
    */
-  def filter[A](dataset: Dataset[A], predicate: A => Boolean): Dataset[A]
+  def filter[A: DataDecoder](dataset: Dataset[A], predicate: A => Boolean): Dataset[A]
 
   /**
    * Map over dataset with pure function. PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
+   *
+   * `DataDecoder[A]` reads every record and `DataEncoder[B]` writes every result, for the reason given on
+   * [[filter]]. `DataDecoder[B]` reads the results back, because the returned `Dataset[B]` is one an engine
+   * must be able to hand to the next operation. A record the decoder rejects is dropped, as is a result the
+   * encoder rejects.
    */
-  def map[A, B: DataEncoder](dataset: Dataset[A], f: A => B): Dataset[B]
+  def map[A: DataDecoder, B: DataEncoder: DataDecoder](dataset: Dataset[A], f: A => B): Dataset[B]
 
   /**
    * FlatMap over dataset for pure nested operations. PURE OPERATION: No F[_] wrapper - direct Dataset
    * transformation.
+   *
+   * Bounded like [[map]], and with one extra condition: `f` returns a `Dataset[B]`, so `f` itself may be
+   * evaluated away from the driver. It must build that dataset from its argument alone and must not capture
+   * an engine session or any other local resource.
    */
-  def flatMap[A, B: DataEncoder](dataset: Dataset[A], f: A => Dataset[B]): Dataset[B]
+  def flatMap[A: DataDecoder, B: DataEncoder: DataDecoder](
+    dataset: Dataset[A],
+    f: A => Dataset[B],
+  ): Dataset[B]
 
   /**
    * Group by key with pure aggregation. PURE OPERATION: No F[_] wrapper - direct Dataset transformation.
@@ -225,8 +244,11 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] with Da
   /**
    * Run quality checks that may involve external services. Uses F[_] because checks may involve external
    * quality services.
+   *
+   * Each check is applied to every record, so `DataDecoder[A]` is needed for the reason given on [[filter]].
+   * A check that reports nothing over the whole dataset is the only way a result passes.
    */
-  def runQualityChecks[A](
+  def runQualityChecks[A: DataDecoder](
     dataset: Dataset[A],
     checks: NonEmptyList[PQualityCheck[A]],
   ): F[List[QualityCheckResult]]

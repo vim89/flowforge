@@ -142,16 +142,20 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
     F.map(write(dataset, sink, options))(result => Validated.validNel(result))
 
   // ---------- Pure data transformations ----------
-  override def filter[A](dataset: Dataset[A], predicate: A => Boolean): Dataset[A] =
+  override def filter[A: DataDecoder](dataset: Dataset[A], predicate: A => Boolean): Dataset[A] =
     SimpleDataset(dataset.data.filter(predicate), dataset.schema, dataset.metadata)
 
-  override def map[A, B: DataEncoder](dataset: Dataset[A], f: A => B): Dataset[B] = {
+  override def map[A: DataDecoder, B: DataEncoder: DataDecoder](dataset: Dataset[A], f: A => B)
+    : Dataset[B] = {
     val out = dataset.data.map(f)
     val sch = DataEncoder[B].schema(DataFormat.JSON)
     SimpleDataset(out, sch, dataset.metadata.copy(recordCount = out.size.toLong))
   }
 
-  override def flatMap[A, B: DataEncoder](dataset: Dataset[A], f: A => Dataset[B]): Dataset[B] = {
+  override def flatMap[A: DataDecoder, B: DataEncoder: DataDecoder](
+    dataset: Dataset[A],
+    f: A => Dataset[B],
+  ): Dataset[B] = {
     val out = dataset.data.flatMap(a => f(a).data)
     val sch = if (out.nonEmpty) DataEncoder[B].schema(DataFormat.JSON) else dataset.schema
     SimpleDataset(out, sch, dataset.metadata.copy(recordCount = out.size.toLong))
@@ -285,7 +289,7 @@ final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataA
   ): F[QualityResult[Dataset[A]]] =
     F.pure(QualityResult(dataset, passed = true, violations = Nil, score = 1.0))
 
-  override def runQualityChecks[A](
+  override def runQualityChecks[A: DataDecoder](
     dataset: Dataset[A],
     checks: NonEmptyList[QualityCheck[A]],
   ): F[List[QualityCheckResult]] = F.pure(

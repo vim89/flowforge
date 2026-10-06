@@ -52,13 +52,16 @@ final class FlinkDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataAlge
     delegate.writeWithValidation(dataset, sink, contract, options)
 
   // ---------- Pure transformations ----------
-  override def filter[A](dataset: Dataset[A], predicate: A => Boolean): Dataset[A] =
+  override def filter[A: DataDecoder](dataset: Dataset[A], predicate: A => Boolean): Dataset[A] =
     delegate.filter(dataset, predicate)
 
-  override def map[A, B: DataEncoder](dataset: Dataset[A], f: A => B): Dataset[B] =
+  override def map[A: DataDecoder, B: DataEncoder: DataDecoder](dataset: Dataset[A], f: A => B): Dataset[B] =
     delegate.map(dataset, f)
 
-  override def flatMap[A, B: DataEncoder](dataset: Dataset[A], f: A => Dataset[B]): Dataset[B] =
+  override def flatMap[A: DataDecoder, B: DataEncoder: DataDecoder](
+    dataset: Dataset[A],
+    f: A => Dataset[B],
+  ): Dataset[B] =
     delegate.flatMap(dataset, f)
 
   override def groupBy[A, K, V: DataEncoder](
@@ -132,7 +135,7 @@ final class FlinkDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataAlge
   ): F[QualityResult[Dataset[A]]] =
     delegate.validate(dataset, contract)
 
-  override def runQualityChecks[A](
+  override def runQualityChecks[A: DataDecoder](
     dataset: Dataset[A],
     checks: NonEmptyList[QualityCheck[A]],
   ): F[List[QualityCheckResult]] =
