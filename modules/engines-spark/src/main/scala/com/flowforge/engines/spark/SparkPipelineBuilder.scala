@@ -8,7 +8,6 @@ import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
 import com.flowforge.core.exec.{ ExecutableStage, StageComposer }
 import com.flowforge.core.types._
 import com.flowforge.framework.{ Pipeline, PipelineMetadata }
-
 import org.apache.spark.sql.SparkSession
 
 /**
