@@ -1,5 +1,9 @@
 # Migrating from dbt to FlowForge
 
+> Status: a design-level guide. The snippets are not compiled by the build, and the sections that use
+> `com.flowforge.core.streaming` describe an API that does not exist yet. What ships today is listed in
+> [v1.0 readiness](../plan/v1.0-readiness.md).
+
 This guide helps dbt users transition to FlowForge, mapping familiar dbt concepts to FlowForge's compile-time contract validation and type-safe data pipelines.
 
 ## Quick Comparison

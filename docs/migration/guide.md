@@ -1,24 +1,21 @@
 # FlowForge - Scala 3 Migration Guide
 
-**Migration strategy for FlowForge's compile-time contracts from Scala 2.13 to Scala 3.**
+Plan for moving FlowForge's compile-time contracts from Scala 2.13 to Scala 3.
 
-✅ **STATUS: COMPLETED WITH SUPERIOR ARCHITECTURE**
+> Status: a plan, not a record of work done. The build runs on Scala 2.13.16 only. The one Scala 3
+> module is `experimental`, which is opt-in and not published. Every Scala 3 snippet below is a
+> proposal and does not exist in the codebase. Readiness for v1.0 is tracked in
+> [v1.0 readiness](../plan/v1.0-readiness.md).
 
-This document reflects our **successfully implemented** improved approach that exceeded the original migration plan, providing a cleaner, more maintainable architecture while maintaining perfect API compatibility.
+## Starting point
 
-## 🎯 Migration Strategy - IMPLEMENTED
+- Today: Scala 2.13 with the TypeShape ADT and policy-based comparison, derived by Magnolia macros.
+- Blocker: the Spark Scala 3 artifacts the engines need do not exist, so a cross-build cannot be
+  switched on for the modules that matter.
 
-FlowForge achieved **API-first compatibility** with a superior architecture upgrade:
+## What is already in place
 
-- **✅ CURRENT**: Scala 2.13 with improved TypeShape ADT + Policy-based comparison
-- **📦 READY**: Complete cross-build infrastructure (parked pending Spark ecosystem Scala 3 support)
-- **🚀 FUTURE**: Scala 3 native implementation ready for immediate activation
-
-## 🏆 What We Achieved - SUPERIOR ARCHITECTURE
-
-### ✅ IMPLEMENTED: Improved Architecture (Better Than Original Plan)
-
-**Our approach exceeded the original migration plan by implementing a superior architecture:**
+The 2.13 implementation the migration starts from:
 
 ```scala
 // CURRENT: Superior TypeShape ADT (replaced old SchemaAST)
@@ -39,19 +36,19 @@ implicit def materialize[Out, Contract, P <: SchemaPolicy]: SchemaConforms[Out, 
   macro internal.ContractMacros.conformsImpl[Out, Contract, P]
 ```
 
-### 🎯 Key Improvements Over Original Plan
+### What this buys the migration
 
-1. **TypeShape ADT**: Cleaner than old SchemaAST - pure functional, immutable
-2. **Policy-Based Comparison**: Much more maintainable than previous complex logic
-3. **Better Error Messages**: Path-aware, actionable feedback
-4. **Future-Ready**: Cross-build infrastructure ready for Scala 3
+1. The shape of a type is an immutable ADT, so the Scala 3 port replaces only how a shape is
+   derived, not how two shapes are compared.
+2. Policy comparison is plain data in, plain data out, so it is shared source across both versions.
+3. Error message text is produced from the comparison result, so the message can stay identical.
 
-### 📦 READY: Cross-Build Infrastructure (Parked)
+### Proposed cross-build settings
 
-Complete infrastructure ready for activation when Spark ecosystem catches up:
+Not in `build.sbt` today. `ThisBuild / crossScalaVersions` is 2.13.16 only:
 
 ```scala
-// Cross-build configuration (build.sbt)
+// Proposed cross-build configuration (build.sbt)
 ThisBuild / crossScalaVersions := Seq("2.13.16", "3.3.3")
 
 // Version-specific dependencies ready
@@ -66,6 +63,8 @@ libraryDependencies ++= {
 ---
 
 ## 🏗️ Cross-build configuration
+
+The full set of settings the migration would add. None of it is in the build today.
 
 ### SBT setup
 ```scala
@@ -272,8 +271,11 @@ class CrossVersionCompatSpec extends AnyWordSpec {
 ```
 
 ### Build matrix
+
+CI has no such workflow today. `ci.yml` runs 2.13.16 only.
+
 ```yaml
-# .github/workflows/cross-build.yml
+# Proposed .github/workflows/cross-build.yml
 strategy:
   matrix:
     scala: ["2.13.16", "3.3.3"]
@@ -287,22 +289,17 @@ steps:
 
 ## 📅 Migration timeline
 
-### ✅ Phase 1: Architecture Upgrade (COMPLETED)
-- ✅ Implemented improved TypeShape ADT
-- ✅ Built policy-based comparison system
-- ✅ Fixed all policy logic (Backward, Forward, ExactByPosition, etc.)
-- ✅ 100% API compatibility maintained
+### Phase 1: 2.13 implementation (done)
+- TypeShape ADT and policy-based comparison, derived by Magnolia macros
+- Policy behaviour covered by the tests in `modules/compile-fail-tests`
 
-### 📦 Phase 2: Cross-Build Infrastructure (READY)
-- ✅ Scala 3 cross-build settings configured
-- ✅ Version-specific dependency management ready
-- ✅ improved inline macro implementation designed
-- ⏸️ **PARKED**: Waiting for Spark ecosystem Scala 3 support
+### Phase 2: cross-build infrastructure (not started)
+- Add Scala 3 to `crossScalaVersions` and split version-specific source directories
+- Write the inline, Mirror-based derivation for Scala 3
+- Blocked on Spark artifacts for Scala 3
 
-### 🚀 Phase 3: Activation (READY WHEN ECOSYSTEM SUPPORTS)
-- 📦 Scala 3 implementation ready for immediate deployment
-- 📦 Feature parity guaranteed (same TypeShape ADT)
-- 📦 Zero breaking changes planned
+### Phase 3: activation (not started)
+- Cross-publish core and contracts, then the engines once Spark allows it
 
 ### 🔮 Phase 4: Future Enhancement
 - 📦 Union types for flexible contract definitions
@@ -330,33 +327,11 @@ steps:
 
 ---
 
-## ✅ Current Status - MISSION ACCOMPLISHED
+## Current status
 
-**✅ ACHIEVED BEYOND ORIGINAL GOALS:**
-
-**Architecture:**
-- ✅ **SUPERIOR DESIGN**: improved TypeShape ADT (cleaner than original SchemaAST)
-- ✅ **POLICY SYSTEM**: Clean, maintainable policy-based comparison
-- ✅ **ERROR MESSAGES**: Path-aware, actionable compilation feedback
-- ✅ **API STABILITY**: Zero breaking changes, perfect backward compatibility
-
-**Implementation:**
-- ✅ **35/35 COMPILE-FAIL TESTS PASSING**: All policy modes working correctly
-- ✅ **22/22 CONTRACT TESTS PASSING**: Full contract system validation
-- ✅ **GREEN BUILD**: Scala 2.13 production ready
-- ✅ **FUTURE-READY**: Complete Scala 3 infrastructure ready
-
-**Ecosystem Readiness:**
-- ✅ **CROSS-BUILD CONFIG**: Complete SBT setup ready
-- ⏸️ **SPARK BLOCKER**: Ecosystem dependency waiting for Spark Scala 3 support
-- 📦 **IMMEDIATE ACTIVATION**: Ready to deploy when dependencies available
-
----
-
-**🎯 CONCLUSION: FlowForge contract system now has a superior architecture with complete Scala 3 readiness.**
-
-**The migration exceeded expectations by delivering both immediate improvements and future-proofing.**
-
----
-
-FlowForge Scala 3 Migration | ✅ Completed with Superior Architecture
+- Scala 2.13.16 is the only version the build and CI run. The `experimental` module is the only
+  Scala 3 module, it is opt-in and it is not published.
+- The contract system works on 2.13: shape derivation, policy comparison and the compile error
+  message are in place, with the policy cases covered in `modules/compile-fail-tests`.
+- Nothing in this document's Scala 3 sections is implemented. They describe the intended port.
+- Readiness statements live in one place: [v1.0 readiness](../plan/v1.0-readiness.md).

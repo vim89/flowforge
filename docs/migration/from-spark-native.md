@@ -1,5 +1,10 @@
 # Migrating from Spark Native to FlowForge
 
+> Status: a design-level guide. The snippets are not compiled by the build. The Spark engine reads and
+> writes a local path or a JDBC endpoint today; other sources and sinks raise
+> `UnsupportedOperationException`, and there is no streaming API. What ships today is listed in
+> [v1.0 readiness](../plan/v1.0-readiness.md).
+
 This guide helps Spark developers migrate existing applications to FlowForge while maintaining performance and leveraging FlowForge's unique compile-time contract validation.
 
 ## Table of Contents

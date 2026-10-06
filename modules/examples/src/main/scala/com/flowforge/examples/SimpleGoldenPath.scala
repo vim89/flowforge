@@ -10,7 +10,7 @@ import com.flowforge.core.lineage.OpenLineageEmitter
 import com.flowforge.core.types._
 
 /**
- * FlowForge v1.0.0 Simple Golden Path Example
+ * FlowForge Simple Golden Path Example
  *
  * Demonstrates the complete FlowForge value proposition in a minimal, working form: Typed Contract → Pipeline
  * Builder → Lineage Events
@@ -30,7 +30,7 @@ object SimpleGoldenPath {
   implicit val salesRecordShape: Shape[SalesRecord] = Shape.gen[SalesRecord]
 
   def main(args: Array[String]): Unit = {
-    println("=== FlowForge v1.0.0 Simple Golden Path Demo ===")
+    println("=== FlowForge Simple Golden Path Demo ===")
     println("Typed Contract → Pipeline Builder → OpenLineage")
     println()
 
