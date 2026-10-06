@@ -55,7 +55,7 @@ You get compile‑time guarantees (not CI or runtime heuristics), a small opinio
 
 - Core: contracts, builder, EffectSystem, DataAlgebra.
 - Engines: Spark. Flink is pinned to Scala 2.12 and does not build today, see the Flink note below.
-- Connectors: filesystem, JDBC, GCS (more coming).
+- Connectors: filesystem, GCS, and JDBC through Spark's own JDBC source. See [docs/connectors/CAPABILITIES.md](docs/connectors/CAPABILITIES.md) for what each one supports.
 - Data Quality: native checks by default; optional Deequ when present.
 - Template: flowforge.g8 for new projects.
 
@@ -205,15 +205,15 @@ We welcome folks from Python/ETL backgrounds and JVM veterans alike. Start with 
 ## License
 
 
-[Apache 2.0](LICENSE)
+[AGPLv3](LICENSE)
 
 ---
 ### Flowforge Hybrid Licensing Model
 
 Flowforge adopts a hybrid licensing structure combining open innovation and IP protection.
 
-- **Legacy / historical releases** remain under MIT (for transparency and ecosystem continuity).
-- **Active and future releases** (v1.0 and onward) are licensed under **AGPLv3** with additional Flowforge terms (“RESTRICTED COMMERCIAL & DERIVATIVE TERMS FOR FLOWFORGE” in `LICENSE`).
+- **Legacy releases** stay under the license they shipped with. Tags `v0.7.0`, `v0.8.0`, `v0.9.0-rc.1` and `v0.9.0` are MIT; `v0.8.1` is AGPLv3.
+- **Active and future releases** (v1.0 and onward) are licensed under **AGPLv3**. `LICENSE` is the unmodified AGPLv3 text and adds no further restrictions.
 - **Commercial usage** (offering as SaaS, embedding in proprietary systems, or internal closed-source deployments) requires a separate **commercial license**. See `COMMERCIAL_LICENSE.md` for template.
 - **Contributor License Agreement (CLA)** in `CLA.md` governs contribution terms, ensuring compatibility with the hybrid licensing framework.
 - **Commercial exceptions** and **dual-licensing** are handled directly by Vitthal Mirji for partners and enterprise use.

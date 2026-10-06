@@ -1,12 +1,12 @@
 package com.flowforge.app
 
-import cats.effect.{ IO, Resource }
-import cats.syntax.functor._
-import java.sql.{ Connection, DriverManager }
+import cats.effect.IO
+import cats.effect.Resource
+import java.sql.Connection
+import java.sql.DriverManager
 
-/**
- * Minimal JDBC audit DB (H2) to demonstrate polymorphic effectful logging around the pipeline.
- */
+/** Minimal JDBC audit DB (H2) to demonstrate polymorphic effectful logging around the pipeline.
+  */
 object AuditDb {
   private val url  = "jdbc:h2:./target/auditdb;MODE=PostgreSQL;DATABASE_TO_UPPER=false"
   private val user = "sa"
@@ -34,4 +34,3 @@ object AuditDb {
     }.void
   }
 }
-
