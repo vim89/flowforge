@@ -32,11 +32,13 @@ jobs:
       - name: sbt format check
         run: sbt -v scalafmtSbtCheck scalafmtCheckAll
 
+  # Needs the flowforge artifacts this project depends on to be resolvable from Maven Central. Until they
+  # are, set the repository variable RUN_FULL to true to turn this on. The guard reads `vars` and not `env`,
+  # because a job-level `if` cannot see `env`, which made the earlier version of this guard skip the job
+  # even when RUN_FULL was set.
   build:
     runs-on: ubuntu-latest
-    if: \${{ env.RUN_FULL == 'true' }}
-    env:
-      RUN_FULL: \${{ vars.RUN_FULL }}
+    if: \${{ vars.RUN_FULL == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -6,10 +6,10 @@ import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.flowforge.core.algebra.EffectSystem
 import com.flowforge.core.instances.EffectInstances
+import com.flowforge.core.testing.How
 import com.flowforge.framework.{ Pipeline, PipelineCombinators }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import com.flowforge.core.testing.How
 
 import scala.concurrent.duration._
 

@@ -1,6 +1,4 @@
 package com.flowforge.core.algebra
-
-import com.flowforge.core.types._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 

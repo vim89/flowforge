@@ -3,7 +3,6 @@ package com.flowforge.core.pipeline
 import cats.data.Validated
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import cats.syntax.all._
 import com.flowforge.core.algebra.{ DataAlgebra, EffectSystem }
 import com.flowforge.core.impl.InMemoryDataAlgebra
 import com.flowforge.core.syntax.PipelineSyntax._

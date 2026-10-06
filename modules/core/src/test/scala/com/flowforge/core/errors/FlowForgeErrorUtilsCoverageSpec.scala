@@ -1,7 +1,6 @@
 package com.flowforge.core.errors
 
-import com.flowforge.core.types.FlowForgeError
-import com.flowforge.core.types.ValidationError
+import com.flowforge.core.types.{ FlowForgeError, ValidationError }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
