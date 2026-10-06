@@ -238,8 +238,18 @@ trait DataAlgebra[F[_]] extends CDCOperations[F] with TableOperations[F] with Da
   /**
    * Validate dataset against external data contract service. Uses F[_] because it may involve external
    * validation service.
+   *
+   * The contract is applied to every record, so `DataDecoder[A]` is needed for the reason given on
+   * [[filter]]. The result is built by [[DataAlgebra.contractResult]] on every engine, so what `passed`,
+   * `score` and `recordsAffected` mean does not depend on which engine ran the contract.
+   *
+   * The returned dataset is the one that went in. Validating reports on the records; it does not drop the
+   * ones that failed.
    */
-  def validate[A](dataset: Dataset[A], contract: PDataContract[A]): F[QualityResult[Dataset[A]]]
+  def validate[A: DataDecoder](
+    dataset: Dataset[A],
+    contract: PDataContract[A],
+  ): F[QualityResult[Dataset[A]]]
 
   /**
    * Run quality checks that may involve external services. Uses F[_] because checks may involve external
@@ -387,6 +397,52 @@ object DataAlgebra {
     passed: Boolean,
     violations: List[QualityViolation],
     score: Double)
+
+  /**
+   * Build the result of validating a dataset against a contract, from counts taken over its records.
+   *
+   * This is the one definition of what a contract result means, and every engine calls it rather than
+   * assembling a `QualityResult` itself. The engines differ in how they reach the records - the driver holds
+   * them, or a frame does - and that is the only thing they should differ in. Two engines each building their
+   * own result is how they come to disagree about the same dataset.
+   *
+   * `score` is the share of records the contract accepted, so an empty dataset scores 1.0: a contract cannot
+   * be violated by a record that is not there. `recordsAffected` on a violation counts the records that
+   * reported that message, not the times it was reported, because one record can break a rule once.
+   *
+   * Every violation is `Critical`. A contract is the shape a caller declared the data has, so a record that
+   * breaks it is wrong rather than suspicious, and the severity levels have no other source here.
+   *
+   * @param totalRecords
+   *   records the contract was applied to
+   * @param violatingRecords
+   *   records that reported at least one violation
+   * @param messageCounts
+   *   how many records reported each distinct message
+   */
+  def contractResult[A](
+    dataset: A,
+    totalRecords: Long,
+    violatingRecords: Long,
+    messageCounts: List[(String, Long)],
+  ): QualityResult[A] = {
+    val violations = messageCounts.map {
+      case (message, affected) =>
+        QualityViolation(
+          rule = "contract",
+          message = message,
+          severity = ViolationSeverity.Critical,
+          recordsAffected = affected,
+        )
+    }
+    val score = if (totalRecords <= 0L) 1.0 else (totalRecords - violatingRecords).toDouble / totalRecords
+    QualityResult(
+      data = dataset,
+      passed = violatingRecords == 0L,
+      violations = violations,
+      score = score,
+    )
+  }
 
   /**
    * Quality check result.

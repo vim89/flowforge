@@ -2,7 +2,7 @@
 package com.flowforge.core.impl
 
 import cats.data.Kleisli
-import com.flowforge.core.algebra.{ DataAlgebra, DataEncoder, EffectSystem }
+import com.flowforge.core.algebra.{ DataAlgebra, DataDecoder, DataEncoder, EffectSystem }
 import com.flowforge.core.exec.{ ExecutableStage, StageComposer }
 import com.flowforge.core.types._
 import com.flowforge.framework.{ Pipeline, PipelineMetadata }
@@ -170,10 +170,13 @@ object InMemoryTypedBuilder {
     }
 
     /**
-     * Add data quality validation
+     * Add data quality validation.
+     *
+     * The decoder is what lets the engine apply the contract to every record. See `DataAlgebra.validate`.
      */
     def addQualityCheck(
       contract: com.flowforge.core.types.PipelineTypes.DataContract[E],
+    )(implicit decoder: DataDecoder[E],
     ): InMemoryTypedBuilder[F, In, DataAlgebra.Dataset[E]] = {
       val ef      = builder.ef
       val algebra = builder.dataAlgebra
