@@ -284,4 +284,4 @@ This project values clear plans, small scoped pull requests, and reliable build 
 
 ## Condensed Pipeline Checklist
 - See: docs/design/framework-behaviors.md
-- See: docs/quality/release-criteria.md
+- See: docs/plan/release-criteria.md

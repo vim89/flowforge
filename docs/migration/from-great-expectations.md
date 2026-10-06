@@ -1,5 +1,9 @@
 # Migrating from Great Expectations to FlowForge
 
+> Status: a design-level guide. The snippets are not compiled by the build. Quality checks run on Spark
+> today; `engines-flink` does not build, so claims about running the same checks on Flink are a goal, not
+> a feature. What ships today is listed in [v1.0 readiness](../plan/v1.0-readiness.md).
+
 This guide helps Great Expectations users transition to FlowForge's compile-time contract validation and dual-mode data quality framework.
 
 ## Why Migrate from Great Expectations?
@@ -474,11 +478,11 @@ object CustomExpectationMigration {
 
 ## Getting Help
 
-- **Documentation**: [FlowForge Quality Guide](/docs/quality/README.md)
+- **Documentation**: [FlowForge Quality Guide](../quality/README.md)
 - **Examples**: Check the `examples/` module for working code
 - **Community**: Join our Slack for migration support
 - **Professional Services**: Contact us for enterprise migration assistance
 
 ---
 
-**Next Steps**: Once you've migrated from Great Expectations, explore FlowForge's advanced features like multi-engine support and streaming contract validation in our [Advanced Tutorials](/docs/tutorials/advanced-patterns.mdoc).
+**Next Steps**: Once you've migrated from Great Expectations, explore FlowForge's advanced features like multi-engine support and streaming contract validation in our [Advanced Tutorials](../tutorials/advanced-patterns.mdoc).

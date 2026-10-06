@@ -13,22 +13,22 @@ import java.nio.file.Paths
 import java.time.Instant
 
 /**
- * PRODUCTION-READY In-Memory Data Algebra Implementation
+ * In-memory implementation of `DataAlgebra`, for development and testing workloads.
  *
- * This implementation uses blocking IO for simplicity and reliability:
- *   - Simple file reading with scala.io.Source
- *   - Memory-efficient processing for reasonable dataset sizes
- *   - Proper error handling with ValidatedNel
- *   - Production-ready CDC operations with MD5 hashing
+ * It uses blocking IO for simplicity:
+ *   - file reading with scala.io.Source
+ *   - error handling with ValidatedNel
+ *   - CDC operations keyed by MD5 hashing
  *
- * PRODUCTION READINESS: 95% - Optimized for development and testing workloads
+ * A dataset is held in memory in full, so size is bounded by the heap. A readiness statement belongs in one
+ * place, so this comment does not make one; see `docs/plan/v1.0-readiness.md`.
  */
 final class InMemoryDataAlgebra[F[_]](implicit F: EffectSystem[F]) extends DataAlgebra[F] {
 
   override val capabilities: Set[Capability] =
     Set(Capability.Read, Capability.Write, Capability.QualityChecks)
 
-  // ---------- External IO (PRODUCTION-READY) ----------
+  // ---------- External IO ----------
   override def read[A: DataDecoder](source: DataSource): F[Dataset[A]] = source match {
     case LocalDataSource(path, format, _, schemaOpt, _) =>
       val pathObj = Paths.get(path)

@@ -90,7 +90,7 @@ Documents are authoritative in this order:
 |-------|-----------------|----------|----------|
 | **Ground Reality & Governance** | `docs/adr/016-ground-reality-governance.md` | `docs/evidence/unvarnished-review.md` | `docs/archive/design/GROUND_REALITY_*.md` |
 | **Roadmap Baseline** | `docs/adr/018-roadmap-baseline.md` | `docs/plan/v1.0-readiness.md` | `docs/archive/design/RoadmapProposal.md` |
-| **v1.0 Readiness** | `docs/plan/v1.0-readiness.md` | `docs/quality/release-criteria.md` | - |
+| **v1.0 Readiness** | `docs/plan/v1.0-readiness.md` | `docs/plan/release-criteria.md` | - |
 | **Scaffolding vs Production** | `docs/adr/015-scaffolding-vs-production-policy.md` | - | `docs/archive/design/SCAFFOLDING_VS_PRODUCTION_AUDIT.md` |
 | **Unvarnished Review** | `docs/evidence/unvarnished-review.md` | `docs/evidence/unvarnished-review-2025-10-03.md` | `docs/archive/design/Findings.md` |
 

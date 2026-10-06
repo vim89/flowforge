@@ -1,4 +1,7 @@
 # FlowForge Architecture Design Document
+
+> **Archived**: superseded by the ADRs listed in `docs/adr/INDEX.md`. Kept for decision lineage only.
+
 *Updated: 2025-08-30 - Post-Comprehensive Assessment*
 
 ## Current Architecture Status

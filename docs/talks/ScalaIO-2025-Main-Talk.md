@@ -563,5 +563,5 @@ flowchart TD
 - Engine portability: `docs/talks/appendix-engine-portability.md`
 - Migration timeline (4-week schema evolution playbook): Week 1 (Backward policy), Week 4 (tighten to Exact), Week 6 (sunset old schema)
 - Experimental Kyo/Caprese: `docs/archive/brainstorming/flowforge/kyo-caprese.md`
-- Quality checklist: `docs/quality/release-criteria.md`
+- Quality checklist: `docs/plan/release-criteria.md`
 - Blog posts: `compile-time-data-contracts` (2025-09-30), `kleisli-data-engineering` (2025-10-08)

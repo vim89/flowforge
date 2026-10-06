@@ -1,5 +1,9 @@
 # Your First FlowForge Contract: An Interactive Tutorial
 
+> Status: the `.mdoc` extension is historical. The build does not run mdoc, so the snippets on this
+> page are not checked by the compiler. What ships today is listed in
+> [v1.0 readiness](../plan/v1.0-readiness.md).
+
 Welcome to FlowForge! This tutorial will walk you through the core concept that makes FlowForge unique: **compile-time contract validation**. By the end, you'll understand how FlowForge prevents schema drift from ever reaching production.
 
 ## 🎯 What You'll Learn
@@ -249,7 +253,9 @@ implicitly[SchemaConforms[OrderRecord, OrderContract, SchemaPolicy.Exact]]
 println("✅ Order processing contract validated! Ready for production pipeline.")
 ```
 
-**Key Point**: Whether your data comes from S3, Kafka, databases, or APIs, FlowForge ensures your pipeline output always matches your contract. No surprises in production!
+**Key Point**: the contract check is about shapes, so it holds for every source. Which sources the
+Spark engine can actually read and write today is a separate question, and the answer is a local path
+or a JDBC endpoint. See [v1.0 readiness](../plan/v1.0-readiness.md).
 
 ## 🎯 Step 8: Advanced Contract Patterns
 
@@ -277,9 +283,11 @@ case class CustomerRecordV1(
   // phoneNumber and marketingOptIn are missing but allowed under Backward policy
 )
 
-// Note: This would require the Backward policy to handle optional contract fields
-// For now, showing the concept - actual behavior depends on policy implementation
-println("✅ Schema evolution concept demonstrated!")
+// Backward allows a contract field to be absent from the producer when the contract declares it
+// optional, so this conformance holds.
+implicitly[SchemaConforms[CustomerRecordV1, CustomerContractV2, SchemaPolicy.Backward]]
+
+println("✅ Schema evolution demonstrated!")
 ```
 
 ### 8.2 Nested Contracts

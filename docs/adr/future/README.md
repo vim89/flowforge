@@ -29,7 +29,7 @@ These ADRs are **NOT ACTIVE** decisions. They represent:
 | [adr-005-kyo-effect-fences-with-cats-effect-interop.md](adr-005-kyo-effect-fences-with-cats-effect-interop.md) | Kyo effect fences | 🔬 Research | Effect system experimentation |
 | [adr-006-dq-lineage-gx-deequ-openlineage.md](adr-006-dq-lineage-gx-deequ-openlineage.md) | Data quality & lineage integration | 🔬 Research | Observability stack |
 | [poc/kyo-caprese-pocs.md](poc/kyo-caprese-pocs.md) | Kyo + Caprese POCs | 🧪 POC | See proof of concept results |
-| [poc/kyo-caprese-poc-adr-lld-impl.md](poc/kyo-caprese-poc-adr-lld-impl.md) | Kyo Caprese implementation | 🧪 POC | Low-level design |
+| [poc/ky-caprese-poc-adr-lld-impl.md](poc/ky-caprese-poc-adr-lld-impl.md) | Kyo Caprese implementation | 🧪 POC | Low-level design |
 | [poc/kyo-gcs-s3-poc-impl.md](poc/kyo-gcs-s3-poc-impl.md) | Kyo with cloud storage | 🧪 POC | Connector research |
 
 ## 🎯 Promotion Criteria

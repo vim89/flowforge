@@ -1,4 +1,7 @@
 # Do we really need Effect System ?
+
+> **Archived**: superseded by `docs/adr/012-effect-system-decision.md`. Kept for decision lineage only.
+
 You have seen entire codebase. Do we really need an Effect system?
 What does your research & unbiased thoughts say?
 

@@ -1,5 +1,9 @@
 # Migrating from Scio/Apache Beam to FlowForge
 
+> Status: a design-level guide. The snippets are not compiled by the build. There is no streaming API, so
+> the streaming sections describe a design rather than shipped code, and `engines-flink` does not build.
+> What ships today is listed in [v1.0 readiness](../plan/v1.0-readiness.md).
+
 This guide helps Scio and Apache Beam users migrate to FlowForge's contract-first, engine-agnostic data pipeline framework. FlowForge provides compile-time contract validation, multi-engine support, and functional programming patterns that complement Scio's type safety with additional guarantees.
 
 ## Table of Contents
@@ -940,6 +944,5 @@ After completing the migration:
 
 For additional support during migration, refer to:
 - [FlowForge Documentation](../README.md)
-- [Interactive Tutorials](../tutorials/README.md)
-- [Community Discord/Slack](#) 
-- [GitHub Issues](https://github.com/flowforge/flowforge/issues)
+- [Tutorials](../tutorials/first-contract.mdoc)
+- [GitHub Issues](https://github.com/vim89/flowforge/issues)

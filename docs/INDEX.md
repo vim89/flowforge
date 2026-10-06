@@ -20,13 +20,13 @@
 1. [Operating Guide](operating/) - Multi-cloud deployment
 2. [Infrastructure Layer](adr/013-infrastructure-layer.md) - Infrastructure design
 3. [Observability](plan/observability.md) - Monitoring and metrics
-4. [Version Management](operating/version-management.md) - Release strategy
+4. [Release Criteria](plan/release-criteria.md) - Release strategy
 
 ### For Contributors
 1. [Contributing Guide](../CONTRIBUTING.md) - How to contribute
 2. [Developer Handbook](contributing/HANDBOOK.md) - Deep technical guide
 3. [ADR Index](adr/INDEX.md) - Architectural decisions
-4. [Code Coverage Map](contributing/COVERAGE.md) - Implementation status
+4. [Coverage Enforcement](plan/COVERAGE_ENFORCEMENT.md) - Coverage gates
 
 ---
 
@@ -194,7 +194,7 @@ Understanding document authority:
 - **Scala Version**: 2.13 (primary), 2.12 (Flink), 3.x (ready, waiting for ecosystem)
 - **Effect Systems**: Cats Effect & ZIO (both supported)
 - **Engines**: Spark (stable), Flink (2.12 only)
-- **Test Coverage**: Core >80%, see [Coverage](contributing/COVERAGE.md)
+- **Test Coverage**: Core >80%, see [Coverage Enforcement](plan/COVERAGE_ENFORCEMENT.md)
 
 ---
 

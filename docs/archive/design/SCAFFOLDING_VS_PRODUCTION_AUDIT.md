@@ -1,5 +1,7 @@
 # 🚨 FlowForge: Scaffolding vs Production Reality Audit
 
+> **Archived**: superseded by `docs/adr/015-scaffolding-vs-production-policy.md`. Its readiness numbers are a 2025-09-02 snapshot and are not current; see `docs/plan/v1.0-readiness.md`. Kept for decision lineage only.
+
 **Date**: 2025-09-02  
 **Critical Issue**: Systematic confusion between architectural scaffolding and production-ready implementations
 

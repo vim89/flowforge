@@ -1,4 +1,7 @@
 # FlowForge Implementation TODO - Priority Action Plan
+
+> **Archived**: superseded by `docs/plan/v1.0-readiness.md`, which is the one readiness statement. Kept for decision lineage only.
+
 *Comprehensive Implementation Guide - Updated 2025-09-01*
 
 ## 🎯 Executive Summary - REALITY-CORRECTED
