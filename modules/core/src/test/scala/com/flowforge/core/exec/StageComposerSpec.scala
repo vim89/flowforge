@@ -266,7 +266,10 @@ class StageComposerSpec extends AnyFunSuite with Matchers {
       )
       .build()
 
-    built.execute(()).unsafeRunSync()
+    val result = built.execute(()).unsafeRunSync()
     seen.toList shouldBe List("read", "transform", "write:8")
+    // A pipeline that ends in a sink produces unit, and its type says so. While the type said the record
+    // instead, reading the result threw a ClassCastException, because the sink had only written it.
+    result shouldBe (())
   }
 }

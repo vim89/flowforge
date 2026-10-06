@@ -10,12 +10,33 @@ object ContractsExtractorCli extends IOApp {
 
   sealed trait Mode
   object Mode {
-    case object Parquet     extends Mode
-    case object Delta       extends Mode
-    case object Hive        extends Mode
-    case object CSV         extends Mode
-    case object JDBC        extends Mode
+
+    /**
+     * The modes that read their input through Spark. Separating these from `GenerateSDK` is what lets
+     * [[read]] be total: it takes a `SparkSource`, so there is no mode it has to refuse.
+     */
+    sealed trait SparkSource extends Mode
+
+    case object Parquet extends SparkSource
+    case object Delta   extends SparkSource
+    case object Hive    extends SparkSource
+    case object CSV     extends SparkSource
+    case object JDBC    extends SparkSource
+
     case object GenerateSDK extends Mode
+
+    private val byName: Map[String, Mode] = Map(
+      "parquet"      -> Parquet,
+      "delta"        -> Delta,
+      "hive"         -> Hive,
+      "csv"          -> CSV,
+      "jdbc"         -> JDBC,
+      "generate-sdk" -> GenerateSDK,
+    )
+
+    def fromString(name: String): Option[Mode] = byName.get(name.toLowerCase)
+
+    val names: String = byName.keys.toList.sorted.mkString(" | ")
   }
 
   final case class Args(
@@ -37,18 +58,12 @@ object ContractsExtractorCli extends IOApp {
       head("FlowForge", "contracts-extractor"),
       opt[String]("mode")
         .required()
-        .action((m, a) =>
-          a.copy(mode = m.toLowerCase match {
-            case "parquet"      => Mode.Parquet
-            case "delta"        => Mode.Delta
-            case "hive"         => Mode.Hive
-            case "csv"          => Mode.CSV
-            case "jdbc"         => Mode.JDBC
-            case "generate-sdk" => Mode.GenerateSDK
-            case other          => throw new IllegalArgumentException(s"Unknown mode: $other")
-          }),
-        )
-        .text("parquet | delta | hive | csv | jdbc | generate-sdk"),
+        // An unrecognised mode leaves the default in place and is then rejected by validate, which is what
+        // prints the message and stops the run. The parsed config is discarded on a validation failure, so
+        // the default is never the mode anything actually runs with.
+        .action((m, a) => Mode.fromString(m).fold(a)(mode => a.copy(mode = mode)))
+        .validate(m => if (Mode.fromString(m).isDefined) success else failure(s"Unknown mode: $m"))
+        .text(Mode.names),
       opt[String]("input")
         .required()
         .action((p, a) => a.copy(input = p))
@@ -78,6 +93,10 @@ object ContractsExtractorCli extends IOApp {
         .optional()
         .action((m, a) => a.copy(master = Some(m)))
         .text("Spark master (default: local[*])"),
+      checkConfig(a =>
+        if (a.mode == Mode.JDBC && a.jdbcUrl.isEmpty) failure("--jdbc-url required for mode=jdbc")
+        else success,
+      ),
     )
   }
 
@@ -103,27 +122,39 @@ object ContractsExtractorCli extends IOApp {
     case Mode.GenerateSDK =>
       import com.flowforge.contracts.sdk.ContractSdkGenerator
       ContractSdkGenerator.generateSdk(args.input, args.outputDir)
-    case _ =>
+    case source: Mode.SparkSource =>
       sparkResource(args.master).use { spark =>
-        val df = args.mode match {
-          case Mode.Parquet => spark.read.parquet(args.input)
-          case Mode.Delta   => spark.read.format("delta").load(args.input)
-          case Mode.Hive    => spark.table(args.input)
-          case Mode.CSV =>
-            spark.read.option("header", "true").option("inferSchema", "true").csv(args.input)
-          case Mode.JDBC =>
-            val url = args.jdbcUrl.getOrElse(
-              throw new IllegalArgumentException("--jdbc-url required for mode=jdbc"),
-            )
-            val table = args.jdbcTable.getOrElse(args.input)
-            spark.read.format("jdbc").option("url", url).option("dbtable", table).load()
-          case Mode.GenerateSDK => throw new IllegalStateException("Should not reach here")
-        }
         for {
+          df   <- read(source, args, spark)
           avro <- IO.pure(Avro.fromSpark(df, args.namespace, args.entity))
           _    <- Files.writeContracts(args.outputDir, args.domain, args.entity, avro)
         } yield ()
       }
+  }
+
+  /**
+   * Reads the input for one Spark-backed mode.
+   *
+   * The missing JDBC url is raised in `IO` rather than thrown. `checkConfig` already rejects it at parse
+   * time, so this branch only covers a caller that built `Args` directly.
+   */
+  private def read(
+    mode: Mode.SparkSource,
+    args: Args,
+    spark: SparkSession,
+  ): IO[DataFrame] = mode match {
+    case Mode.Parquet => IO(spark.read.parquet(args.input))
+    case Mode.Delta   => IO(spark.read.format("delta").load(args.input))
+    case Mode.Hive    => IO(spark.table(args.input))
+    case Mode.CSV =>
+      IO(spark.read.option("header", "true").option("inferSchema", "true").csv(args.input))
+    case Mode.JDBC =>
+      IO.fromOption(args.jdbcUrl)(
+        new IllegalArgumentException("--jdbc-url required for mode=jdbc"),
+      ).flatMap { url =>
+          val table = args.jdbcTable.getOrElse(args.input)
+          IO(spark.read.format("jdbc").option("url", url).option("dbtable", table).load())
+        }
   }
 
   // Very small Avro generator from Spark StructType (flat/nested basic support)

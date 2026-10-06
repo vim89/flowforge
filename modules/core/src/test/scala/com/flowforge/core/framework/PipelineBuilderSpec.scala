@@ -7,10 +7,10 @@ import com.flowforge.core.contracts.SchemaPolicy
 import com.flowforge.core.instances.EffectInstances
 import com.flowforge.core.lineage.OpenLineageEmitter
 import com.flowforge.core.observability.Tracer
+import com.flowforge.core.testing.How
 import com.flowforge.core.types._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import com.flowforge.core.testing.How
 
 class PipelineBuilderSpec extends AnyFunSuite with Matchers {
 

@@ -867,13 +867,19 @@ object DataSink {
 // ===============================
 
 /**
- * A sink that encodes its expected schema at the type level as an HList of labelled fields. Use with
- * PipelineBuilder.addTypedSink to enforce compile-time schema compatibility between pipeline output type and
- * sink expectation. Record-typed endpoints; schema carried by compile-time Shape evidence.
+ * A source that names the type it produces. Use with PipelineBuilder.addTypedSource, which requires
+ * `SchemaConforms` evidence that the reader's result conforms to `C` under the chosen policy.
+ *
+ * The `Shape[C]` instance is what restricts `C` to a derivable case class. Nothing in core reads its field
+ * list; the schema comparison is done by the `SchemaConforms` macro, which derives its own view of `C`.
  */
 final case class TypedSource[C](underlying: DataSource)(implicit val sc: Shape[C])
 
-/** A source that encodes its expected schema at the type level. */
+/**
+ * A sink that names the type it expects. Use with PipelineBuilder.addTypedSink, which requires
+ * `SchemaConforms` evidence that the pipeline's output type conforms to `R` under the chosen policy. The
+ * `Shape[R]` instance plays the same role as in [[TypedSource]].
+ */
 final case class TypedSink[R](underlying: DataSink)(implicit val sr: Shape[R])
 
 // ===============================

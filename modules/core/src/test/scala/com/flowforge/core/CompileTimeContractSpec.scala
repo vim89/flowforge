@@ -4,9 +4,9 @@ package com.flowforge.core
 import cats.effect.IO
 import com.flowforge.core.contracts.SchemaPolicy
 import com.flowforge.core.instances.EffectInstances._
+import com.flowforge.core.testing.Why
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import com.flowforge.core.testing.Why
 
 /**
  * Compile-time contract enforcement tests.
