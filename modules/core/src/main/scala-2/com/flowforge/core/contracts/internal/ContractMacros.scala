@@ -54,7 +54,29 @@ object ContractMacros {
       def isAtomicKey(t: Type): Boolean =
         t =:= typeOf[String] || t =:= typeOf[Int] || t =:= typeOf[Long] ||
           t =:= typeOf[Short] || t =:= typeOf[Byte] || t =:= typeOf[Boolean]
+
+      def isTuple(t: Type): Boolean =
+        t.typeSymbol.fullName.startsWith("scala.Tuple")
     }
+
+    /**
+     * A type this macro cannot look inside, compared by its name.
+     *
+     * There used to be a closed list of leaf types here, on the reasoning that a type outside it is one no
+     * sink can write. That is not something a contract can know: a sink takes the writer as a function, so
+     * whether a `UUID` or a domain enum can be written is decided by the writer the caller supplies, not by
+     * this list. Rejecting an unlisted leaf therefore turned away pipelines that were fine. Comparing it by
+     * name still catches the drift that is this macro's job, because a leaf that changes type changes its
+     * name.
+     */
+    def opaqueLeaf(t: Type): PrimitiveShape = PrimitiveShape(TypeShape.simpleName(t.toString))
+
+    def unsupportedTuple(t: Type): Nothing =
+      c.abort(
+        c.enclosingPosition,
+        s"Unsupported tuple in SchemaConforms derivation: ${t.toString}. " +
+          "A tuple has no field names to compare, so use a case class instead.",
+      )
 
     // TypeShape builder - pure functional approach
     object ShapeBuilder {
@@ -76,13 +98,13 @@ object ContractMacros {
                     s"Unsupported Map key type: ${k.toString}. Allowed: String, Int, Long, Short, Byte, Boolean",
                   )
                 }
-                MapShape(PrimitiveShape(k.toString), buildTypeShape(v))
+                MapShape(PrimitiveShape(TypeShape.simpleName(k.toString)), buildTypeShape(v))
             }.getOrElse {
-              if (isCaseClass(tpe)) {
-                buildStructShape(tpe)
-              } else {
-                PrimitiveShape(tpe.toString)
-              }
+              // Tuples are checked first because every TupleN is itself a case class. Reading one as a
+              // struct of `_1`, `_2` would make positional junk look like a named schema.
+              if (isTuple(tpe)) unsupportedTuple(tpe)
+              else if (isCaseClass(tpe)) buildStructShape(tpe)
+              else opaqueLeaf(tpe)
             }
           }
         }
@@ -107,11 +129,30 @@ object ContractMacros {
       }
     }
 
+    // Matched by subtyping rather than by the rendered type name, so that a policy named as the trait
+    // (SchemaPolicy.Backward) and the same policy named as the case object (SchemaPolicy.Backward.type)
+    // resolve to the same rules. The policy traits are disjoint, so at most one entry can match.
+    val known: List[(Type, SchemaPolicy)] = List(
+      typeOf[SchemaPolicy.Exact]            -> SchemaPolicy.Exact,
+      typeOf[SchemaPolicy.ExactUnordered]   -> SchemaPolicy.ExactUnordered,
+      typeOf[SchemaPolicy.ExactUnorderedCI] -> SchemaPolicy.ExactUnorderedCI,
+      typeOf[SchemaPolicy.ExactOrdered]     -> SchemaPolicy.ExactOrdered,
+      typeOf[SchemaPolicy.ExactOrderedCI]   -> SchemaPolicy.ExactOrderedCI,
+      typeOf[SchemaPolicy.ExactByPosition]  -> SchemaPolicy.ExactByPosition,
+      typeOf[SchemaPolicy.Backward]         -> SchemaPolicy.Backward,
+      typeOf[SchemaPolicy.Forward]          -> SchemaPolicy.Forward,
+      typeOf[SchemaPolicy.Full]             -> SchemaPolicy.Full,
+    )
+
+    val rules = known.collectFirst { case (t, policy) if weakTypeOf[P] <:< t => ComparisonRules.of(policy) }
+      .getOrElse(ComparisonRules.strictest)
+
     ShapeDiff
       .report(
         policyName = weakTypeOf[P].toString,
         outName = weakTypeOf[Out].toString,
         contractName = weakTypeOf[Contract].toString,
+        rules = rules,
         out = ShapeBuilder.buildTypeShape(weakTypeOf[Out]),
         contract = ShapeBuilder.buildTypeShape(weakTypeOf[Contract]),
       )

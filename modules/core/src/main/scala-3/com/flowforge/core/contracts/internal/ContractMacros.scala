@@ -24,11 +24,39 @@ object ContractMacros {
         policyName = TypeRepr.of[P].show,
         outName = TypeRepr.of[Out].show,
         contractName = TypeRepr.of[Contract].show,
+        rules = rulesOf[P],
         out = TypeShapes.of(TypeRepr.of[Out]),
         contract = TypeShapes.of(TypeRepr.of[Contract]),
       )
       .foreach(message => report.errorAndAbort(message))
 
     '{ new SchemaConforms[Out, Contract, P] {} }
+  }
+
+  /**
+   * The comparison rules the policy type `P` stands for.
+   *
+   * Matched by subtyping rather than by the rendered type name, so that a policy named as the trait
+   * (`SchemaPolicy.Backward`) and the same policy named as the case object (`SchemaPolicy.Backward.type`)
+   * resolve to the same rules. The policy traits are disjoint, so at most one branch can match.
+   */
+  private def rulesOf[P <: SchemaPolicy: Type](using q: Quotes): ComparisonRules = {
+    import q.reflect.*
+    val requested = TypeRepr.of[P]
+
+    val known: List[(TypeRepr, SchemaPolicy)] = List(
+      TypeRepr.of[SchemaPolicy.Exact]            -> SchemaPolicy.Exact,
+      TypeRepr.of[SchemaPolicy.ExactUnordered]   -> SchemaPolicy.ExactUnordered,
+      TypeRepr.of[SchemaPolicy.ExactUnorderedCI] -> SchemaPolicy.ExactUnorderedCI,
+      TypeRepr.of[SchemaPolicy.ExactOrdered]     -> SchemaPolicy.ExactOrdered,
+      TypeRepr.of[SchemaPolicy.ExactOrderedCI]   -> SchemaPolicy.ExactOrderedCI,
+      TypeRepr.of[SchemaPolicy.ExactByPosition]  -> SchemaPolicy.ExactByPosition,
+      TypeRepr.of[SchemaPolicy.Backward]         -> SchemaPolicy.Backward,
+      TypeRepr.of[SchemaPolicy.Forward]          -> SchemaPolicy.Forward,
+      TypeRepr.of[SchemaPolicy.Full]             -> SchemaPolicy.Full,
+    )
+
+    known.collectFirst { case (tpe, policy) if requested <:< tpe => ComparisonRules.of(policy) }
+      .getOrElse(ComparisonRules.strictest)
   }
 }

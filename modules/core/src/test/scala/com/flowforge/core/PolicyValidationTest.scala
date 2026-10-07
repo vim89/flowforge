@@ -3,9 +3,10 @@ package com.flowforge.core
 
 import com.flowforge.core.contracts.derive.Shape
 import com.flowforge.core.contracts.{ SchemaConforms, SchemaPolicy }
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-class PolicyValidationTest extends AnyWordSpec {
+class PolicyValidationTest extends AnyWordSpec with Matchers {
   case class User(
     id: Long,
     name: String,
@@ -24,6 +25,9 @@ class PolicyValidationTest extends AnyWordSpec {
     Id: Long,
     Name: String,
     Email: String)
+
+  case class WithUuid(id: java.util.UUID)
+  case class WithStringId(id: String)
 
   case class Item(sku: String, qty: Int)
   case class WiderItem(
@@ -86,5 +90,57 @@ class PolicyValidationTest extends AnyWordSpec {
       val widerElement: SchemaConforms[OrderWithWiderItems, OrderWithList, SchemaPolicy.Backward] = implicitly
       assert(widerElement != null)
     }
+
+    "render a field type without the packages a reader does not need" in {
+      // Scala 3 reflection renders String as `scala.Predef.String` and magnolia renders it as
+      // `java.lang.String`, so without reducing the name a field type reads differently per compiler.
+      userShape.fields.map(_.tpe) shouldBe List("Long", "String", "String")
+    }
+
+    "render a type argument without those packages either" in {
+      // Reducing only the leading prefix left the argument's own prefix in place, so Scala 3 read this as
+      // `Option[scala.Predef.String]` where Scala 2 read it as `Option`.
+      userWithAgeShape.fields.map(_.tpe) shouldBe List("Long", "String", "String", "Option[Int]")
+    }
+
+    "mark an Option field optional" in {
+      // Scala 2 derivation decided this from the rendered name containing `Option[`, but magnolia reports
+      // the name and its arguments apart, so the name alone never contained it and every field read as
+      // required. A sink that trusted this would have declared a nullable column as NOT NULL.
+      userWithAgeShape.fields.map(f => (f.name, f.isOptional)) shouldBe
+        List(("id", false), ("name", false), ("email", false), ("age", true))
+    }
+
+    "resolve a policy named as the case object, not only as the trait" in {
+      // Both spellings name the same policy. The macro used to resolve a policy by the simple name of its
+      // rendered type, which reads `.type` out of `SchemaPolicy.Backward.type` and then silently compared
+      // under the default rules. UserMissingEmail drops a required field, so Backward is the only policy
+      // here that accepts it, which is what makes this a check of the dispatch rather than of the default.
+      val asObjectType: SchemaConforms[User, UserWithAge, SchemaPolicy.Backward.type] = implicitly
+      assert(asObjectType != null)
+    }
+
+    "accept a leaf type the macro cannot look inside" in {
+      // Whether a UUID can be written is decided by the writer the caller passes to the sink, not by this
+      // macro, so a closed list of leaf types here only turned away pipelines that were fine.
+      val valid: SchemaConforms[WithUuid, WithUuid, SchemaPolicy.Exact] = implicitly
+      assert(valid != null)
+    }
+
+    "still catch drift in a leaf type it cannot look inside" in
+      // Comparing such a leaf by name is enough, because a leaf that changes type changes its name.
+      assertTypeError("""
+        import com.flowforge.core.contracts._
+        implicitly[SchemaConforms[WithUuid, WithStringId, SchemaPolicy.Exact]]
+      """)
+
+    "reject a tuple rather than reading it as a named struct" in
+      // Every TupleN is a case class, so a tuple used to be read as a struct of `_1`, `_2`, which makes
+      // positional junk look like a named schema.
+      assertTypeError("""
+        import com.flowforge.core.contracts._
+        final case class WithTuple(pair: (Long, String))
+        implicitly[SchemaConforms[WithTuple, WithTuple, SchemaPolicy.Exact]]
+      """)
   }
 }

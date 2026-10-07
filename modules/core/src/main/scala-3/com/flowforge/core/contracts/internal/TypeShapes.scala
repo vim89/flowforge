@@ -62,15 +62,46 @@ object TypeShapes {
             s"Unsupported Map key type: ${key.show}. Allowed: String, Int, Long, Short, Byte, Boolean",
           )
         }
-        MapShape(PrimitiveShape(key.show), shapeOf(TypeRepr.of[v], inField = false))
+        MapShape(PrimitiveShape(TypeShape.simpleName(key.show)), shapeOf(TypeRepr.of[v], inField = false))
 
       case '[Seq[a]]   => SequenceShape(shapeOf(TypeRepr.of[a], inField = false))
       case '[Set[a]]   => SequenceShape(shapeOf(TypeRepr.of[a], inField = false))
       case '[Array[a]] => SequenceShape(shapeOf(TypeRepr.of[a], inField = false))
 
-      case _ =>
-        if (isCaseClass(t)) StructShape(fieldsOf(t)) else PrimitiveShape(t.show)
+      case _ => structOrLeaf(t)
     }
+  }
+
+  private def structOrLeaf(using q: Quotes)(tpe: q.reflect.TypeRepr): TypeShape = {
+    import q.reflect.*
+    // Tuples are checked first because every TupleN is itself a case class. Reading one as a struct of
+    // `_1`, `_2` would make positional junk look like a named schema, so a tuple is rejected rather than
+    // reinterpreted.
+    if (tpe <:< TypeRepr.of[Tuple]) unsupportedTuple(tpe)
+    else if (isCaseClass(tpe)) StructShape(fieldsOf(tpe))
+    else opaqueLeaf(tpe)
+  }
+
+  /**
+   * A type this macro cannot look inside, compared by its name.
+   *
+   * There used to be a closed list of leaf types here, on the reasoning that a type outside it is one no sink
+   * can write. That is not something a contract can know: a sink takes the writer as a function, so whether a
+   * `UUID` or a domain enum can be written is decided by the writer the caller supplies, not by this list.
+   * Rejecting an unlisted leaf therefore turned away pipelines that were fine. Comparing it by name still
+   * catches the drift that is this macro's job, because a leaf that changes type changes its name.
+   */
+  private def opaqueLeaf(using q: Quotes)(tpe: q.reflect.TypeRepr): PrimitiveShape = {
+    import q.reflect.*
+    PrimitiveShape(TypeShape.simpleName(tpe.show))
+  }
+
+  private def unsupportedTuple(using q: Quotes)(tpe: q.reflect.TypeRepr): Nothing = {
+    import q.reflect.*
+    report.errorAndAbort(
+      s"Unsupported tuple in SchemaConforms derivation: ${tpe.show}. " +
+        "A tuple has no field names to compare, so use a case class instead.",
+    )
   }
 
   private def fieldsOf(using q: Quotes)(tpe: q.reflect.TypeRepr): List[FieldShape] = {
