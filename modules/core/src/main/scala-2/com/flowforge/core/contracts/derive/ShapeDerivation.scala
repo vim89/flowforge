@@ -1,6 +1,7 @@
 // scalafix:off DisableSyntax.throw
 package com.flowforge.core.contracts.derive
 
+import com.flowforge.core.contracts.internal.TypeShape
 import magnolia1._
 
 import scala.language.experimental.macros
@@ -16,7 +17,9 @@ trait ShapeDerivation {
           val full = p.typeName.full // Magnolia 1 (Scala 2) exposes typeName
           Field(
             name = p.label,
-            tpe = full,
+            // Reduced so that a field type reads the same here as it does on Scala 3, where reflection
+            // renders the same type as `scala.Predef.String`.
+            tpe = TypeShape.simpleName(full),
             hasDefault = p.default.isDefined,
             isOptional = full.startsWith("scala.Option["),
           )

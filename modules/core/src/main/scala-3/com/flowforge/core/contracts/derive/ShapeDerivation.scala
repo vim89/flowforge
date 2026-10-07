@@ -1,6 +1,6 @@
 package com.flowforge.core.contracts.derive
 
-import com.flowforge.core.contracts.internal.TypeShapes
+import com.flowforge.core.contracts.internal.{ TypeShape, TypeShapes }
 
 import scala.quoted.*
 
@@ -24,7 +24,7 @@ object ShapeDerivation {
       case (name, fieldType, hasDefault) =>
         // Read off the type out here: inside the quote a different Quotes instance is in scope, so a
         // `TypeRepr` from this one does not typecheck there.
-        val rendered   = Expr(fieldType.show)
+        val rendered   = Expr(TypeShape.simpleName(fieldType.show))
         val isOptional = Expr(TypeShapes.isOption(fieldType.dealias))
         '{
           Field(
