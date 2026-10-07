@@ -44,50 +44,48 @@ object ShapeDiff {
     /**
      * The one mapping from policy to comparison behaviour.
      *
-     * Keyed by the case objects so the names cannot drift from the policies they describe: each policy's
-     * sealed trait and case object share a name, which is what lets a macro look a policy up by the simple
-     * name of the type it was given.
+     * Total over the policy ADT on purpose. A policy nobody mapped is a compile error here rather than a
+     * silent fallback to some default at the call site.
      */
-    private val table: List[(SchemaPolicy, Flags)] = List(
-      SchemaPolicy.Exact            -> Flags(),
-      SchemaPolicy.ExactUnordered   -> Flags(),
-      SchemaPolicy.ExactUnorderedCI -> Flags(caseInsensitive = true),
-      SchemaPolicy.ExactOrdered     -> Flags(orderedByName = true),
-      SchemaPolicy.ExactOrderedCI   -> Flags(caseInsensitive = true, orderedByName = true),
-      SchemaPolicy.ExactByPosition  -> Flags(byPosition = true),
-      SchemaPolicy.Backward         -> Flags(backward = true),
-      SchemaPolicy.Forward          -> Flags(forward = true),
-      SchemaPolicy.Full             -> Flags(full = true),
-    )
-
-    private val byName: Map[String, Flags] =
-      table.map { case (policy, flags) => policy.toString -> flags }.toMap
+    def of(policy: SchemaPolicy): Flags = policy match {
+      case SchemaPolicy.Exact            => Flags()
+      case SchemaPolicy.ExactUnordered   => Flags()
+      case SchemaPolicy.ExactUnorderedCI => Flags(caseInsensitive = true)
+      case SchemaPolicy.ExactOrdered     => Flags(orderedByName = true)
+      case SchemaPolicy.ExactOrderedCI   => Flags(caseInsensitive = true, orderedByName = true)
+      case SchemaPolicy.ExactByPosition  => Flags(byPosition = true)
+      case SchemaPolicy.Backward         => Flags(backward = true)
+      case SchemaPolicy.Forward          => Flags(forward = true)
+      case SchemaPolicy.Full             => Flags(full = true)
+    }
 
     /**
-     * Flags for the named policy.
+     * What to compare under when the policy type is not one of the known policies.
      *
-     * Either a simple name ("Backward") or the fully qualified type name a macro reads off the type it was
-     * given ("com.flowforge.core.contracts.SchemaPolicy.Backward") works.
-     *
-     * An unrecognised name, including an abstract `P <: SchemaPolicy`, compares exactly and relaxes nothing,
-     * which is the strictest answer available.
+     * Reached only for an abstract `P <: SchemaPolicy`, which is generic code that has not fixed its policy
+     * yet. Strict matching is the safe answer: it can report drift a looser policy would have accepted, but
+     * it never passes a producer the requested policy would have rejected.
      */
-    def forName(policyName: String): Flags =
-      byName.getOrElse(policyName.substring(policyName.lastIndexOf('.') + 1), Flags())
+    val strictest: Flags = Flags()
   }
 
   /**
-   * The compile error for the drift between `out` and `contract` under the named policy, or None when they
-   * conform.
+   * The compile error for the drift between `out` and `contract` under `flags`, or None when they conform.
+   *
+   * `flags` is passed in rather than looked up from `policyName`, which is only ever printed. Resolving a
+   * policy from its rendered type name was fragile: a policy written as `SchemaPolicy.Backward.type` renders
+   * differently from the same policy written as `SchemaPolicy.Backward`, and a lookup that missed used to
+   * compare under the default rules instead of the requested ones.
    */
   def report(
     policyName: String,
     outName: String,
     contractName: String,
+    flags: Flags,
     out: TypeShape,
     contract: TypeShape,
   ): Option[String] = {
-    val drift = diff(Flags.forName(policyName), out, contract)
+    val drift = diff(flags, out, contract)
     if (drift.isEmpty) None else Some(render(policyName, outName, contractName, drift))
   }
 

@@ -54,7 +54,26 @@ object ContractMacros {
       def isAtomicKey(t: Type): Boolean =
         t =:= typeOf[String] || t =:= typeOf[Int] || t =:= typeOf[Long] ||
           t =:= typeOf[Short] || t =:= typeOf[Byte] || t =:= typeOf[Boolean]
+
+      def isTuple(t: Type): Boolean =
+        t.typeSymbol.fullName.startsWith("scala.Tuple")
+
+      def isSupportedLeaf(t: Type): Boolean =
+        t =:= typeOf[String] || t =:= typeOf[Int] || t =:= typeOf[Long] ||
+          t =:= typeOf[Short] || t =:= typeOf[Byte] || t =:= typeOf[Double] ||
+          t =:= typeOf[Float] || t =:= typeOf[Boolean] || t =:= typeOf[BigDecimal] ||
+          t =:= typeOf[java.math.BigDecimal] || t =:= typeOf[java.sql.Date] ||
+          t =:= typeOf[java.time.LocalDate] || t =:= typeOf[java.sql.Timestamp] ||
+          t =:= typeOf[java.time.Instant] || t =:= typeOf[java.time.LocalDateTime]
     }
+
+    def unsupportedLeaf(t: Type): Nothing =
+      c.abort(
+        c.enclosingPosition,
+        s"Unsupported structural leaf type in SchemaConforms derivation: ${t.toString}. " +
+          s"Supported leaf types: ${TypeShape.supportedLeafTypes}. " +
+          "Supported container shapes: case classes, Option, List/Seq/Vector/Array/Set, and Map[atomic, _].",
+      )
 
     // TypeShape builder - pure functional approach
     object ShapeBuilder {
@@ -76,13 +95,14 @@ object ContractMacros {
                     s"Unsupported Map key type: ${k.toString}. Allowed: String, Int, Long, Short, Byte, Boolean",
                   )
                 }
-                MapShape(PrimitiveShape(k.toString), buildTypeShape(v))
+                MapShape(PrimitiveShape(TypeShape.simpleName(k.toString)), buildTypeShape(v))
             }.getOrElse {
-              if (isCaseClass(tpe)) {
-                buildStructShape(tpe)
-              } else {
-                PrimitiveShape(tpe.toString)
-              }
+              // Tuples are checked first because every TupleN is itself a case class. Reading one as a
+              // struct of `_1`, `_2` would make positional junk look like a named schema.
+              if (isTuple(tpe)) unsupportedLeaf(tpe)
+              else if (isCaseClass(tpe)) buildStructShape(tpe)
+              else if (isSupportedLeaf(tpe)) PrimitiveShape(TypeShape.simpleName(tpe.toString))
+              else unsupportedLeaf(tpe)
             }
           }
         }
@@ -107,11 +127,30 @@ object ContractMacros {
       }
     }
 
+    // Matched by subtyping rather than by the rendered type name, so that a policy named as the trait
+    // (SchemaPolicy.Backward) and the same policy named as the case object (SchemaPolicy.Backward.type)
+    // resolve to the same rules. The policy traits are disjoint, so at most one entry can match.
+    val known: List[(Type, SchemaPolicy)] = List(
+      typeOf[SchemaPolicy.Exact]            -> SchemaPolicy.Exact,
+      typeOf[SchemaPolicy.ExactUnordered]   -> SchemaPolicy.ExactUnordered,
+      typeOf[SchemaPolicy.ExactUnorderedCI] -> SchemaPolicy.ExactUnorderedCI,
+      typeOf[SchemaPolicy.ExactOrdered]     -> SchemaPolicy.ExactOrdered,
+      typeOf[SchemaPolicy.ExactOrderedCI]   -> SchemaPolicy.ExactOrderedCI,
+      typeOf[SchemaPolicy.ExactByPosition]  -> SchemaPolicy.ExactByPosition,
+      typeOf[SchemaPolicy.Backward]         -> SchemaPolicy.Backward,
+      typeOf[SchemaPolicy.Forward]          -> SchemaPolicy.Forward,
+      typeOf[SchemaPolicy.Full]             -> SchemaPolicy.Full,
+    )
+
+    val flags = known.collectFirst { case (t, policy) if weakTypeOf[P] <:< t => ShapeDiff.Flags.of(policy) }
+      .getOrElse(ShapeDiff.Flags.strictest)
+
     ShapeDiff
       .report(
         policyName = weakTypeOf[P].toString,
         outName = weakTypeOf[Out].toString,
         contractName = weakTypeOf[Contract].toString,
+        flags = flags,
         out = ShapeBuilder.buildTypeShape(weakTypeOf[Out]),
         contract = ShapeBuilder.buildTypeShape(weakTypeOf[Contract]),
       )
