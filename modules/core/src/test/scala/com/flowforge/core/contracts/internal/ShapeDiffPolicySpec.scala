@@ -26,7 +26,7 @@ class ShapeDiffPolicySpec extends AnyFunSpec with Matchers {
     out: TypeShape,
     contract: TypeShape,
   ): ShapeDiff.Drift =
-    ShapeDiff.diff(ShapeDiff.Flags.forName(policy.toString), out, contract)
+    ShapeDiff.diff(ShapeDiff.Flags.of(policy), out, contract)
 
   private def conforms(
     policy: SchemaPolicy,
@@ -177,9 +177,9 @@ class ShapeDiffPolicySpec extends AnyFunSpec with Matchers {
     }
   }
 
-  describe("an unknown policy name") {
+  describe("an unresolved policy type") {
     it("compares exactly, so an abstract policy cannot widen what is accepted") {
-      ShapeDiff.Flags.forName("P") shouldBe ShapeDiff.Flags.forName("Exact")
+      ShapeDiff.Flags.strictest shouldBe ShapeDiff.Flags.of(SchemaPolicy.Exact)
     }
   }
 }
