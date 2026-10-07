@@ -46,7 +46,7 @@ You get compile‑time guarantees (not CI or runtime heuristics), a small opinio
 
 ## How (principles)
 
-- **Compile‑time contracts:** `SchemaConforms[Out, Contract, Policy]` proves compatibility; policies include **Exact**, **Backward**, **Forward** (+ Ordered/CI/ByPosition). See [docs/how-it-fails.md](docs/how-it-fails.md).
+- **Compile‑time contracts:** `SchemaConforms[Out, Contract, Policy]` proves compatibility; policies include **Exact**, **Backward**, **Forward** (+ Ordered/CI/ByPosition). See [docs/how-it-fails.md](docs/how-it-fails.md). The engine behind it is [ctdc-core](https://github.com/vim89/compile-time-data-contracts), a standalone library; `com.flowforge.core.contracts` aliases its types so there is one implementation to maintain.
 - **Typestate builder:** `build()` exists only when source, transforms, and sink are present. Incomplete pipelines are unbuildable.
 - **Pure vs effect boundary:** transforms are pure functions; `F[_]` only at IO edges; engines plug into a single algebra.
 - **Pictures over prose:** see [flowchart.svg](docs/diagrams/compile-time-contracts/flowchart.svg) and [optionality.md](docs/diagrams/compile-time-contracts/optionality.md).

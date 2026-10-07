@@ -127,7 +127,7 @@ implicitly[SchemaConforms[Out, Contract, SchemaPolicy.Exact]]
 Indicative error message shape:
 
 ```
-Compile-time contract drift (policy: com.flowforge.core.contracts.SchemaPolicy.Exact).
+Compile-time contract drift (policy: ctdc.SchemaPolicy.Exact).
 Out: List[Option[Int]] vs Contract: List[Int]
 Mismatch attributes: []? expected Int, found optional Int
 ```

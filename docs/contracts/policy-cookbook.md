@@ -8,7 +8,7 @@ Notes
 
 - All examples use `PipelineBuilder` + `TypedSource/TypedSink` so the compiler must materialize `SchemaConforms[Out, Contract, P]` evidence.
 - On mismatch, compilation aborts with a diff like:
-  FlowForge: Contract drift (policy: com.flowforge.core.contracts.SchemaPolicy.Exact).
+  FlowForge: Contract drift (policy: ctdc.SchemaPolicy.Exact).
   Out: Producer vs Contract: Contract
   Missing: email:string
   Extra: age:int
