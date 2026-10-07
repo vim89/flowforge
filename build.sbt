@@ -38,14 +38,25 @@ ThisBuild / coverageFailOnMinimum := enforceCoverageThreshold
 ThisBuild / coverageHighlighting := true
 
 // ===== REPOSITORY RESOLVERS =====
-resolvers ++= Resolver.sonatypeOssRepos("public") ++ Seq(
+// ThisBuild and not the root project: every module is defined separately below, so a root-only setting
+// would not reach them and `core` could not resolve ctdc-core.
+ThisBuild / resolvers ++= Resolver.sonatypeOssRepos("public") ++ Seq(
   Resolver.mavenCentral,
   "Confluent" at "https://packages.confluent.io/maven/",
   "Apache Releases" at "https://repository.apache.org/content/repositories/releases/",
   "Google Cloud" at "https://maven-central.storage-download.googleapis.com/maven2/",
   "AWS SDK" at "https://repo1.maven.org/maven2/software/amazon/awssdk/",
   "Spark Packages" at "https://repos.spark-packages.org/",
+  // The contract engine, published from github.com/vim89/compile-time-data-contracts.
+  "ctdc GitHub Packages" at "https://maven.pkg.github.com/vim89/compile-time-data-contracts",
 )
+
+// GitHub Packages authenticates reads, not just writes, so resolving ctdc-core needs a token. Absent
+// locally, where ctdc is resolved from `~/.ivy2/local` after a `publishLocal` instead.
+ThisBuild / credentials ++= (for {
+  user  <- sys.env.get("GITHUB_ACTOR")
+  token <- sys.env.get("GITHUB_TOKEN")
+} yield Credentials("GitHub Package Registry", "maven.pkg.github.com", user, token)).toSeq
 
 // Compiler settings for all projects
 
@@ -204,52 +215,14 @@ lazy val core = moduleProject("core")
     coverageExcludedPackages := Seq(
       "com.flowforge.core.examples.*",
     ).mkString(";"),
-    // The macros run in the compiler rather than in a test, so the instrumentation never sees them. The
-    // comparison they share lives in the same package and is ordinary code with its own tests, which is
-    // why these are excluded by file instead of by package.
-    coverageExcludedFiles := Seq(
-      ".*/ContractMacros.scala",
-      ".*/SchemaConformsMaterializer.scala",
-      ".*/ShapeDerivation.scala",
-      ".*/TypeShapes.scala",
-    ).mkString(";"),
     // Core module requires 90% coverage (foundational code)
     coverageMinimumStmtTotal := 90,
     coverageMinimumBranchTotal := 85,
     coverageFailOnMinimum := enforceCoverageThreshold,
-    // Section 13.3 - Version-specific dependencies for Scala 2/3 cross-build
-    libraryDependencies ++= {
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, _)) =>
-          Seq(
-            "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.10",
-            "org.scala-lang"                % "scala-reflect" % scalaVersion.value,
-          )
-        case Some((3, _)) =>
-          Seq(
-            // Scala 3 derives and inspects types with the compiler's own quotes reflection, so there is
-            // no Magnolia or scala-reflect to add here.
-          )
-        case _ => Seq.empty
-      }
-    },
-    // Section 13.3 - Version-specific source directories for Scala 2/3 cross-build
-    Compile / unmanagedSourceDirectories ++= {
-      val base = (Compile / sourceDirectory).value
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, _)) => Seq(base / "scala-2")
-        case Some((3, _)) => Seq(base / "scala-3")
-        case _            => Nil
-      }
-    },
-    Test / unmanagedSourceDirectories ++= {
-      val base = (Test / sourceDirectory).value
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, _)) => Seq(base / "scala-2")
-        case Some((3, _)) => Seq(base / "scala-3")
-        case _            => Nil
-      }
-    },
+    // Magnolia, scala-reflect and the scala-2/scala-3 source directories used to be wired here, because the
+    // contract macro is spelled differently on each Scala version. That macro now ships in ctdc-core, which
+    // carries its own per-version sources and dependencies, so everything left in this module is ordinary
+    // version-agnostic Scala.
   )
   .settings(mimaSettings("core"): _*)
 
