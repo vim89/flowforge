@@ -2,8 +2,9 @@
 
 Plan for moving FlowForge's compile-time contracts from Scala 2.13 to Scala 3.
 
-> Status: part plan, part record. `core` now cross-builds Scala 2.13.16 and 3.3.3, with the Scala 3
-> derivation in `modules/core/src/main/scala-3`, and CI runs `core/testQuick` on 3.3.3. Every other
+> Status: part plan, part record. `core` now cross-builds Scala 2.13.16 and 3.3.6, with the per-version
+> derivation living in the ctdc-core library rather than in FlowForge, and CI runs `core/testQuick` on
+> 3.3.6. Every other
 > module is 2.13.16 only. Snippets below that are marked proposed are still proposals. Readiness for
 > v1.0 is tracked in [v1.0 readiness](../plan/v1.0-readiness.md).
 

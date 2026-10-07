@@ -58,7 +58,7 @@ jobs:
 
       # Core's src/main/scala-3 is only on the source path under Scala 3, so the check above never sees it.
       - name: scalafmt check (Scala 3 sources)
-        run: sbt "++3.3.3 core/scalafmtCheckAll"
+        run: sbt "++3.3.6 core/scalafmtCheckAll"
 
       - name: Guard - ban println in production sources
         run: |
@@ -187,7 +187,7 @@ jobs:
           # Core is the only module built for Scala 3, so the command is core only. The whole aggregate
           # cannot run here: the modules that stay on 2.13 fail dependency resolution under ++3.
           - os: ubuntu-latest
-            scala: 3.3.3
+            scala: 3.3.6
             java: 17
             command: core/testQuick
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
