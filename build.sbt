@@ -204,52 +204,14 @@ lazy val core = moduleProject("core")
     coverageExcludedPackages := Seq(
       "com.flowforge.core.examples.*",
     ).mkString(";"),
-    // The macros run in the compiler rather than in a test, so the instrumentation never sees them. The
-    // comparison they share lives in the same package and is ordinary code with its own tests, which is
-    // why these are excluded by file instead of by package.
-    coverageExcludedFiles := Seq(
-      ".*/ContractMacros.scala",
-      ".*/SchemaConformsMaterializer.scala",
-      ".*/ShapeDerivation.scala",
-      ".*/TypeShapes.scala",
-    ).mkString(";"),
     // Core module requires 90% coverage (foundational code)
     coverageMinimumStmtTotal := 90,
     coverageMinimumBranchTotal := 85,
     coverageFailOnMinimum := enforceCoverageThreshold,
-    // Section 13.3 - Version-specific dependencies for Scala 2/3 cross-build
-    libraryDependencies ++= {
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, _)) =>
-          Seq(
-            "com.softwaremill.magnolia1_2" %% "magnolia"      % "1.1.10",
-            "org.scala-lang"                % "scala-reflect" % scalaVersion.value,
-          )
-        case Some((3, _)) =>
-          Seq(
-            // Scala 3 derives and inspects types with the compiler's own quotes reflection, so there is
-            // no Magnolia or scala-reflect to add here.
-          )
-        case _ => Seq.empty
-      }
-    },
-    // Section 13.3 - Version-specific source directories for Scala 2/3 cross-build
-    Compile / unmanagedSourceDirectories ++= {
-      val base = (Compile / sourceDirectory).value
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, _)) => Seq(base / "scala-2")
-        case Some((3, _)) => Seq(base / "scala-3")
-        case _            => Nil
-      }
-    },
-    Test / unmanagedSourceDirectories ++= {
-      val base = (Test / sourceDirectory).value
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, _)) => Seq(base / "scala-2")
-        case Some((3, _)) => Seq(base / "scala-3")
-        case _            => Nil
-      }
-    },
+    // Magnolia, scala-reflect and the scala-2/scala-3 source directories used to be wired here, because the
+    // contract macro is spelled differently on each Scala version. That macro now ships in ctdc-core, which
+    // carries its own per-version sources and dependencies, so everything left in this module is ordinary
+    // version-agnostic Scala.
   )
   .settings(mimaSettings("core"): _*)
 

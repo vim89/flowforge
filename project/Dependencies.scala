@@ -7,7 +7,11 @@ object Dependencies {
   object Versions {
     // Scala ecosystem
     val scala213 = "2.13.16"
-    val scala3   = "3.3.3"
+    // 3.3.6 and not 3.3.3: ctdc-core is built with 3.3.6 and an older compiler cannot read newer TASTy.
+    val scala3 = "3.3.6"
+
+    // The compile-time contract engine, maintained at github.com/vim89/compile-time-data-contracts.
+    val ctdc = "0.1.0-SNAPSHOT"
 
     // Core functional libraries
     val cats           = "2.10.0"
@@ -220,7 +224,10 @@ object Dependencies {
     deps ++ providedLibs.map(_ % "provided")
 
   def forModule(moduleName: String): Seq[ModuleID] = moduleName match {
-    case "core" => Core.all ++ Monitoring.prometheus ++ Testing.unit
+    case "core" =>
+      Core.all ++ Monitoring.prometheus ++ Testing.unit ++ Seq(
+        "com.vitthalmirji" %% "ctdc-core" % Versions.ctdc,
+      )
     // Infrastructure Layer modules
     case "infrastructure" =>
       Core.all ++ effectSystems ++ Testing.integration ++ Monitoring.all ++ Seq(
