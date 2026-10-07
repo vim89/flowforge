@@ -26,7 +26,7 @@ class ShapeDiffPolicySpec extends AnyFunSpec with Matchers {
     out: TypeShape,
     contract: TypeShape,
   ): ShapeDiff.Drift =
-    ShapeDiff.diff(ShapeDiff.Flags.of(policy), out, contract)
+    ShapeDiff.diff(ComparisonRules.of(policy), out, contract)
 
   private def conforms(
     policy: SchemaPolicy,
@@ -110,9 +110,26 @@ class ShapeDiffPolicySpec extends AnyFunSpec with Matchers {
       conforms(SchemaPolicy.ExactByPosition, renamed, user) shouldBe true
     }
 
-    it("rejects a different field count") {
-      drift(SchemaPolicy.ExactByPosition, withAge, user).mismatched.map(_.found) shouldBe
-        List("4 fields")
+    it("reports a producer field past the end of the contract as extra") {
+      // Reported at the first unpaired index rather than by name, because names are not compared under this
+      // policy at all, so there is no name to report it under.
+      val found = drift(SchemaPolicy.ExactByPosition, withAge, user).extra
+      found.map(_.name) shouldBe List("age")
+      found.map(_.path) shouldBe List("@3")
+    }
+
+    it("reports a contract field the producer does not reach as missing") {
+      val found = drift(SchemaPolicy.ExactByPosition, withoutEmail, user).missing
+      found.map(_.field.name) shouldBe List("email")
+      found.map(_.path) shouldBe List("@2")
+    }
+
+    it("still compares the positions both sides have when the counts differ") {
+      // A count difference used to be the whole report, so a type break at a position the two sides share
+      // only surfaced on the next compile, after the count was fixed.
+      val found = drift(SchemaPolicy.ExactByPosition, idAsStringWithAge, user)
+      found.extra.map(_.name) shouldBe List("age")
+      found.mismatched.map(_.path) shouldBe List("@0")
     }
 
     it("rejects a type that differs at one position") {
@@ -175,11 +192,49 @@ class ShapeDiffPolicySpec extends AnyFunSpec with Matchers {
     it("is not relaxed by Backward, which only relaxes whole fields") {
       conforms(SchemaPolicy.Backward, listOfInt, listOfOptionalInt) shouldBe false
     }
+
+    it("reports the producer's own type as what it found") {
+      // The message used to print the contract's type on both sides, so a producer holding an optional Int
+      // against a required String was reported as having found `optional String`, a type it never had.
+      val found = drift(SchemaPolicy.Exact, OptionalShape(PrimitiveShape("Int")), PrimitiveShape("String"))
+      found.mismatched.map(m => (m.expected, m.found)) shouldBe List(("String", "optional Int"))
+    }
+
+    it("reports the contract's own type as what it expected") {
+      val found = drift(SchemaPolicy.Exact, PrimitiveShape("Int"), OptionalShape(PrimitiveShape("String")))
+      found.mismatched.map(m => (m.expected, m.found)) shouldBe List(("optional String", "Int"))
+    }
   }
 
   describe("an unresolved policy type") {
     it("compares exactly, so an abstract policy cannot widen what is accepted") {
-      ShapeDiff.Flags.strictest shouldBe ShapeDiff.Flags.of(SchemaPolicy.Exact)
+      ComparisonRules.strictest shouldBe ComparisonRules.of(SchemaPolicy.Exact)
+    }
+  }
+
+  describe("the policy mapping") {
+    it("states each policy as one matching, one casing and one tolerance") {
+      // Written out in full because this table is the whole definition of what a policy means. The three
+      // axes are separate types rather than independent booleans, so a policy cannot ask to match both by
+      // position and by ordered name, or to be both backward and forward tolerant.
+      val expected = List(
+        SchemaPolicy.Exact            -> (FieldMatching.ByName, NameCasing.Sensitive, Tolerance.Strict),
+        SchemaPolicy.ExactUnordered   -> (FieldMatching.ByName, NameCasing.Sensitive, Tolerance.Strict),
+        SchemaPolicy.ExactUnorderedCI -> (FieldMatching.ByName, NameCasing.Insensitive, Tolerance.Strict),
+        SchemaPolicy.ExactOrdered -> (FieldMatching.ByNameOrdered, NameCasing.Sensitive, Tolerance.Strict),
+        SchemaPolicy.ExactOrderedCI ->
+          (FieldMatching.ByNameOrdered, NameCasing.Insensitive, Tolerance.Strict),
+        SchemaPolicy.ExactByPosition -> (FieldMatching.ByPosition, NameCasing.Sensitive, Tolerance.Strict),
+        SchemaPolicy.Backward        -> (FieldMatching.ByName, NameCasing.Sensitive, Tolerance.Backward),
+        SchemaPolicy.Forward         -> (FieldMatching.ByName, NameCasing.Sensitive, Tolerance.Forward),
+        SchemaPolicy.Full            -> (FieldMatching.ByName, NameCasing.Sensitive, Tolerance.Permissive),
+      )
+
+      expected.map { case (policy, _) => ComparisonRules.of(policy) } shouldBe
+        expected.map {
+          case (_, (matching, casing, tolerance)) =>
+            ComparisonRules(matching, casing, tolerance)
+        }
     }
   }
 }
@@ -212,6 +267,8 @@ object ShapeDiffPolicySpec {
   private val idAsString   = StructShape(List(field("id", PrimitiveShape("String")), name, email))
   private val differentCase =
     StructShape(List(field("Id", PrimitiveShape("Long")), field("NAME", PrimitiveShape("String")), email))
+  private val idAsStringWithAge =
+    StructShape(List(field("id", PrimitiveShape("String")), name, email, field("age", PrimitiveShape("Int"))))
   private val renamed = StructShape(
     List(
       field("identifier", PrimitiveShape("Long")),

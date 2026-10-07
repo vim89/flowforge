@@ -142,15 +142,15 @@ object ContractMacros {
       typeOf[SchemaPolicy.Full]             -> SchemaPolicy.Full,
     )
 
-    val flags = known.collectFirst { case (t, policy) if weakTypeOf[P] <:< t => ShapeDiff.Flags.of(policy) }
-      .getOrElse(ShapeDiff.Flags.strictest)
+    val rules = known.collectFirst { case (t, policy) if weakTypeOf[P] <:< t => ComparisonRules.of(policy) }
+      .getOrElse(ComparisonRules.strictest)
 
     ShapeDiff
       .report(
         policyName = weakTypeOf[P].toString,
         outName = weakTypeOf[Out].toString,
         contractName = weakTypeOf[Contract].toString,
-        flags = flags,
+        rules = rules,
         out = ShapeBuilder.buildTypeShape(weakTypeOf[Out]),
         contract = ShapeBuilder.buildTypeShape(weakTypeOf[Contract]),
       )
