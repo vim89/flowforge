@@ -38,14 +38,25 @@ ThisBuild / coverageFailOnMinimum := enforceCoverageThreshold
 ThisBuild / coverageHighlighting := true
 
 // ===== REPOSITORY RESOLVERS =====
-resolvers ++= Resolver.sonatypeOssRepos("public") ++ Seq(
+// ThisBuild and not the root project: every module is defined separately below, so a root-only setting
+// would not reach them and `core` could not resolve ctdc-core.
+ThisBuild / resolvers ++= Resolver.sonatypeOssRepos("public") ++ Seq(
   Resolver.mavenCentral,
   "Confluent" at "https://packages.confluent.io/maven/",
   "Apache Releases" at "https://repository.apache.org/content/repositories/releases/",
   "Google Cloud" at "https://maven-central.storage-download.googleapis.com/maven2/",
   "AWS SDK" at "https://repo1.maven.org/maven2/software/amazon/awssdk/",
   "Spark Packages" at "https://repos.spark-packages.org/",
+  // The contract engine, published from github.com/vim89/compile-time-data-contracts.
+  "ctdc GitHub Packages" at "https://maven.pkg.github.com/vim89/compile-time-data-contracts",
 )
+
+// GitHub Packages authenticates reads, not just writes, so resolving ctdc-core needs a token. Absent
+// locally, where ctdc is resolved from `~/.ivy2/local` after a `publishLocal` instead.
+ThisBuild / credentials ++= (for {
+  user  <- sys.env.get("GITHUB_ACTOR")
+  token <- sys.env.get("GITHUB_TOKEN")
+} yield Credentials("GitHub Package Registry", "maven.pkg.github.com", user, token)).toSeq
 
 // Compiler settings for all projects
 

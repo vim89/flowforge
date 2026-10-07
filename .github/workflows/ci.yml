@@ -11,6 +11,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# GitHub Packages authenticates reads, so sbt needs a token to resolve ctdc-core. The repo token works
+# once the package grants this repo access; CTDC_PACKAGES_TOKEN is the override if a wider token is needed.
+env:
+  GITHUB_TOKEN: ${{ secrets.CTDC_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+
 jobs:
   fixture-sync:
     name: Spec fixture sync
@@ -32,6 +37,7 @@ jobs:
     needs: fixture-sync
     permissions:
       contents: read
+      packages: read
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
     steps:
       - uses: actions/checkout@v6
@@ -161,6 +167,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
+      packages: read
     strategy:
       fail-fast: false
       matrix:
@@ -214,6 +221,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: read
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -240,6 +248,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: read
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
     steps:
       - uses: actions/checkout@v6
@@ -263,6 +272,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: read
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-integration-tests')) ||
@@ -284,6 +294,7 @@ jobs:
     needs: quick-checks
     permissions:
       contents: read
+      packages: read
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
     steps:
       - uses: actions/checkout@v6
@@ -309,6 +320,7 @@ jobs:
     needs: test
     permissions:
       contents: read
+      packages: read
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
     steps:
       - uses: actions/checkout@v6
@@ -330,6 +342,7 @@ jobs:
     needs: [test]
     permissions:
       contents: read
+      packages: read
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[skip release]')"
     steps:
       - uses: actions/checkout@v6
