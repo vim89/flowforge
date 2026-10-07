@@ -11,7 +11,9 @@ object Dependencies {
     val scala3 = "3.3.6"
 
     // The compile-time contract engine, maintained at github.com/vim89/compile-time-data-contracts.
-    val ctdc = "0.1.0-SNAPSHOT"
+    // A release and not a snapshot: a snapshot republishes under the same coordinates, so this build could
+    // change behaviour without a commit of its own.
+    val ctdc = "0.1.0"
 
     // Core functional libraries
     val cats           = "2.10.0"
