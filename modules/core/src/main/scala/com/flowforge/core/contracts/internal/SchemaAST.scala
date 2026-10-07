@@ -22,17 +22,6 @@ object TypeShape {
   final case class StructShape(fields: List[FieldShape]) extends TypeShape
 
   /**
-   * Leaf types a contract may be built from.
-   *
-   * Closed on purpose. Anything outside it is rejected at compile time rather than treated as an opaque
-   * primitive, because a type the sink has no encoder for would otherwise pass the contract check and fail at
-   * write time instead. Shared by both macros so neither version accepts a leaf the other rejects.
-   */
-  val supportedLeafTypes: String =
-    "String, Int, Long, Short, Byte, Double, Float, Boolean, BigDecimal, java.math.BigDecimal, " +
-      "java.sql.Date, java.time.LocalDate, java.sql.Timestamp, java.time.Instant, java.time.LocalDateTime"
-
-  /**
    * Prefixes that carry no information for a reader of a drift report.
    *
    * Matched anywhere in the name rather than only at the front, because a type argument carries its own

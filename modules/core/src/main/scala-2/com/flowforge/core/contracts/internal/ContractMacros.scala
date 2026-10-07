@@ -57,22 +57,25 @@ object ContractMacros {
 
       def isTuple(t: Type): Boolean =
         t.typeSymbol.fullName.startsWith("scala.Tuple")
-
-      def isSupportedLeaf(t: Type): Boolean =
-        t =:= typeOf[String] || t =:= typeOf[Int] || t =:= typeOf[Long] ||
-          t =:= typeOf[Short] || t =:= typeOf[Byte] || t =:= typeOf[Double] ||
-          t =:= typeOf[Float] || t =:= typeOf[Boolean] || t =:= typeOf[BigDecimal] ||
-          t =:= typeOf[java.math.BigDecimal] || t =:= typeOf[java.sql.Date] ||
-          t =:= typeOf[java.time.LocalDate] || t =:= typeOf[java.sql.Timestamp] ||
-          t =:= typeOf[java.time.Instant] || t =:= typeOf[java.time.LocalDateTime]
     }
 
-    def unsupportedLeaf(t: Type): Nothing =
+    /**
+     * A type this macro cannot look inside, compared by its name.
+     *
+     * There used to be a closed list of leaf types here, on the reasoning that a type outside it is one no
+     * sink can write. That is not something a contract can know: a sink takes the writer as a function, so
+     * whether a `UUID` or a domain enum can be written is decided by the writer the caller supplies, not by
+     * this list. Rejecting an unlisted leaf therefore turned away pipelines that were fine. Comparing it by
+     * name still catches the drift that is this macro's job, because a leaf that changes type changes its
+     * name.
+     */
+    def opaqueLeaf(t: Type): PrimitiveShape = PrimitiveShape(TypeShape.simpleName(t.toString))
+
+    def unsupportedTuple(t: Type): Nothing =
       c.abort(
         c.enclosingPosition,
-        s"Unsupported structural leaf type in SchemaConforms derivation: ${t.toString}. " +
-          s"Supported leaf types: ${TypeShape.supportedLeafTypes}. " +
-          "Supported container shapes: case classes, Option, List/Seq/Vector/Array/Set, and Map[atomic, _].",
+        s"Unsupported tuple in SchemaConforms derivation: ${t.toString}. " +
+          "A tuple has no field names to compare, so use a case class instead.",
       )
 
     // TypeShape builder - pure functional approach
@@ -99,10 +102,9 @@ object ContractMacros {
             }.getOrElse {
               // Tuples are checked first because every TupleN is itself a case class. Reading one as a
               // struct of `_1`, `_2` would make positional junk look like a named schema.
-              if (isTuple(tpe)) unsupportedLeaf(tpe)
+              if (isTuple(tpe)) unsupportedTuple(tpe)
               else if (isCaseClass(tpe)) buildStructShape(tpe)
-              else if (isSupportedLeaf(tpe)) PrimitiveShape(TypeShape.simpleName(tpe.toString))
-              else unsupportedLeaf(tpe)
+              else opaqueLeaf(tpe)
             }
           }
         }

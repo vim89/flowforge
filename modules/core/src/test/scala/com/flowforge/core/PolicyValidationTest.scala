@@ -26,6 +26,9 @@ class PolicyValidationTest extends AnyWordSpec with Matchers {
     Name: String,
     Email: String)
 
+  case class WithUuid(id: java.util.UUID)
+  case class WithStringId(id: String)
+
   case class Item(sku: String, qty: Int)
   case class WiderItem(
     sku: String,
@@ -117,14 +120,18 @@ class PolicyValidationTest extends AnyWordSpec with Matchers {
       assert(asObjectType != null)
     }
 
-    "reject a leaf type that no sink can encode" in
-      // java.util.UUID is not a case class, so it used to be read as an opaque primitive and compared by
-      // name. A contract and a producer that both used it therefore conformed, and the pipeline only failed
-      // at write time for want of an encoder.
+    "accept a leaf type the macro cannot look inside" in {
+      // Whether a UUID can be written is decided by the writer the caller passes to the sink, not by this
+      // macro, so a closed list of leaf types here only turned away pipelines that were fine.
+      val valid: SchemaConforms[WithUuid, WithUuid, SchemaPolicy.Exact] = implicitly
+      assert(valid != null)
+    }
+
+    "still catch drift in a leaf type it cannot look inside" in
+      // Comparing such a leaf by name is enough, because a leaf that changes type changes its name.
       assertTypeError("""
         import com.flowforge.core.contracts._
-        final case class WithUuid(id: java.util.UUID)
-        implicitly[SchemaConforms[WithUuid, WithUuid, SchemaPolicy.Exact]]
+        implicitly[SchemaConforms[WithUuid, WithStringId, SchemaPolicy.Exact]]
       """)
 
     "reject a tuple rather than reading it as a named struct" in

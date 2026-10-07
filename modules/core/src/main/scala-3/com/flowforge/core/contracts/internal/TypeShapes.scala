@@ -77,37 +77,30 @@ object TypeShapes {
     // Tuples are checked first because every TupleN is itself a case class. Reading one as a struct of
     // `_1`, `_2` would make positional junk look like a named schema, so a tuple is rejected rather than
     // reinterpreted.
-    if (tpe <:< TypeRepr.of[Tuple]) unsupportedLeaf(tpe)
+    if (tpe <:< TypeRepr.of[Tuple]) unsupportedTuple(tpe)
     else if (isCaseClass(tpe)) StructShape(fieldsOf(tpe))
-    else if (isSupportedLeaf(tpe)) PrimitiveShape(TypeShape.simpleName(tpe.show))
-    else unsupportedLeaf(tpe)
+    else opaqueLeaf(tpe)
   }
 
-  private def isSupportedLeaf(using q: Quotes)(tpe: q.reflect.TypeRepr): Boolean = {
+  /**
+   * A type this macro cannot look inside, compared by its name.
+   *
+   * There used to be a closed list of leaf types here, on the reasoning that a type outside it is one no sink
+   * can write. That is not something a contract can know: a sink takes the writer as a function, so whether a
+   * `UUID` or a domain enum can be written is decided by the writer the caller supplies, not by this list.
+   * Rejecting an unlisted leaf therefore turned away pipelines that were fine. Comparing it by name still
+   * catches the drift that is this macro's job, because a leaf that changes type changes its name.
+   */
+  private def opaqueLeaf(using q: Quotes)(tpe: q.reflect.TypeRepr): PrimitiveShape = {
     import q.reflect.*
-    tpe =:= TypeRepr.of[String] ||
-    tpe =:= TypeRepr.of[Int] ||
-    tpe =:= TypeRepr.of[Long] ||
-    tpe =:= TypeRepr.of[Short] ||
-    tpe =:= TypeRepr.of[Byte] ||
-    tpe =:= TypeRepr.of[Double] ||
-    tpe =:= TypeRepr.of[Float] ||
-    tpe =:= TypeRepr.of[Boolean] ||
-    tpe =:= TypeRepr.of[BigDecimal] ||
-    tpe =:= TypeRepr.of[java.math.BigDecimal] ||
-    tpe =:= TypeRepr.of[java.sql.Date] ||
-    tpe =:= TypeRepr.of[java.time.LocalDate] ||
-    tpe =:= TypeRepr.of[java.sql.Timestamp] ||
-    tpe =:= TypeRepr.of[java.time.Instant] ||
-    tpe =:= TypeRepr.of[java.time.LocalDateTime]
+    PrimitiveShape(TypeShape.simpleName(tpe.show))
   }
 
-  private def unsupportedLeaf(using q: Quotes)(tpe: q.reflect.TypeRepr): Nothing = {
+  private def unsupportedTuple(using q: Quotes)(tpe: q.reflect.TypeRepr): Nothing = {
     import q.reflect.*
     report.errorAndAbort(
-      s"Unsupported structural leaf type in SchemaConforms derivation: ${tpe.show}. " +
-        s"Supported leaf types: ${TypeShape.supportedLeafTypes}. " +
-        "Supported container shapes: case classes, Option, List/Seq/Vector/Array/Set, and Map[atomic, _].",
+      s"Unsupported tuple in SchemaConforms derivation: ${tpe.show}. " +
+        "A tuple has no field names to compare, so use a case class instead.",
     )
   }
 
