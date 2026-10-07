@@ -94,6 +94,20 @@ class PolicyValidationTest extends AnyWordSpec with Matchers {
       userShape.fields.map(_.tpe) shouldBe List("Long", "String", "String")
     }
 
+    "render a type argument without those packages either" in {
+      // Reducing only the leading prefix left the argument's own prefix in place, so Scala 3 read this as
+      // `Option[scala.Predef.String]` where Scala 2 read it as `Option`.
+      userWithAgeShape.fields.map(_.tpe) shouldBe List("Long", "String", "String", "Option[Int]")
+    }
+
+    "mark an Option field optional" in {
+      // Scala 2 derivation decided this from the rendered name containing `Option[`, but magnolia reports
+      // the name and its arguments apart, so the name alone never contained it and every field read as
+      // required. A sink that trusted this would have declared a nullable column as NOT NULL.
+      userWithAgeShape.fields.map(f => (f.name, f.isOptional)) shouldBe
+        List(("id", false), ("name", false), ("email", false), ("age", true))
+    }
+
     "resolve a policy named as the case object, not only as the trait" in {
       // Both spellings name the same policy. The macro used to resolve a policy by the simple name of its
       // rendered type, which reads `.type` out of `SchemaPolicy.Backward.type` and then silently compared
